@@ -32,8 +32,8 @@ describe("document storage helpers", () => {
     expect(() => resolveStoragePath("../escape.pdf")).toThrow("Invalid storage key");
   });
 
-  it("keeps the S3 provider as a clear non-network placeholder", async () => {
-    await expect(s3StorageProvider.write("key", Buffer.from("x"))).rejects.toThrow("not implemented");
+  it("keeps S3 failures clear when configuration is missing", async () => {
+    await expect(s3StorageProvider.write("key", Buffer.from("x"))).rejects.toThrow("Missing S3 configuration");
     await expect(s3StorageProvider.checkWritable()).resolves.toBe(false);
   });
 });

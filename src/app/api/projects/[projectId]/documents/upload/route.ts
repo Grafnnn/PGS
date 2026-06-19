@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { writeAudit } from "@/lib/audit";
-import { canUploadDocument } from "@/lib/auth/permissions";
+import { canProject } from "@/lib/auth/project-permissions";
 import { getCurrentUser } from "@/lib/auth/session";
 import { getDemoContext } from "@/lib/project-data";
 import { prisma } from "@/lib/prisma";
@@ -12,7 +12,7 @@ export const runtime = "nodejs";
 
 export async function POST(request: NextRequest, { params }: { params: { projectId: string } }) {
   const user = await getCurrentUser();
-  if (!canUploadDocument(user)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!(await canProject(user, params.projectId, "upload_document"))) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const formData = await request.formData();
   const file = formData.get("file");

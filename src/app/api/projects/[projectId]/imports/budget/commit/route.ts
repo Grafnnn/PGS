@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { ZodError } from "zod";
 import { writeAudit } from "@/lib/audit";
-import { canImportBudget } from "@/lib/auth/permissions";
+import { canProject } from "@/lib/auth/project-permissions";
 import { getCurrentUser } from "@/lib/auth/session";
 import { importPreviewCommitSchema } from "@/lib/excel/import-types";
 import { getDemoContext } from "@/lib/project-data";
@@ -14,7 +14,7 @@ export async function POST(request: NextRequest, { params }: { params: { project
 
   try {
     const user = await getCurrentUser();
-    if (!canImportBudget(user)) {
+    if (!(await canProject(user, params.projectId, "import"))) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
     const payload = importPreviewCommitSchema.parse(body);

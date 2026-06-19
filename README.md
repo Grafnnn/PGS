@@ -7,9 +7,11 @@
 - Next.js / React / TypeScript приложение.
 - DB-backed auth: bcrypt password hashes, opaque session cookie, server-side sessions.
 - First-admin bootstrap через `FIRST_ADMIN_EMAIL`, `FIRST_ADMIN_PASSWORD`, `FIRST_ADMIN_NAME`.
+- Админка пользователей `/admin/users`: создание, роли, активация и reset temporary password.
 - Дашборд компании и список проектов.
 - Health endpoint `/api/health` для проверки env, PostgreSQL, AI и storage-настроек.
 - Роли `OWNER`, `ADMIN`, `MANAGER`, `VIEWER` с централизованной проверкой permissions.
+- Project-level permissions через `ProjectMember` и effective role.
 - Карточка проекта с вкладками:
   - Обзор;
   - Бюджет / ВОР;
@@ -31,6 +33,8 @@
 - Inline edit/delete для ВОР, материалов и графика.
 - Audit trail для импорта и ключевых CRUD-операций.
 - Local document upload/download/delete через storage adapter, метаданные и `DocumentVersion` в PostgreSQL.
+- S3-compatible storage adapter с SigV4 signing.
+- JSON export проекта и истории изменений.
 - Demo seed для организации “Демо Строй”.
 - SQL migration в `prisma/migrations/20260619183000_v0_2_baseline`.
 - Docker Compose для PostgreSQL + web.
@@ -49,12 +53,16 @@
 - `src/app/api/[...path]/route.ts` - API endpoints с Prisma CRUD и Zod-валидацией.
 - `src/app/api/health/route.ts` - staging health check.
 - `src/app/api/auth/login/route.ts` - DB-backed login с server-side session.
+- `src/app/admin/users/page.tsx` - минимальная админка пользователей.
+- `src/app/api/admin/users` - user management API без `passwordHash` и session tokens.
+- `src/app/api/projects/[projectId]/members` - ProjectMember API.
 - `src/app/api/projects/[projectId]/documents` - upload/download/delete документов.
 - `src/lib/auth/permissions.ts` - базовая модель ролей и прав.
 - `src/lib/auth/session.ts` - opaque session tokens и DB session lookup.
 - `src/lib/auth/password.ts` - bcrypt hash/verify.
+- `src/lib/auth/project-permissions.ts` - effective project role через global role + ProjectMember.
 - `src/lib/env.ts` - централизованная валидация env.
-- `src/lib/storage` - local/S3-ready storage adapter.
+- `src/lib/storage` - local/S3-compatible storage adapter.
 - `src/lib/calculations.ts` - расчетный слой.
 - `src/lib/ai.ts` - AI context builder и OpenAI вызов.
 - `src/lib/prisma.ts` - Prisma Client singleton.
@@ -115,6 +123,14 @@ UPLOAD_STORAGE_PROVIDER="local"
 FIRST_ADMIN_EMAIL="admin@pgs.local"
 FIRST_ADMIN_PASSWORD="pgs-admin-local"
 FIRST_ADMIN_NAME="PGS Admin"
+S3_BUCKET=""
+S3_REGION=""
+S3_ENDPOINT=""
+S3_FORCE_PATH_STYLE="true"
+S3_PUBLIC_BASE_URL=""
+S3_ACCESS_KEY_ID=""
+S3_SECRET_ACCESS_KEY=""
+APP_ENV="development"
 ```
 
 `.env.local` не коммитится.
@@ -127,11 +143,12 @@ FIRST_ADMIN_NAME="PGS Admin"
 - `FIRST_ADMIN_EMAIL` и `FIRST_ADMIN_PASSWORD` заданы для первого bootstrap, затем пароль нужно сменить/убрать из env;
 - `DATABASE_URL` указывает на live PostgreSQL;
 - `UPLOAD_STORAGE_PROVIDER=local` допустим только для VPS/volume, для serverless нужен S3-compatible storage;
+- для S3 задать `S3_BUCKET`, `S3_REGION`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, а `S3_ENDPOINT` для совместимого провайдера;
 - `OPENAI_API_KEY` задается только если нужны AI endpoints.
 
 ## Auth, Sessions и First Admin
 
-v0.6 использует DB-backed auth:
+Система использует DB-backed auth:
 
 - пароль хранится только как bcrypt hash в `users.password_hash`;
 - cookie `pgs_session` содержит только случайный opaque token;
@@ -158,6 +175,31 @@ Seed создает первого OWNER:
 - anonymous - нет доступа при `AUTH_REQUIRED=true`; local fallback только при `AUTH_REQUIRED=false`.
 
 Все write/import/upload/delete endpoints проходят через `src/lib/auth/permissions.ts`.
+
+Project-level permissions:
+
+- global `OWNER` и `ADMIN` управляют всеми проектами;
+- authenticated `MANAGER` и `VIEWER` получают проектные права через `ProjectMember`;
+- dev fallback при `AUTH_REQUIRED=false` сохраняет локальную работу без БД-сессии;
+- backend endpoints участников: `GET/POST /api/projects/:id/members`, `PATCH/DELETE /api/projects/:id/members/:memberId`.
+
+## Управление Пользователями
+
+Откройте:
+
+```text
+http://localhost:3000/admin/users
+```
+
+Доступ только `OWNER/ADMIN`. Возможности:
+
+- создать пользователя и получить temporary password один раз в response/UI;
+- изменить имя и роль;
+- активировать/деактивировать;
+- выдать новый temporary password;
+- защитить последнего активного `OWNER` от деактивации или понижения.
+
+API не возвращает `passwordHash`, session tokens или секреты. Reset password отзывает активные sessions пользователя.
 
 ## PostgreSQL, миграции и seed
 
@@ -199,6 +241,22 @@ pnpm import:fixture
 pnpm smoke:staging
 ```
 
+Live DB flow для local/staging:
+
+```bash
+pnpm install
+pnpm prisma validate
+pnpm prisma generate
+docker compose config
+docker compose up -d db
+pnpm prisma:migrate
+pnpm prisma:seed
+pnpm dev
+APP_URL=http://127.0.0.1:3000 SMOKE_EMAIL=admin@pgs.local SMOKE_PASSWORD=pgs-admin-local pnpm smoke:staging
+```
+
+Если Docker/PostgreSQL недоступны, `/api/health` должен возвращать `503 degraded`, а `pnpm test/lint/build` должны проходить.
+
 ## API endpoints
 
 Next.js routes имеют префикс `/api`.
@@ -208,6 +266,12 @@ Next.js routes имеют префикс `/api`.
 - `POST /api/auth/login`
 - `POST /api/auth/logout`
 - `GET /api/auth/me`
+- `GET /api/admin/users`
+- `POST /api/admin/users`
+- `PATCH /api/admin/users/:userId`
+- `POST /api/admin/users/:userId/reset-password`
+- `POST /api/admin/users/:userId/deactivate`
+- `POST /api/admin/users/:userId/activate`
 - `GET /api/projects`
 - `POST /api/projects`
 - `GET /api/projects/:id`
@@ -254,6 +318,15 @@ Next.js routes имеют префикс `/api`.
 - `POST /api/projects/:id/documents/upload`
 - `GET /api/projects/:id/documents/:documentId/download`
 - `DELETE /api/projects/:id/documents/:documentId`
+- `GET /api/projects/:id/documents/:documentId/versions`
+- `POST /api/projects/:id/documents/:documentId/versions`
+- `GET /api/projects/:id/documents/:documentId/versions/:versionId/download`
+- `GET /api/projects/:id/members`
+- `POST /api/projects/:id/members`
+- `PATCH /api/projects/:id/members/:memberId`
+- `DELETE /api/projects/:id/members/:memberId`
+- `GET /api/projects/:id/export/json`
+- `GET /api/projects/:id/audit/export/json`
 - `GET /api/projects/:id/audit`
 - `GET /api/projects/:id/audit?entityType=budget&action=update&limit=25&from=2026-06-01&to=2026-06-30`
 - `POST /api/projects/:id/ai/chat`
@@ -299,6 +372,7 @@ Health response показывает:
 - `storage.provider`, `storage.writable`, `storage.maxUploadMb`;
 - `ai.configured`;
 - `version.appVersion` и `version.gitSha`, если `GIT_SHA` задан;
+- `migrations.status/count`, если PostgreSQL доступен;
 - `missing` для обязательных production/staging env.
 
 AI key, `DATABASE_URL`, `SESSION_SECRET`, S3 secrets и абсолютный upload path не раскрываются.
@@ -327,6 +401,8 @@ SMOKE_ALLOW_MUTATION=true SMOKE_EMAIL=admin@pgs.local SMOKE_PASSWORD=pgs-admin-l
 ```
 
 Вывод имеет статусы `PASS`, `FAIL`, `SKIP`; любой `FAIL` завершает процесс с non-zero exit code.
+
+Mutation mode дополнительно проверяет upload/download документа, upload/download новой версии и delete smoke-документа. В production mutation запрещен без отдельного explicit override.
 
 ## AI-помощник
 
@@ -389,9 +465,9 @@ Audit trail пишет последние изменения по проекту
 Storage providers:
 
 - `UPLOAD_STORAGE_PROVIDER=local` - полностью работает, требует persistent disk/volume;
-- `UPLOAD_STORAGE_PROVIDER=s3` - интерфейс подготовлен, в v0.6 возвращает clear not implemented/configured error без внешних вызовов.
+- `UPLOAD_STORAGE_PROVIDER=s3` - S3-compatible adapter с AWS Signature v4 через server-side endpoints.
 
-Для production/serverless нужен S3-compatible storage adapter. Рекомендуемые категории:
+Для production/serverless нужен S3-compatible storage. Рекомендуемые категории:
 
 - договоры;
 - сметы;
@@ -403,6 +479,31 @@ Storage providers:
 - счета и платежные документы.
 
 Уже включены whitelist расширений, базовая проверка MIME/размера, backend-проверка прав, audit log, server-generated storage key, path traversal protection и `DocumentVersion` для первой версии файла. Для PDF/images выставляется preview-ready metadata, но встроенный preview viewer пока не реализован.
+
+В UI можно загрузить новую версию документа и скачать конкретную версию из истории. Download идет только через protected backend endpoint; файлы не лежат в public.
+
+S3 пример:
+
+```bash
+UPLOAD_STORAGE_PROVIDER=s3
+S3_BUCKET=pgs-documents
+S3_REGION=us-east-1
+S3_ENDPOINT=https://s3.example.com
+S3_FORCE_PATH_STYLE=true
+S3_ACCESS_KEY_ID=...
+S3_SECRET_ACCESS_KEY=...
+```
+
+S3 credentials не логируются и не возвращаются API.
+
+## JSON Export
+
+Доступны:
+
+- `GET /api/projects/:id/export/json` - проект, бюджет, график, материалы, снабжение, платежи, рапорты, риски и metadata документов без file bytes;
+- `GET /api/projects/:id/audit/export/json` - журнал с фильтрами `entityType`, `action`, `from`, `to`, `limit` до 5000.
+
+Кнопки экспорта находятся во вкладке “История”.
 
 ## Production deployment notes
 
@@ -438,16 +539,17 @@ Production checklist:
 
 - Dashboard, Projects и Project detail читают PostgreSQL через Prisma, с fallback на demo state только когда локальная БД недоступна.
 - Создание бюджетных позиций, работ, материалов, платежей, рапортов и рисков из UI идет через API и сохраняется в PostgreSQL при поднятой БД.
-- Auth уже DB-backed, но без UI управления пользователями, reset password и invite flow.
-- Файловое хранилище реализовано локально через adapter; production S3 adapter пока placeholder без внешних вызовов.
+- Auth уже DB-backed, есть минимальная админка пользователей, но нет email invite delivery/self-service reset.
+- ProjectMember backend готов, UI управления участниками проекта перенесен на следующий этап.
+- Файловое хранилище реализовано локально и через S3-compatible adapter; S3 live network flow требует реальный bucket/env.
 - Excel импорт реализован для типовых ВОР/смет; сложные многострочные шапки, объединенные ячейки и нестандартные формы могут потребовать ручной подготовки файла или расширения маппинга.
 - PDF импорт пока не реализован.
 - КС-2/КС-3 заложены как документы/структура, официальные печатные формы не генерируются.
 
 ## Следующий этап
 
-- Добавить UI управления пользователями, invite/reset password и project-level permissions.
-- Реализовать полноценный S3-compatible storage adapter.
-- Проверить live Excel import на реальной локальной PostgreSQL.
+- Проверить live PostgreSQL migrate/seed/import/documents/audit на машине с Docker/PostgreSQL.
+- Добавить UI управления участниками проекта.
+- Добавить email delivery для invite/reset password.
 - Расширить ПТО/КС закрытие и approval workflow.
 - Добавить миграции CI/CD и production deploy profile.

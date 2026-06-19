@@ -17,6 +17,8 @@ const envSchema = z.object({
   S3_BUCKET: z.string().optional(),
   S3_REGION: z.string().optional(),
   S3_ENDPOINT: z.string().optional(),
+  S3_FORCE_PATH_STYLE: z.enum(["true", "false"]).default("true"),
+  S3_PUBLIC_BASE_URL: z.string().optional(),
   S3_ACCESS_KEY_ID: z.string().optional(),
   S3_SECRET_ACCESS_KEY: z.string().optional(),
   GIT_SHA: z.string().optional()
@@ -42,6 +44,8 @@ export function getEnvStatus() {
   if (production && env.UPLOAD_STORAGE_PROVIDER === "s3") {
     if (!env.S3_BUCKET) missing.push("S3_BUCKET");
     if (!env.S3_REGION) missing.push("S3_REGION");
+    if (!env.S3_ACCESS_KEY_ID) missing.push("S3_ACCESS_KEY_ID");
+    if (!env.S3_SECRET_ACCESS_KEY) missing.push("S3_SECRET_ACCESS_KEY");
   }
 
   return {

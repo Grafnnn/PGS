@@ -12,6 +12,9 @@ const email = process.env.SMOKE_EMAIL;
 const password = process.env.SMOKE_PASSWORD;
 const projectId = process.env.PROJECT_ID ?? "project-demo";
 const allowMutation = process.env.SMOKE_ALLOW_MUTATION === "true";
+const appEnv = process.env.APP_ENV ?? process.env.NODE_ENV ?? "development";
+const allowProductionMutation = process.env.SMOKE_ALLOW_PRODUCTION_MUTATION === "true";
+const smokeRunId = process.env.SMOKE_RUN_ID ?? `SMOKE-${Date.now()}`;
 
 const results: SmokeResult[] = [];
 let sessionCookie = "";
@@ -65,15 +68,37 @@ async function optionalDocumentUpload() {
     record({ status: "SKIP", name: "document upload", url, reason: "SMOKE_ALLOW_MUTATION is not true" });
     return;
   }
-  if (!sessionCookie) {
-    record({ status: "SKIP", name: "document upload", url, reason: "auth session is unavailable" });
+  if (appEnv === "production" && !allowProductionMutation) {
+    record({ status: "FAIL", name: "mutation safety", url, reason: "Refusing mutation smoke in production" });
     return;
   }
   const form = new FormData();
   form.append("category", "прочее");
-  form.append("file", new Blob([Buffer.from("%PDF-1.4 smoke")], { type: "application/pdf" }), "smoke.pdf");
+  form.append("file", new Blob([Buffer.from(`%PDF-1.4 ${smokeRunId}`)], { type: "application/pdf" }), `${smokeRunId}.pdf`);
   const response = await fetch(url, { method: "POST", headers: { cookie: sessionCookie }, body: form });
   record({ status: response.ok ? "PASS" : "FAIL", name: "document upload", url, reason: `HTTP ${response.status}` });
+  if (!response.ok) return;
+  const data = (await response.json()) as { item?: { id: string } };
+  const documentId = data.item?.id;
+  if (!documentId) {
+    record({ status: "FAIL", name: "document upload parse", url, reason: "No document id returned" });
+    return;
+  }
+  await checkGet("document download", `/api/projects/${projectId}/documents/${documentId}/download`, [200]);
+
+  const versionForm = new FormData();
+  versionForm.append("file", new Blob([Buffer.from(`%PDF-1.4 ${smokeRunId} v2`)], { type: "application/pdf" }), `${smokeRunId}-v2.pdf`);
+  const versionUrl = `${appUrl}/api/projects/${projectId}/documents/${documentId}/versions`;
+  const versionResponse = await fetch(versionUrl, { method: "POST", headers: { cookie: sessionCookie }, body: versionForm });
+  record({ status: versionResponse.ok ? "PASS" : "FAIL", name: "document version upload", url: versionUrl, reason: `HTTP ${versionResponse.status}` });
+  if (versionResponse.ok) {
+    const versionData = (await versionResponse.json()) as { item?: { id: string } };
+    if (versionData.item?.id) await checkGet("document version download", `/api/projects/${projectId}/documents/${documentId}/versions/${versionData.item.id}/download`, [200]);
+  }
+
+  const deleteUrl = `${appUrl}/api/projects/${projectId}/documents/${documentId}`;
+  const deleteResponse = await fetch(deleteUrl, { method: "DELETE", headers: { cookie: sessionCookie } });
+  record({ status: deleteResponse.ok ? "PASS" : "FAIL", name: "document delete", url: deleteUrl, reason: `HTTP ${deleteResponse.status}` });
 }
 
 async function main() {
@@ -84,6 +109,9 @@ async function main() {
   await checkGet("project page", `/projects/${projectId}`, [200, 500]);
   await checkGet("projects api", "/api/projects", [200, 403, 503]);
   await checkGet("audit api", `/api/projects/${projectId}/audit`, [200, 403, 503]);
+  await checkGet("documents api", `/api/projects/${projectId}/documents`, [200, 403, 503]);
+  await checkGet("project export", `/api/projects/${projectId}/export/json`, [200, 403, 503]);
+  await checkGet("audit export", `/api/projects/${projectId}/audit/export/json`, [200, 403, 503]);
   record({ status: "SKIP", name: "excel preview", url: `${appUrl}/api/projects/${projectId}/imports/budget/preview`, reason: "read-only smoke; run import fixture flow separately" });
   await optionalDocumentUpload();
 

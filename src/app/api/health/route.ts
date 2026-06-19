@@ -7,9 +7,12 @@ export async function GET() {
   const env = getEnvStatus();
   let database: "ok" | "unavailable" = "ok";
   let storageWritable = false;
+  let migrations: { status: "ok"; count: number } | { status: "unavailable" } = { status: "unavailable" };
 
   try {
     await prisma.$queryRaw`SELECT 1`;
+    const rows = await prisma.$queryRaw<Array<{ count: bigint }>>`SELECT COUNT(*)::bigint AS count FROM "_prisma_migrations" WHERE finished_at IS NOT NULL`;
+    migrations = { status: "ok", count: Number(rows[0]?.count ?? 0) };
   } catch {
     database = "unavailable";
   }
@@ -29,6 +32,7 @@ export async function GET() {
       ai: { configured: env.aiConfigured },
       auth: { required: env.authRequired, mode: env.authMode },
       storage: { provider: env.uploadProvider, writable: storageWritable, maxUploadMb: env.maxUploadMb },
+      migrations,
       version: { appVersion: env.appVersion, gitSha: env.gitSha ?? null },
       missing: env.missing,
       timestamp: new Date().toISOString()

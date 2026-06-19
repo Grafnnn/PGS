@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { AlertTriangle, Bot, ClipboardList, FileText, Landmark, Package, Pencil, Plus, Send, Table2, TimerReset, Trash2, Truck } from "lucide-react";
 import { budgetTotals, deriveAutoRisks, financeTotals, materialTotals, money, percent, workTotals } from "@/lib/calculations";
 import type { ImportPreview } from "@/lib/excel/import-types";
-import type { AuditEvent, BudgetItem, DailyReport, Material, Payment, ProcurementRequest, ProjectDocument, Risk, ScheduleItem } from "@/lib/types";
+import type { AuditEvent, BudgetItem, DailyReport, Material, Payment, ProcurementRequest, ProjectDocument, ProjectDocumentVersion, Risk, ScheduleItem } from "@/lib/types";
 
 type Bundle = {
   project: {
@@ -63,6 +63,7 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
   const [editingSchedule, setEditingSchedule] = useState<ScheduleItem | null>(null);
   const [auditEvents, setAuditEvents] = useState<AuditEvent[]>([]);
   const [documents, setDocuments] = useState<ProjectDocument[]>([]);
+  const [documentVersions, setDocumentVersions] = useState<Record<string, ProjectDocumentVersion[]>>({});
   const [documentFile, setDocumentFile] = useState<File | null>(null);
   const [documentCategory, setDocumentCategory] = useState("прочее");
 
@@ -214,6 +215,44 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
       setDocuments((current) => current.filter((item) => item.id !== document.id));
     } catch (deleteError) {
       setError(deleteError instanceof Error ? deleteError.message : "Ошибка удаления документа.");
+    } finally {
+      setSaving("");
+    }
+  }
+
+  async function loadDocumentVersions(document: ProjectDocument) {
+    try {
+      const response = await fetch(`/api/projects/${initialBundle.project.id}/documents/${document.id}/versions`);
+      const data = (await response.json()) as { items?: ProjectDocumentVersion[]; error?: string };
+      if (!response.ok) throw new Error(data.error ?? "Не удалось загрузить версии.");
+      setDocumentVersions((current) => ({ ...current, [document.id]: data.items ?? [] }));
+    } catch (versionError) {
+      setError(versionError instanceof Error ? versionError.message : "Ошибка загрузки версий.");
+    }
+  }
+
+  async function uploadDocumentVersion(document: ProjectDocument, file: File) {
+    setSaving("document-version");
+    setError("");
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const response = await fetch(`/api/projects/${initialBundle.project.id}/documents/${document.id}/versions`, {
+        method: "POST",
+        body: formData
+      });
+      const data = (await response.json()) as { item?: ProjectDocumentVersion; error?: string };
+      if (!response.ok || !data.item) throw new Error(data.error ?? "Не удалось загрузить версию.");
+      setDocuments((current) =>
+        current.map((item) =>
+          item.id === document.id
+            ? { ...item, version: data.item!.versionNumber, fileName: data.item!.fileName, mimeType: data.item!.mimeType, sizeBytes: data.item!.sizeBytes, uploadedAt: data.item!.createdAt }
+            : item
+        )
+      );
+      await loadDocumentVersions(document);
+    } catch (versionError) {
+      setError(versionError instanceof Error ? versionError.message : "Ошибка загрузки версии.");
     } finally {
       setSaving("");
     }
@@ -580,6 +619,13 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
           <DocumentTable
             items={documents}
             projectId={initialBundle.project.id}
+            versions={documentVersions}
+            onLoadVersions={(document) => {
+              void loadDocumentVersions(document);
+            }}
+            onUploadVersion={(document, file) => {
+              void uploadDocumentVersion(document, file);
+            }}
             onDelete={(document) => {
               void deleteDocument(document);
             }}
@@ -589,6 +635,14 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
 
       {activeTab === "История" && (
         <Panel title="Журнал изменений" icon={<ClipboardList size={18} />}>
+          <div className="toolbar">
+            <a className="button secondary" href={`/api/projects/${initialBundle.project.id}/export/json`}>
+              Экспорт проекта JSON
+            </a>
+            <a className="button secondary" href={`/api/projects/${initialBundle.project.id}/audit/export/json`}>
+              Экспорт истории JSON
+            </a>
+          </div>
           <AuditTable items={auditEvents} />
         </Panel>
       )}
@@ -1304,23 +1358,53 @@ function AuditTable({ items }: { items: AuditEvent[] }) {
   );
 }
 
-function DocumentTable({ items, projectId, onDelete }: { items: ProjectDocument[]; projectId: string; onDelete: (document: ProjectDocument) => void }) {
+function DocumentTable({
+  items,
+  projectId,
+  versions,
+  onLoadVersions,
+  onUploadVersion,
+  onDelete
+}: {
+  items: ProjectDocument[];
+  projectId: string;
+  versions: Record<string, ProjectDocumentVersion[]>;
+  onLoadVersions: (document: ProjectDocument) => void;
+  onUploadVersion: (document: ProjectDocument, file: File) => void;
+  onDelete: (document: ProjectDocument) => void;
+}) {
   return (
     <DataTable
-      headers={["Файл", "Категория", "Тип", "Версия", "Размер", "Загрузил", "Дата", ""]}
+      headers={["Файл", "Категория", "Тип", "Версии", "Размер", "Загрузил", "Дата", "Действия"]}
       rows={items.map((item) => [
         <a key="download" className="delta-good" href={`/api/projects/${projectId}/documents/${item.id}/download`}>
           {item.fileName ?? item.title}
         </a>,
         item.category,
         item.previewAvailable ? `${item.mimeType ?? "-"} · preview-ready` : item.mimeType ?? "-",
-        `v${item.version}`,
+        <div key="versions" className="stack">
+          <button className="button secondary" type="button" onClick={() => onLoadVersions(item)}>
+            v{item.version} · История
+          </button>
+          {versions[item.id]?.map((version) => (
+            <a key={version.id} className="muted" href={`/api/projects/${projectId}/documents/${item.id}/versions/${version.id}/download`}>
+              v{version.versionNumber}: {version.fileName}
+            </a>
+          ))}
+        </div>,
         item.sizeBytes ? `${(item.sizeBytes / 1024 / 1024).toFixed(2)} MB` : "-",
         item.author,
         item.uploadedAt ? new Date(item.uploadedAt).toLocaleString("ru-RU") : new Date(item.createdAt).toLocaleString("ru-RU"),
-        <button key="delete" className="icon-button" title="Удалить" type="button" onClick={() => onDelete(item)}>
-          <Trash2 size={16} />
-        </button>
+        <div key="actions" className="stack">
+          <input accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.webp,.zip" type="file" onChange={(event) => {
+            const file = event.target.files?.[0];
+            if (file) onUploadVersion(item, file);
+            event.currentTarget.value = "";
+          }} />
+          <button className="icon-button" title="Удалить" type="button" onClick={() => onDelete(item)}>
+            <Trash2 size={16} />
+          </button>
+        </div>
       ])}
     />
   );

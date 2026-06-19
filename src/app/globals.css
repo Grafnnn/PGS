@@ -358,6 +358,12 @@ textarea {
   margin: 0;
 }
 
+.success-text {
+  color: var(--green);
+  font-size: 13px;
+  margin: 0;
+}
+
 .inline-status {
   align-items: center;
   background: #f8fafc;

@@ -97,8 +97,8 @@ async function main() {
 
   await prisma.projectMember.upsert({
     where: { projectId_userId: { projectId: project.id, userId: user.id } },
-    update: {},
-    create: { projectId: project.id, userId: user.id, role: "owner" }
+    update: { role: "OWNER" },
+    create: { projectId: project.id, userId: user.id, role: "OWNER" }
   });
 
   const sections = Array.from(new Set(demoState.budgetItems.map((item) => item.section)));

@@ -7,21 +7,20 @@ import { readDocumentFile } from "@/lib/storage/documents";
 
 export const runtime = "nodejs";
 
-export async function GET(_request: Request, { params }: { params: { projectId: string; documentId: string } }) {
+export async function GET(_request: Request, { params }: { params: { projectId: string; documentId: string; versionId: string } }) {
   const user = await getCurrentUser();
   if (!(await canProject(user, params.projectId, "view"))) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   try {
-    const document = await prisma.document.findFirst({
-      where: { id: params.documentId, projectId: params.projectId }
+    const version = await prisma.documentVersion.findFirst({
+      where: { id: params.versionId, documentId: params.documentId, document: { projectId: params.projectId } }
     });
-    if (!document?.storageKey) return NextResponse.json({ error: "Document not found" }, { status: 404 });
-
-    const bytes = await readDocumentFile(document.storageKey);
-    const fileName = encodeURIComponent(document.fileName ?? document.title);
+    if (!version) return NextResponse.json({ error: "Document version not found" }, { status: 404 });
+    const fileName = encodeURIComponent(version.fileName);
+    const bytes = await readDocumentFile(version.storageKey);
     return new NextResponse(new Uint8Array(bytes), {
       headers: {
-        "content-type": document.mimeType ?? "application/octet-stream",
+        "content-type": version.mimeType ?? "application/octet-stream",
         "content-disposition": `attachment; filename="${fileName}"; filename*=UTF-8''${fileName}`
       }
     });
@@ -29,6 +28,6 @@ export async function GET(_request: Request, { params }: { params: { projectId: 
     if (error instanceof Prisma.PrismaClientInitializationError) {
       return NextResponse.json({ error: "Database is not available. Start PostgreSQL and run prisma migrate/seed.", detail: error.message }, { status: 503 });
     }
-    return NextResponse.json({ error: "File is missing from local storage" }, { status: 404 });
+    return NextResponse.json({ error: "File is missing from storage" }, { status: 404 });
   }
 }

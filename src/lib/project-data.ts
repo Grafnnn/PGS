@@ -1,4 +1,5 @@
 import { prisma } from "./prisma";
+import type { AppUser } from "./auth/permissions";
 import {
   serializeBudgetItem,
   serializeDailyReport,
@@ -10,8 +11,12 @@ import {
   serializeScheduleItem
 } from "./serializers";
 
-export async function listProjectsFromDb() {
+export async function listProjectsFromDb(user?: AppUser | null) {
   const projects = await prisma.project.findMany({
+    where:
+      user?.authenticated && user.role !== "OWNER" && user.role !== "ADMIN"
+        ? { members: { some: { userId: user.id } } }
+        : undefined,
     orderBy: { createdAt: "asc" }
   });
 

@@ -1,17 +1,20 @@
 import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { writeAudit } from "@/lib/audit";
-import { canDeleteDocument } from "@/lib/auth/permissions";
+import { canProject } from "@/lib/auth/project-permissions";
 import { getCurrentUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { deleteDocumentFile } from "@/lib/storage/documents";
 
 export async function DELETE(_request: Request, { params }: { params: { projectId: string; documentId: string } }) {
   const user = await getCurrentUser();
-  if (!canDeleteDocument(user)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!(await canProject(user, params.projectId, "delete_document"))) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   try {
-    const document = await prisma.document.findFirst({ where: { id: params.documentId, projectId: params.projectId } });
+    const document = await prisma.document.findFirst({
+      where: { id: params.documentId, projectId: params.projectId },
+      include: { versions: { select: { storageKey: true } } }
+    });
     if (!document) return NextResponse.json({ error: "Document not found" }, { status: 404 });
 
     await prisma.$transaction(async (tx) => {
@@ -30,7 +33,10 @@ export async function DELETE(_request: Request, { params }: { params: { projectI
       });
     });
 
-    if (document.storageKey) await deleteDocumentFile(document.storageKey);
+    const keys = Array.from(new Set([document.storageKey, ...document.versions.map((version) => version.storageKey)].filter(Boolean) as string[]));
+    for (const storageKey of keys) {
+      await deleteDocumentFile(storageKey);
+    }
 
     return NextResponse.json({ ok: true, deletedId: params.documentId });
   } catch (error) {

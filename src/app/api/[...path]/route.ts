@@ -4,7 +4,8 @@ import { ZodError } from "zod";
 import { askProjectAssistant, buildProjectContext, localAiFallback } from "@/lib/ai";
 import { writeAudit } from "@/lib/audit";
 import { getCurrentUser } from "@/lib/auth/session";
-import { canDeleteDocument, canDeleteProject, canEditProject, canImportBudget, canViewAudit, canViewProject, type AppUser } from "@/lib/auth/permissions";
+import { canDeleteDocument, canDeleteProject, canEditProject, canViewAudit, canViewProject, type AppUser } from "@/lib/auth/permissions";
+import { canProject, type ProjectAction } from "@/lib/auth/project-permissions";
 import { budgetTotals, deriveAutoRisks, financeTotals, materialTotals, workTotals } from "@/lib/calculations";
 import { demoState } from "@/lib/demo-data";
 import { getDemoContext, getProjectBundleFromDb, listProjectsFromDb } from "@/lib/project-data";
@@ -48,12 +49,14 @@ export async function GET(request: NextRequest, { params }: { params: { path?: s
     }
 
     if (path[0] === "projects" && path.length === 1) {
-      if (!canViewProject(await getCurrentUser())) return json({ error: "Forbidden" }, 403);
-      return json({ projects: await listProjectsFromDb() });
+      const user = await getCurrentUser();
+      if (!canViewProject(user)) return json({ error: "Forbidden" }, 403);
+      return json({ projects: await listProjectsFromDb(user) });
     }
 
     if (path[0] === "projects" && path[1]) {
-      if (!canViewProject(await getCurrentUser())) return json({ error: "Forbidden" }, 403);
+      const user = await getCurrentUser();
+      if (!(await canProject(user, path[1], "view"))) return json({ error: "Forbidden" }, 403);
       const projectId = path[1];
       const resource = path[2];
 
@@ -108,7 +111,7 @@ export async function GET(request: NextRequest, { params }: { params: { path?: s
       }
       if (resource === "audit") {
         const user = await getCurrentUser();
-        if (!canViewAudit(user)) return json({ error: "Forbidden" }, 403);
+        if (!canViewAudit(user) || !(await canProject(user, projectId, "view_audit"))) return json({ error: "Forbidden" }, 403);
         const search = request.nextUrl.searchParams;
         const limit = Math.min(Number(search.get("limit") ?? 50), 100);
         const entityType = search.get("entityType");
@@ -185,7 +188,7 @@ export async function POST(request: NextRequest, { params }: { params: { path?: 
 
       if (resource === "budget" && path[3] === "import") {
         const user = await getCurrentUser();
-        if (!canImportBudget(user)) return json({ error: "Forbidden" }, 403);
+        if (!(await canProject(user, projectId, "import"))) return json({ error: "Forbidden" }, 403);
         return json({
           imported: false,
           recommendations: [
@@ -211,7 +214,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { path?:
   try {
     if (path[0] === "projects" && path[1] && path.length === 2) {
       const user = await getCurrentUser();
-      if (!canEditProject(user)) return json({ error: "Forbidden" }, 403);
+      if (!(await canProject(user, path[1], "edit"))) return json({ error: "Forbidden" }, 403);
       const data = partial(projectSchema).parse(body);
       const project = await prisma.project.update({
         where: { id: path[1] },
@@ -242,7 +245,7 @@ export async function DELETE(_request: NextRequest, { params }: { params: { path
   try {
     if (path[0] === "projects" && path[1] && path.length === 2) {
       const user = await getCurrentUser();
-      if (!canDeleteProject(user)) return json({ error: "Forbidden" }, 403);
+      if (!(await canProject(user, path[1], "delete"))) return json({ error: "Forbidden" }, 403);
       await prisma.project.delete({ where: { id: path[1] } });
       return json({ ok: true, deletedId: path[1] });
     }
@@ -262,7 +265,8 @@ export async function DELETE(_request: NextRequest, { params }: { params: { path
 
 async function createProjectResource(projectId: string, resource: string | undefined, body: unknown) {
   const user = await getCurrentUser();
-  if (!canEditProject(user)) return json({ error: "Forbidden" }, 403);
+  const action: ProjectAction = resource === "documents" ? "upload_document" : "edit";
+  if (!(await canProject(user, projectId, action))) return json({ error: "Forbidden" }, 403);
   const project = await prisma.project.findUnique({ where: { id: projectId }, select: { organizationId: true } });
   if (!project) return json({ error: "Project not found" }, 404);
   const { userId: demoUserId } = await getDemoContext();
@@ -444,7 +448,8 @@ async function createProjectResource(projectId: string, resource: string | undef
 
 async function updateResource(resource: string, id: string, body: unknown) {
   const user = await getCurrentUser();
-  if (!canEditProject(user)) return json({ error: "Forbidden" }, 403);
+  const scopedProjectId = await projectIdForResource(resource, id);
+  if (scopedProjectId ? !(await canProject(user, scopedProjectId, "edit")) : !canEditProject(user)) return json({ error: "Forbidden" }, 403);
   if (resource === "budget") {
     const data = partial(budgetItemSchema).parse(body);
     const item = await prisma.$transaction(async (tx) => {
@@ -565,7 +570,11 @@ async function updateResource(resource: string, id: string, body: unknown) {
 
 async function deleteResource(resource: string, id: string) {
   const user = await getCurrentUser();
-  if (resource === "documents" ? !canDeleteDocument(user) : !canDeleteProject(user)) return json({ error: "Forbidden" }, 403);
+  const scopedProjectId = await projectIdForResource(resource, id);
+  const deleteAction: ProjectAction = resource === "documents" ? "delete_document" : "delete";
+  if (scopedProjectId ? !(await canProject(user, scopedProjectId, deleteAction)) : resource === "documents" ? !canDeleteDocument(user) : !canDeleteProject(user)) {
+    return json({ error: "Forbidden" }, 403);
+  }
   const actor = auditActor(user);
   if (resource === "budget") await deleteWithAudit("budget_item", id, "budgetItem", serializeBudgetItem, actor);
   else if (resource === "schedule") await deleteWithAudit("schedule_item", id, "scheduleItem", serializeScheduleItem, actor);
@@ -619,6 +628,18 @@ function directResource(path: string[]) {
     documents: "documents"
   };
   if (path.length === 2 && aliases[path[0]]) return { resource: aliases[path[0]], id: path[1] };
+  return null;
+}
+
+async function projectIdForResource(resource: string, id: string) {
+  if (resource === "budget") return (await prisma.budgetItem.findUnique({ where: { id }, select: { projectId: true } }))?.projectId ?? null;
+  if (resource === "schedule") return (await prisma.scheduleItem.findUnique({ where: { id }, select: { projectId: true } }))?.projectId ?? null;
+  if (resource === "materials") return (await prisma.material.findUnique({ where: { id }, select: { projectId: true } }))?.projectId ?? null;
+  if (resource === "procurement") return (await prisma.procurementRequest.findUnique({ where: { id }, select: { projectId: true } }))?.projectId ?? null;
+  if (resource === "finance" || resource === "payments") return (await prisma.payment.findUnique({ where: { id }, select: { projectId: true } }))?.projectId ?? null;
+  if (resource === "daily-reports") return (await prisma.dailyReport.findUnique({ where: { id }, select: { projectId: true } }))?.projectId ?? null;
+  if (resource === "risks") return (await prisma.risk.findUnique({ where: { id }, select: { projectId: true } }))?.projectId ?? null;
+  if (resource === "documents") return (await prisma.document.findUnique({ where: { id }, select: { projectId: true } }))?.projectId ?? null;
   return null;
 }
 

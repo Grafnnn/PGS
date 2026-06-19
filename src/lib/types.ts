@@ -176,6 +176,18 @@ export interface ProjectDocument {
   createdAt: string;
 }
 
+export interface ProjectDocumentVersion {
+  id: string;
+  versionNumber: number;
+  fileName: string;
+  mimeType?: string | null;
+  sizeBytes: number;
+  storageKey: string;
+  uploadedByName?: string | null;
+  previewAvailable: boolean;
+  createdAt: string;
+}
+
 export interface DemoState {
   users: User[];
   projects: Project[];
