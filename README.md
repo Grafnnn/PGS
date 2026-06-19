@@ -23,6 +23,8 @@
 - REST-like API routes под `/api/...`.
 - Prisma/PostgreSQL multi-tenant схема.
 - Prisma CRUD API для ключевых сущностей проекта.
+- Excel import preview для ВОР/сметы без автосохранения непроверенных данных.
+- Транзакционный commit импорта в `BudgetSection`, `BudgetItem`, `Material`, `ScheduleItem`.
 - Demo seed для организации “Демо Строй”.
 - SQL migration в `prisma/migrations/20260619183000_v0_2_baseline`.
 - Docker Compose для PostgreSQL + web.
@@ -45,6 +47,9 @@
 - `src/lib/project-data.ts` - чтение project bundle из PostgreSQL.
 - `src/lib/serializers.ts` - преобразование Prisma Decimal/Date в JSON.
 - `src/lib/validation.ts` - серверная валидация входных данных.
+- `src/lib/excel/import-parser.ts` - чтение `.xlsx/.xls` и сбор preview.
+- `src/lib/excel/import-classifier.ts` - deterministic-классификация строк.
+- `src/lib/excel/import-normalizer.ts` - распознавание заголовков, чисел и дат.
 - `src/lib/demo-data.ts` - demo seed для UI/API.
 - `prisma/schema.prisma` - PostgreSQL модель данных.
 - `prisma/seed.ts` - загрузка demo данных в БД.
@@ -134,6 +139,8 @@ Next.js routes имеют префикс `/api`.
 - `PATCH /api/budget/:itemId`
 - `DELETE /api/budget/:itemId`
 - `POST /api/projects/:id/budget/import`
+- `POST /api/projects/:id/imports/budget/preview`
+- `POST /api/projects/:id/imports/budget/commit`
 - `GET /api/projects/:id/schedule`
 - `POST /api/projects/:id/schedule`
 - `PATCH /api/projects/:id/schedule/:itemId`
@@ -200,13 +207,33 @@ AI endpoint собирает контекст проекта:
 
 Если `OPENAI_API_KEY` есть, `/api/projects/project-demo/ai/chat` отправляет контекст в OpenAI. Если ключ отсутствует, endpoint не падает и возвращает локальный fallback с понятной причиной.
 
+## Импорт Excel ВОР / сметы
+
+Вкладка “Бюджет / ВОР” содержит блок импорта:
+
+1. Выберите `.xlsx` или `.xls` файл до 15 MB.
+2. Нажмите “Проверить файл”.
+3. Проверьте preview: разделы, позиции ВОР, материалы, график, warnings/errors и unknown rows.
+4. Отметьте “Я проверил импортируемые данные”.
+5. Нажмите “Сохранить импорт”.
+
+Preview не пишет данные в БД. Commit endpoint принимает только нормализованные preview-данные и пишет их транзакционно. Режимы commit:
+
+- `append` - добавить к текущим данным;
+- `replace_budget` - заменить бюджетные разделы и позиции;
+- `replace_materials` - заменить материалы;
+- `replace_schedule` - заменить график.
+
+AI-классификация для unknown rows пока не вызывается автоматически: импорт работает deterministic-слоем и не зависит от `OPENAI_API_KEY`.
+
 ## Ограничения MVP
 
 - Dashboard, Projects и Project detail читают PostgreSQL через Prisma, с fallback на demo state только когда локальная БД недоступна.
 - Создание бюджетных позиций, работ, материалов, платежей, рапортов и рисков из UI идет через API и сохраняется в PostgreSQL при поднятой БД.
 - Auth пока демонстрационный, без полноценной session/JWT проверки.
 - Файловое хранилище и документы подготовлены структурно, но upload pipeline не реализован.
-- Импорт Excel/PDF реализован как API-заготовка с рекомендациями, без полноценного парсинга.
+- Excel импорт реализован для типовых ВОР/смет; сложные многострочные шапки, объединенные ячейки и нестандартные формы могут потребовать ручной подготовки файла или расширения маппинга.
+- PDF импорт пока не реализован.
 - КС-2/КС-3 заложены как документы/структура, официальные печатные формы не генерируются.
 
 ## Следующий этап

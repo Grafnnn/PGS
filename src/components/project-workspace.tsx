@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { AlertTriangle, Bot, ClipboardList, FileText, Landmark, Package, Plus, Send, Table2, TimerReset, Truck } from "lucide-react";
 import { budgetTotals, deriveAutoRisks, financeTotals, materialTotals, money, percent, workTotals } from "@/lib/calculations";
+import type { ImportPreview } from "@/lib/excel/import-types";
 import type { BudgetItem, DailyReport, Material, Payment, ProcurementRequest, Risk, ScheduleItem } from "@/lib/types";
 
 type Bundle = {
@@ -52,6 +53,10 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
   const [aiLoading, setAiLoading] = useState(false);
   const [saving, setSaving] = useState("");
   const [error, setError] = useState("");
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importPreview, setImportPreview] = useState<ImportPreview | null>(null);
+  const [importConfirmed, setImportConfirmed] = useState(false);
+  const [importMode, setImportMode] = useState<"append" | "replace_budget" | "replace_materials" | "replace_schedule">("append");
 
   const budget = useMemo(() => budgetTotals(initialBundle.project.contractAmount, budgetItems), [budgetItems, initialBundle.project.contractAmount]);
   const works = useMemo(() => workTotals(scheduleItems), [scheduleItems]);
@@ -95,6 +100,70 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
       const message = saveError instanceof Error ? saveError.message : "Ошибка сохранения.";
       setError(message);
       throw saveError;
+    } finally {
+      setSaving("");
+    }
+  }
+
+  async function previewImport() {
+    if (!importFile) {
+      setError("Выберите Excel-файл для импорта.");
+      return;
+    }
+    setSaving("import-preview");
+    setError("");
+    setImportConfirmed(false);
+    try {
+      const formData = new FormData();
+      formData.append("file", importFile);
+      const response = await fetch(`/api/projects/${initialBundle.project.id}/imports/budget/preview`, {
+        method: "POST",
+        body: formData
+      });
+      const data = (await response.json()) as ImportPreview | { error?: string };
+      if (!response.ok && "error" in data) throw new Error(data.error ?? "Не удалось проверить файл.");
+      setImportPreview(data as ImportPreview);
+    } catch (previewError) {
+      setImportPreview(null);
+      setError(previewError instanceof Error ? previewError.message : "Ошибка проверки Excel-файла.");
+    } finally {
+      setSaving("");
+    }
+  }
+
+  async function commitImport() {
+    if (!importPreview || !importConfirmed || importPreview.summary.errors > 0) return;
+    setSaving("import-commit");
+    setError("");
+    try {
+      const response = await fetch(`/api/projects/${initialBundle.project.id}/imports/budget/commit`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mode: importMode,
+          sections: importPreview.sections,
+          budgetItems: importPreview.budgetItems,
+          materials: importPreview.materials,
+          scheduleItems: importPreview.scheduleItems
+        })
+      });
+      const data = (await response.json()) as { ok?: boolean; budgetItems?: BudgetItem[]; materials?: Material[]; scheduleItems?: ScheduleItem[]; error?: string };
+      if (!response.ok || !data.ok) throw new Error(data.error ?? "Не удалось сохранить импорт.");
+
+      if (importMode === "replace_budget") setBudgetItems(data.budgetItems ?? []);
+      else setBudgetItems((current) => [...current, ...(data.budgetItems ?? [])]);
+
+      if (importMode === "replace_materials") setMaterials(data.materials ?? []);
+      else setMaterials((current) => [...current, ...(data.materials ?? [])]);
+
+      if (importMode === "replace_schedule") setScheduleItems(data.scheduleItems ?? []);
+      else setScheduleItems((current) => [...current, ...(data.scheduleItems ?? [])]);
+
+      setImportConfirmed(false);
+      setError("");
+      setAiAnswer(`Импорт сохранен: ВОР ${data.budgetItems?.length ?? 0}, материалы ${data.materials?.length ?? 0}, график ${data.scheduleItems?.length ?? 0}.`);
+    } catch (commitError) {
+      setError(commitError instanceof Error ? commitError.message : "Ошибка сохранения импорта.");
     } finally {
       setSaving("");
     }
@@ -172,6 +241,22 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
 
       {activeTab === "Бюджет / ВОР" && (
         <Panel title="Бюджет, ВОР и классификация затрат" icon={<Table2 size={18} />}>
+          <ImportPanel
+            file={importFile}
+            mode={importMode}
+            preview={importPreview}
+            confirmed={importConfirmed}
+            loading={saving === "import-preview" || saving === "import-commit"}
+            onFileChange={(file) => {
+              setImportFile(file);
+              setImportPreview(null);
+              setImportConfirmed(false);
+            }}
+            onModeChange={setImportMode}
+            onPreview={() => void previewImport()}
+            onConfirmChange={setImportConfirmed}
+            onCommit={() => void commitImport()}
+          />
           <BudgetForm
             onAdd={async (item) => {
               const saved = await createResource<BudgetItem>("budget", {
@@ -342,6 +427,141 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
         </Panel>
       )}
     </main>
+  );
+}
+
+function ImportPanel({
+  file,
+  mode,
+  preview,
+  confirmed,
+  loading,
+  onFileChange,
+  onModeChange,
+  onPreview,
+  onConfirmChange,
+  onCommit
+}: {
+  file: File | null;
+  mode: "append" | "replace_budget" | "replace_materials" | "replace_schedule";
+  preview: ImportPreview | null;
+  confirmed: boolean;
+  loading: boolean;
+  onFileChange: (file: File | null) => void;
+  onModeChange: (mode: "append" | "replace_budget" | "replace_materials" | "replace_schedule") => void;
+  onPreview: () => void;
+  onConfirmChange: (confirmed: boolean) => void;
+  onCommit: () => void;
+}) {
+  const canCommit = Boolean(preview && preview.summary.errors === 0 && confirmed && !loading);
+
+  return (
+    <div className="panel stack" style={{ background: "#f8fafc" }}>
+      <div className="toolbar" style={{ marginBottom: 0 }}>
+        <div>
+          <h3>Импорт Excel ВОР / сметы</h3>
+          <p className="muted">Файл сначала проверяется и показывается в preview. Запись в БД происходит только после подтверждения.</p>
+        </div>
+      </div>
+      <div className="form-grid">
+        <label>
+          Excel-файл
+          <input accept=".xlsx,.xls" type="file" onChange={(event) => onFileChange(event.target.files?.[0] ?? null)} />
+        </label>
+        <label>
+          Режим сохранения
+          <select value={mode} onChange={(event) => onModeChange(event.target.value as typeof mode)}>
+            <option value="append">Добавить к текущим данным</option>
+            <option value="replace_budget">Заменить только бюджет</option>
+            <option value="replace_materials">Заменить только материалы</option>
+            <option value="replace_schedule">Заменить только график</option>
+          </select>
+        </label>
+        <label>
+          &nbsp;
+          <button className="button secondary" disabled={!file || loading} onClick={onPreview} type="button">
+            Проверить файл
+          </button>
+        </label>
+        <label>
+          &nbsp;
+          <button className="button primary" disabled={!canCommit} onClick={onCommit} type="button">
+            Сохранить импорт
+          </button>
+        </label>
+      </div>
+
+      {file && <p className="muted">Выбран файл: {file.name}</p>}
+
+      {preview && (
+        <div className="stack">
+          <div className="grid grid-4">
+            <Kpi title="Разделы" value={String(preview.summary.sections)} />
+            <Kpi title="ВОР" value={String(preview.summary.budgetItems)} />
+            <Kpi title="Материалы" value={String(preview.summary.materials)} />
+            <Kpi title="Неизвестные" value={String(preview.summary.unknownRows)} tone={preview.summary.unknownRows ? "warn" : undefined} />
+          </div>
+          <div className="grid grid-3">
+            <Kpi title="График" value={String(preview.summary.scheduleItems)} />
+            <Kpi title="Ошибки" value={String(preview.summary.errors)} tone={preview.summary.errors ? "bad" : "good"} />
+            <Kpi title="Предупреждения" value={String(preview.summary.warnings)} tone={preview.summary.warnings ? "warn" : undefined} />
+          </div>
+
+          {(preview.errors.length > 0 || preview.warnings.length > 0) && (
+            <div className="grid grid-2">
+              <MessageList title="Ошибки" items={preview.errors} tone="bad" />
+              <MessageList title="Предупреждения" items={preview.warnings} tone="warn" />
+            </div>
+          )}
+
+          <PreviewTable
+            title="Распознанные позиции"
+            headers={["Лист", "Строка", "Раздел", "Наименование", "Тип", "Кол-во", "Цена"]}
+            rows={preview.budgetItems.slice(0, 12).map((item) => [
+              item.sheetName,
+              item.rowNumber,
+              item.section,
+              item.name,
+              item.kind,
+              `${item.qty} ${item.unit}`,
+              money(item.plannedUnitPrice)
+            ])}
+          />
+          <PreviewTable
+            title="Неизвестные строки"
+            headers={["Лист", "Строка", "Причина", "Значения"]}
+            rows={preview.unknownRows.slice(0, 8).map((item) => [item.sheetName, item.rowNumber, item.reason, item.values.join(" | ")])}
+          />
+          <label style={{ alignItems: "center", display: "flex", gridTemplateColumns: "auto 1fr", gap: 8 }}>
+            <input checked={confirmed} onChange={(event) => onConfirmChange(event.target.checked)} style={{ width: "auto" }} type="checkbox" />
+            Я проверил импортируемые данные
+          </label>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MessageList({ title, items, tone }: { title: string; items: string[]; tone: "bad" | "warn" }) {
+  if (!items.length) return <div className="panel muted">{title}: нет</div>;
+  return (
+    <div className="panel">
+      <h3 className={tone === "bad" ? "delta-bad" : "delta-warn"}>{title}</h3>
+      <ul>
+        {items.map((item) => (
+          <li key={item}>{item}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function PreviewTable({ title, headers, rows }: { title: string; headers: string[]; rows: Array<Array<React.ReactNode>> }) {
+  return (
+    <div className="stack">
+      <h3>{title}</h3>
+      {rows.length ? <DataTable headers={headers} rows={rows} /> : <p className="muted">Нет строк для отображения.</p>}
+    </div>
   );
 }
 
