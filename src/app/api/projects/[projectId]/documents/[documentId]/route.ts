@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { writeAudit } from "@/lib/audit";
-import { canDeleteProject } from "@/lib/auth/permissions";
+import { canDeleteDocument } from "@/lib/auth/permissions";
 import { getCurrentUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { deleteDocumentFile } from "@/lib/storage/documents";
 
 export async function DELETE(_request: Request, { params }: { params: { projectId: string; documentId: string } }) {
-  const user = getCurrentUser();
-  if (!canDeleteProject(user)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const user = await getCurrentUser();
+  if (!canDeleteDocument(user)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   try {
     const document = await prisma.document.findFirst({ where: { id: params.documentId, projectId: params.projectId } });
@@ -19,8 +19,9 @@ export async function DELETE(_request: Request, { params }: { params: { projectI
       await writeAudit(tx, {
         organizationId: document.organizationId,
         projectId: document.projectId,
-        actorId: user?.id,
+        actorId: user?.authenticated ? user.id : null,
         actorName: user?.name ?? "local-user",
+        actorEmail: user?.email ?? null,
         entity: "document",
         entityId: document.id,
         action: "delete",

@@ -7,5 +7,5 @@ coverage
 .env.local
 uploads
 .data
-storage
+/storage
 *.log

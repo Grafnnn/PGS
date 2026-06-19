@@ -1,21 +1,29 @@
 "use client";
 
-import { FormEvent, useState } from "react";
-import { LogIn } from "lucide-react";
+import { FormEvent, useEffect, useState } from "react";
+import { LogIn, LogOut } from "lucide-react";
 
-const roleOptions = [
-  { value: "owner", label: "Собственник / OWNER" },
-  { value: "admin", label: "Администратор / ADMIN" },
-  { value: "manager", label: "Руководитель проекта / MANAGER" },
-  { value: "viewer", label: "Наблюдатель / VIEWER" }
-];
+type CurrentUser = {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  authenticated: boolean;
+};
 
 export default function LoginPage() {
   const [email, setEmail] = useState("demo@pgs.local");
   const [password, setPassword] = useState("demo-password-change-me");
-  const [role, setRole] = useState("owner");
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    void fetch("/api/auth/me")
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data: { user?: CurrentUser } | null) => setCurrentUser(data?.user ?? null))
+      .catch(() => setCurrentUser(null));
+  }, []);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -25,7 +33,7 @@ export default function LoginPage() {
       const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, role })
+        body: JSON.stringify({ email, password })
       });
       const data = (await response.json()) as { error?: string };
       if (!response.ok) throw new Error(data.error ?? "Не удалось войти.");
@@ -37,14 +45,36 @@ export default function LoginPage() {
     }
   }
 
+  async function logout() {
+    setLoading(true);
+    setError("");
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+      setCurrentUser(null);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <main className="login-page">
       <form className="login-box panel stack" onSubmit={(event) => void submit(event)}>
         <div>
           <div className="eyebrow">Локальный MVP</div>
           <h1>Вход в систему управления строительством</h1>
-          <p className="muted">Демо-доступ использует безопасную cookie-сессию и роли для проверки staging-поведения.</p>
+          <p className="muted">Доступ использует DB-backed session cookie. Роль назначается пользователю на сервере.</p>
         </div>
+        {currentUser && (
+          <div className="inline-status">
+            <span>
+              {currentUser.name} · {currentUser.role}
+            </span>
+            <button className="button secondary" disabled={loading} type="button" onClick={() => void logout()}>
+              <LogOut size={16} />
+              Выйти
+            </button>
+          </div>
+        )}
         <label>
           Email
           <input value={email} onChange={(event) => setEmail(event.target.value)} />
@@ -52,16 +82,6 @@ export default function LoginPage() {
         <label>
           Пароль
           <input value={password} type="password" onChange={(event) => setPassword(event.target.value)} />
-        </label>
-        <label>
-          Роль
-          <select value={role} onChange={(event) => setRole(event.target.value)}>
-            {roleOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
         </label>
         {error && <p className="error-text">{error}</p>}
         <button className="button primary" disabled={loading} type="submit">

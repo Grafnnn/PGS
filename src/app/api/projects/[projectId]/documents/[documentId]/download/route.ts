@@ -8,7 +8,7 @@ import { readDocumentFile } from "@/lib/storage/documents";
 export const runtime = "nodejs";
 
 export async function GET(_request: Request, { params }: { params: { projectId: string; documentId: string } }) {
-  const user = getCurrentUser();
+  const user = await getCurrentUser();
   if (!canViewProject(user)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   try {

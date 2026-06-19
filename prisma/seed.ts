@@ -1,23 +1,60 @@
 import { PrismaClient } from "@prisma/client";
 import { demoState } from "../src/lib/demo-data";
+import { hashPassword } from "../src/lib/auth/password";
+import { getEnv } from "../src/lib/env";
 
 const prisma = new PrismaClient();
 
 async function main() {
+  const env = getEnv();
+  const production = env.NODE_ENV === "production";
   const org = await prisma.organization.upsert({
     where: { id: "org-demo" },
     update: {},
     create: { id: "org-demo", name: "Демо Строй" }
   });
 
+  const firstAdminEmail = env.FIRST_ADMIN_EMAIL ?? (production ? undefined : "admin@pgs.local");
+  const firstAdminPassword = env.FIRST_ADMIN_PASSWORD ?? (production ? undefined : "pgs-admin-local");
+  const firstAdminName = env.FIRST_ADMIN_NAME ?? "PGS Admin";
+  if (firstAdminEmail && firstAdminPassword) {
+    const firstAdmin = await prisma.user.upsert({
+      where: { email: firstAdminEmail.toLowerCase() },
+      update: {
+        name: firstAdminName,
+        passwordHash: await hashPassword(firstAdminPassword),
+        appRole: "OWNER",
+        isActive: true
+      },
+      create: {
+        name: firstAdminName,
+        email: firstAdminEmail.toLowerCase(),
+        passwordHash: await hashPassword(firstAdminPassword),
+        appRole: "OWNER",
+        isActive: true
+      }
+    });
+    await prisma.membership.upsert({
+      where: { organizationId_userId: { organizationId: org.id, userId: firstAdmin.id } },
+      update: { role: "owner" },
+      create: { organizationId: org.id, userId: firstAdmin.id, role: "owner" }
+    });
+  }
+
   const user = await prisma.user.upsert({
     where: { email: "demo@pgs.local" },
-    update: {},
+    update: {
+      passwordHash: await hashPassword(env.DEMO_ADMIN_PASSWORD),
+      appRole: "OWNER",
+      isActive: true
+    },
     create: {
       id: "user-demo",
       name: "Алексей Орлов",
       email: "demo@pgs.local",
-      passwordHash: "$2a$10$local-demo-password-hash"
+      passwordHash: await hashPassword(env.DEMO_ADMIN_PASSWORD),
+      appRole: "OWNER",
+      isActive: true
     }
   });
 

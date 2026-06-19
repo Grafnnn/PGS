@@ -7,6 +7,7 @@ export interface AuditInput {
   projectId?: string | null;
   actorId?: string | null;
   actorName?: string | null;
+  actorEmail?: string | null;
   entity: string;
   entityId: string;
   action: "create" | "update" | "delete" | "import_commit";
@@ -47,6 +48,7 @@ export async function writeAudit(client: TxClient, input: AuditInput) {
       projectId: input.projectId ?? null,
       actorId: input.actorId ?? null,
       actorName: input.actorName ?? "local-user",
+      actorEmail: input.actorEmail ?? null,
       entity: input.entity,
       entityId: input.entityId,
       action: input.action,

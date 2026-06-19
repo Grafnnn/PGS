@@ -13,12 +13,13 @@ export async function POST(request: NextRequest, { params }: { params: { project
   const body = await request.json().catch(() => ({}));
 
   try {
-    const user = getCurrentUser();
+    const user = await getCurrentUser();
     if (!canImportBudget(user)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
     const payload = importPreviewCommitSchema.parse(body);
-    const { userId } = await getDemoContext();
+    const { userId: demoUserId } = await getDemoContext();
+    const userId = user?.authenticated ? user.id : demoUserId;
     const project = await prisma.project.findUnique({
       where: { id: params.projectId },
       select: { id: true, organizationId: true }
@@ -124,8 +125,9 @@ export async function POST(request: NextRequest, { params }: { params: { project
       await writeAudit(tx, {
         organizationId: project.organizationId,
         projectId: project.id,
-        actorId: userId,
-        actorName: "local-user",
+        actorId: user?.authenticated ? user.id : null,
+        actorName: user?.name ?? "local-user",
+        actorEmail: user?.email ?? null,
         entity: "excel_import",
         entityId: `import-${Date.now()}`,
         action: "import_commit",

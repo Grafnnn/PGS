@@ -358,6 +358,17 @@ textarea {
   margin: 0;
 }
 
+.inline-status {
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  padding: 10px;
+}
+
 .stack {
   display: grid;
   gap: 14px;

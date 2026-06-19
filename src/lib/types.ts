@@ -150,6 +150,7 @@ export interface AuditEvent {
   id: string;
   projectId?: string | null;
   actorName?: string | null;
+  actorEmail?: string | null;
   entity: string;
   entityId: string;
   action: string;
@@ -168,6 +169,7 @@ export interface ProjectDocument {
   sizeBytes?: number | null;
   storageKey?: string | null;
   uploadedAt?: string | null;
+  previewAvailable?: boolean;
   version: number;
   author: string;
   comment?: string | null;

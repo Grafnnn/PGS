@@ -6,12 +6,12 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { getDemoContext } from "@/lib/project-data";
 import { prisma } from "@/lib/prisma";
 import { serializeDocument } from "@/lib/serializers";
-import { sanitizeFileName, makeStorageKey, saveDocumentFile, validateDocumentUpload } from "@/lib/storage/documents";
+import { sanitizeFileName, makeStorageKey, saveDocumentFile, validateDocumentUpload, hasPreviewMetadata } from "@/lib/storage/documents";
 
 export const runtime = "nodejs";
 
 export async function POST(request: NextRequest, { params }: { params: { projectId: string } }) {
-  const user = getCurrentUser();
+  const user = await getCurrentUser();
   if (!canUploadDocument(user)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const formData = await request.formData();
@@ -26,7 +26,8 @@ export async function POST(request: NextRequest, { params }: { params: { project
   try {
     const project = await prisma.project.findUnique({ where: { id: params.projectId }, select: { organizationId: true } });
     if (!project) return NextResponse.json({ error: "Project not found" }, { status: 404 });
-    const { userId } = await getDemoContext();
+    const { userId: demoUserId } = await getDemoContext();
+    const userId = user?.authenticated ? user.id : demoUserId;
     const storageKey = makeStorageKey(params.projectId, safeName);
     const bytes = Buffer.from(await file.arrayBuffer());
     await saveDocumentFile(storageKey, bytes);
@@ -47,11 +48,25 @@ export async function POST(request: NextRequest, { params }: { params: { project
           createdBy: userId
         }
       });
+      await tx.documentVersion.create({
+        data: {
+          documentId: created.id,
+          versionNumber: 1,
+          fileName: safeName,
+          mimeType: file.type,
+          sizeBytes: file.size,
+          storageKey,
+          uploadedById: user?.authenticated ? user.id : null,
+          uploadedByName: user?.name ?? "local-user",
+          previewAvailable: hasPreviewMetadata(file.type)
+        }
+      });
       await writeAudit(tx, {
         organizationId: project.organizationId,
         projectId: params.projectId,
-        actorId: user?.id ?? userId,
+        actorId: user?.authenticated ? user.id : null,
         actorName: user?.name ?? "local-user",
+        actorEmail: user?.email ?? null,
         entity: "document",
         entityId: created.id,
         action: "create",

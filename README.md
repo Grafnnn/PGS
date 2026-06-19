@@ -5,10 +5,11 @@
 ## Что реализовано
 
 - Next.js / React / TypeScript приложение.
-- Демо-вход: `demo@pgs.local` / `demo-password-change-me`.
+- DB-backed auth: bcrypt password hashes, opaque session cookie, server-side sessions.
+- First-admin bootstrap через `FIRST_ADMIN_EMAIL`, `FIRST_ADMIN_PASSWORD`, `FIRST_ADMIN_NAME`.
 - Дашборд компании и список проектов.
 - Health endpoint `/api/health` для проверки env, PostgreSQL, AI и storage-настроек.
-- Демо-auth с cookie-сессией и ролями `OWNER`, `ADMIN`, `MANAGER`, `VIEWER`.
+- Роли `OWNER`, `ADMIN`, `MANAGER`, `VIEWER` с централизованной проверкой permissions.
 - Карточка проекта с вкладками:
   - Обзор;
   - Бюджет / ВОР;
@@ -29,11 +30,11 @@
 - Транзакционный commit импорта в `BudgetSection`, `BudgetItem`, `Material`, `ScheduleItem`.
 - Inline edit/delete для ВОР, материалов и графика.
 - Audit trail для импорта и ключевых CRUD-операций.
-- Local document upload/download/delete с метаданными в PostgreSQL и файлами в `UPLOAD_DIR`.
+- Local document upload/download/delete через storage adapter, метаданные и `DocumentVersion` в PostgreSQL.
 - Demo seed для организации “Демо Строй”.
 - SQL migration в `prisma/migrations/20260619183000_v0_2_baseline`.
 - Docker Compose для PostgreSQL + web.
-- OpenAI API key сохранен локально в `.env.local` как `OPENAI_API_KEY`.
+- OpenAI API key берется только из env и не коммитится.
 
 ## Архитектура
 
@@ -47,10 +48,13 @@
 - `src/components/project-workspace.tsx` - основной рабочий интерфейс объекта.
 - `src/app/api/[...path]/route.ts` - API endpoints с Prisma CRUD и Zod-валидацией.
 - `src/app/api/health/route.ts` - staging health check.
-- `src/app/api/auth/login/route.ts` - демо-login с cookie-сессией.
+- `src/app/api/auth/login/route.ts` - DB-backed login с server-side session.
 - `src/app/api/projects/[projectId]/documents` - upload/download/delete документов.
 - `src/lib/auth/permissions.ts` - базовая модель ролей и прав.
+- `src/lib/auth/session.ts` - opaque session tokens и DB session lookup.
+- `src/lib/auth/password.ts` - bcrypt hash/verify.
 - `src/lib/env.ts` - централизованная валидация env.
+- `src/lib/storage` - local/S3-ready storage adapter.
 - `src/lib/calculations.ts` - расчетный слой.
 - `src/lib/ai.ts` - AI context builder и OpenAI вызов.
 - `src/lib/prisma.ts` - Prisma Client singleton.
@@ -105,9 +109,12 @@ SESSION_SECRET="change-me-before-staging"
 DEMO_ADMIN_EMAIL="demo@pgs.local"
 DEMO_ADMIN_PASSWORD="demo-password-change-me"
 OPENAI_API_KEY=""
-UPLOAD_DIR="./uploads"
+UPLOAD_DIR="./storage/uploads"
 MAX_UPLOAD_MB="50"
 UPLOAD_STORAGE_PROVIDER="local"
+FIRST_ADMIN_EMAIL="admin@pgs.local"
+FIRST_ADMIN_PASSWORD="pgs-admin-local"
+FIRST_ADMIN_NAME="PGS Admin"
 ```
 
 `.env.local` не коммитится.
@@ -117,9 +124,40 @@ UPLOAD_STORAGE_PROVIDER="local"
 - `NODE_ENV=production`;
 - `AUTH_REQUIRED=true`;
 - `SESSION_SECRET` задан длинным случайным значением;
+- `FIRST_ADMIN_EMAIL` и `FIRST_ADMIN_PASSWORD` заданы для первого bootstrap, затем пароль нужно сменить/убрать из env;
 - `DATABASE_URL` указывает на live PostgreSQL;
 - `UPLOAD_STORAGE_PROVIDER=local` допустим только для VPS/volume, для serverless нужен S3-compatible storage;
 - `OPENAI_API_KEY` задается только если нужны AI endpoints.
+
+## Auth, Sessions и First Admin
+
+v0.6 использует DB-backed auth:
+
+- пароль хранится только как bcrypt hash в `users.password_hash`;
+- cookie `pgs_session` содержит только случайный opaque token;
+- в таблице `sessions` хранится SHA-256 hash token, `expires_at`, `revoked_at`, user agent и IP;
+- logout отзывает session и очищает cookie;
+- `/api/auth/me` читает session и возвращает текущего пользователя без `passwordHash`.
+
+Seed создает первого OWNER:
+
+- если заданы `FIRST_ADMIN_EMAIL` и `FIRST_ADMIN_PASSWORD`, используется эта пара;
+- в dev, если они не заданы, создается local-only `admin@pgs.local` / `pgs-admin-local`;
+- в production небезопасный пароль автоматически не создается.
+
+Также seed обновляет demo-пользователя `demo@pgs.local` с паролем из `DEMO_ADMIN_PASSWORD`, чтобы локальный сценарий оставался удобным.
+
+## Roles и Permissions
+
+Роли приложения хранятся в `users.app_role`:
+
+- `OWNER` - все действия;
+- `ADMIN` - все операции по проектам, без будущих owner-only системных действий;
+- `MANAGER` - редактирование данных проекта, Excel import, upload документов, просмотр audit;
+- `VIEWER` - read-only, скачивание документов и просмотр audit;
+- anonymous - нет доступа при `AUTH_REQUIRED=true`; local fallback только при `AUTH_REQUIRED=false`.
+
+Все write/import/upload/delete endpoints проходят через `src/lib/auth/permissions.ts`.
 
 ## PostgreSQL, миграции и seed
 
@@ -158,6 +196,7 @@ pnpm db:down
 pnpm db:reset
 pnpm db:seed
 pnpm import:fixture
+pnpm smoke:staging
 ```
 
 ## API endpoints
@@ -241,6 +280,7 @@ npx prisma validate
 pnpm test
 pnpm lint
 pnpm build
+pnpm smoke:staging
 ```
 
 Health check:
@@ -250,6 +290,43 @@ curl -i http://localhost:3000/api/health
 ```
 
 При недоступной БД endpoint возвращает `503` и JSON со статусом `degraded`, не ломая приложение.
+
+Health response показывает:
+
+- `status`: `ok` или `degraded`;
+- `database`: `ok` или `unavailable`;
+- `auth.required` и `auth.mode`;
+- `storage.provider`, `storage.writable`, `storage.maxUploadMb`;
+- `ai.configured`;
+- `version.appVersion` и `version.gitSha`, если `GIT_SHA` задан;
+- `missing` для обязательных production/staging env.
+
+AI key, `DATABASE_URL`, `SESSION_SECRET`, S3 secrets и абсолютный upload path не раскрываются.
+
+## Staging Smoke Test
+
+Smoke script запускается командой:
+
+```bash
+APP_URL=http://127.0.0.1:3000 pnpm smoke:staging
+```
+
+Опционально для auth:
+
+```bash
+APP_URL=https://staging.example.com \
+SMOKE_EMAIL=admin@pgs.local \
+SMOKE_PASSWORD=pgs-admin-local \
+pnpm smoke:staging
+```
+
+По умолчанию smoke не мутирует production/staging данные. Для локальной проверки upload можно явно включить:
+
+```bash
+SMOKE_ALLOW_MUTATION=true SMOKE_EMAIL=admin@pgs.local SMOKE_PASSWORD=pgs-admin-local pnpm smoke:staging
+```
+
+Вывод имеет статусы `PASS`, `FAIL`, `SKIP`; любой `FAIL` завершает процесс с non-zero exit code.
 
 ## AI-помощник
 
@@ -307,9 +384,14 @@ Audit trail пишет последние изменения по проекту
 
 ## Документы и файловое хранилище
 
-Для dev-режима документы хранятся в `UPLOAD_DIR` (`./uploads`), а в PostgreSQL остаются только метаданные: категория, название, путь, имя файла, mime type, размер, storage key, версия и автор.
+Для dev-режима документы хранятся в `UPLOAD_DIR` (`./storage/uploads`), а в PostgreSQL остаются только метаданные: категория, название, путь, имя файла, mime type, размер, storage key, версия и автор.
 
-Для production нужен S3-compatible storage. Рекомендуемые категории:
+Storage providers:
+
+- `UPLOAD_STORAGE_PROVIDER=local` - полностью работает, требует persistent disk/volume;
+- `UPLOAD_STORAGE_PROVIDER=s3` - интерфейс подготовлен, в v0.6 возвращает clear not implemented/configured error без внешних вызовов.
+
+Для production/serverless нужен S3-compatible storage adapter. Рекомендуемые категории:
 
 - договоры;
 - сметы;
@@ -320,7 +402,7 @@ Audit trail пишет последние изменения по проекту
 - фотофиксация;
 - счета и платежные документы.
 
-Уже включены whitelist расширений, базовая проверка MIME/размера, backend-проверка прав и audit log. Ограничения для следующего этапа: S3 adapter, антивирусная проверка или asynchronous scan pipeline, версии документов и preview.
+Уже включены whitelist расширений, базовая проверка MIME/размера, backend-проверка прав, audit log, server-generated storage key, path traversal protection и `DocumentVersion` для первой версии файла. Для PDF/images выставляется preview-ready metadata, но встроенный preview viewer пока не реализован.
 
 ## Production deployment notes
 
@@ -335,30 +417,37 @@ Production checklist:
 - `DATABASE_URL` задан;
 - `AUTH_REQUIRED=true`;
 - `SESSION_SECRET` задан;
+- `FIRST_ADMIN_EMAIL` задан для bootstrap;
+- `FIRST_ADMIN_PASSWORD` задан только на время bootstrap и затем ротирован/убран;
 - `OPENAI_API_KEY` задан только если AI endpoints нужны;
 - `NODE_ENV=production`;
 - migrations применены;
 - demo seed выключен или ограничен demo-only;
 - storage strategy для документов определена, uploads не лежат в git;
+- `UPLOAD_STORAGE_PROVIDER` выбран;
+- local uploads имеют persistent disk; Vercel/serverless использует внешний S3-compatible storage;
+- S3 env vars заданы, если используется S3 adapter;
+- `MAX_UPLOAD_MB` задан;
 - PostgreSQL backups включены;
 - HTTPS включен;
 - `/api/health` возвращает `200 ok`;
+- `pnpm smoke:staging` выполнен;
 - роли проверены: `VIEWER` не может писать, `MANAGER` может вести проект, `OWNER/ADMIN` могут удалять.
 
 ## Ограничения MVP
 
 - Dashboard, Projects и Project detail читают PostgreSQL через Prisma, с fallback на demo state только когда локальная БД недоступна.
 - Создание бюджетных позиций, работ, материалов, платежей, рапортов и рисков из UI идет через API и сохраняется в PostgreSQL при поднятой БД.
-- Auth пока демонстрационный: cookie-сессия с ролью, без полноценной таблицы sessions/JWT/password hash flow.
-- Файловое хранилище реализовано локально, production S3 adapter пока описан архитектурно.
+- Auth уже DB-backed, но без UI управления пользователями, reset password и invite flow.
+- Файловое хранилище реализовано локально через adapter; production S3 adapter пока placeholder без внешних вызовов.
 - Excel импорт реализован для типовых ВОР/смет; сложные многострочные шапки, объединенные ячейки и нестандартные формы могут потребовать ручной подготовки файла или расширения маппинга.
 - PDF импорт пока не реализован.
 - КС-2/КС-3 заложены как документы/структура, официальные печатные формы не генерируются.
 
 ## Следующий этап
 
-- Добавить реальные sessions/JWT, reset password и управление пользователями.
-- Реализовать S3-compatible storage adapter.
+- Добавить UI управления пользователями, invite/reset password и project-level permissions.
+- Реализовать полноценный S3-compatible storage adapter.
 - Проверить live Excel import на реальной локальной PostgreSQL.
 - Расширить ПТО/КС закрытие и approval workflow.
 - Добавить миграции CI/CD и production deploy profile.

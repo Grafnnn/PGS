@@ -1307,13 +1307,14 @@ function AuditTable({ items }: { items: AuditEvent[] }) {
 function DocumentTable({ items, projectId, onDelete }: { items: ProjectDocument[]; projectId: string; onDelete: (document: ProjectDocument) => void }) {
   return (
     <DataTable
-      headers={["Файл", "Категория", "Тип", "Размер", "Загрузил", "Дата", ""]}
+      headers={["Файл", "Категория", "Тип", "Версия", "Размер", "Загрузил", "Дата", ""]}
       rows={items.map((item) => [
         <a key="download" className="delta-good" href={`/api/projects/${projectId}/documents/${item.id}/download`}>
           {item.fileName ?? item.title}
         </a>,
         item.category,
-        item.mimeType ?? "-",
+        item.previewAvailable ? `${item.mimeType ?? "-"} · preview-ready` : item.mimeType ?? "-",
+        `v${item.version}`,
         item.sizeBytes ? `${(item.sizeBytes / 1024 / 1024).toFixed(2)} MB` : "-",
         item.author,
         item.uploadedAt ? new Date(item.uploadedAt).toLocaleString("ru-RU") : new Date(item.createdAt).toLocaleString("ru-RU"),
