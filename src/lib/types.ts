@@ -146,6 +146,17 @@ export interface AiMessage {
   createdAt: string;
 }
 
+export interface AuditEvent {
+  id: string;
+  projectId?: string | null;
+  actorName?: string | null;
+  entity: string;
+  entityId: string;
+  action: string;
+  summary?: string | null;
+  createdAt: string;
+}
+
 export interface DemoState {
   users: User[];
   projects: Project[];

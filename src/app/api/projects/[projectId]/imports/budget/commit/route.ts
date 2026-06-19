@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { ZodError } from "zod";
+import { writeAudit } from "@/lib/audit";
 import { importPreviewCommitSchema } from "@/lib/excel/import-types";
 import { getDemoContext } from "@/lib/project-data";
 import { prisma } from "@/lib/prisma";
@@ -113,6 +114,23 @@ export async function POST(request: NextRequest, { params }: { params: { project
           })
         )
       );
+
+      await writeAudit(tx, {
+        organizationId: project.organizationId,
+        projectId: project.id,
+        actorId: userId,
+        actorName: "local-user",
+        entity: "excel_import",
+        entityId: `import-${Date.now()}`,
+        action: "import_commit",
+        summary: `Excel import saved: budget ${budgetItems.length}, materials ${materials.length}, schedule ${scheduleItems.length}, mode ${payload.mode}`,
+        after: {
+          mode: payload.mode,
+          budgetItems: budgetItems.length,
+          materials: materials.length,
+          scheduleItems: scheduleItems.length
+        }
+      });
 
       return {
         budgetItems: budgetItems.map(serializeBudgetItem),

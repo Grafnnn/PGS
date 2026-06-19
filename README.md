@@ -25,6 +25,8 @@
 - Prisma CRUD API для ключевых сущностей проекта.
 - Excel import preview для ВОР/сметы без автосохранения непроверенных данных.
 - Транзакционный commit импорта в `BudgetSection`, `BudgetItem`, `Material`, `ScheduleItem`.
+- Inline edit/delete для ВОР, материалов и графика.
+- Audit trail для импорта и ключевых CRUD-операций.
 - Demo seed для организации “Демо Строй”.
 - SQL migration в `prisma/migrations/20260619183000_v0_2_baseline`.
 - Docker Compose для PostgreSQL + web.
@@ -47,6 +49,7 @@
 - `src/lib/project-data.ts` - чтение project bundle из PostgreSQL.
 - `src/lib/serializers.ts` - преобразование Prisma Decimal/Date в JSON.
 - `src/lib/validation.ts` - серверная валидация входных данных.
+- `src/lib/audit.ts` - безопасная запись журнала изменений.
 - `src/lib/excel/import-parser.ts` - чтение `.xlsx/.xls` и сбор preview.
 - `src/lib/excel/import-classifier.ts` - deterministic-классификация строк.
 - `src/lib/excel/import-normalizer.ts` - распознавание заголовков, чисел и дат.
@@ -59,8 +62,13 @@
 В этой desktop-сессии Node.js доступен через bundled runtime. Если в обычном терминале установлен Node.js 20+, можно использовать стандартные команды:
 
 ```bash
-npm install
-npm run dev
+pnpm install
+cp .env.example .env.local
+pnpm db:up
+pnpm prisma:generate
+pnpm prisma:migrate
+pnpm prisma:seed
+pnpm dev
 ```
 
 Если используете bundled pnpm из Codex:
@@ -82,9 +90,10 @@ http://localhost:3000
 Минимум для локального запуска UI:
 
 ```bash
-OPENAI_API_KEY="..."
-DATABASE_URL="postgresql://pgs:pgs@localhost:5432/pgs?schema=public"
+DATABASE_URL="postgresql://pgs:pgs_local_password@localhost:5432/pgs_local?schema=public"
 NEXTAUTH_SECRET="change-me-in-local-dev"
+OPENAI_API_KEY=""
+UPLOAD_DIR="./uploads"
 ```
 
 `.env.local` не коммитится.
@@ -94,7 +103,7 @@ NEXTAUTH_SECRET="change-me-in-local-dev"
 Запуск БД:
 
 ```bash
-docker compose up db
+pnpm db:up
 ```
 
 Миграции и seed:
@@ -116,7 +125,16 @@ pnpm prisma:studio
 Если PostgreSQL уже запущен отдельно, достаточно чтобы `DATABASE_URL` указывал на него. Для текущего локального профиля используется:
 
 ```text
-postgresql://pgs:pgs@localhost:5432/pgs?schema=public
+postgresql://pgs:pgs_local_password@localhost:5432/pgs_local?schema=public
+```
+
+Дополнительные команды:
+
+```bash
+pnpm db:down
+pnpm db:reset
+pnpm db:seed
+pnpm import:fixture
 ```
 
 ## API endpoints
@@ -170,6 +188,7 @@ Next.js routes имеют префикс `/api`.
 - `POST /api/projects/:id/documents`
 - `PATCH /api/projects/:id/documents/:documentId`
 - `DELETE /api/projects/:id/documents/:documentId`
+- `GET /api/projects/:id/audit`
 - `POST /api/projects/:id/ai/chat`
 - `POST /api/projects/:id/ai/summary`
 - `POST /api/projects/:id/ai/analyze-budget`
@@ -226,6 +245,65 @@ Preview не пишет данные в БД. Commit endpoint принимает
 
 AI-классификация для unknown rows пока не вызывается автоматически: импорт работает deterministic-слоем и не зависит от `OPENAI_API_KEY`.
 
+Для генерации безопасного synthetic Excel-файла:
+
+```bash
+pnpm import:fixture -- /tmp/pgs-budget-import-demo.xlsx
+```
+
+Этот файл не является пользовательским документом и не коммитится.
+
+## Журнал изменений
+
+Audit trail пишет последние изменения по проекту:
+
+- Excel commit;
+- создание/редактирование/удаление ВОР;
+- создание/редактирование/удаление материалов;
+- создание/редактирование/удаление графика;
+- создание/редактирование/удаление рисков;
+- создание/редактирование/удаление платежей.
+
+В карточке проекта есть вкладка “История”, которая читает `GET /api/projects/:id/audit` и показывает последние 50 событий.
+
+## Документы и файловое хранилище
+
+Для dev-режима документы должны храниться в `UPLOAD_DIR` (`./uploads`), а в PostgreSQL остаются только метаданные: категория, название, путь, имя файла, mime type, размер, storage key, версия и автор.
+
+Для production нужен S3-compatible storage. Рекомендуемые категории:
+
+- договоры;
+- сметы;
+- ВОР;
+- исполнительная документация;
+- КС-2/КС-3;
+- чертежи;
+- фотофиксация;
+- счета и платежные документы.
+
+Ограничения для следующего этапа: whitelist типов файлов, лимит размера, проверка прав доступа, антивирусная проверка или asynchronous scan pipeline.
+
+## Production deployment notes
+
+Проект не деплоится автоматически. Варианты:
+
+- Render: web service + managed PostgreSQL. Env: `DATABASE_URL`, `NEXTAUTH_SECRET`, `OPENAI_API_KEY` при использовании AI, `UPLOAD_DIR` или S3 env. Команды: `pnpm install`, `pnpm prisma:generate`, `pnpm build`, start `pnpm start`. Миграции запускать отдельным one-off job.
+- Vercel + managed PostgreSQL: подключить PostgreSQL provider, установить env, выполнить `pnpm prisma:migrate` из CI/локально перед production traffic. Документы хранить в S3-compatible storage, не на ephemeral FS.
+- Docker VPS: `docker compose up --build`, production `DATABASE_URL` на managed или локальный PostgreSQL, HTTPS через reverse proxy, backups volume/database.
+
+Production checklist:
+
+- `DATABASE_URL` задан;
+- `NEXTAUTH_SECRET` задан;
+- `OPENAI_API_KEY` задан только если AI endpoints нужны;
+- `NODE_ENV=production`;
+- migrations применены;
+- demo seed выключен или ограничен demo-only;
+- storage strategy для документов определена;
+- PostgreSQL backups включены;
+- HTTPS включен;
+- auth/roles реализованы перед реальными пользователями.
+
 ## Ограничения MVP
 
 - Dashboard, Projects и Project detail читают PostgreSQL через Prisma, с fallback на demo state только когда локальная БД недоступна.
@@ -238,9 +316,8 @@ AI-классификация для unknown rows пока не вызывает
 
 ## Следующий этап
 
-- Подключить редактирование/удаление к UI-кнопкам для всех таблиц.
 - Добавить реальные sessions/JWT и backend authorization checks.
 - Реализовать upload файлов в `uploads` и S3-compatible storage.
-- Добавить CSV/XLSX import pipeline.
+- Проверить live Excel import на реальной локальной PostgreSQL.
 - Расширить ПТО/КС закрытие и approval workflow.
 - Добавить миграции CI/CD и production deploy profile.

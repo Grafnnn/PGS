@@ -1,10 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { AlertTriangle, Bot, ClipboardList, FileText, Landmark, Package, Plus, Send, Table2, TimerReset, Truck } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { AlertTriangle, Bot, ClipboardList, FileText, Landmark, Package, Pencil, Plus, Send, Table2, TimerReset, Trash2, Truck } from "lucide-react";
 import { budgetTotals, deriveAutoRisks, financeTotals, materialTotals, money, percent, workTotals } from "@/lib/calculations";
 import type { ImportPreview } from "@/lib/excel/import-types";
-import type { BudgetItem, DailyReport, Material, Payment, ProcurementRequest, Risk, ScheduleItem } from "@/lib/types";
+import type { AuditEvent, BudgetItem, DailyReport, Material, Payment, ProcurementRequest, Risk, ScheduleItem } from "@/lib/types";
 
 type Bundle = {
   project: {
@@ -37,6 +37,7 @@ const tabs = [
   "Рапорты",
   "Риски",
   "Документы",
+  "История",
   "AI-помощник"
 ];
 
@@ -57,12 +58,31 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
   const [importPreview, setImportPreview] = useState<ImportPreview | null>(null);
   const [importConfirmed, setImportConfirmed] = useState(false);
   const [importMode, setImportMode] = useState<"append" | "replace_budget" | "replace_materials" | "replace_schedule">("append");
+  const [editingBudget, setEditingBudget] = useState<BudgetItem | null>(null);
+  const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
+  const [editingSchedule, setEditingSchedule] = useState<ScheduleItem | null>(null);
+  const [auditEvents, setAuditEvents] = useState<AuditEvent[]>([]);
 
   const budget = useMemo(() => budgetTotals(initialBundle.project.contractAmount, budgetItems), [budgetItems, initialBundle.project.contractAmount]);
   const works = useMemo(() => workTotals(scheduleItems), [scheduleItems]);
   const materialStats = useMemo(() => materialTotals(materials), [materials]);
   const finance = useMemo(() => financeTotals(payments), [payments]);
   const allRisks = useMemo(() => [...risks, ...deriveAutoRisks(scheduleItems, materials, payments)], [risks, scheduleItems, materials, payments]);
+
+  const loadAudit = useCallback(async () => {
+    try {
+      const response = await fetch(`/api/projects/${initialBundle.project.id}/audit`);
+      const data = (await response.json()) as { items?: AuditEvent[] };
+      if (response.ok) setAuditEvents(data.items ?? []);
+    } catch {
+      setAuditEvents([]);
+    }
+  }, [initialBundle.project.id]);
+
+  useEffect(() => {
+    if (activeTab !== "История") return;
+    void loadAudit();
+  }, [activeTab, loadAudit]);
 
   async function askAi(prompt = aiPrompt) {
     setAiLoading(true);
@@ -100,6 +120,41 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
       const message = saveError instanceof Error ? saveError.message : "Ошибка сохранения.";
       setError(message);
       throw saveError;
+    } finally {
+      setSaving("");
+    }
+  }
+
+  async function updateResource<T>(resource: string, id: string, payload: unknown) {
+    setSaving(resource);
+    setError("");
+    try {
+      const response = await fetch(`/api/${resource}/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      const data = (await response.json()) as { item?: T; error?: string };
+      if (!response.ok || !data.item) throw new Error(data.error ?? "Не удалось обновить запись.");
+      return data.item;
+    } catch (updateError) {
+      setError(updateError instanceof Error ? updateError.message : "Ошибка обновления.");
+      throw updateError;
+    } finally {
+      setSaving("");
+    }
+  }
+
+  async function deleteResource(resource: string, id: string) {
+    setSaving(resource);
+    setError("");
+    try {
+      const response = await fetch(`/api/${resource}/${id}`, { method: "DELETE" });
+      const data = (await response.json()) as { ok?: boolean; error?: string };
+      if (!response.ok || !data.ok) throw new Error(data.error ?? "Не удалось удалить запись.");
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : "Ошибка удаления.");
+      throw deleteError;
     } finally {
       setSaving("");
     }
@@ -268,7 +323,25 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
               setBudgetItems((current) => [...current, saved]);
             }}
           />
-          <BudgetTable items={budgetItems} />
+          {editingBudget && (
+            <BudgetEditForm
+              item={editingBudget}
+              onCancel={() => setEditingBudget(null)}
+              onSave={async (payload) => {
+                const saved = await updateResource<BudgetItem>("budget", editingBudget.id, payload);
+                setBudgetItems((current) => current.map((item) => (item.id === saved.id ? saved : item)));
+                setEditingBudget(null);
+              }}
+            />
+          )}
+          <BudgetTable
+            items={budgetItems}
+            onEdit={setEditingBudget}
+            onDelete={async (item) => {
+              await deleteResource("budget", item.id);
+              setBudgetItems((current) => current.filter((candidate) => candidate.id !== item.id));
+            }}
+          />
         </Panel>
       )}
 
@@ -280,13 +353,49 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
               setScheduleItems((current) => [...current, saved]);
             }}
           />
-          <ScheduleTable items={scheduleItems} />
+          {editingSchedule && (
+            <ScheduleEditForm
+              item={editingSchedule}
+              onCancel={() => setEditingSchedule(null)}
+              onSave={async (payload) => {
+                const saved = await updateResource<ScheduleItem>("schedule", editingSchedule.id, payload);
+                setScheduleItems((current) => current.map((item) => (item.id === saved.id ? saved : item)));
+                setEditingSchedule(null);
+              }}
+            />
+          )}
+          <ScheduleTable
+            items={scheduleItems}
+            onEdit={setEditingSchedule}
+            onDelete={async (item) => {
+              await deleteResource("schedule", item.id);
+              setScheduleItems((current) => current.filter((candidate) => candidate.id !== item.id));
+            }}
+          />
         </Panel>
       )}
 
       {activeTab === "Материалы" && (
         <Panel title="Материалы и снабжение" icon={<Package size={18} />}>
-          <MaterialTable items={materials} />
+          {editingMaterial && (
+            <MaterialEditForm
+              item={editingMaterial}
+              onCancel={() => setEditingMaterial(null)}
+              onSave={async (payload) => {
+                const saved = await updateResource<Material>("materials", editingMaterial.id, payload);
+                setMaterials((current) => current.map((item) => (item.id === saved.id ? saved : item)));
+                setEditingMaterial(null);
+              }}
+            />
+          )}
+          <MaterialTable
+            items={materials}
+            onEdit={setEditingMaterial}
+            onDelete={async (item) => {
+              await deleteResource("materials", item.id);
+              setMaterials((current) => current.filter((candidate) => candidate.id !== item.id));
+            }}
+          />
           <button
             className="button primary"
             style={{ marginTop: 14 }}
@@ -393,6 +502,12 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
               </div>
             ))}
           </div>
+        </Panel>
+      )}
+
+      {activeTab === "История" && (
+        <Panel title="Журнал изменений" icon={<ClipboardList size={18} />}>
+          <AuditTable items={auditEvents} />
         </Panel>
       )}
 
@@ -762,10 +877,215 @@ function PaymentForm({ onAdd }: { onAdd: (payment: Omit<Payment, "id" | "project
   );
 }
 
-function BudgetTable({ items }: { items: BudgetItem[] }) {
+function BudgetEditForm({ item, onSave, onCancel }: { item: BudgetItem; onSave: (payload: Partial<BudgetItem>) => Promise<void>; onCancel: () => void }) {
+  return (
+    <form
+      className="form-grid panel"
+      onSubmit={(event) => {
+        event.preventDefault();
+        const data = new FormData(event.currentTarget);
+        void onSave({
+          name: String(data.get("name") || item.name),
+          unit: String(data.get("unit") || item.unit),
+          qty: Number(data.get("qty") || item.qty),
+          plannedUnitPrice: Number(data.get("plannedUnitPrice") || item.plannedUnitPrice),
+          actualUnitPrice: Number(data.get("actualUnitPrice") || item.actualUnitPrice),
+          forecastUnitPrice: Number(data.get("forecastUnitPrice") || item.forecastUnitPrice)
+        }).catch(() => undefined);
+      }}
+    >
+      <label>
+        Наименование
+        <input name="name" defaultValue={item.name} />
+      </label>
+      <label>
+        Ед.
+        <input name="unit" defaultValue={item.unit} />
+      </label>
+      <label>
+        Кол-во
+        <input name="qty" type="number" step="0.001" defaultValue={item.qty} />
+      </label>
+      <label>
+        Цена план
+        <input name="plannedUnitPrice" type="number" step="0.01" defaultValue={item.plannedUnitPrice} />
+      </label>
+      <label>
+        Цена факт
+        <input name="actualUnitPrice" type="number" step="0.01" defaultValue={item.actualUnitPrice} />
+      </label>
+      <label>
+        Цена прогноз
+        <input name="forecastUnitPrice" type="number" step="0.01" defaultValue={item.forecastUnitPrice} />
+      </label>
+      <label>
+        &nbsp;
+        <button className="button primary" type="submit">Сохранить</button>
+      </label>
+      <label>
+        &nbsp;
+        <button className="button secondary" type="button" onClick={onCancel}>Отмена</button>
+      </label>
+    </form>
+  );
+}
+
+function ScheduleEditForm({ item, onSave, onCancel }: { item: ScheduleItem; onSave: (payload: Partial<ScheduleItem>) => Promise<void>; onCancel: () => void }) {
+  return (
+    <form
+      className="form-grid panel"
+      onSubmit={(event) => {
+        event.preventDefault();
+        const data = new FormData(event.currentTarget);
+        void onSave({
+          name: String(data.get("name") || item.name),
+          owner: String(data.get("owner") || item.owner),
+          startsAt: String(data.get("startsAt") || item.startsAt),
+          endsAt: String(data.get("endsAt") || item.endsAt),
+          plannedQty: Number(data.get("plannedQty") || item.plannedQty),
+          actualQty: Number(data.get("actualQty") || item.actualQty),
+          status: String(data.get("status") || item.status) as ScheduleItem["status"]
+        }).catch(() => undefined);
+      }}
+    >
+      <label>
+        Работа
+        <input name="name" defaultValue={item.name} />
+      </label>
+      <label>
+        Ответственный
+        <input name="owner" defaultValue={item.owner} />
+      </label>
+      <label>
+        Начало
+        <input name="startsAt" type="date" defaultValue={item.startsAt} />
+      </label>
+      <label>
+        Окончание
+        <input name="endsAt" type="date" defaultValue={item.endsAt} />
+      </label>
+      <label>
+        План
+        <input name="plannedQty" type="number" step="0.001" defaultValue={item.plannedQty} />
+      </label>
+      <label>
+        Факт
+        <input name="actualQty" type="number" step="0.001" defaultValue={item.actualQty} />
+      </label>
+      <label>
+        Статус
+        <select name="status" defaultValue={item.status}>
+          <option value="not_started">not_started</option>
+          <option value="in_progress">in_progress</option>
+          <option value="done">done</option>
+          <option value="delayed">delayed</option>
+          <option value="stopped">stopped</option>
+        </select>
+      </label>
+      <label>
+        &nbsp;
+        <button className="button primary" type="submit">Сохранить</button>
+      </label>
+      <label>
+        &nbsp;
+        <button className="button secondary" type="button" onClick={onCancel}>Отмена</button>
+      </label>
+    </form>
+  );
+}
+
+function MaterialEditForm({ item, onSave, onCancel }: { item: Material; onSave: (payload: Partial<Material>) => Promise<void>; onCancel: () => void }) {
+  return (
+    <form
+      className="form-grid panel"
+      onSubmit={(event) => {
+        event.preventDefault();
+        const data = new FormData(event.currentTarget);
+        void onSave({
+          name: String(data.get("name") || item.name),
+          unit: String(data.get("unit") || item.unit),
+          requiredQty: Number(data.get("requiredQty") || item.requiredQty),
+          orderedQty: Number(data.get("orderedQty") || item.orderedQty),
+          deliveredQty: Number(data.get("deliveredQty") || item.deliveredQty),
+          consumedQty: Number(data.get("consumedQty") || item.consumedQty),
+          plannedUnitPrice: Number(data.get("plannedUnitPrice") || item.plannedUnitPrice),
+          actualUnitPrice: Number(data.get("actualUnitPrice") || item.actualUnitPrice),
+          status: String(data.get("status") || item.status) as Material["status"]
+        }).catch(() => undefined);
+      }}
+    >
+      <label>
+        Материал
+        <input name="name" defaultValue={item.name} />
+      </label>
+      <label>
+        Ед.
+        <input name="unit" defaultValue={item.unit} />
+      </label>
+      <label>
+        Потребность
+        <input name="requiredQty" type="number" step="0.001" defaultValue={item.requiredQty} />
+      </label>
+      <label>
+        Заказано
+        <input name="orderedQty" type="number" step="0.001" defaultValue={item.orderedQty} />
+      </label>
+      <label>
+        Доставлено
+        <input name="deliveredQty" type="number" step="0.001" defaultValue={item.deliveredQty} />
+      </label>
+      <label>
+        Списано
+        <input name="consumedQty" type="number" step="0.001" defaultValue={item.consumedQty} />
+      </label>
+      <label>
+        Цена план
+        <input name="plannedUnitPrice" type="number" step="0.01" defaultValue={item.plannedUnitPrice} />
+      </label>
+      <label>
+        Цена факт
+        <input name="actualUnitPrice" type="number" step="0.01" defaultValue={item.actualUnitPrice} />
+      </label>
+      <label>
+        Статус
+        <select name="status" defaultValue={item.status}>
+          <option value="required">required</option>
+          <option value="requested">requested</option>
+          <option value="ordered">ordered</option>
+          <option value="in_transit">in_transit</option>
+          <option value="delivered">delivered</option>
+          <option value="closed">closed</option>
+        </select>
+      </label>
+      <label>
+        &nbsp;
+        <button className="button primary" type="submit">Сохранить</button>
+      </label>
+      <label>
+        &nbsp;
+        <button className="button secondary" type="button" onClick={onCancel}>Отмена</button>
+      </label>
+    </form>
+  );
+}
+
+function RowActions({ onEdit, onDelete }: { onEdit: () => void; onDelete: () => void }) {
+  return (
+    <div style={{ display: "flex", gap: 6 }}>
+      <button className="icon-button" title="Редактировать" type="button" onClick={onEdit}>
+        <Pencil size={16} />
+      </button>
+      <button className="icon-button" title="Удалить" type="button" onClick={onDelete}>
+        <Trash2 size={16} />
+      </button>
+    </div>
+  );
+}
+
+function BudgetTable({ items, onEdit, onDelete }: { items: BudgetItem[]; onEdit: (item: BudgetItem) => void; onDelete: (item: BudgetItem) => void }) {
   return (
     <DataTable
-      headers={["Раздел", "Код", "Наименование", "Тип", "Кол-во", "Цена план", "Цена факт", "Сумма план", "Маржа"]}
+      headers={["Раздел", "Код", "Наименование", "Тип", "Кол-во", "Цена план", "Цена факт", "Сумма план", "Маржа", ""]}
       rows={items.map((item) => [
         item.section,
         item.code,
@@ -775,16 +1095,17 @@ function BudgetTable({ items }: { items: BudgetItem[] }) {
         money(item.plannedUnitPrice),
         money(item.actualUnitPrice),
         money(item.qty * item.plannedUnitPrice),
-        money(item.qty * (item.forecastUnitPrice - item.actualUnitPrice))
+        money(item.qty * (item.forecastUnitPrice - item.actualUnitPrice)),
+        <RowActions key="actions" onEdit={() => onEdit(item)} onDelete={() => onDelete(item)} />
       ])}
     />
   );
 }
 
-function ScheduleTable({ items }: { items: ScheduleItem[] }) {
+function ScheduleTable({ items, onEdit, onDelete }: { items: ScheduleItem[]; onEdit: (item: ScheduleItem) => void; onDelete: (item: ScheduleItem) => void }) {
   return (
     <DataTable
-      headers={["Работа", "Ответственный", "Начало", "Окончание", "План", "Факт", "Выполнение", "Статус"]}
+      headers={["Работа", "Ответственный", "Начало", "Окончание", "План", "Факт", "Выполнение", "Статус", ""]}
       rows={items.map((item) => [
         item.name,
         item.owner,
@@ -793,16 +1114,17 @@ function ScheduleTable({ items }: { items: ScheduleItem[] }) {
         item.plannedQty,
         item.actualQty,
         percent(item.plannedQty ? (item.actualQty / item.plannedQty) * 100 : 0),
-        <span className={`badge ${item.status === "delayed" ? "red" : item.status === "done" ? "green" : "blue"}`} key="status">{item.status}</span>
+        <span className={`badge ${item.status === "delayed" ? "red" : item.status === "done" ? "green" : "blue"}`} key="status">{item.status}</span>,
+        <RowActions key="actions" onEdit={() => onEdit(item)} onDelete={() => onDelete(item)} />
       ])}
     />
   );
 }
 
-function MaterialTable({ items }: { items: Material[] }) {
+function MaterialTable({ items, onEdit, onDelete }: { items: Material[]; onEdit: (item: Material) => void; onDelete: (item: Material) => void }) {
   return (
     <DataTable
-      headers={["Материал", "Потребность", "Заказано", "Доставлено", "Списано", "Цена план/факт", "Поставщик", "Статус"]}
+      headers={["Материал", "Потребность", "Заказано", "Доставлено", "Списано", "Цена план/факт", "Поставщик", "Статус", ""]}
       rows={items.map((item) => [
         item.name,
         `${item.requiredQty} ${item.unit}`,
@@ -811,7 +1133,8 @@ function MaterialTable({ items }: { items: Material[] }) {
         `${item.consumedQty} ${item.unit}`,
         `${money(item.plannedUnitPrice)} / ${money(item.actualUnitPrice)}`,
         item.supplier,
-        <span className={`badge ${item.status === "required" ? "red" : item.status === "delivered" ? "green" : "yellow"}`} key="status">{item.status}</span>
+        <span className={`badge ${item.status === "required" ? "red" : item.status === "delivered" ? "green" : "yellow"}`} key="status">{item.status}</span>,
+        <RowActions key="actions" onEdit={() => onEdit(item)} onDelete={() => onDelete(item)} />
       ])}
     />
   );
@@ -879,6 +1202,21 @@ function RiskTable({ items }: { items: Risk[] }) {
         item.owner,
         item.dueAt,
         <span className={`badge ${item.status === "closed" ? "green" : "gray"}`} key="status">{item.status}</span>
+      ])}
+    />
+  );
+}
+
+function AuditTable({ items }: { items: AuditEvent[] }) {
+  return (
+    <DataTable
+      headers={["Дата", "Действие", "Сущность", "Описание", "Пользователь"]}
+      rows={items.map((item) => [
+        new Date(item.createdAt).toLocaleString("ru-RU"),
+        item.action,
+        item.entity,
+        item.summary ?? item.entityId,
+        item.actorName ?? "local-user"
       ])}
     />
   );

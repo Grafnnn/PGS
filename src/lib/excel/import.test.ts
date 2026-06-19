@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { classifyRow } from "./import-classifier";
 import { buildPreview } from "./import-parser";
 import { detectColumns, normalizeNumber } from "./import-normalizer";
+import { importPreviewCommitSchema } from "./import-types";
 
 describe("excel budget import", () => {
   it("detects common Russian column names", () => {
@@ -75,5 +76,33 @@ describe("excel budget import", () => {
     expect(preview.summary.sections).toBe(1);
     expect(preview.summary.unknownRows).toBe(1);
     expect(preview.summary.warnings).toBe(1);
+  });
+
+  it("validates commit payloads", () => {
+    const parsed = importPreviewCommitSchema.parse({
+      mode: "append",
+      sections: [{ name: "Земляные работы", sheetName: "ВОР", rowNumber: 2 }],
+      budgetItems: [
+        {
+          section: "Земляные работы",
+          code: "1.1",
+          name: "Разработка котлована",
+          unit: "м3",
+          qty: 100,
+          plannedUnitPrice: 650,
+          actualUnitPrice: 650,
+          forecastUnitPrice: 650,
+          kind: "work",
+          source: "Excel import",
+          sheetName: "ВОР",
+          rowNumber: 3
+        }
+      ],
+      materials: [],
+      scheduleItems: []
+    });
+
+    expect(parsed.mode).toBe("append");
+    expect(parsed.budgetItems).toHaveLength(1);
   });
 });

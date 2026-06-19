@@ -16,7 +16,7 @@ export const demoState: DemoState = {
     {
       id: "project-demo",
       organizationId: "org-demo",
-      name: "Демо объект - строительство административного здания",
+      name: "Демо объект: строительство административного корпуса",
       customer: "АО Городская инфраструктура",
       object: "Административное здание",
       address: "Москва, ул. Производственная, 12",
@@ -112,6 +112,62 @@ export const demoState: DemoState = {
       forecastUnitPrice: 1_350_000,
       kind: "overhead",
       source: "Управленческий бюджет"
+    },
+    {
+      id: "b-prep-1",
+      projectId: "project-demo",
+      section: "Подготовительные работы",
+      code: "0.1",
+      name: "Мобилизация строительного городка",
+      unit: "компл.",
+      qty: 1,
+      plannedUnitPrice: 950_000,
+      actualUnitPrice: 920_000,
+      forecastUnitPrice: 950_000,
+      kind: "overhead",
+      source: "Demo fixture"
+    },
+    {
+      id: "b-metal-1",
+      projectId: "project-demo",
+      section: "Металлоконструкции",
+      code: "5.1",
+      name: "Монтаж закладных деталей",
+      unit: "т",
+      qty: 14,
+      plannedUnitPrice: 118_000,
+      actualUnitPrice: 121_000,
+      forecastUnitPrice: 124_000,
+      kind: "work",
+      source: "Demo fixture"
+    },
+    {
+      id: "b-electric-1",
+      projectId: "project-demo",
+      section: "Электрика",
+      code: "7.1",
+      name: "Кабель ВВГнг-LS",
+      unit: "м",
+      qty: 2400,
+      plannedUnitPrice: 240,
+      actualUnitPrice: 255,
+      forecastUnitPrice: 260,
+      kind: "material",
+      source: "Demo fixture"
+    },
+    {
+      id: "b-land-1",
+      projectId: "project-demo",
+      section: "Благоустройство",
+      code: "8.1",
+      name: "Геотекстиль под проезды",
+      unit: "м2",
+      qty: 1800,
+      plannedUnitPrice: 95,
+      actualUnitPrice: 0,
+      forecastUnitPrice: 110,
+      kind: "material",
+      source: "Demo fixture"
     }
   ],
   scheduleItems: [
@@ -172,6 +228,40 @@ export const demoState: DemoState = {
       startsAt: isoShift(55),
       endsAt: isoShift(74),
       plannedQty: 1600,
+      actualQty: 0,
+      status: "not_started"
+    },
+    {
+      id: "s-mobilization",
+      projectId: "project-demo",
+      budgetItemId: "b-prep-1",
+      name: "Мобилизация",
+      owner: "РП",
+      startsAt: isoShift(-10),
+      endsAt: isoShift(-7),
+      plannedQty: 1,
+      actualQty: 1,
+      status: "done"
+    },
+    {
+      id: "s-axes",
+      projectId: "project-demo",
+      name: "Разбивка осей",
+      owner: "Геодезист",
+      startsAt: isoShift(-8),
+      endsAt: isoShift(-6),
+      plannedQty: 1,
+      actualQty: 1,
+      status: "done"
+    },
+    {
+      id: "s-docs",
+      projectId: "project-demo",
+      name: "Исполнительная документация",
+      owner: "ПТО",
+      startsAt: isoShift(20),
+      endsAt: isoShift(90),
+      plannedQty: 1,
       actualQty: 0,
       status: "not_started"
     }
@@ -235,6 +325,36 @@ export const demoState: DemoState = {
       actualUnitPrice: 0,
       supplier: "Не выбран",
       neededAt: isoShift(12),
+      status: "required"
+    },
+    {
+      id: "m-cable",
+      projectId: "project-demo",
+      name: "Кабель ВВГнг-LS",
+      unit: "м",
+      requiredQty: 2400,
+      orderedQty: 0,
+      deliveredQty: 0,
+      consumedQty: 0,
+      plannedUnitPrice: 240,
+      actualUnitPrice: 0,
+      supplier: "Не выбран",
+      neededAt: isoShift(30),
+      status: "required"
+    },
+    {
+      id: "m-geotextile",
+      projectId: "project-demo",
+      name: "Геотекстиль",
+      unit: "м2",
+      requiredQty: 1800,
+      orderedQty: 0,
+      deliveredQty: 0,
+      consumedQty: 0,
+      plannedUnitPrice: 95,
+      actualUnitPrice: 0,
+      supplier: "Не выбран",
+      neededAt: isoShift(50),
       status: "required"
     }
   ],

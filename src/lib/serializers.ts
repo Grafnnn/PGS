@@ -6,6 +6,7 @@ import type {
   Payment as DbPayment,
   ProcurementRequest as DbProcurementRequest,
   ProcurementRequestItem as DbProcurementRequestItem,
+  AuditLog as DbAuditLog,
   Project as DbProject,
   Risk as DbRisk,
   ScheduleItem as DbScheduleItem
@@ -164,6 +165,19 @@ export function serializeDocument(item: DbDocument) {
     version: item.version,
     author: item.author,
     comment: item.comment,
+    createdAt: item.createdAt.toISOString()
+  };
+}
+
+export function serializeAuditLog(item: DbAuditLog) {
+  return {
+    id: item.id,
+    projectId: item.projectId,
+    actorName: item.actorName,
+    entity: item.entity,
+    entityId: item.entityId,
+    action: item.action,
+    summary: item.summary,
     createdAt: item.createdAt.toISOString()
   };
 }

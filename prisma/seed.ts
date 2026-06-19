@@ -30,7 +30,18 @@ async function main() {
   const project = demoState.projects[0];
   await prisma.project.upsert({
     where: { id: project.id },
-    update: {},
+    update: {
+      name: project.name,
+      customer: project.customer,
+      object: project.object,
+      address: project.address,
+      contractAmount: project.contractAmount,
+      vatMode: project.vatMode,
+      startsAt: new Date(project.startsAt),
+      endsAt: new Date(project.endsAt),
+      manager: project.manager,
+      status: project.status
+    },
     create: {
       id: project.id,
       organizationId: org.id,
@@ -185,6 +196,10 @@ async function main() {
       category: "договор",
       title: "Договор подряда - демо",
       filePath: "uploads/demo-contract.pdf",
+      fileName: "demo-contract.pdf",
+      mimeType: "application/pdf",
+      sizeBytes: 0,
+      storageKey: "demo/demo-contract.pdf",
       version: 1,
       author: "Алексей Орлов",
       comment: "Метаданные документа для MVP; файл можно подключить на следующем этапе.",

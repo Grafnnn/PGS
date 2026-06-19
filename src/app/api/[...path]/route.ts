@@ -2,12 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { ZodError } from "zod";
 import { askProjectAssistant, buildProjectContext, localAiFallback } from "@/lib/ai";
+import { writeAudit } from "@/lib/audit";
 import { budgetTotals, deriveAutoRisks, financeTotals, materialTotals, workTotals } from "@/lib/calculations";
 import { demoState } from "@/lib/demo-data";
 import { getDemoContext, getProjectBundleFromDb, listProjectsFromDb } from "@/lib/project-data";
 import { prisma } from "@/lib/prisma";
 import {
   serializeBudgetItem,
+  serializeAuditLog,
   serializeDailyReport,
   serializeDocument,
   serializeMaterial,
@@ -97,6 +99,14 @@ export async function GET(_request: NextRequest, { params }: { params: { path?: 
       }
       if (resource === "ai" && path[3] === "summary") {
         return json(await buildProjectContext(projectId));
+      }
+      if (resource === "audit") {
+        const items = await prisma.auditLog.findMany({
+          where: { projectId },
+          orderBy: { createdAt: "desc" },
+          take: 50
+        });
+        return json({ items: items.map(serializeAuditLog) });
       }
     }
 
@@ -221,43 +231,86 @@ async function createProjectResource(projectId: string, resource: string | undef
   const project = await prisma.project.findUnique({ where: { id: projectId }, select: { organizationId: true } });
   if (!project) return json({ error: "Project not found" }, 404);
   const { userId } = await getDemoContext();
+  const actorName = "local-user";
 
   if (resource === "budget") {
     const data = budgetItemSchema.parse(body);
-    const item = await prisma.budgetItem.create({
-      data: {
-        ...data,
+    const item = await prisma.$transaction(async (tx) => {
+      const created = await tx.budgetItem.create({
+        data: {
+          ...data,
+          organizationId: project.organizationId,
+          projectId,
+          createdBy: userId,
+          actualUnitPrice: new Prisma.Decimal(data.actualUnitPrice ?? data.plannedUnitPrice),
+          forecastUnitPrice: new Prisma.Decimal(data.forecastUnitPrice ?? data.plannedUnitPrice),
+          plannedUnitPrice: new Prisma.Decimal(data.plannedUnitPrice),
+          qty: new Prisma.Decimal(data.qty)
+        }
+      });
+      await writeAudit(tx, {
         organizationId: project.organizationId,
         projectId,
-        createdBy: userId,
-        actualUnitPrice: new Prisma.Decimal(data.actualUnitPrice ?? data.plannedUnitPrice),
-        forecastUnitPrice: new Prisma.Decimal(data.forecastUnitPrice ?? data.plannedUnitPrice),
-        plannedUnitPrice: new Prisma.Decimal(data.plannedUnitPrice),
-        qty: new Prisma.Decimal(data.qty)
-      }
+        actorId: userId,
+        actorName,
+        entity: "budget_item",
+        entityId: created.id,
+        action: "create",
+        summary: `Добавлена позиция ВОР: ${created.name}`,
+        after: serializeBudgetItem(created)
+      });
+      return created;
     });
     return json({ item: serializeBudgetItem(item) }, 201);
   }
 
   if (resource === "schedule") {
     const data = scheduleItemSchema.parse(body);
-    const item = await prisma.scheduleItem.create({
-      data: {
-        ...data,
+    const item = await prisma.$transaction(async (tx) => {
+      const created = await tx.scheduleItem.create({
+        data: {
+          ...data,
+          organizationId: project.organizationId,
+          projectId,
+          createdBy: userId,
+          plannedQty: new Prisma.Decimal(data.plannedQty),
+          actualQty: new Prisma.Decimal(data.actualQty)
+        }
+      });
+      await writeAudit(tx, {
         organizationId: project.organizationId,
         projectId,
-        createdBy: userId,
-        plannedQty: new Prisma.Decimal(data.plannedQty),
-        actualQty: new Prisma.Decimal(data.actualQty)
-      }
+        actorId: userId,
+        actorName,
+        entity: "schedule_item",
+        entityId: created.id,
+        action: "create",
+        summary: `Добавлена работа графика: ${created.name}`,
+        after: serializeScheduleItem(created)
+      });
+      return created;
     });
     return json({ item: serializeScheduleItem(item) }, 201);
   }
 
   if (resource === "materials") {
     const data = materialSchema.parse(body);
-    const item = await prisma.material.create({
-      data: decimalMaterialData({ ...data, organizationId: project.organizationId, projectId, createdBy: userId })
+    const item = await prisma.$transaction(async (tx) => {
+      const created = await tx.material.create({
+        data: decimalMaterialData({ ...data, organizationId: project.organizationId, projectId, createdBy: userId })
+      });
+      await writeAudit(tx, {
+        organizationId: project.organizationId,
+        projectId,
+        actorId: userId,
+        actorName,
+        entity: "material",
+        entityId: created.id,
+        action: "create",
+        summary: `Добавлен материал: ${created.name}`,
+        after: serializeMaterial(created)
+      });
+      return created;
     });
     return json({ item: serializeMaterial(item) }, 201);
   }
@@ -291,14 +344,28 @@ async function createProjectResource(projectId: string, resource: string | undef
 
   if (resource === "finance" || resource === "payments") {
     const data = paymentSchema.parse(body);
-    const item = await prisma.payment.create({
-      data: {
-        ...data,
+    const item = await prisma.$transaction(async (tx) => {
+      const created = await tx.payment.create({
+        data: {
+          ...data,
+          organizationId: project.organizationId,
+          projectId,
+          createdBy: userId,
+          amount: new Prisma.Decimal(data.amount)
+        }
+      });
+      await writeAudit(tx, {
         organizationId: project.organizationId,
         projectId,
-        createdBy: userId,
-        amount: new Prisma.Decimal(data.amount)
-      }
+        actorId: userId,
+        actorName,
+        entity: "payment",
+        entityId: created.id,
+        action: "create",
+        summary: `Добавлен платеж: ${created.title}`,
+        after: serializePayment(created)
+      });
+      return created;
     });
     return json({ item: serializePayment(item) }, 201);
   }
@@ -313,8 +380,22 @@ async function createProjectResource(projectId: string, resource: string | undef
 
   if (resource === "risks") {
     const data = riskSchema.parse(body);
-    const item = await prisma.risk.create({
-      data: { ...data, organizationId: project.organizationId, projectId, createdBy: userId }
+    const item = await prisma.$transaction(async (tx) => {
+      const created = await tx.risk.create({
+        data: { ...data, organizationId: project.organizationId, projectId, createdBy: userId }
+      });
+      await writeAudit(tx, {
+        organizationId: project.organizationId,
+        projectId,
+        actorId: userId,
+        actorName,
+        entity: "risk",
+        entityId: created.id,
+        action: "create",
+        summary: `Добавлен риск: ${created.title}`,
+        after: serializeRisk(created)
+      });
+      return created;
     });
     return json({ item: serializeRisk(item) }, 201);
   }
@@ -333,17 +414,62 @@ async function createProjectResource(projectId: string, resource: string | undef
 async function updateResource(resource: string, id: string, body: unknown) {
   if (resource === "budget") {
     const data = partial(budgetItemSchema).parse(body);
-    const item = await prisma.budgetItem.update({ where: { id }, data: budgetUpdateData(data) });
+    const item = await prisma.$transaction(async (tx) => {
+      const before = await tx.budgetItem.findUniqueOrThrow({ where: { id } });
+      const updated = await tx.budgetItem.update({ where: { id }, data: budgetUpdateData(data) });
+      await writeAudit(tx, {
+        organizationId: updated.organizationId,
+        projectId: updated.projectId,
+        actorName: "local-user",
+        entity: "budget_item",
+        entityId: id,
+        action: "update",
+        summary: `Обновлена позиция ВОР: ${updated.name}`,
+        before: serializeBudgetItem(before),
+        after: serializeBudgetItem(updated)
+      });
+      return updated;
+    });
     return json({ item: serializeBudgetItem(item) });
   }
   if (resource === "schedule") {
     const data = partial(scheduleItemSchema).parse(body);
-    const item = await prisma.scheduleItem.update({ where: { id }, data: scheduleUpdateData(data) });
+    const item = await prisma.$transaction(async (tx) => {
+      const before = await tx.scheduleItem.findUniqueOrThrow({ where: { id } });
+      const updated = await tx.scheduleItem.update({ where: { id }, data: scheduleUpdateData(data) });
+      await writeAudit(tx, {
+        organizationId: updated.organizationId,
+        projectId: updated.projectId,
+        actorName: "local-user",
+        entity: "schedule_item",
+        entityId: id,
+        action: "update",
+        summary: `Обновлена работа графика: ${updated.name}`,
+        before: serializeScheduleItem(before),
+        after: serializeScheduleItem(updated)
+      });
+      return updated;
+    });
     return json({ item: serializeScheduleItem(item) });
   }
   if (resource === "materials") {
     const data = partial(materialSchema).parse(body);
-    const item = await prisma.material.update({ where: { id }, data: materialUpdateData(data) });
+    const item = await prisma.$transaction(async (tx) => {
+      const before = await tx.material.findUniqueOrThrow({ where: { id } });
+      const updated = await tx.material.update({ where: { id }, data: materialUpdateData(data) });
+      await writeAudit(tx, {
+        organizationId: updated.organizationId,
+        projectId: updated.projectId,
+        actorName: "local-user",
+        entity: "material",
+        entityId: id,
+        action: "update",
+        summary: `Обновлен материал: ${updated.name}`,
+        before: serializeMaterial(before),
+        after: serializeMaterial(updated)
+      });
+      return updated;
+    });
     return json({ item: serializeMaterial(item) });
   }
   if (resource === "procurement") {
@@ -353,7 +479,22 @@ async function updateResource(resource: string, id: string, body: unknown) {
   }
   if (resource === "finance" || resource === "payments") {
     const data = partial(paymentSchema).parse(body);
-    const item = await prisma.payment.update({ where: { id }, data: paymentUpdateData(data) });
+    const item = await prisma.$transaction(async (tx) => {
+      const before = await tx.payment.findUniqueOrThrow({ where: { id } });
+      const updated = await tx.payment.update({ where: { id }, data: paymentUpdateData(data) });
+      await writeAudit(tx, {
+        organizationId: updated.organizationId,
+        projectId: updated.projectId,
+        actorName: "local-user",
+        entity: "payment",
+        entityId: id,
+        action: "update",
+        summary: `Обновлен платеж: ${updated.title}`,
+        before: serializePayment(before),
+        after: serializePayment(updated)
+      });
+      return updated;
+    });
     return json({ item: serializePayment(item) });
   }
   if (resource === "daily-reports") {
@@ -363,7 +504,22 @@ async function updateResource(resource: string, id: string, body: unknown) {
   }
   if (resource === "risks") {
     const data = partial(riskSchema).parse(body);
-    const item = await prisma.risk.update({ where: { id }, data });
+    const item = await prisma.$transaction(async (tx) => {
+      const before = await tx.risk.findUniqueOrThrow({ where: { id } });
+      const updated = await tx.risk.update({ where: { id }, data });
+      await writeAudit(tx, {
+        organizationId: updated.organizationId,
+        projectId: updated.projectId,
+        actorName: "local-user",
+        entity: "risk",
+        entityId: id,
+        action: "update",
+        summary: `Обновлен риск: ${updated.title}`,
+        before: serializeRisk(before),
+        after: serializeRisk(updated)
+      });
+      return updated;
+    });
     return json({ item: serializeRisk(item) });
   }
   if (resource === "documents") {
@@ -375,16 +531,42 @@ async function updateResource(resource: string, id: string, body: unknown) {
 }
 
 async function deleteResource(resource: string, id: string) {
-  if (resource === "budget") await prisma.budgetItem.delete({ where: { id } });
-  else if (resource === "schedule") await prisma.scheduleItem.delete({ where: { id } });
-  else if (resource === "materials") await prisma.material.delete({ where: { id } });
+  if (resource === "budget") await deleteWithAudit("budget_item", id, "budgetItem", serializeBudgetItem);
+  else if (resource === "schedule") await deleteWithAudit("schedule_item", id, "scheduleItem", serializeScheduleItem);
+  else if (resource === "materials") await deleteWithAudit("material", id, "material", serializeMaterial);
   else if (resource === "procurement") await prisma.procurementRequest.delete({ where: { id } });
-  else if (resource === "finance" || resource === "payments") await prisma.payment.delete({ where: { id } });
+  else if (resource === "finance" || resource === "payments") await deleteWithAudit("payment", id, "payment", serializePayment);
   else if (resource === "daily-reports") await prisma.dailyReport.delete({ where: { id } });
-  else if (resource === "risks") await prisma.risk.delete({ where: { id } });
+  else if (resource === "risks") await deleteWithAudit("risk", id, "risk", serializeRisk);
   else if (resource === "documents") await prisma.document.delete({ where: { id } });
   else return json({ error: "Endpoint not found", resource }, 404);
   return json({ ok: true, deletedId: id });
+}
+
+async function deleteWithAudit<T extends { organizationId: string; projectId: string }>(
+  entity: string,
+  id: string,
+  model: "budgetItem" | "scheduleItem" | "material" | "payment" | "risk",
+  serializer: (item: T) => unknown
+) {
+  await prisma.$transaction(async (tx) => {
+    const delegate = tx[model] as unknown as {
+      findUniqueOrThrow(args: { where: { id: string } }): Promise<T>;
+      delete(args: { where: { id: string } }): Promise<T>;
+    };
+    const before = await delegate.findUniqueOrThrow({ where: { id } });
+    await delegate.delete({ where: { id } });
+    await writeAudit(tx, {
+      organizationId: before.organizationId,
+      projectId: before.projectId,
+      actorName: "local-user",
+      entity,
+      entityId: id,
+      action: "delete",
+      summary: `Удалено: ${entity}`,
+      before: serializer(before)
+    });
+  });
 }
 
 function directResource(path: string[]) {
