@@ -1,9 +1,10 @@
 import OpenAI from "openai";
 import { budgetTotals, financeTotals, materialTotals, money, percent, workTotals } from "./calculations";
 import { getProjectBundle } from "./demo-data";
+import { getProjectBundleFromDb } from "./project-data";
 
-export function buildProjectContext(projectId: string) {
-  const bundle = getProjectBundle(projectId);
+export async function buildProjectContext(projectId: string) {
+  const bundle = (await getProjectBundleFromDb(projectId).catch(() => null)) ?? getProjectBundle(projectId);
   const budget = budgetTotals(bundle.project.contractAmount, bundle.budgetItems);
   const works = workTotals(bundle.scheduleItems);
   const materials = materialTotals(bundle.materials);
@@ -30,7 +31,29 @@ export function buildProjectContext(projectId: string) {
 }
 
 export function localAiFallback(prompt: string, projectId: string) {
-  const context = buildProjectContext(projectId);
+  const bundle = getProjectBundle(projectId);
+  const budget = budgetTotals(bundle.project.contractAmount, bundle.budgetItems);
+  const works = workTotals(bundle.scheduleItems);
+  const materials = materialTotals(bundle.materials);
+  const finance = financeTotals(bundle.payments);
+  const context = {
+    ...bundle,
+    kpi: {
+      contractAmount: money(bundle.project.contractAmount),
+      plannedCost: money(budget.totalPlannedCost),
+      actualCost: money(budget.totalActualCost),
+      forecastCost: money(budget.totalForecastCost),
+      plannedProfit: money(budget.plannedProfit),
+      forecastProfit: money(budget.forecastProfit),
+      plannedMargin: percent(budget.plannedMarginPercent),
+      forecastMargin: percent(budget.forecastMarginPercent),
+      completion: percent(works.completionPercent),
+      overdueWorks: works.overdueItems.length,
+      materialOverrun: money(materials.materialOverrun),
+      cashGap: money(finance.cashGap),
+      financingNeed: money(finance.financingNeed)
+    }
+  };
   const criticalRisks = context.risks.filter((risk) => risk.priority === "critical" || risk.priority === "high");
   const deficitMaterials = context.materials.filter((material) => material.requiredQty > material.orderedQty);
 
@@ -55,7 +78,7 @@ export async function askProjectAssistant(projectId: string, prompt: string) {
   }
 
   const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-  const context = buildProjectContext(projectId);
+  const context = await buildProjectContext(projectId);
 
   const completion = await client.chat.completions.create({
     model: "gpt-4o-mini",

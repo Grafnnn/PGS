@@ -22,7 +22,9 @@
 - Расчетный слой KPI: себестоимость, прибыль, маржинальность, готовность, материалы, кассовый разрыв, авто-риски.
 - REST-like API routes под `/api/...`.
 - Prisma/PostgreSQL multi-tenant схема.
+- Prisma CRUD API для ключевых сущностей проекта.
 - Demo seed для организации “Демо Строй”.
+- SQL migration в `prisma/migrations/20260619183000_v0_2_baseline`.
 - Docker Compose для PostgreSQL + web.
 - OpenAI API key сохранен локально в `.env.local` как `OPENAI_API_KEY`.
 
@@ -36,9 +38,13 @@
 - `src/app/projects/page.tsx` - список проектов.
 - `src/app/projects/[id]/page.tsx` - карточка проекта.
 - `src/components/project-workspace.tsx` - основной рабочий интерфейс объекта.
-- `src/app/api/[...path]/route.ts` - MVP API endpoints.
+- `src/app/api/[...path]/route.ts` - API endpoints с Prisma CRUD и Zod-валидацией.
 - `src/lib/calculations.ts` - расчетный слой.
 - `src/lib/ai.ts` - AI context builder и OpenAI вызов.
+- `src/lib/prisma.ts` - Prisma Client singleton.
+- `src/lib/project-data.ts` - чтение project bundle из PostgreSQL.
+- `src/lib/serializers.ts` - преобразование Prisma Decimal/Date в JSON.
+- `src/lib/validation.ts` - серверная валидация входных данных.
 - `src/lib/demo-data.ts` - demo seed для UI/API.
 - `prisma/schema.prisma` - PostgreSQL модель данных.
 - `prisma/seed.ts` - загрузка demo данных в БД.
@@ -102,6 +108,12 @@ pnpm prisma:seed
 pnpm prisma:studio
 ```
 
+Если PostgreSQL уже запущен отдельно, достаточно чтобы `DATABASE_URL` указывал на него. Для текущего локального профиля используется:
+
+```text
+postgresql://pgs:pgs@localhost:5432/pgs?schema=public
+```
+
 ## API endpoints
 
 Next.js routes имеют префикс `/api`.
@@ -117,19 +129,40 @@ Next.js routes имеют префикс `/api`.
 - `DELETE /api/projects/:id`
 - `GET /api/projects/:id/budget`
 - `POST /api/projects/:id/budget`
+- `PATCH /api/projects/:id/budget/:itemId`
+- `DELETE /api/projects/:id/budget/:itemId`
+- `PATCH /api/budget/:itemId`
+- `DELETE /api/budget/:itemId`
 - `POST /api/projects/:id/budget/import`
 - `GET /api/projects/:id/schedule`
 - `POST /api/projects/:id/schedule`
+- `PATCH /api/projects/:id/schedule/:itemId`
+- `DELETE /api/projects/:id/schedule/:itemId`
 - `GET /api/projects/:id/materials`
 - `POST /api/projects/:id/materials`
+- `PATCH /api/projects/:id/materials/:materialId`
+- `DELETE /api/projects/:id/materials/:materialId`
 - `GET /api/projects/:id/procurement`
 - `POST /api/projects/:id/procurement`
+- `PATCH /api/projects/:id/procurement/:requestId`
+- `DELETE /api/projects/:id/procurement/:requestId`
 - `GET /api/projects/:id/finance`
+- `POST /api/projects/:id/finance`
 - `POST /api/projects/:id/payments`
+- `PATCH /api/projects/:id/finance/:paymentId`
+- `DELETE /api/projects/:id/finance/:paymentId`
 - `GET /api/projects/:id/daily-reports`
 - `POST /api/projects/:id/daily-reports`
+- `PATCH /api/projects/:id/daily-reports/:reportId`
+- `DELETE /api/projects/:id/daily-reports/:reportId`
 - `GET /api/projects/:id/risks`
 - `POST /api/projects/:id/risks`
+- `PATCH /api/projects/:id/risks/:riskId`
+- `DELETE /api/projects/:id/risks/:riskId`
+- `GET /api/projects/:id/documents`
+- `POST /api/projects/:id/documents`
+- `PATCH /api/projects/:id/documents/:documentId`
+- `DELETE /api/projects/:id/documents/:documentId`
 - `POST /api/projects/:id/ai/chat`
 - `POST /api/projects/:id/ai/summary`
 - `POST /api/projects/:id/ai/analyze-budget`
@@ -169,7 +202,8 @@ AI endpoint собирает контекст проекта:
 
 ## Ограничения MVP
 
-- UI использует demo state и local client-side добавления; запись в PostgreSQL подготовлена схемой и seed, но не подключена к каждому экрану.
+- Dashboard, Projects и Project detail читают PostgreSQL через Prisma, с fallback на demo state только когда локальная БД недоступна.
+- Создание бюджетных позиций, работ, материалов, платежей, рапортов и рисков из UI идет через API и сохраняется в PostgreSQL при поднятой БД.
 - Auth пока демонстрационный, без полноценной session/JWT проверки.
 - Файловое хранилище и документы подготовлены структурно, но upload pipeline не реализован.
 - Импорт Excel/PDF реализован как API-заготовка с рекомендациями, без полноценного парсинга.
@@ -177,7 +211,7 @@ AI endpoint собирает контекст проекта:
 
 ## Следующий этап
 
-- Подключить Prisma queries вместо demo state.
+- Подключить редактирование/удаление к UI-кнопкам для всех таблиц.
 - Добавить реальные sessions/JWT и backend authorization checks.
 - Реализовать upload файлов в `uploads` и S3-compatible storage.
 - Добавить CSV/XLSX import pipeline.

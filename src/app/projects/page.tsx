@@ -2,8 +2,11 @@ import Link from "next/link";
 import { Plus, Search } from "lucide-react";
 import { demoState } from "@/lib/demo-data";
 import { money } from "@/lib/calculations";
+import { listProjectsFromDb } from "@/lib/project-data";
 
-export default function ProjectsPage() {
+export default async function ProjectsPage() {
+  const projects = (await listProjectsFromDb().catch(() => null)) ?? demoState.projects;
+
   return (
     <main className="page">
       <div className="header-row">
@@ -50,7 +53,7 @@ export default function ProjectsPage() {
               </tr>
             </thead>
             <tbody>
-              {demoState.projects.map((project) => (
+              {projects.map((project) => (
                 <tr key={project.id}>
                   <td>
                     <Link href={`/projects/${project.id}`}>

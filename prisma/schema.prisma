@@ -102,6 +102,7 @@ model Project {
   updatedAt       DateTime      @updatedAt @map("updated_at")
   organization    Organization  @relation(fields: [organizationId], references: [id])
   members         ProjectMember[]
+  budgetSections  BudgetSection[]
   budgetItems     BudgetItem[]
   scheduleItems   ScheduleItem[]
   workProgressEntries WorkProgressEntry[]
@@ -126,7 +127,7 @@ model ProjectMember {
   role      UserRole
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
-  project   Project  @relation(fields: [projectId], references: [id])
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
   user      User     @relation(fields: [userId], references: [id])
 
   @@unique([projectId, userId])
@@ -152,9 +153,25 @@ model BudgetItem {
   createdBy       String?    @map("created_by")
   createdAt       DateTime   @default(now()) @map("created_at")
   updatedAt       DateTime   @updatedAt @map("updated_at")
-  project         Project    @relation(fields: [projectId], references: [id])
+  project         Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@map("budget_items")
+}
+
+model BudgetSection {
+  id             String   @id @default(cuid())
+  organizationId String   @map("organization_id")
+  projectId      String   @map("project_id")
+  name           String
+  parentId       String?  @map("parent_id")
+  sortOrder      Int      @default(0) @map("sort_order")
+  createdBy      String?  @map("created_by")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  project        Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, name])
+  @@map("budget_sections")
 }
 
 model ScheduleItem {
@@ -173,7 +190,7 @@ model ScheduleItem {
   createdBy   String?  @map("created_by")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
-  project     Project  @relation(fields: [projectId], references: [id])
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@map("schedule_items")
 }
@@ -192,7 +209,7 @@ model WorkProgressEntry {
   createdBy   String?  @map("created_by")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
-  project     Project  @relation(fields: [projectId], references: [id])
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@map("work_progress_entries")
 }
@@ -215,7 +232,7 @@ model Material {
   createdBy   String?  @map("created_by")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
-  project     Project  @relation(fields: [projectId], references: [id])
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@map("materials")
 }
@@ -230,7 +247,7 @@ model MaterialNeed {
   reason      String
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
-  project     Project  @relation(fields: [projectId], references: [id])
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@map("material_needs")
 }
@@ -247,7 +264,7 @@ model ProcurementRequest {
   createdBy   String?  @map("created_by")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
-  project     Project  @relation(fields: [projectId], references: [id])
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
   items       ProcurementRequestItem[]
 
   @@map("procurement_requests")
@@ -263,7 +280,7 @@ model ProcurementRequestItem {
   comment     String?
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
-  request     ProcurementRequest @relation(fields: [requestId], references: [id])
+  request     ProcurementRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
 
   @@map("procurement_request_items")
 }
@@ -295,7 +312,7 @@ model SupplierQuote {
   comment     String?
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
-  project     Project  @relation(fields: [projectId], references: [id])
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
   supplier    Supplier @relation(fields: [supplierId], references: [id])
 
   @@map("supplier_quotes")
@@ -316,7 +333,7 @@ model Payment {
   createdBy   String?  @map("created_by")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
-  project     Project  @relation(fields: [projectId], references: [id])
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@map("payments")
 }
@@ -334,7 +351,7 @@ model CashflowPeriod {
   cashGap     Decimal  @map("cash_gap") @db.Decimal(14, 2)
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
-  project     Project  @relation(fields: [projectId], references: [id])
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@map("cashflow_periods")
 }
@@ -352,7 +369,7 @@ model Document {
   createdBy   String?  @map("created_by")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
-  project     Project  @relation(fields: [projectId], references: [id])
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@map("documents")
 }
@@ -376,7 +393,7 @@ model DailyReport {
   createdBy   String?  @map("created_by")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
-  project     Project  @relation(fields: [projectId], references: [id])
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@map("daily_reports")
 }
@@ -394,7 +411,7 @@ model Risk {
   createdBy   String?  @map("created_by")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
-  project     Project  @relation(fields: [projectId], references: [id])
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@map("risks")
 }
@@ -407,7 +424,7 @@ model AiMessage {
   prompt      String
   response    String
   createdAt   DateTime @default(now()) @map("created_at")
-  project     Project  @relation(fields: [projectId], references: [id])
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
   user        User     @relation(fields: [userId], references: [id])
 
   @@map("ai_messages")

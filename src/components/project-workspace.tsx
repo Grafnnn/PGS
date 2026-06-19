@@ -50,6 +50,8 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
   const [aiPrompt, setAiPrompt] = useState("Что сейчас самое важное по проекту?");
   const [aiAnswer, setAiAnswer] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
+  const [saving, setSaving] = useState("");
+  const [error, setError] = useState("");
 
   const budget = useMemo(() => budgetTotals(initialBundle.project.contractAmount, budgetItems), [budgetItems, initialBundle.project.contractAmount]);
   const works = useMemo(() => workTotals(scheduleItems), [scheduleItems]);
@@ -72,6 +74,29 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
       setAiAnswer(error instanceof Error ? error.message : "Ошибка AI-запроса.");
     } finally {
       setAiLoading(false);
+    }
+  }
+
+  async function createResource<T>(resource: string, payload: unknown) {
+    setSaving(resource);
+    setError("");
+    try {
+      const response = await fetch(`/api/projects/${initialBundle.project.id}/${resource}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      const data = (await response.json()) as { item?: T; error?: string; issues?: unknown };
+      if (!response.ok || !data.item) {
+        throw new Error(data.error ?? "Не удалось сохранить запись.");
+      }
+      return data.item;
+    } catch (saveError) {
+      const message = saveError instanceof Error ? saveError.message : "Ошибка сохранения.";
+      setError(message);
+      throw saveError;
+    } finally {
+      setSaving("");
     }
   }
 
@@ -102,6 +127,11 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
           </button>
         ))}
       </div>
+      {(saving || error) && (
+        <div className={`panel ${error ? "delta-bad" : "muted"}`} style={{ marginBottom: 16 }}>
+          {error || `Сохраняю: ${saving}`}
+        </div>
+      )}
 
       {activeTab === "Обзор" && (
         <section className="grid grid-2">
@@ -143,19 +173,15 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
       {activeTab === "Бюджет / ВОР" && (
         <Panel title="Бюджет, ВОР и классификация затрат" icon={<Table2 size={18} />}>
           <BudgetForm
-            onAdd={(item) =>
-              setBudgetItems((current) => [
-                ...current,
-                {
-                  id: `b-${Date.now()}`,
-                  projectId: initialBundle.project.id,
-                  source: "Ручной ввод",
-                  actualUnitPrice: item.plannedUnitPrice,
-                  forecastUnitPrice: item.plannedUnitPrice,
-                  ...item
-                }
-              ])
-            }
+            onAdd={async (item) => {
+              const saved = await createResource<BudgetItem>("budget", {
+                source: "Ручной ввод",
+                actualUnitPrice: item.plannedUnitPrice,
+                forecastUnitPrice: item.plannedUnitPrice,
+                ...item
+              });
+              setBudgetItems((current) => [...current, saved]);
+            }}
           />
           <BudgetTable items={budgetItems} />
         </Panel>
@@ -164,12 +190,10 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
       {activeTab === "График" && (
         <Panel title="Календарный график работ" icon={<TimerReset size={18} />}>
           <ScheduleForm
-            onAdd={(item) =>
-              setScheduleItems((current) => [
-                ...current,
-                { id: `s-${Date.now()}`, projectId: initialBundle.project.id, actualQty: 0, status: "not_started", ...item }
-              ])
-            }
+            onAdd={async (item) => {
+              const saved = await createResource<ScheduleItem>("schedule", { actualQty: 0, status: "not_started", ...item });
+              setScheduleItems((current) => [...current, saved]);
+            }}
           />
           <ScheduleTable items={scheduleItems} />
         </Panel>
@@ -181,26 +205,22 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
           <button
             className="button primary"
             style={{ marginTop: 14 }}
-            onClick={() =>
-              setMaterials((current) => [
-                ...current,
-                {
-                  id: `m-${Date.now()}`,
-                  projectId: initialBundle.project.id,
-                  name: "Кабель",
-                  unit: "м",
-                  requiredQty: 500,
-                  orderedQty: 0,
-                  deliveredQty: 0,
-                  consumedQty: 0,
-                  plannedUnitPrice: 240,
-                  actualUnitPrice: 0,
-                  supplier: "Не выбран",
-                  neededAt: new Date().toISOString().slice(0, 10),
-                  status: "required"
-                }
-              ])
-            }
+            onClick={async () => {
+              const saved = await createResource<Material>("materials", {
+                name: "Кабель",
+                unit: "м",
+                requiredQty: 500,
+                orderedQty: 0,
+                deliveredQty: 0,
+                consumedQty: 0,
+                plannedUnitPrice: 240,
+                actualUnitPrice: 0,
+                supplier: "Не выбран",
+                neededAt: new Date().toISOString().slice(0, 10),
+                status: "required"
+              });
+              setMaterials((current) => [...current, saved]);
+            }}
           >
             <Plus size={18} />
             Добавить материал
@@ -217,9 +237,10 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
       {activeTab === "Финансы" && (
         <Panel title="Платежи и кассовый план" icon={<Landmark size={18} />}>
           <PaymentForm
-            onAdd={(payment) =>
-              setPayments((current) => [...current, { id: `pay-${Date.now()}`, projectId: initialBundle.project.id, status: "planned", ...payment }])
-            }
+            onAdd={async (payment) => {
+              const saved = await createResource<Payment>("finance", { status: "planned", ...payment });
+              setPayments((current) => [...current, saved]);
+            }}
           />
           <PaymentTable items={payments} />
         </Panel>
@@ -229,27 +250,23 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
         <Panel title="Ежедневные рапорты стройплощадки" icon={<ClipboardList size={18} />}>
           <button
             className="button primary"
-            onClick={() =>
-              setReports((current) => [
-                ...current,
-                {
-                  id: `dr-${Date.now()}`,
-                  projectId: initialBundle.project.id,
-                  date: new Date().toISOString().slice(0, 10),
-                  author: "Прораб",
-                  weather: "Без осадков",
-                  workers: 18,
-                  engineers: 2,
-                  equipment: "Кран, самосвалы",
-                  completedWorks: "Заполните выполненные объемы",
-                  materialsReceived: "",
-                  materialsConsumed: "",
-                  downtime: "",
-                  issues: "",
-                  status: "draft"
-                }
-              ])
-            }
+            onClick={async () => {
+              const saved = await createResource<DailyReport>("daily-reports", {
+                date: new Date().toISOString().slice(0, 10),
+                author: "Прораб",
+                weather: "Без осадков",
+                workers: 18,
+                engineers: 2,
+                equipment: "Кран, самосвалы",
+                completedWorks: "Заполните выполненные объемы",
+                materialsReceived: "",
+                materialsConsumed: "",
+                downtime: "",
+                issues: "",
+                status: "draft"
+              });
+              setReports((current) => [saved, ...current]);
+            }}
           >
             <Plus size={18} />
             Создать рапорт
@@ -262,21 +279,17 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
         <Panel title="Риски и отклонения" icon={<AlertTriangle size={18} />}>
           <button
             className="button primary"
-            onClick={() =>
-              setRisks((current) => [
-                ...current,
-                {
-                  id: `risk-${Date.now()}`,
-                  projectId: initialBundle.project.id,
-                  title: "Новый риск",
-                  reason: "Опишите причину и требуемое решение.",
-                  priority: "medium",
-                  owner: "РП",
-                  dueAt: new Date().toISOString().slice(0, 10),
-                  status: "open"
-                }
-              ])
-            }
+            onClick={async () => {
+              const saved = await createResource<Risk>("risks", {
+                title: "Новый риск",
+                reason: "Опишите причину и требуемое решение.",
+                priority: "medium",
+                owner: "РП",
+                dueAt: new Date().toISOString().slice(0, 10),
+                status: "open"
+              });
+              setRisks((current) => [...current, saved]);
+            }}
           >
             <Plus size={18} />
             Добавить риск
@@ -353,14 +366,14 @@ function Kpi({ title, value, tone }: { title: string; value: string; tone?: "goo
   );
 }
 
-function BudgetForm({ onAdd }: { onAdd: (item: Omit<BudgetItem, "id" | "projectId" | "source" | "actualUnitPrice" | "forecastUnitPrice">) => void }) {
+function BudgetForm({ onAdd }: { onAdd: (item: Omit<BudgetItem, "id" | "projectId" | "source" | "actualUnitPrice" | "forecastUnitPrice">) => Promise<void> }) {
   return (
     <form
       className="form-grid"
       onSubmit={(event) => {
         event.preventDefault();
         const data = new FormData(event.currentTarget);
-        onAdd({
+        void onAdd({
           section: String(data.get("section") || "Новый раздел"),
           code: String(data.get("code") || "new"),
           name: String(data.get("name") || "Новая позиция"),
@@ -368,7 +381,7 @@ function BudgetForm({ onAdd }: { onAdd: (item: Omit<BudgetItem, "id" | "projectI
           qty: Number(data.get("qty") || 1),
           plannedUnitPrice: Number(data.get("price") || 0),
           kind: String(data.get("kind") || "work") as BudgetItem["kind"]
-        });
+        }).catch(() => undefined);
         event.currentTarget.reset();
       }}
     >
@@ -418,20 +431,20 @@ function BudgetForm({ onAdd }: { onAdd: (item: Omit<BudgetItem, "id" | "projectI
   );
 }
 
-function ScheduleForm({ onAdd }: { onAdd: (item: Omit<ScheduleItem, "id" | "projectId" | "actualQty" | "status">) => void }) {
+function ScheduleForm({ onAdd }: { onAdd: (item: Omit<ScheduleItem, "id" | "projectId" | "actualQty" | "status">) => Promise<void> }) {
   return (
     <form
       className="form-grid"
       onSubmit={(event) => {
         event.preventDefault();
         const data = new FormData(event.currentTarget);
-        onAdd({
+        void onAdd({
           name: String(data.get("name") || "Новая работа"),
           owner: String(data.get("owner") || "РП"),
           startsAt: String(data.get("startsAt") || new Date().toISOString().slice(0, 10)),
           endsAt: String(data.get("endsAt") || new Date().toISOString().slice(0, 10)),
           plannedQty: Number(data.get("plannedQty") || 1)
-        });
+        }).catch(() => undefined);
         event.currentTarget.reset();
       }}
     >
@@ -466,21 +479,21 @@ function ScheduleForm({ onAdd }: { onAdd: (item: Omit<ScheduleItem, "id" | "proj
   );
 }
 
-function PaymentForm({ onAdd }: { onAdd: (payment: Omit<Payment, "id" | "projectId" | "status">) => void }) {
+function PaymentForm({ onAdd }: { onAdd: (payment: Omit<Payment, "id" | "projectId" | "status">) => Promise<void> }) {
   return (
     <form
       className="form-grid"
       onSubmit={(event) => {
         event.preventDefault();
         const data = new FormData(event.currentTarget);
-        onAdd({
+        void onAdd({
           title: String(data.get("title") || "Новый платеж"),
           counterparty: String(data.get("counterparty") || "Контрагент"),
           direction: String(data.get("direction") || "outgoing") as Payment["direction"],
           plannedAt: String(data.get("plannedAt") || new Date().toISOString().slice(0, 10)),
           amount: Number(data.get("amount") || 0),
           category: String(data.get("category") || "supplier") as Payment["category"]
-        });
+        }).catch(() => undefined);
         event.currentTarget.reset();
       }}
     >

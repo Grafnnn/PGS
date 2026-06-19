@@ -2,9 +2,11 @@ import Link from "next/link";
 import { AlertTriangle, Banknote, CalendarClock, FolderKanban } from "lucide-react";
 import { budgetTotals, deriveAutoRisks, financeTotals, materialTotals, money, percent, workTotals } from "@/lib/calculations";
 import { demoState, getProjectBundle } from "@/lib/demo-data";
+import { getProjectBundleFromDb, listProjectsFromDb } from "@/lib/project-data";
 
-export default function DashboardPage() {
-  const bundle = getProjectBundle("project-demo");
+export default async function DashboardPage() {
+  const bundle = (await getProjectBundleFromDb("project-demo").catch(() => null)) ?? getProjectBundle("project-demo");
+  const projects = (await listProjectsFromDb().catch(() => null)) ?? demoState.projects;
   const budget = budgetTotals(bundle.project.contractAmount, bundle.budgetItems);
   const works = workTotals(bundle.scheduleItems);
   const finance = financeTotals(bundle.payments);
@@ -26,7 +28,7 @@ export default function DashboardPage() {
       </div>
 
       <section className="grid grid-4">
-        <Kpi title="Сумма договоров" value={money(demoState.projects.reduce((total, project) => total + project.contractAmount, 0))} icon={<Banknote size={18} />} />
+        <Kpi title="Сумма договоров" value={money(projects.reduce((total, project) => total + project.contractAmount, 0))} icon={<Banknote size={18} />} />
         <Kpi title="Прогнозная прибыль" value={money(budget.forecastProfit)} tone={budget.forecastProfit > 0 ? "good" : "bad"} />
         <Kpi title="Готовность работ" value={percent(works.completionPercent)} icon={<CalendarClock size={18} />} />
         <Kpi title="Активные риски" value={String(risks.filter((risk) => risk.status !== "closed").length)} tone="bad" icon={<AlertTriangle size={18} />} />
@@ -71,7 +73,7 @@ export default function DashboardPage() {
               </tr>
             </thead>
             <tbody>
-              {demoState.projects.map((project) => (
+              {projects.map((project) => (
                 <tr key={project.id}>
                   <td>
                     <Link href={`/projects/${project.id}`}>
