@@ -1,0 +1,35 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: pgs
+      POSTGRES_PASSWORD: pgs
+      POSTGRES_DB: pgs
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgs-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pgs -d pgs"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://pgs:pgs@db:5432/pgs?schema=public
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      NEXTAUTH_SECRET: local-docker-secret
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./uploads:/app/uploads
+
+volumes:
+  pgs-postgres:
