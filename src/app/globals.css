@@ -352,6 +352,12 @@ textarea {
   width: 100%;
 }
 
+.error-text {
+  color: var(--danger);
+  font-size: 13px;
+  margin: 0;
+}
+
 .stack {
   display: grid;
   gap: 14px;

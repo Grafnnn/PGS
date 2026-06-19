@@ -157,6 +157,23 @@ export interface AuditEvent {
   createdAt: string;
 }
 
+export interface ProjectDocument {
+  id: string;
+  projectId: string;
+  category: string;
+  title: string;
+  filePath: string;
+  fileName?: string | null;
+  mimeType?: string | null;
+  sizeBytes?: number | null;
+  storageKey?: string | null;
+  uploadedAt?: string | null;
+  version: number;
+  author: string;
+  comment?: string | null;
+  createdAt: string;
+}
+
 export interface DemoState {
   users: User[];
   projects: Project[];

@@ -6,4 +6,6 @@ coverage
 .env
 .env.local
 uploads
+.data
+storage
 *.log

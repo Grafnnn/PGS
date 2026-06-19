@@ -5,8 +5,10 @@
 ## Что реализовано
 
 - Next.js / React / TypeScript приложение.
-- Демо-вход: `demo@pgs.local` / `demo-password`.
+- Демо-вход: `demo@pgs.local` / `demo-password-change-me`.
 - Дашборд компании и список проектов.
+- Health endpoint `/api/health` для проверки env, PostgreSQL, AI и storage-настроек.
+- Демо-auth с cookie-сессией и ролями `OWNER`, `ADMIN`, `MANAGER`, `VIEWER`.
 - Карточка проекта с вкладками:
   - Обзор;
   - Бюджет / ВОР;
@@ -27,6 +29,7 @@
 - Транзакционный commit импорта в `BudgetSection`, `BudgetItem`, `Material`, `ScheduleItem`.
 - Inline edit/delete для ВОР, материалов и графика.
 - Audit trail для импорта и ключевых CRUD-операций.
+- Local document upload/download/delete с метаданными в PostgreSQL и файлами в `UPLOAD_DIR`.
 - Demo seed для организации “Демо Строй”.
 - SQL migration в `prisma/migrations/20260619183000_v0_2_baseline`.
 - Docker Compose для PostgreSQL + web.
@@ -43,6 +46,11 @@
 - `src/app/projects/[id]/page.tsx` - карточка проекта.
 - `src/components/project-workspace.tsx` - основной рабочий интерфейс объекта.
 - `src/app/api/[...path]/route.ts` - API endpoints с Prisma CRUD и Zod-валидацией.
+- `src/app/api/health/route.ts` - staging health check.
+- `src/app/api/auth/login/route.ts` - демо-login с cookie-сессией.
+- `src/app/api/projects/[projectId]/documents` - upload/download/delete документов.
+- `src/lib/auth/permissions.ts` - базовая модель ролей и прав.
+- `src/lib/env.ts` - централизованная валидация env.
 - `src/lib/calculations.ts` - расчетный слой.
 - `src/lib/ai.ts` - AI context builder и OpenAI вызов.
 - `src/lib/prisma.ts` - Prisma Client singleton.
@@ -92,11 +100,26 @@ http://localhost:3000
 ```bash
 DATABASE_URL="postgresql://pgs:pgs_local_password@localhost:5432/pgs_local?schema=public"
 NEXTAUTH_SECRET="change-me-in-local-dev"
+AUTH_REQUIRED="false"
+SESSION_SECRET="change-me-before-staging"
+DEMO_ADMIN_EMAIL="demo@pgs.local"
+DEMO_ADMIN_PASSWORD="demo-password-change-me"
 OPENAI_API_KEY=""
 UPLOAD_DIR="./uploads"
+MAX_UPLOAD_MB="50"
+UPLOAD_STORAGE_PROVIDER="local"
 ```
 
 `.env.local` не коммитится.
+
+Для production/staging:
+
+- `NODE_ENV=production`;
+- `AUTH_REQUIRED=true`;
+- `SESSION_SECRET` задан длинным случайным значением;
+- `DATABASE_URL` указывает на live PostgreSQL;
+- `UPLOAD_STORAGE_PROVIDER=local` допустим только для VPS/volume, для serverless нужен S3-compatible storage;
+- `OPENAI_API_KEY` задается только если нужны AI endpoints.
 
 ## PostgreSQL, миграции и seed
 
@@ -141,6 +164,7 @@ pnpm import:fixture
 
 Next.js routes имеют префикс `/api`.
 
+- `GET /api/health`
 - `POST /api/auth/register`
 - `POST /api/auth/login`
 - `POST /api/auth/logout`
@@ -188,7 +212,11 @@ Next.js routes имеют префикс `/api`.
 - `POST /api/projects/:id/documents`
 - `PATCH /api/projects/:id/documents/:documentId`
 - `DELETE /api/projects/:id/documents/:documentId`
+- `POST /api/projects/:id/documents/upload`
+- `GET /api/projects/:id/documents/:documentId/download`
+- `DELETE /api/projects/:id/documents/:documentId`
 - `GET /api/projects/:id/audit`
+- `GET /api/projects/:id/audit?entityType=budget&action=update&limit=25&from=2026-06-01&to=2026-06-30`
 - `POST /api/projects/:id/ai/chat`
 - `POST /api/projects/:id/ai/summary`
 - `POST /api/projects/:id/ai/analyze-budget`
@@ -208,10 +236,20 @@ docker compose up --build
 В этой сессии проверки запускались через pnpm:
 
 ```bash
+pnpm prisma:generate
+npx prisma validate
 pnpm test
 pnpm lint
 pnpm build
 ```
+
+Health check:
+
+```bash
+curl -i http://localhost:3000/api/health
+```
+
+При недоступной БД endpoint возвращает `503` и JSON со статусом `degraded`, не ломая приложение.
 
 ## AI-помощник
 
@@ -263,12 +301,13 @@ Audit trail пишет последние изменения по проекту
 - создание/редактирование/удаление графика;
 - создание/редактирование/удаление рисков;
 - создание/редактирование/удаление платежей.
+- загрузка/удаление документов.
 
-В карточке проекта есть вкладка “История”, которая читает `GET /api/projects/:id/audit` и показывает последние 50 событий.
+В карточке проекта есть вкладка “История”, которая читает `GET /api/projects/:id/audit` и показывает последние 50 событий. Endpoint поддерживает фильтры `entityType`, `action`, `limit`, `from`, `to`.
 
 ## Документы и файловое хранилище
 
-Для dev-режима документы должны храниться в `UPLOAD_DIR` (`./uploads`), а в PostgreSQL остаются только метаданные: категория, название, путь, имя файла, mime type, размер, storage key, версия и автор.
+Для dev-режима документы хранятся в `UPLOAD_DIR` (`./uploads`), а в PostgreSQL остаются только метаданные: категория, название, путь, имя файла, mime type, размер, storage key, версия и автор.
 
 Для production нужен S3-compatible storage. Рекомендуемые категории:
 
@@ -281,43 +320,45 @@ Audit trail пишет последние изменения по проекту
 - фотофиксация;
 - счета и платежные документы.
 
-Ограничения для следующего этапа: whitelist типов файлов, лимит размера, проверка прав доступа, антивирусная проверка или asynchronous scan pipeline.
+Уже включены whitelist расширений, базовая проверка MIME/размера, backend-проверка прав и audit log. Ограничения для следующего этапа: S3 adapter, антивирусная проверка или asynchronous scan pipeline, версии документов и preview.
 
 ## Production deployment notes
 
 Проект не деплоится автоматически. Варианты:
 
-- Render: web service + managed PostgreSQL. Env: `DATABASE_URL`, `NEXTAUTH_SECRET`, `OPENAI_API_KEY` при использовании AI, `UPLOAD_DIR` или S3 env. Команды: `pnpm install`, `pnpm prisma:generate`, `pnpm build`, start `pnpm start`. Миграции запускать отдельным one-off job.
+- Render: web service + managed PostgreSQL. Env: `DATABASE_URL`, `AUTH_REQUIRED`, `SESSION_SECRET`, `OPENAI_API_KEY` при использовании AI, `UPLOAD_DIR` или S3 env. Команды: `pnpm install`, `pnpm prisma:generate`, `pnpm build`, start `pnpm start`. Миграции запускать отдельным one-off job.
 - Vercel + managed PostgreSQL: подключить PostgreSQL provider, установить env, выполнить `pnpm prisma:migrate` из CI/локально перед production traffic. Документы хранить в S3-compatible storage, не на ephemeral FS.
 - Docker VPS: `docker compose up --build`, production `DATABASE_URL` на managed или локальный PostgreSQL, HTTPS через reverse proxy, backups volume/database.
 
 Production checklist:
 
 - `DATABASE_URL` задан;
-- `NEXTAUTH_SECRET` задан;
+- `AUTH_REQUIRED=true`;
+- `SESSION_SECRET` задан;
 - `OPENAI_API_KEY` задан только если AI endpoints нужны;
 - `NODE_ENV=production`;
 - migrations применены;
 - demo seed выключен или ограничен demo-only;
-- storage strategy для документов определена;
+- storage strategy для документов определена, uploads не лежат в git;
 - PostgreSQL backups включены;
 - HTTPS включен;
-- auth/roles реализованы перед реальными пользователями.
+- `/api/health` возвращает `200 ok`;
+- роли проверены: `VIEWER` не может писать, `MANAGER` может вести проект, `OWNER/ADMIN` могут удалять.
 
 ## Ограничения MVP
 
 - Dashboard, Projects и Project detail читают PostgreSQL через Prisma, с fallback на demo state только когда локальная БД недоступна.
 - Создание бюджетных позиций, работ, материалов, платежей, рапортов и рисков из UI идет через API и сохраняется в PostgreSQL при поднятой БД.
-- Auth пока демонстрационный, без полноценной session/JWT проверки.
-- Файловое хранилище и документы подготовлены структурно, но upload pipeline не реализован.
+- Auth пока демонстрационный: cookie-сессия с ролью, без полноценной таблицы sessions/JWT/password hash flow.
+- Файловое хранилище реализовано локально, production S3 adapter пока описан архитектурно.
 - Excel импорт реализован для типовых ВОР/смет; сложные многострочные шапки, объединенные ячейки и нестандартные формы могут потребовать ручной подготовки файла или расширения маппинга.
 - PDF импорт пока не реализован.
 - КС-2/КС-3 заложены как документы/структура, официальные печатные формы не генерируются.
 
 ## Следующий этап
 
-- Добавить реальные sessions/JWT и backend authorization checks.
-- Реализовать upload файлов в `uploads` и S3-compatible storage.
+- Добавить реальные sessions/JWT, reset password и управление пользователями.
+- Реализовать S3-compatible storage adapter.
 - Проверить live Excel import на реальной локальной PostgreSQL.
 - Расширить ПТО/КС закрытие и approval workflow.
 - Добавить миграции CI/CD и production deploy profile.

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { AlertTriangle, Bot, ClipboardList, FileText, Landmark, Package, Pencil, Plus, Send, Table2, TimerReset, Trash2, Truck } from "lucide-react";
 import { budgetTotals, deriveAutoRisks, financeTotals, materialTotals, money, percent, workTotals } from "@/lib/calculations";
 import type { ImportPreview } from "@/lib/excel/import-types";
-import type { AuditEvent, BudgetItem, DailyReport, Material, Payment, ProcurementRequest, Risk, ScheduleItem } from "@/lib/types";
+import type { AuditEvent, BudgetItem, DailyReport, Material, Payment, ProcurementRequest, ProjectDocument, Risk, ScheduleItem } from "@/lib/types";
 
 type Bundle = {
   project: {
@@ -62,6 +62,9 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
   const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
   const [editingSchedule, setEditingSchedule] = useState<ScheduleItem | null>(null);
   const [auditEvents, setAuditEvents] = useState<AuditEvent[]>([]);
+  const [documents, setDocuments] = useState<ProjectDocument[]>([]);
+  const [documentFile, setDocumentFile] = useState<File | null>(null);
+  const [documentCategory, setDocumentCategory] = useState("прочее");
 
   const budget = useMemo(() => budgetTotals(initialBundle.project.contractAmount, budgetItems), [budgetItems, initialBundle.project.contractAmount]);
   const works = useMemo(() => workTotals(scheduleItems), [scheduleItems]);
@@ -83,6 +86,21 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
     if (activeTab !== "История") return;
     void loadAudit();
   }, [activeTab, loadAudit]);
+
+  const loadDocuments = useCallback(async () => {
+    try {
+      const response = await fetch(`/api/projects/${initialBundle.project.id}/documents`);
+      const data = (await response.json()) as { items?: ProjectDocument[] };
+      if (response.ok) setDocuments(data.items ?? []);
+    } catch {
+      setDocuments([]);
+    }
+  }, [initialBundle.project.id]);
+
+  useEffect(() => {
+    if (activeTab !== "Документы") return;
+    void loadDocuments();
+  }, [activeTab, loadDocuments]);
 
   async function askAi(prompt = aiPrompt) {
     setAiLoading(true);
@@ -155,6 +173,47 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
     } catch (deleteError) {
       setError(deleteError instanceof Error ? deleteError.message : "Ошибка удаления.");
       throw deleteError;
+    } finally {
+      setSaving("");
+    }
+  }
+
+  async function uploadDocument() {
+    if (!documentFile) {
+      setError("Выберите файл документа.");
+      return;
+    }
+    setSaving("document-upload");
+    setError("");
+    try {
+      const formData = new FormData();
+      formData.append("file", documentFile);
+      formData.append("category", documentCategory);
+      const response = await fetch(`/api/projects/${initialBundle.project.id}/documents/upload`, {
+        method: "POST",
+        body: formData
+      });
+      const data = (await response.json()) as { item?: ProjectDocument; error?: string };
+      if (!response.ok || !data.item) throw new Error(data.error ?? "Не удалось загрузить документ.");
+      setDocuments((current) => [data.item as ProjectDocument, ...current]);
+      setDocumentFile(null);
+    } catch (uploadError) {
+      setError(uploadError instanceof Error ? uploadError.message : "Ошибка загрузки документа.");
+    } finally {
+      setSaving("");
+    }
+  }
+
+  async function deleteDocument(document: ProjectDocument) {
+    setSaving("document-delete");
+    setError("");
+    try {
+      const response = await fetch(`/api/projects/${initialBundle.project.id}/documents/${document.id}`, { method: "DELETE" });
+      const data = (await response.json()) as { ok?: boolean; error?: string };
+      if (!response.ok || !data.ok) throw new Error(data.error ?? "Не удалось удалить документ.");
+      setDocuments((current) => current.filter((item) => item.id !== document.id));
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : "Ошибка удаления документа.");
     } finally {
       setSaving("");
     }
@@ -494,14 +553,37 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
 
       {activeTab === "Документы" && (
         <Panel title="Документы проекта" icon={<FileText size={18} />}>
-          <div className="grid grid-3">
-            {["Договор", "ВОР", "Проектная документация", "КС", "КП поставщика", "Фото"].map((category) => (
-              <div className="panel" key={category}>
-                <h3>{category}</h3>
-                <p className="muted">Метаданные готовы в Prisma-схеме. Файлы хранятся в uploads/S3-compatible storage.</p>
-              </div>
-            ))}
+          <div className="form-grid">
+            <label>
+              Категория
+              <select value={documentCategory} onChange={(event) => setDocumentCategory(event.target.value)}>
+                <option value="договор">Договор</option>
+                <option value="смета">Смета</option>
+                <option value="вор">ВОР</option>
+                <option value="исполнительная">Исполнительная</option>
+                <option value="кс">КС</option>
+                <option value="фото">Фото</option>
+                <option value="прочее">Прочее</option>
+              </select>
+            </label>
+            <label>
+              Файл
+              <input accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.webp,.zip" type="file" onChange={(event) => setDocumentFile(event.target.files?.[0] ?? null)} />
+            </label>
+            <label>
+              &nbsp;
+              <button className="button primary" type="button" disabled={!documentFile || saving === "document-upload"} onClick={() => void uploadDocument()}>
+                Загрузить
+              </button>
+            </label>
           </div>
+          <DocumentTable
+            items={documents}
+            projectId={initialBundle.project.id}
+            onDelete={(document) => {
+              void deleteDocument(document);
+            }}
+          />
         </Panel>
       )}
 
@@ -1217,6 +1299,27 @@ function AuditTable({ items }: { items: AuditEvent[] }) {
         item.entity,
         item.summary ?? item.entityId,
         item.actorName ?? "local-user"
+      ])}
+    />
+  );
+}
+
+function DocumentTable({ items, projectId, onDelete }: { items: ProjectDocument[]; projectId: string; onDelete: (document: ProjectDocument) => void }) {
+  return (
+    <DataTable
+      headers={["Файл", "Категория", "Тип", "Размер", "Загрузил", "Дата", ""]}
+      rows={items.map((item) => [
+        <a key="download" className="delta-good" href={`/api/projects/${projectId}/documents/${item.id}/download`}>
+          {item.fileName ?? item.title}
+        </a>,
+        item.category,
+        item.mimeType ?? "-",
+        item.sizeBytes ? `${(item.sizeBytes / 1024 / 1024).toFixed(2)} MB` : "-",
+        item.author,
+        item.uploadedAt ? new Date(item.uploadedAt).toLocaleString("ru-RU") : new Date(item.createdAt).toLocaleString("ru-RU"),
+        <button key="delete" className="icon-button" title="Удалить" type="button" onClick={() => onDelete(item)}>
+          <Trash2 size={16} />
+        </button>
       ])}
     />
   );
