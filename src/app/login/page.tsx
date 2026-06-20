@@ -11,6 +11,10 @@ type CurrentUser = {
   authenticated: boolean;
 };
 
+function readError(data: { error?: string | { message?: string } }) {
+  return typeof data.error === "string" ? data.error : data.error?.message ?? "Не удалось войти.";
+}
+
 export default function LoginPage() {
   const [email, setEmail] = useState("demo@pgs.local");
   const [password, setPassword] = useState("demo-password-change-me");
@@ -35,8 +39,8 @@ export default function LoginPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password })
       });
-      const data = (await response.json()) as { error?: string };
-      if (!response.ok) throw new Error(data.error ?? "Не удалось войти.");
+      const data = (await response.json()) as { error?: string | { message?: string } };
+      if (!response.ok) throw new Error(readError(data));
       window.location.href = "/dashboard";
     } catch (loginError) {
       setError(loginError instanceof Error ? loginError.message : "Ошибка входа.");

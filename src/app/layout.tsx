@@ -25,6 +25,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <Link href="/projects">Проекты</Link>
               <Link href="/projects/project-demo">Демо объект</Link>
               <Link href="/admin/users">Пользователи</Link>
+              <Link href="/admin/integrations">Интеграции</Link>
               <Link href="/login">Вход</Link>
             </nav>
           </header>

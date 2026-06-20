@@ -17,6 +17,8 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:seed": "tsx prisma/seed.ts",
     "smoke:staging": "tsx scripts/smoke-staging.ts",
+    "smoke:cleanup": "tsx scripts/cleanup-smoke-data.ts",
+    "auth:cleanup-sessions": "tsx scripts/cleanup-expired-sessions.ts",
     "prisma:studio": "prisma studio"
   },
   "dependencies": {

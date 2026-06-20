@@ -32,7 +32,8 @@ export function serializeProject(project: DbProject): Project {
     startsAt: dateOnly(project.startsAt),
     endsAt: dateOnly(project.endsAt),
     manager: project.manager,
-    status: project.status
+    status: project.status,
+    isSmokeProject: "isSmokeProject" in project ? Boolean(project.isSmokeProject) : false
   };
 }
 

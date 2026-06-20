@@ -353,7 +353,7 @@ textarea {
 }
 
 .error-text {
-  color: var(--danger);
+  color: var(--red);
   font-size: 13px;
   margin: 0;
 }

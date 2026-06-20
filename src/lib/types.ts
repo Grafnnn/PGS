@@ -36,6 +36,7 @@ export interface Project {
   endsAt: string;
   manager: string;
   status: ProjectStatus;
+  isSmokeProject?: boolean;
 }
 
 export interface BudgetItem {
@@ -186,6 +187,19 @@ export interface ProjectDocumentVersion {
   uploadedByName?: string | null;
   previewAvailable: boolean;
   createdAt: string;
+}
+
+export interface ProjectMember {
+  id: string;
+  role: "OWNER" | "ADMIN" | "MANAGER" | "VIEWER";
+  createdAt: string;
+  user: {
+    id: string;
+    email: string;
+    name: string;
+    role: "OWNER" | "ADMIN" | "MANAGER" | "VIEWER";
+    isActive: boolean;
+  };
 }
 
 export interface DemoState {

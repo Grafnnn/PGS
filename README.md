@@ -2,12 +2,16 @@
 
 Локальный MVP онлайн-системы управления строительным проектом по концепции EfA: проект → бюджет / ВОР → график → факт → материалы → снабжение → финансы → рапорты → риски → AI-помощник.
 
+Официальный GitHub repository: `https://github.com/Grafnnn/PGS`.
+
 ## Что реализовано
 
 - Next.js / React / TypeScript приложение.
 - DB-backed auth: bcrypt password hashes, opaque session cookie, server-side sessions.
 - First-admin bootstrap через `FIRST_ADMIN_EMAIL`, `FIRST_ADMIN_PASSWORD`, `FIRST_ADMIN_NAME`.
 - Админка пользователей `/admin/users`: создание, роли, активация и reset temporary password.
+- Invite/reset-password foundation: hash-only tokens, страницы `/invite/accept` и `/reset-password`, безопасный console email provider.
+- Админка интеграций `/admin/integrations` и protected endpoint `/api/connectors/status`.
 - Дашборд компании и список проектов.
 - Health endpoint `/api/health` для проверки env, PostgreSQL, AI и storage-настроек.
 - Роли `OWNER`, `ADMIN`, `MANAGER`, `VIEWER` с централизованной проверкой permissions.
@@ -22,6 +26,8 @@
   - Рапорты;
   - Риски;
   - Документы;
+  - Участники;
+  - История;
   - AI-помощник.
 - Локальные формы добавления бюджетных позиций, работ, материалов, платежей, рапортов и рисков.
 - Расчетный слой KPI: себестоимость, прибыль, маржинальность, готовность, материалы, кассовый разрыв, авто-риски.
@@ -35,6 +41,8 @@
 - Local document upload/download/delete через storage adapter, метаданные и `DocumentVersion` в PostgreSQL.
 - S3-compatible storage adapter с SigV4 signing.
 - JSON export проекта и истории изменений.
+- Dedicated `project-smoke` для staging smoke mutation и `pnpm smoke:cleanup`.
+- GitHub Actions CI и manual staging smoke workflow.
 - Demo seed для организации “Демо Строй”.
 - SQL migration в `prisma/migrations/20260619183000_v0_2_baseline`.
 - Docker Compose для PostgreSQL + web.
@@ -54,13 +62,22 @@
 - `src/app/api/health/route.ts` - staging health check.
 - `src/app/api/auth/login/route.ts` - DB-backed login с server-side session.
 - `src/app/admin/users/page.tsx` - минимальная админка пользователей.
+- `src/app/admin/integrations/page.tsx` - readiness-страница внешних коннекторов.
 - `src/app/api/admin/users` - user management API без `passwordHash` и session tokens.
+- `src/app/api/admin/invites/route.ts` - создание invite-token без реальной email-отправки по умолчанию.
+- `src/app/api/auth/reset-password/route.ts` - single-use reset-token flow.
+- `src/app/api/connectors/status/route.ts` - protected connector readiness endpoint.
 - `src/app/api/projects/[projectId]/members` - ProjectMember API.
 - `src/app/api/projects/[projectId]/documents` - upload/download/delete документов.
 - `src/lib/auth/permissions.ts` - базовая модель ролей и прав.
 - `src/lib/auth/session.ts` - opaque session tokens и DB session lookup.
 - `src/lib/auth/password.ts` - bcrypt hash/verify.
+- `src/lib/auth/tokens.ts` - hash-only one-time invite/reset tokens.
 - `src/lib/auth/project-permissions.ts` - effective project role через global role + ProjectMember.
+- `src/lib/connectors` - readiness config/status для GitHub, Google, Gmail, Calendar, Render, Vercel, OpenAI.
+- `src/lib/email` - console email adapter и future Gmail/SMTP provider boundary.
+- `src/lib/rate-limit.ts` - MVP in-memory rate limiter для login/reset.
+- `src/lib/smoke/cleanup.ts` - safety helpers для smoke mutation/cleanup.
 - `src/lib/env.ts` - централизованная валидация env.
 - `src/lib/storage` - local/S3-compatible storage adapter.
 - `src/lib/calculations.ts` - расчетный слой.
@@ -130,6 +147,21 @@ S3_FORCE_PATH_STYLE="true"
 S3_PUBLIC_BASE_URL=""
 S3_ACCESS_KEY_ID=""
 S3_SECRET_ACCESS_KEY=""
+EMAIL_PROVIDER="console"
+EMAIL_FROM="PGS <no-reply@pgs.local>"
+APP_URL="http://localhost:3000"
+GITHUB_REPO="Grafnnn/PGS"
+GITHUB_CONNECTOR_MODE="read_only"
+GOOGLE_DRIVE_CONNECTOR_MODE="disabled"
+GMAIL_CONNECTOR_MODE="disabled"
+GOOGLE_CALENDAR_CONNECTOR_MODE="disabled"
+RENDER_CONNECTOR_MODE="disabled"
+VERCEL_CONNECTOR_MODE="disabled"
+OPENAI_CONNECTOR_MODE="disabled"
+LOGIN_RATE_LIMIT_WINDOW_MS="60000"
+LOGIN_RATE_LIMIT_MAX="8"
+RESET_RATE_LIMIT_WINDOW_MS="900000"
+RESET_RATE_LIMIT_MAX="5"
 APP_ENV="development"
 ```
 
@@ -145,6 +177,8 @@ APP_ENV="development"
 - `UPLOAD_STORAGE_PROVIDER=local` допустим только для VPS/volume, для serverless нужен S3-compatible storage;
 - для S3 задать `S3_BUCKET`, `S3_REGION`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, а `S3_ENDPOINT` для совместимого провайдера;
 - `OPENAI_API_KEY` задается только если нужны AI endpoints.
+- `EMAIL_PROVIDER=console` безопасен для dev/staging проверки, но не отправляет реальные письма;
+- внешние Google/Gmail/Calendar/Render/Vercel modes по умолчанию disabled/read-only и не выполняют мутаций.
 
 ## Auth, Sessions и First Admin
 
@@ -182,6 +216,8 @@ Project-level permissions:
 - authenticated `MANAGER` и `VIEWER` получают проектные права через `ProjectMember`;
 - dev fallback при `AUTH_REQUIRED=false` сохраняет локальную работу без БД-сессии;
 - backend endpoints участников: `GET/POST /api/projects/:id/members`, `PATCH/DELETE /api/projects/:id/members/:memberId`.
+- UI управления участниками находится во вкладке “Участники” карточки проекта.
+- нельзя удалить или понизить последнего проектного `OWNER`.
 
 ## Управление Пользователями
 
@@ -197,9 +233,11 @@ http://localhost:3000/admin/users
 - изменить имя и роль;
 - активировать/деактивировать;
 - выдать новый temporary password;
+- создать invite-link через console email provider;
+- выдать single-use reset-link без хранения raw token;
 - защитить последнего активного `OWNER` от деактивации или понижения.
 
-API не возвращает `passwordHash`, session tokens или секреты. Reset password отзывает активные sessions пользователя.
+API не возвращает `passwordHash`, session tokens или секреты. Reset password отзывает активные sessions пользователя. Invite/reset tokens хранятся только как SHA-256 hash и показываются только один раз в dev/admin response.
 
 ## PostgreSQL, миграции и seed
 
@@ -239,6 +277,8 @@ pnpm db:reset
 pnpm db:seed
 pnpm import:fixture
 pnpm smoke:staging
+SMOKE_CLEANUP_CONFIRM=project-smoke pnpm smoke:cleanup
+pnpm auth:cleanup-sessions
 ```
 
 Live DB flow для local/staging:
@@ -252,10 +292,15 @@ docker compose up -d db
 pnpm prisma:migrate
 pnpm prisma:seed
 pnpm dev
-APP_URL=http://127.0.0.1:3000 SMOKE_EMAIL=admin@pgs.local SMOKE_PASSWORD=pgs-admin-local pnpm smoke:staging
+APP_URL=http://127.0.0.1:3000 SMOKE_EMAIL=admin@pgs.local SMOKE_PASSWORD=... pnpm smoke:staging
 ```
 
 Если Docker/PostgreSQL недоступны, `/api/health` должен возвращать `503 degraded`, а `pnpm test/lint/build` должны проходить.
+
+Seed создает два проекта:
+
+- `project-demo` - демонстрационный объект для ручной работы;
+- `project-smoke` - безопасный объект для staging mutation smoke, помечен `isSmokeProject=true`.
 
 ## API endpoints
 
@@ -390,14 +435,14 @@ APP_URL=http://127.0.0.1:3000 pnpm smoke:staging
 ```bash
 APP_URL=https://staging.example.com \
 SMOKE_EMAIL=admin@pgs.local \
-SMOKE_PASSWORD=pgs-admin-local \
+SMOKE_PASSWORD=... \
 pnpm smoke:staging
 ```
 
 По умолчанию smoke не мутирует production/staging данные. Для локальной проверки upload можно явно включить:
 
 ```bash
-SMOKE_ALLOW_MUTATION=true SMOKE_EMAIL=admin@pgs.local SMOKE_PASSWORD=pgs-admin-local pnpm smoke:staging
+SMOKE_ALLOW_MUTATION=true SMOKE_EMAIL=admin@pgs.local SMOKE_PASSWORD=... pnpm smoke:staging
 ```
 
 Вывод имеет статусы `PASS`, `FAIL`, `SKIP`; любой `FAIL` завершает процесс с non-zero exit code.
@@ -505,6 +550,114 @@ S3 credentials не логируются и не возвращаются API.
 
 Кнопки экспорта находятся во вкладке “История”.
 
+## GitHub и CI
+
+Repo: `https://github.com/Grafnnn/PGS`.
+
+Добавлены:
+
+- `.github/workflows/ci.yml` - safe CI без реальных DB/S3 secrets: install, Prisma generate/validate, test, lint, build;
+- `.github/workflows/staging-smoke.yml` - manual workflow_dispatch smoke по `app_url`, mutation выключен по умолчанию;
+- issue templates для bug/feature/staging smoke;
+- PR template с DB/env/security/smoke checklist.
+
+Правило процесса: не push, не merge, не закрывать issues и не менять protected/main без явной команды владельца.
+
+## Connector Readiness
+
+PGS знает о будущих online integrations, но v0.8 не выполняет внешние мутации:
+
+- GitHub: metadata repo `Grafnnn/PGS`, режим `read_only` по умолчанию;
+- Google Drive/Docs/Sheets/Slides: readiness для будущего источника документов;
+- Gmail: readiness для invite/reset delivery;
+- Google Calendar: readiness для будущих контрольных дат;
+- Render/Vercel: deployment profile placeholders;
+- OpenAI: optional, AI calls opt-in.
+
+Проверка:
+
+```bash
+GET /api/connectors/status
+```
+
+UI:
+
+```text
+/admin/integrations
+```
+
+Endpoint доступен `OWNER/ADMIN` и не возвращает OAuth tokens/API keys/secrets.
+
+## Invite, Reset Password и Email Adapter
+
+Routes:
+
+- `POST /api/admin/invites`;
+- `POST /api/invites/accept`;
+- `POST /api/admin/users/:userId/reset-password-token`;
+- `POST /api/auth/reset-password`;
+- `/invite/accept?token=...`;
+- `/reset-password?token=...`.
+
+Токены:
+
+- raw token генерируется один раз;
+- в БД хранится только SHA-256 hash;
+- invite token по умолчанию живет 48 часов;
+- reset token по умолчанию живет 2 часа;
+- reset token single-use и отзывает старые sessions.
+
+Email:
+
+- `EMAIL_PROVIDER=console` в dev/staging не отправляет письма, а возвращает delivery preview;
+- Gmail/SMTP оставлены как provider boundary без внешних зависимостей;
+- в production console provider не должен считаться рабочей доставкой.
+
+## Smoke Project и Cleanup
+
+Mutation smoke должен идти только в `project-smoke`.
+
+Read-only smoke:
+
+```bash
+APP_URL=http://127.0.0.1:3000 pnpm smoke:staging
+```
+
+Authenticated smoke:
+
+```bash
+APP_URL=http://127.0.0.1:3000 \
+SMOKE_EMAIL=admin@pgs.local \
+SMOKE_PASSWORD=... \
+pnpm smoke:staging
+```
+
+Mutation smoke:
+
+```bash
+APP_URL=http://127.0.0.1:3000 \
+SMOKE_EMAIL=admin@pgs.local \
+SMOKE_PASSWORD=... \
+SMOKE_ALLOW_MUTATION=true \
+pnpm smoke:staging
+```
+
+Cleanup:
+
+```bash
+SMOKE_CLEANUP_CONFIRM=project-smoke pnpm smoke:cleanup
+```
+
+Cleanup удаляет только smoke-marked данные (`SMOKE-...`, `smoke+...`) внутри `project-smoke` и не трогает `project-demo`.
+
+## Operational Hardening
+
+- Новые v0.8 endpoints используют `x-request-id` и JSON error envelope.
+- Login/reset защищены MVP in-memory rate limit.
+- `pnpm auth:cleanup-sessions` удаляет истекшие sessions и старые revoked sessions.
+- `scripts/db-backup.sh` и `scripts/db-restore.sh` дают local/staging pg_dump/pg_restore flow.
+- Подробный live playbook: `docs/staging_live_verification.md`.
+
 ## Production deployment notes
 
 Проект не деплоится автоматически. Варианты:
@@ -515,9 +668,13 @@ S3 credentials не логируются и не возвращаются API.
 
 Production checklist:
 
+- GitHub repo connected: `https://github.com/Grafnnn/PGS`;
+- CI green;
 - `DATABASE_URL` задан;
 - `AUTH_REQUIRED=true`;
 - `SESSION_SECRET` задан;
+- `APP_URL` задан;
+- `EMAIL_PROVIDER` production-ready или invite/reset delivery отключен;
 - `FIRST_ADMIN_EMAIL` задан для bootstrap;
 - `FIRST_ADMIN_PASSWORD` задан только на время bootstrap и затем ротирован/убран;
 - `OPENAI_API_KEY` задан только если AI endpoints нужны;
@@ -530,18 +687,25 @@ Production checklist:
 - S3 env vars заданы, если используется S3 adapter;
 - `MAX_UPLOAD_MB` задан;
 - PostgreSQL backups включены;
+- S3 verified или local persistent disk mounted;
 - HTTPS включен;
 - `/api/health` возвращает `200 ok`;
-- `pnpm smoke:staging` выполнен;
+- read-only `pnpm smoke:staging` выполнен;
+- mutation smoke выполнен только на staging и только на `project-smoke`;
+- `SMOKE_CLEANUP_CONFIRM=project-smoke pnpm smoke:cleanup` выполнен после mutation smoke;
 - роли проверены: `VIEWER` не может писать, `MANAGER` может вести проект, `OWNER/ADMIN` могут удалять.
+- connector modes reviewed: Google Drive/Gmail/Calendar disabled until explicitly configured;
+- no demo/local passwords active.
 
 ## Ограничения MVP
 
 - Dashboard, Projects и Project detail читают PostgreSQL через Prisma, с fallback на demo state только когда локальная БД недоступна.
 - Создание бюджетных позиций, работ, материалов, платежей, рапортов и рисков из UI идет через API и сохраняется в PostgreSQL при поднятой БД.
-- Auth уже DB-backed, есть минимальная админка пользователей, но нет email invite delivery/self-service reset.
-- ProjectMember backend готов, UI управления участниками проекта перенесен на следующий этап.
+- Auth уже DB-backed, есть админка пользователей, invite/reset foundation и console email provider; real Gmail/SMTP delivery еще не подключен.
+- Invite/reset foundation готов, но real Gmail/SMTP delivery еще не подключен.
 - Файловое хранилище реализовано локально и через S3-compatible adapter; S3 live network flow требует реальный bucket/env.
+- Connector readiness не выполняет реальные Google/Gmail/Calendar/Render/Vercel мутации.
+- Rate limit in-memory, не распределенный; для production нужен Redis/WAF/platform limit.
 - Excel импорт реализован для типовых ВОР/смет; сложные многострочные шапки, объединенные ячейки и нестандартные формы могут потребовать ручной подготовки файла или расширения маппинга.
 - PDF импорт пока не реализован.
 - КС-2/КС-3 заложены как документы/структура, официальные печатные формы не генерируются.
@@ -549,7 +713,9 @@ Production checklist:
 ## Следующий этап
 
 - Проверить live PostgreSQL migrate/seed/import/documents/audit на машине с Docker/PostgreSQL.
-- Добавить UI управления участниками проекта.
-- Добавить email delivery для invite/reset password.
+- Подключить real staging PostgreSQL/S3 и выполнить mutation smoke на `project-smoke`.
+- Подключить production email provider для invite/reset password.
+- Подготовить Render/Vercel deployment profile без ручных шагов.
+- Добавить distributed rate limit и более полный request logging.
 - Расширить ПТО/КС закрытие и approval workflow.
-- Добавить миграции CI/CD и production deploy profile.
+- Добавить Google Drive/Sheets import только после явного connector setup.

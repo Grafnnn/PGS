@@ -77,7 +77,8 @@ async function main() {
       startsAt: new Date(project.startsAt),
       endsAt: new Date(project.endsAt),
       manager: project.manager,
-      status: project.status
+      status: project.status,
+      isSmokeProject: false
     },
     create: {
       id: project.id,
@@ -91,7 +92,8 @@ async function main() {
       startsAt: new Date(project.startsAt),
       endsAt: new Date(project.endsAt),
       manager: project.manager,
-      status: project.status
+      status: project.status,
+      isSmokeProject: false
     }
   });
 
@@ -99,6 +101,44 @@ async function main() {
     where: { projectId_userId: { projectId: project.id, userId: user.id } },
     update: { role: "OWNER" },
     create: { projectId: project.id, userId: user.id, role: "OWNER" }
+  });
+
+  const smokeProject = await prisma.project.upsert({
+    where: { id: "project-smoke" },
+    update: {
+      name: "SMOKE: staging verification project",
+      customer: "Демо Строй",
+      object: "Smoke объект для проверки staging",
+      address: "Не использовать для реальных данных",
+      contractAmount: 1000000,
+      vatMode: "vat",
+      startsAt: new Date(),
+      endsAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
+      manager: "PGS Smoke",
+      status: "planning",
+      isSmokeProject: true
+    },
+    create: {
+      id: "project-smoke",
+      organizationId: org.id,
+      name: "SMOKE: staging verification project",
+      customer: "Демо Строй",
+      object: "Smoke объект для проверки staging",
+      address: "Не использовать для реальных данных",
+      contractAmount: 1000000,
+      vatMode: "vat",
+      startsAt: new Date(),
+      endsAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
+      manager: "PGS Smoke",
+      status: "planning",
+      isSmokeProject: true
+    }
+  });
+
+  await prisma.projectMember.upsert({
+    where: { projectId_userId: { projectId: smokeProject.id, userId: user.id } },
+    update: { role: "OWNER" },
+    create: { projectId: smokeProject.id, userId: user.id, role: "OWNER" }
   });
 
   const sections = Array.from(new Set(demoState.budgetItems.map((item) => item.section)));

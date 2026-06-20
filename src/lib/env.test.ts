@@ -1,14 +1,8 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { getEnvStatus } from "./env";
 
-const originalNodeEnv = process.env.NODE_ENV;
-const originalAuthRequired = process.env.AUTH_REQUIRED;
-const originalSessionSecret = process.env.SESSION_SECRET;
-
 afterEach(() => {
-  process.env.NODE_ENV = originalNodeEnv;
-  process.env.AUTH_REQUIRED = originalAuthRequired;
-  process.env.SESSION_SECRET = originalSessionSecret;
+  vi.unstubAllEnvs();
 });
 
 describe("env helpers", () => {
@@ -20,9 +14,9 @@ describe("env helpers", () => {
   });
 
   it("flags insecure production auth configuration", () => {
-    process.env.NODE_ENV = "production";
-    process.env.AUTH_REQUIRED = "false";
-    delete process.env.SESSION_SECRET;
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("AUTH_REQUIRED", "false");
+    vi.stubEnv("SESSION_SECRET", "");
 
     const status = getEnvStatus();
 

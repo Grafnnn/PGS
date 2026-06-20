@@ -24,12 +24,20 @@ function serializeMember(member: { id: string; role: string; createdAt: Date; us
 export async function GET(_request: Request, { params }: { params: { projectId: string } }) {
   const currentUser = await getCurrentUser();
   if (!(await canProject(currentUser, params.projectId, "view"))) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  const members = await prisma.projectMember.findMany({
-    where: { projectId: params.projectId },
-    include: { user: true },
-    orderBy: { createdAt: "asc" }
-  });
-  return NextResponse.json({ items: members.map(serializeMember) });
+  try {
+    const members = await prisma.projectMember.findMany({
+      where: { projectId: params.projectId },
+      include: { user: true },
+      orderBy: { createdAt: "asc" }
+    });
+    return NextResponse.json({ items: members.map(serializeMember) });
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientInitializationError) {
+      return NextResponse.json({ error: "Database is not available. Start PostgreSQL and run prisma migrate/seed.", detail: error.message }, { status: 503 });
+    }
+    console.error(error);
+    return NextResponse.json({ error: "Project members request failed" }, { status: 500 });
+  }
 }
 
 export async function POST(request: NextRequest, { params }: { params: { projectId: string } }) {

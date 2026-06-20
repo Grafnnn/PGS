@@ -15,11 +15,17 @@ type AdminUser = {
 
 const roles: AdminUser["role"][] = ["OWNER", "ADMIN", "MANAGER", "VIEWER"];
 
+function readError(data: { error?: string | { message?: string } }) {
+  return typeof data.error === "string" ? data.error : data.error?.message ?? "Ошибка запроса.";
+}
+
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [role, setRole] = useState<AdminUser["role"]>("MANAGER");
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState<AdminUser["role"]>("MANAGER");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -29,8 +35,8 @@ export default function AdminUsersPage() {
     setError("");
     try {
       const response = await fetch("/api/admin/users");
-      const data = (await response.json()) as { items?: AdminUser[]; error?: string };
-      if (!response.ok) throw new Error(data.error ?? "Не удалось загрузить пользователей.");
+      const data = (await response.json()) as { items?: AdminUser[]; error?: string | { message?: string } };
+      if (!response.ok) throw new Error(readError(data));
       setUsers(data.items ?? []);
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Ошибка загрузки.");
@@ -54,8 +60,8 @@ export default function AdminUsersPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, name, role })
       });
-      const data = (await response.json()) as { item?: AdminUser; temporaryPassword?: string; error?: string };
-      if (!response.ok || !data.item) throw new Error(data.error ?? "Не удалось создать пользователя.");
+      const data = (await response.json()) as { item?: AdminUser; temporaryPassword?: string; error?: string | { message?: string } };
+      if (!response.ok || !data.item) throw new Error(readError(data));
       setUsers((current) => [...current, data.item as AdminUser]);
       setEmail("");
       setName("");
@@ -73,8 +79,8 @@ export default function AdminUsersPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload)
     });
-    const data = (await response.json()) as { item?: AdminUser; error?: string };
-    if (!response.ok || !data.item) throw new Error(data.error ?? "Не удалось обновить пользователя.");
+    const data = (await response.json()) as { item?: AdminUser; error?: string | { message?: string } };
+    if (!response.ok || !data.item) throw new Error(readError(data));
     setUsers((current) => current.map((user) => (user.id === userId ? (data.item as AdminUser) : user)));
   }
 
@@ -83,11 +89,46 @@ export default function AdminUsersPage() {
     setMessage("");
     try {
       const response = await fetch(`/api/admin/users/${userId}/reset-password`, { method: "POST" });
-      const data = (await response.json()) as { temporaryPassword?: string; error?: string };
-      if (!response.ok) throw new Error(data.error ?? "Не удалось сбросить пароль.");
+      const data = (await response.json()) as { temporaryPassword?: string; error?: string | { message?: string } };
+      if (!response.ok) throw new Error(readError(data));
       setMessage(`Новый временный пароль: ${data.temporaryPassword}`);
     } catch (resetError) {
       setError(resetError instanceof Error ? resetError.message : "Ошибка сброса пароля.");
+    }
+  }
+
+  async function createInvite(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setLoading(true);
+    setError("");
+    setMessage("");
+    try {
+      const response = await fetch("/api/admin/invites", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: inviteEmail, role: inviteRole })
+      });
+      const data = (await response.json()) as { devPreview?: { acceptUrl?: string } | null; error?: string | { message?: string } };
+      if (!response.ok) throw new Error(readError(data));
+      setInviteEmail("");
+      setMessage(data.devPreview?.acceptUrl ? `Invite link: ${data.devPreview.acceptUrl}` : "Приглашение создано. Delivery зависит от email provider.");
+    } catch (inviteError) {
+      setError(inviteError instanceof Error ? inviteError.message : "Ошибка приглашения.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function issueResetToken(userId: string) {
+    setError("");
+    setMessage("");
+    try {
+      const response = await fetch(`/api/admin/users/${userId}/reset-password-token`, { method: "POST" });
+      const data = (await response.json()) as { devPreview?: { resetUrl?: string } | null; error?: string | { message?: string } };
+      if (!response.ok) throw new Error(readError(data));
+      setMessage(data.devPreview?.resetUrl ? `Reset link: ${data.devPreview.resetUrl}` : "Reset token создан. Delivery зависит от email provider.");
+    } catch (resetError) {
+      setError(resetError instanceof Error ? resetError.message : "Ошибка выпуска reset-token.");
     }
   }
 
@@ -138,6 +179,33 @@ export default function AdminUsersPage() {
         {error && <p className="error-text">{error}</p>}
       </section>
 
+      <section className="panel stack" style={{ marginTop: 16 }}>
+        <h2>Пригласить пользователя</h2>
+        <form className="form-grid" onSubmit={(event) => void createInvite(event)}>
+          <label>
+            Email
+            <input value={inviteEmail} onChange={(event) => setInviteEmail(event.target.value)} />
+          </label>
+          <label>
+            Роль
+            <select value={inviteRole} onChange={(event) => setInviteRole(event.target.value as AdminUser["role"])}>
+              {roles.map((item) => (
+                <option key={item} value={item}>
+                  {item}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            &nbsp;
+            <button className="button primary" disabled={loading} type="submit">
+              <UserPlus size={18} />
+              Создать invite
+            </button>
+          </label>
+        </form>
+      </section>
+
       <section className="panel" style={{ marginTop: 16 }}>
         <div className="table-wrap">
           <table>
@@ -178,6 +246,9 @@ export default function AdminUsersPage() {
                   <td>
                     <button className="button secondary" type="button" onClick={() => void resetPassword(user.id)}>
                       Reset
+                    </button>
+                    <button className="button secondary" type="button" onClick={() => void issueResetToken(user.id)}>
+                      Reset link
                     </button>
                   </td>
                 </tr>

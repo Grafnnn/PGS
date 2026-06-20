@@ -1,10 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AlertTriangle, Bot, ClipboardList, FileText, Landmark, Package, Pencil, Plus, Send, Table2, TimerReset, Trash2, Truck } from "lucide-react";
+import { AlertTriangle, Bot, ClipboardList, FileText, Landmark, Package, Pencil, Plus, Send, Table2, TimerReset, Trash2, Truck, Users } from "lucide-react";
 import { budgetTotals, deriveAutoRisks, financeTotals, materialTotals, money, percent, workTotals } from "@/lib/calculations";
 import type { ImportPreview } from "@/lib/excel/import-types";
-import type { AuditEvent, BudgetItem, DailyReport, Material, Payment, ProcurementRequest, ProjectDocument, ProjectDocumentVersion, Risk, ScheduleItem } from "@/lib/types";
+import type { AuditEvent, BudgetItem, DailyReport, Material, Payment, ProcurementRequest, ProjectDocument, ProjectDocumentVersion, ProjectMember, Risk, ScheduleItem } from "@/lib/types";
 
 type Bundle = {
   project: {
@@ -37,6 +37,7 @@ const tabs = [
   "Рапорты",
   "Риски",
   "Документы",
+  "Участники",
   "История",
   "AI-помощник"
 ];
@@ -66,6 +67,9 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
   const [documentVersions, setDocumentVersions] = useState<Record<string, ProjectDocumentVersion[]>>({});
   const [documentFile, setDocumentFile] = useState<File | null>(null);
   const [documentCategory, setDocumentCategory] = useState("прочее");
+  const [members, setMembers] = useState<ProjectMember[]>([]);
+  const [memberEmail, setMemberEmail] = useState("");
+  const [memberRole, setMemberRole] = useState<ProjectMember["role"]>("VIEWER");
 
   const budget = useMemo(() => budgetTotals(initialBundle.project.contractAmount, budgetItems), [budgetItems, initialBundle.project.contractAmount]);
   const works = useMemo(() => workTotals(scheduleItems), [scheduleItems]);
@@ -102,6 +106,23 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
     if (activeTab !== "Документы") return;
     void loadDocuments();
   }, [activeTab, loadDocuments]);
+
+  const loadMembers = useCallback(async () => {
+    try {
+      const response = await fetch(`/api/projects/${initialBundle.project.id}/members`);
+      const data = (await response.json()) as { items?: ProjectMember[]; error?: string };
+      if (!response.ok) throw new Error(data.error ?? "Не удалось загрузить участников.");
+      setMembers(data.items ?? []);
+    } catch (memberError) {
+      setError(memberError instanceof Error ? memberError.message : "Ошибка загрузки участников.");
+      setMembers([]);
+    }
+  }, [initialBundle.project.id]);
+
+  useEffect(() => {
+    if (activeTab !== "Участники") return;
+    void loadMembers();
+  }, [activeTab, loadMembers]);
 
   async function askAi(prompt = aiPrompt) {
     setAiLoading(true);
@@ -253,6 +274,63 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
       await loadDocumentVersions(document);
     } catch (versionError) {
       setError(versionError instanceof Error ? versionError.message : "Ошибка загрузки версии.");
+    } finally {
+      setSaving("");
+    }
+  }
+
+  async function addProjectMember() {
+    setSaving("members");
+    setError("");
+    try {
+      const response = await fetch(`/api/projects/${initialBundle.project.id}/members`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: memberEmail, role: memberRole })
+      });
+      const data = (await response.json()) as { item?: ProjectMember; error?: string };
+      if (!response.ok || !data.item) throw new Error(data.error ?? "Не удалось добавить участника.");
+      setMembers((current) => {
+        const withoutDuplicate = current.filter((member) => member.id !== data.item!.id);
+        return [...withoutDuplicate, data.item as ProjectMember];
+      });
+      setMemberEmail("");
+    } catch (memberError) {
+      setError(memberError instanceof Error ? memberError.message : "Ошибка добавления участника.");
+    } finally {
+      setSaving("");
+    }
+  }
+
+  async function updateProjectMember(memberId: string, role: ProjectMember["role"]) {
+    setSaving("members");
+    setError("");
+    try {
+      const response = await fetch(`/api/projects/${initialBundle.project.id}/members/${memberId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role })
+      });
+      const data = (await response.json()) as { item?: ProjectMember; error?: string };
+      if (!response.ok || !data.item) throw new Error(data.error ?? "Не удалось изменить роль.");
+      setMembers((current) => current.map((member) => (member.id === memberId ? (data.item as ProjectMember) : member)));
+    } catch (memberError) {
+      setError(memberError instanceof Error ? memberError.message : "Ошибка изменения роли.");
+    } finally {
+      setSaving("");
+    }
+  }
+
+  async function removeProjectMember(memberId: string) {
+    setSaving("members");
+    setError("");
+    try {
+      const response = await fetch(`/api/projects/${initialBundle.project.id}/members/${memberId}`, { method: "DELETE" });
+      const data = (await response.json()) as { ok?: boolean; error?: string };
+      if (!response.ok || !data.ok) throw new Error(data.error ?? "Не удалось удалить участника.");
+      setMembers((current) => current.filter((member) => member.id !== memberId));
+    } catch (memberError) {
+      setError(memberError instanceof Error ? memberError.message : "Ошибка удаления участника.");
     } finally {
       setSaving("");
     }
@@ -628,6 +706,42 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
             }}
             onDelete={(document) => {
               void deleteDocument(document);
+            }}
+          />
+        </Panel>
+      )}
+
+      {activeTab === "Участники" && (
+        <Panel title="Участники проекта" icon={<Users size={18} />}>
+          <div className="form-grid">
+            <label>
+              Email пользователя
+              <input value={memberEmail} placeholder="manager@company.ru" onChange={(event) => setMemberEmail(event.target.value)} />
+            </label>
+            <label>
+              Проектная роль
+              <select value={memberRole} onChange={(event) => setMemberRole(event.target.value as ProjectMember["role"])}>
+                <option value="OWNER">OWNER</option>
+                <option value="ADMIN">ADMIN</option>
+                <option value="MANAGER">MANAGER</option>
+                <option value="VIEWER">VIEWER</option>
+              </select>
+            </label>
+            <label>
+              &nbsp;
+              <button className="button primary" type="button" disabled={!memberEmail || saving === "members"} onClick={() => void addProjectMember()}>
+                <Plus size={18} />
+                Добавить
+              </button>
+            </label>
+          </div>
+          <ProjectMembersTable
+            items={members}
+            onRoleChange={(member, role) => {
+              void updateProjectMember(member.id, role);
+            }}
+            onRemove={(member) => {
+              void removeProjectMember(member.id);
             }}
           />
         </Panel>
@@ -1405,6 +1519,38 @@ function DocumentTable({
             <Trash2 size={16} />
           </button>
         </div>
+      ])}
+    />
+  );
+}
+
+function ProjectMembersTable({
+  items,
+  onRoleChange,
+  onRemove
+}: {
+  items: ProjectMember[];
+  onRoleChange: (member: ProjectMember, role: ProjectMember["role"]) => void;
+  onRemove: (member: ProjectMember) => void;
+}) {
+  return (
+    <DataTable
+      headers={["Пользователь", "Email", "Проектная роль", "Глобальная роль", "Статус", "Добавлен", "Действия"]}
+      rows={items.map((member) => [
+        member.user.name,
+        member.user.email,
+        <select key="role" value={member.role} onChange={(event) => onRoleChange(member, event.target.value as ProjectMember["role"])}>
+          <option value="OWNER">OWNER</option>
+          <option value="ADMIN">ADMIN</option>
+          <option value="MANAGER">MANAGER</option>
+          <option value="VIEWER">VIEWER</option>
+        </select>,
+        <span className="badge blue" key="global-role">{member.user.role}</span>,
+        <span className={`badge ${member.user.isActive ? "green" : "gray"}`} key="status">{member.user.isActive ? "active" : "inactive"}</span>,
+        new Date(member.createdAt).toLocaleString("ru-RU"),
+        <button className="icon-button" key="remove" title="Удалить участника" type="button" onClick={() => onRemove(member)}>
+          <Trash2 size={16} />
+        </button>
       ])}
     />
   );

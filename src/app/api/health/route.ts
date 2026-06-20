@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { connectorSummary, getConnectorStatuses } from "@/lib/connectors/status";
 import { getEnvStatus } from "@/lib/env";
 import { prisma } from "@/lib/prisma";
 import { getStorageProvider } from "@/lib/storage";
@@ -32,6 +33,7 @@ export async function GET() {
       ai: { configured: env.aiConfigured },
       auth: { required: env.authRequired, mode: env.authMode },
       storage: { provider: env.uploadProvider, writable: storageWritable, maxUploadMb: env.maxUploadMb },
+      connectors: connectorSummary(getConnectorStatuses()),
       migrations,
       version: { appVersion: env.appVersion, gitSha: env.gitSha ?? null },
       missing: env.missing,

@@ -5,6 +5,9 @@ dist
 coverage
 .env
 .env.local
+backups/
+*.dump
+tsconfig.tsbuildinfo
 uploads
 .data
 /storage

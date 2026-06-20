@@ -1,0 +1,48 @@
+name: Staging Smoke
+
+on:
+  workflow_dispatch:
+    inputs:
+      app_url:
+        description: "Staging app URL"
+        required: true
+        type: string
+      allow_mutation:
+        description: "Allow mutation smoke against project-smoke only"
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    env:
+      APP_URL: ${{ inputs.app_url }}
+      SMOKE_ALLOW_MUTATION: ${{ inputs.allow_mutation }}
+      SMOKE_EMAIL: ${{ secrets.SMOKE_EMAIL }}
+      SMOKE_PASSWORD: ${{ secrets.SMOKE_PASSWORD }}
+      SMOKE_RUN_ID: SMOKE-${{ github.run_id }}-${{ github.run_attempt }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Run staging smoke
+        run: pnpm smoke:staging
