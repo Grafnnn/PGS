@@ -181,6 +181,8 @@ export async function POST(request: NextRequest, { params }: { params: { path?: 
       const resource = path[2];
 
       if (resource === "ai" && ["chat", "summary", "analyze-budget", "analyze-contract", "procurement-suggestion", "risk-review"].includes(path[3] ?? "")) {
+        const user = await getCurrentUser();
+        if (!(await canProject(user, projectId, "view"))) return json({ error: "Forbidden" }, 403);
         const prompt = body.prompt ?? body.question ?? promptByAiEndpoint(path[3]);
         const result = path[3] === "chat" ? await askProjectAssistant(projectId, prompt) : { ok: true, status: 200, response: localAiFallback(prompt, projectId) };
         return json({ response: result.response, ok: result.ok, error: "error" in result ? result.error : undefined }, result.status);

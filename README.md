@@ -196,7 +196,7 @@ Seed создает первого OWNER:
 - в dev, если они не заданы, создается local-only `admin@pgs.local` / `pgs-admin-local`;
 - в production небезопасный пароль автоматически не создается.
 
-Также seed обновляет demo-пользователя `demo@pgs.local` с паролем из `DEMO_ADMIN_PASSWORD`, чтобы локальный сценарий оставался удобным.
+В non-production seed также обновляет demo-пользователя `demo@pgs.local` с паролем из `DEMO_ADMIN_PASSWORD`, чтобы локальный сценарий оставался удобным.
 
 ## Roles и Permissions
 

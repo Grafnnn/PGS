@@ -17,6 +17,7 @@ async function main() {
   const firstAdminEmail = env.FIRST_ADMIN_EMAIL ?? (production ? undefined : "admin@pgs.local");
   const firstAdminPassword = env.FIRST_ADMIN_PASSWORD ?? (production ? undefined : "pgs-admin-local");
   const firstAdminName = env.FIRST_ADMIN_NAME ?? "PGS Admin";
+  let seedUser: { id: string } | null = null;
   if (firstAdminEmail && firstAdminPassword) {
     const firstAdmin = await prisma.user.upsert({
       where: { email: firstAdminEmail.toLowerCase() },
@@ -34,6 +35,7 @@ async function main() {
         isActive: true
       }
     });
+    seedUser = firstAdmin;
     await prisma.membership.upsert({
       where: { organizationId_userId: { organizationId: org.id, userId: firstAdmin.id } },
       update: { role: "owner" },
@@ -41,28 +43,37 @@ async function main() {
     });
   }
 
-  const user = await prisma.user.upsert({
-    where: { email: "demo@pgs.local" },
-    update: {
-      passwordHash: await hashPassword(env.DEMO_ADMIN_PASSWORD),
-      appRole: "OWNER",
-      isActive: true
-    },
-    create: {
-      id: "user-demo",
-      name: "Алексей Орлов",
-      email: "demo@pgs.local",
-      passwordHash: await hashPassword(env.DEMO_ADMIN_PASSWORD),
-      appRole: "OWNER",
-      isActive: true
-    }
-  });
+  if (!production) {
+    const demoUser = await prisma.user.upsert({
+      where: { email: "demo@pgs.local" },
+      update: {
+        passwordHash: await hashPassword(env.DEMO_ADMIN_PASSWORD),
+        appRole: "OWNER",
+        isActive: true
+      },
+      create: {
+        id: "user-demo",
+        name: "Алексей Орлов",
+        email: "demo@pgs.local",
+        passwordHash: await hashPassword(env.DEMO_ADMIN_PASSWORD),
+        appRole: "OWNER",
+        isActive: true
+      }
+    });
 
-  await prisma.membership.upsert({
-    where: { organizationId_userId: { organizationId: org.id, userId: user.id } },
-    update: {},
-    create: { organizationId: org.id, userId: user.id, role: "owner" }
-  });
+    seedUser = demoUser;
+    await prisma.membership.upsert({
+      where: { organizationId_userId: { organizationId: org.id, userId: demoUser.id } },
+      update: {},
+      create: { organizationId: org.id, userId: demoUser.id, role: "owner" }
+    });
+  }
+
+  if (!seedUser) {
+    throw new Error("FIRST_ADMIN_EMAIL and FIRST_ADMIN_PASSWORD are required when running prisma seed in production.");
+  }
+
+  const user = seedUser;
 
   const project = demoState.projects[0];
   await prisma.project.upsert({
