@@ -1,0 +1,95 @@
+# Render Blueprint for PGS staging.
+#
+# Apply this file from the Render Dashboard after selecting the correct
+# workspace. It provisions a free first-pass staging web service and
+# PostgreSQL database. Uploads use an ephemeral writable path for smoke
+# verification; switch to S3 or a paid persistent disk before storing
+# real staging documents.
+
+previews:
+  generation: off
+
+projects:
+  - name: PGS
+    environments:
+      - name: staging
+        services:
+          - type: web
+            name: pgs-grafnnn-staging
+            runtime: node
+            plan: free
+            region: frankfurt
+            repo: https://github.com/Grafnnn/PGS
+            branch: main
+            autoDeployTrigger: checksPass
+            buildCommand: corepack enable && corepack prepare pnpm@11.5.3 --activate && pnpm install --frozen-lockfile && pnpm prisma generate && pnpm build
+            preDeployCommand: pnpm prisma migrate deploy
+            startCommand: pnpm start -- -H 0.0.0.0 -p $PORT
+            initialDeployHook: pnpm prisma db seed
+            healthCheckPath: /api/health
+            envVars:
+              - key: NODE_ENV
+                value: production
+              - key: APP_ENV
+                value: staging
+              - key: APP_URL
+                value: https://pgs-grafnnn-staging.onrender.com
+              - key: DATABASE_URL
+                fromDatabase:
+                  name: pgs-grafnnn-staging-db
+                  property: connectionString
+              - key: AUTH_REQUIRED
+                value: "true"
+              - key: SESSION_SECRET
+                generateValue: true
+              - key: FIRST_ADMIN_EMAIL
+                sync: false
+              - key: FIRST_ADMIN_PASSWORD
+                sync: false
+              - key: FIRST_ADMIN_NAME
+                value: PGS Staging Admin
+              - key: EMAIL_PROVIDER
+                value: console
+              - key: EMAIL_FROM
+                value: PGS Staging <no-reply@pgs.local>
+              - key: UPLOAD_STORAGE_PROVIDER
+                value: local
+              - key: UPLOAD_DIR
+                value: /tmp/pgs/uploads
+              - key: MAX_UPLOAD_MB
+                value: "50"
+              - key: OPENAI_API_KEY
+                value: ""
+              - key: GITHUB_REPO
+                value: Grafnnn/PGS
+              - key: GITHUB_CONNECTOR_MODE
+                value: read_only
+              - key: GOOGLE_DRIVE_CONNECTOR_MODE
+                value: disabled
+              - key: GMAIL_CONNECTOR_MODE
+                value: disabled
+              - key: GOOGLE_CALENDAR_CONNECTOR_MODE
+                value: disabled
+              - key: RENDER_CONNECTOR_MODE
+                value: read_only
+              - key: VERCEL_CONNECTOR_MODE
+                value: disabled
+              - key: OPENAI_CONNECTOR_MODE
+                value: disabled
+              - key: LOGIN_RATE_LIMIT_WINDOW_MS
+                value: "60000"
+              - key: LOGIN_RATE_LIMIT_MAX
+                value: "8"
+              - key: RESET_RATE_LIMIT_WINDOW_MS
+                value: "900000"
+              - key: RESET_RATE_LIMIT_MAX
+                value: "5"
+
+        databases:
+          - name: pgs-grafnnn-staging-db
+            databaseName: pgs_staging
+            user: pgs_staging
+            plan: free
+            region: frankfurt
+            postgresMajorVersion: "16"
+            ipAllowList: []
