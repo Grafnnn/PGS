@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql://pgs:pgs_local_password@localhost:5432/pgs_local?schema=public
+      AUTH_REQUIRED: "false"
+      SESSION_SECRET: ci-session-secret-change-me
+      APP_URL: http://127.0.0.1:3000
+      EMAIL_PROVIDER: console
+      GITHUB_REPO: Grafnnn/PGS
+      GITHUB_CONNECTOR_MODE: read_only
+      GOOGLE_DRIVE_CONNECTOR_MODE: disabled
+      GMAIL_CONNECTOR_MODE: disabled
+      GOOGLE_CALENDAR_CONNECTOR_MODE: disabled
+      RENDER_CONNECTOR_MODE: disabled
+      VERCEL_CONNECTOR_MODE: disabled
+      OPENAI_CONNECTOR_MODE: disabled
+      OPENAI_API_KEY: ""
+      UPLOAD_STORAGE_PROVIDER: local
+      UPLOAD_DIR: ./storage/uploads
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.5.3
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Prisma generate
+        run: pnpm prisma generate
+
+      - name: Prisma validate
+        run: pnpm prisma validate
+
+      - name: Test
+        run: pnpm test
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Build
+        run: pnpm build
