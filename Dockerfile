@@ -28,4 +28,4 @@ COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/src ./src
 EXPOSE 3000
-CMD ["sh", "-c", "pnpm prisma migrate deploy && pnpm prisma db seed && pnpm start -- -H 0.0.0.0 -p ${PORT:-3000}"]
+CMD ["sh", "-c", "pnpm prisma migrate deploy && pnpm prisma db seed && pnpm exec next start -H 0.0.0.0 -p ${PORT:-3000}"]
