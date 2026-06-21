@@ -56,9 +56,11 @@ export async function GET(request: NextRequest, { params }: { params: { path?: s
 
     if (path[0] === "projects" && path[1]) {
       const user = await getCurrentUser();
-      if (!(await canProject(user, path[1], "view"))) return json({ error: "Forbidden" }, 403);
       const projectId = path[1];
       const resource = path[2];
+      if (!user) return json({ error: "Forbidden" }, 403);
+      if (resource === "ai" && path[3] === "summary" && !(await projectExists(projectId))) return json({ error: "Project not found" }, 404);
+      if (!(await canProject(user, projectId, "view"))) return json({ error: "Forbidden" }, 403);
 
       if (!resource) {
         const bundle = await getProjectBundleFromDb(projectId);
@@ -182,6 +184,8 @@ export async function POST(request: NextRequest, { params }: { params: { path?: 
 
       if (resource === "ai" && ["chat", "summary", "analyze-budget", "analyze-contract", "procurement-suggestion", "risk-review"].includes(path[3] ?? "")) {
         const user = await getCurrentUser();
+        if (!user) return json({ error: "Forbidden" }, 403);
+        if (!(await projectExists(projectId))) return json({ error: "Project not found" }, 404);
         if (!(await canProject(user, projectId, "view"))) return json({ error: "Forbidden" }, 403);
         const prompt = body.prompt ?? body.question ?? promptByAiEndpoint(path[3]);
         const result = path[3] === "chat" ? await askProjectAssistant(projectId, prompt) : { ok: true, status: 200, response: localAiFallback(prompt, projectId) };
@@ -643,6 +647,10 @@ async function projectIdForResource(resource: string, id: string) {
   if (resource === "risks") return (await prisma.risk.findUnique({ where: { id }, select: { projectId: true } }))?.projectId ?? null;
   if (resource === "documents") return (await prisma.document.findUnique({ where: { id }, select: { projectId: true } }))?.projectId ?? null;
   return null;
+}
+
+async function projectExists(projectId: string) {
+  return Boolean(await prisma.project.findUnique({ where: { id: projectId }, select: { id: true } }));
 }
 
 function budgetUpdateData(data: Partial<ReturnType<typeof budgetItemSchema.parse>>) {
