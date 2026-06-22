@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Plus, Search } from "lucide-react";
+import { AlertTriangle, Plus, Search } from "lucide-react";
 import { demoState } from "@/lib/demo-data";
 import { money } from "@/lib/calculations";
 import { listProjectsFromDb } from "@/lib/project-data";
@@ -9,13 +9,18 @@ export default async function ProjectsPage() {
 
   return (
     <main className="page">
-      <div className="header-row">
-        <div>
+      <div className="page-header">
+        <div className="page-header-main">
           <div className="eyebrow">Реестр</div>
           <h1>Проекты</h1>
           <p className="muted">Фильтры, статусы, ответственные и быстрый переход в центр управления объектом.</p>
+          <div className="page-header-meta">
+            <span className="badge green">В работе</span>
+            <span className="badge blue">{projects.length} объекта</span>
+            <span className="badge gray">Сумма договоров: {money(projects.reduce((total, project) => total + project.contractAmount, 0))}</span>
+          </div>
         </div>
-        <button className="button primary">
+        <button className="button primary" type="button">
           <Plus size={18} />
           Создать проект
         </button>
@@ -39,40 +44,60 @@ export default async function ProjectsPage() {
               <option value="completed">Завершен</option>
             </select>
           </label>
-        </div>
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Название</th>
-                <th>Объект</th>
-                <th>Заказчик</th>
-                <th>Договорная сумма</th>
-                <th>Руководитель</th>
-                <th>Статус</th>
-              </tr>
-            </thead>
-            <tbody>
+          <label>
+            Ответственный
+            <select defaultValue="all">
+              <option value="all">Все руководители</option>
               {projects.map((project) => (
-                <tr key={project.id}>
-                  <td>
-                    <Link href={`/projects/${project.id}`}>
-                      <strong>{project.name}</strong>
-                    </Link>
-                    <div className="muted">{project.address}</div>
-                  </td>
-                  <td>{project.object}</td>
-                  <td>{project.customer}</td>
-                  <td>{money(project.contractAmount)}</td>
-                  <td>{project.manager}</td>
-                  <td>
-                    <span className="badge green">В работе</span>
-                  </td>
-                </tr>
+                <option key={project.id} value={project.manager}>{project.manager}</option>
               ))}
-            </tbody>
-          </table>
+            </select>
+          </label>
         </div>
+        {projects.length ? (
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Название</th>
+                  <th>Объект</th>
+                  <th>Заказчик</th>
+                  <th className="numeric">Договорная сумма</th>
+                  <th>Руководитель</th>
+                  <th>Контроль</th>
+                  <th>Статус</th>
+                </tr>
+              </thead>
+              <tbody>
+                {projects.map((project) => (
+                  <tr key={project.id}>
+                    <td>
+                      <Link href={`/projects/${project.id}`}>
+                        <strong>{project.name}</strong>
+                      </Link>
+                      <div className="muted">{project.address}</div>
+                    </td>
+                    <td>{project.object}</td>
+                    <td>{project.customer}</td>
+                    <td className="numeric">{money(project.contractAmount)}</td>
+                    <td>{project.manager}</td>
+                    <td>
+                      <span className="badge yellow">
+                        <AlertTriangle size={13} />
+                        План-факт
+                      </span>
+                    </td>
+                    <td>
+                      <span className="badge green">В работе</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="empty-state">Проекты пока не заведены. Создайте первый объект или импортируйте демо-данные.</div>
+        )}
       </section>
     </main>
   );
