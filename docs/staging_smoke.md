@@ -18,6 +18,9 @@ The endpoint:
 - checks unauthenticated AI guard returns `403`;
 - checks authenticated missing-project AI guard returns `404`;
 - optionally runs exactly one live AI prompt;
+- optionally checks configured storage provider write/read/version/delete with synthetic `project-smoke` keys;
+- optionally checks email safe mode without real delivery;
+- optionally returns connector readiness statuses without token/secret values;
 - returns only statuses and safe metadata.
 
 ## Required Render env
@@ -86,6 +89,27 @@ curl -sS -X POST "$APP_URL/api/internal/staging-smoke" \
 
 This performs exactly one authenticated AI request to `project-demo`.
 
+## Optional readiness smoke
+
+Run only after core smoke is green. This does not call OAuth providers and does not send real email. Storage uses synthetic `project-smoke/runtime-smoke/...` keys and deletes them before returning.
+
+```bash
+curl -sS -X POST "$APP_URL/api/internal/staging-smoke" \
+  -H "content-type: application/json" \
+  -H "authorization: Bearer $STAGING_SMOKE_SECRET" \
+  --data '{"includeStorageSmoke":true,"includeEmailSmoke":true,"includeConnectorReadiness":true}'
+```
+
+Expected:
+
+- HTTP `200`;
+- `ok: true`;
+- `storage.status: pass` for the configured storage provider;
+- `storage.s3Configured: true` only when `UPLOAD_STORAGE_PROVIDER=s3`;
+- `email.status: pass` when `EMAIL_PROVIDER=console`; real providers are skipped by this safe smoke;
+- `connectors.status: pass`;
+- no passwords, cookies, session tokens, S3 credentials, OAuth tokens, `DATABASE_URL`, `OPENAI_API_KEY`, or smoke secret.
+
 ## Safety notes
 
 - The endpoint must not be used for mutation smoke.
@@ -93,5 +117,7 @@ This performs exactly one authenticated AI request to `project-demo`.
 - Existing smoke-user sessions are revoked during rotation.
 - The endpoint uses the deployed app's runtime `DATABASE_URL`; operators never need to expose that URL to Codex.
 - If every HTTP check returns `fetch failed`, confirm the deployed revision includes loopback smoke routing and that `PORT` is present in the runtime.
+- Storage readiness verifies the configured provider. A local-provider pass is not an S3-provider pass.
+- Email readiness intentionally avoids real delivery unless a dedicated live-provider smoke is added later.
 - If the endpoint returns `STAGING_SMOKE_SECRET_MISSING`, configure the secret in Render staging and redeploy/restart.
 - If it returns `STAGING_SMOKE_FAILED`, inspect Render logs for sanitized errors only.

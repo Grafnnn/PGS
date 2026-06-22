@@ -1,5 +1,10 @@
 import { randomBytes } from "crypto";
+import { connectorSummary, getConnectorStatuses } from "@/lib/connectors/status";
+import { buildInviteEmail, getEmailProvider, getEmailProviderStatus } from "@/lib/email";
+import { getEnvStatus } from "@/lib/env";
 import { prisma } from "@/lib/prisma";
+import { getStorageProvider } from "@/lib/storage";
+import { SMOKE_PROJECT_ID } from "./cleanup";
 import { CREATE_STAGING_SMOKE_USER_CONFIRM, createOrRotateStagingSmokeUser, type StagingSmokeUserReport } from "./user";
 
 const STAGING_SMOKE_EMAIL = "smoke+staging-runtime@pgs.local";
@@ -23,12 +28,40 @@ export interface RuntimeSmokeResult {
     responseChars?: number;
     providerError?: string;
   };
+  storage?: RuntimeSmokeCheck & {
+    provider: string;
+    s3Configured: boolean;
+    projectId: string;
+    operations: string[];
+    bytesRead?: number;
+    cleanup: "pass" | "fail" | "skip";
+  };
+  email?: RuntimeSmokeCheck & {
+    provider: string;
+    delivered?: boolean;
+    safeMode: boolean;
+    warning?: string;
+  };
+  connectors?: RuntimeSmokeCheck & {
+    summary: ReturnType<typeof connectorSummary>;
+    items: Array<{
+      id: string;
+      label: string;
+      mode: string;
+      configured: boolean;
+      warnings: string[];
+      metadata?: Record<string, string>;
+    }>;
+  };
   secretsPrinted: false;
 }
 
 export interface RuntimeSmokeInput {
   baseUrl: string;
   includeLiveAi?: boolean;
+  includeStorageSmoke?: boolean;
+  includeEmailSmoke?: boolean;
+  includeConnectorReadiness?: boolean;
   requestId: string;
 }
 
@@ -53,6 +86,134 @@ function failed(name: string, error: unknown): RuntimeSmokeCheck {
     name,
     status: "fail",
     detail: error instanceof Error ? error.message.slice(0, 160) : "request failed"
+  };
+}
+
+function failureDetail(error: unknown) {
+  return error instanceof Error ? error.message.replace(/postgres(ql)?:\/\/\S+/g, "[REDACTED_DATABASE_URL]").slice(0, 160) : "request failed";
+}
+
+async function runStorageSmoke(requestId: string): Promise<NonNullable<RuntimeSmokeResult["storage"]>> {
+  const env = getEnvStatus();
+  const provider = getStorageProvider();
+  const project = await prisma.project.findUnique({ where: { id: SMOKE_PROJECT_ID }, select: { id: true, isSmokeProject: true } });
+
+  if (!project?.isSmokeProject) {
+    return {
+      name: "storage smoke",
+      status: "fail",
+      detail: `${SMOKE_PROJECT_ID} is missing or isSmokeProject=false`,
+      provider: provider.name,
+      s3Configured: env.uploadProvider === "s3",
+      projectId: SMOKE_PROJECT_ID,
+      operations: [],
+      cleanup: "skip"
+    };
+  }
+
+  const runKey = requestId.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 48) || Date.now().toString();
+  const firstKey = `${SMOKE_PROJECT_ID}/runtime-smoke/${runKey}-v1.pdf`;
+  const secondKey = `${SMOKE_PROJECT_ID}/runtime-smoke/${runKey}-v2.pdf`;
+  const firstBytes = Buffer.from(`PGS runtime storage smoke ${runKey} v1`);
+  const secondBytes = Buffer.from(`PGS runtime storage smoke ${runKey} v2`);
+  const operations: string[] = [];
+  let cleanup: "pass" | "fail" | "skip" = "skip";
+
+  try {
+    await provider.write(firstKey, firstBytes);
+    operations.push("write:v1");
+    const firstRead = await provider.read(firstKey);
+    operations.push("read:v1");
+    await provider.write(secondKey, secondBytes);
+    operations.push("write:v2");
+    const secondRead = await provider.read(secondKey);
+    operations.push("read:v2");
+    await provider.delete(firstKey);
+    await provider.delete(secondKey);
+    operations.push("delete:v1", "delete:v2");
+    cleanup = "pass";
+
+    const bytesMatch = firstRead.equals(firstBytes) && secondRead.equals(secondBytes);
+    return {
+      name: "storage smoke",
+      status: bytesMatch ? "pass" : "fail",
+      detail: env.uploadProvider === "s3" ? undefined : "S3 provider is not active; verified the configured storage provider.",
+      provider: provider.name,
+      s3Configured: env.uploadProvider === "s3",
+      projectId: SMOKE_PROJECT_ID,
+      operations,
+      bytesRead: firstRead.byteLength + secondRead.byteLength,
+      cleanup
+    };
+  } catch (error) {
+    await Promise.allSettled([provider.delete(firstKey), provider.delete(secondKey)]).then((results) => {
+      cleanup = results.every((result) => result.status === "fulfilled") ? "pass" : "fail";
+    });
+    return {
+      name: "storage smoke",
+      status: "fail",
+      detail: failureDetail(error),
+      provider: provider.name,
+      s3Configured: env.uploadProvider === "s3",
+      projectId: SMOKE_PROJECT_ID,
+      operations,
+      cleanup
+    };
+  }
+}
+
+async function runEmailSmoke(): Promise<NonNullable<RuntimeSmokeResult["email"]>> {
+  const status = getEmailProviderStatus();
+  if (status.provider !== "console") {
+    return {
+      name: "email smoke",
+      status: "skip",
+      provider: status.provider,
+      safeMode: false,
+      warning: "Safe smoke does not invoke real email providers."
+    };
+  }
+
+  try {
+    const preview = await getEmailProvider().send(
+      buildInviteEmail({
+        to: "smoke+email@pgs.local",
+        acceptUrl: "https://pgs.local/smoke"
+      })
+    );
+    return {
+      name: "email smoke",
+      status: preview.provider === "console" && preview.delivered === false ? "pass" : "fail",
+      provider: preview.provider,
+      delivered: preview.delivered,
+      safeMode: true,
+      warning: preview.warning
+    };
+  } catch (error) {
+    return {
+      name: "email smoke",
+      status: "fail",
+      provider: status.provider,
+      safeMode: true,
+      warning: failureDetail(error)
+    };
+  }
+}
+
+function connectorReadiness(): NonNullable<RuntimeSmokeResult["connectors"]> {
+  const items = getConnectorStatuses().map((connector) => ({
+    id: connector.id,
+    label: connector.label,
+    mode: connector.mode,
+    configured: connector.configured,
+    warnings: connector.warnings,
+    metadata: connector.metadata
+  }));
+  return {
+    name: "connector readiness",
+    status: "pass",
+    summary: connectorSummary(),
+    items
   };
 }
 
@@ -165,11 +326,37 @@ export async function runStagingSmokeBootstrap(input: RuntimeSmokeInput): Promis
     }
   }
 
+  const optionalChecks: RuntimeSmokeCheck[] = [];
+  let storage: RuntimeSmokeResult["storage"];
+  let email: RuntimeSmokeResult["email"];
+  let connectors: RuntimeSmokeResult["connectors"];
+
+  if (input.includeStorageSmoke) {
+    storage = await runStorageSmoke(input.requestId);
+    optionalChecks.push(storage);
+  }
+
+  if (input.includeEmailSmoke) {
+    email = await runEmailSmoke();
+    optionalChecks.push(email);
+  }
+
+  if (input.includeConnectorReadiness) {
+    connectors = connectorReadiness();
+    optionalChecks.push(connectors);
+  }
+
   return {
-    ok: checks.every((item) => item.status === "pass") && (liveAi.status === "pass" || liveAi.status === "skip"),
+    ok:
+      checks.every((item) => item.status === "pass") &&
+      optionalChecks.every((item) => item.status === "pass" || item.status === "skip") &&
+      (liveAi.status === "pass" || liveAi.status === "skip"),
     smokeUser,
     checks,
     liveAi,
+    ...(storage ? { storage } : {}),
+    ...(email ? { email } : {}),
+    ...(connectors ? { connectors } : {}),
     secretsPrinted: false
   };
 }
