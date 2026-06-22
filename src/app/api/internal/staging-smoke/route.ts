@@ -55,12 +55,20 @@ export async function POST(request: NextRequest) {
     return apiError(requestId, "FORBIDDEN", "Forbidden", 403);
   }
 
-  const body = (await request.json().catch(() => ({}))) as { includeLiveAi?: unknown };
+  const body = (await request.json().catch(() => ({}))) as {
+    includeLiveAi?: unknown;
+    includeStorageSmoke?: unknown;
+    includeEmailSmoke?: unknown;
+    includeConnectorReadiness?: unknown;
+  };
 
   try {
     const result = await runStagingSmokeBootstrap({
       baseUrl: stagingSmokeBaseUrl(request.nextUrl.origin),
       includeLiveAi: body.includeLiveAi === true,
+      includeStorageSmoke: body.includeStorageSmoke === true,
+      includeEmailSmoke: body.includeEmailSmoke === true,
+      includeConnectorReadiness: body.includeConnectorReadiness === true,
       requestId
     });
 

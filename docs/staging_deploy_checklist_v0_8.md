@@ -259,6 +259,21 @@ curl -sS -X POST "$APP_URL/api/internal/staging-smoke" \
   --data '{"includeLiveAi":true}'
 ```
 
+Optional readiness smoke for storage, email safe mode, and connector statuses:
+
+```bash
+curl -sS -X POST "$APP_URL/api/internal/staging-smoke" \
+  -H "content-type: application/json" \
+  -H "authorization: Bearer $STAGING_SMOKE_SECRET" \
+  --data '{"includeStorageSmoke":true,"includeEmailSmoke":true,"includeConnectorReadiness":true}'
+```
+
+Notes:
+
+- `storage.status=pass` verifies the configured storage provider only. It is an S3 pass only when `storage.s3Configured=true`.
+- `email.status=pass` in console mode means no real email was sent.
+- Connector readiness returns sanitized status metadata only; it must not mutate OAuth providers.
+
 Full runbook: `docs/staging_smoke.md`.
 
 ### 3. Project baseline

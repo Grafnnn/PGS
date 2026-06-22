@@ -92,6 +92,9 @@ describe("staging smoke runtime endpoint", () => {
     expect(runStagingSmokeBootstrapMock).toHaveBeenCalledWith({
       baseUrl: "https://pgs.local",
       includeLiveAi: true,
+      includeStorageSmoke: false,
+      includeEmailSmoke: false,
+      includeConnectorReadiness: false,
       requestId: "test-request-id"
     });
   });
@@ -109,6 +112,38 @@ describe("staging smoke runtime endpoint", () => {
     expect(runStagingSmokeBootstrapMock).toHaveBeenCalledWith({
       baseUrl: "http://127.0.0.1:10000",
       includeLiveAi: false,
+      includeStorageSmoke: false,
+      includeEmailSmoke: false,
+      includeConnectorReadiness: false,
+      requestId: "test-request-id"
+    });
+  });
+
+  it("passes explicit optional readiness smoke flags to the runner", async () => {
+    vi.stubEnv("APP_ENV", "staging");
+    vi.stubEnv("STAGING_SMOKE_SECRET", "expected-secret");
+    runStagingSmokeBootstrapMock.mockResolvedValue(safeSmokeResult);
+    const { POST } = await import("./route");
+
+    const response = await POST(
+      stagingRequest({
+        secret: "expected-secret",
+        bearer: true,
+        body: {
+          includeStorageSmoke: true,
+          includeEmailSmoke: true,
+          includeConnectorReadiness: true
+        }
+      })
+    );
+
+    expect(response.status).toBe(200);
+    expect(runStagingSmokeBootstrapMock).toHaveBeenCalledWith({
+      baseUrl: "https://pgs.local",
+      includeLiveAi: false,
+      includeStorageSmoke: true,
+      includeEmailSmoke: true,
+      includeConnectorReadiness: true,
       requestId: "test-request-id"
     });
   });
