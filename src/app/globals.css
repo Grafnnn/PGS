@@ -733,6 +733,35 @@ input[type="checkbox"] {
   background: var(--panel-muted);
 }
 
+.intelligence-view {
+  align-content: start;
+}
+
+.risk-radar-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.risk-radar-card {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding: 12px;
+}
+
+.evidence-list {
+  color: var(--muted);
+  display: grid;
+  font-size: 12px;
+  gap: 5px;
+  margin: 0;
+  padding-left: 18px;
+}
+
 .checkbox-row {
   align-items: center;
   display: flex;
@@ -851,6 +880,10 @@ input[type="checkbox"] {
   .context-panel {
     position: static;
   }
+
+  .risk-radar-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 640px) {
@@ -893,6 +926,10 @@ input[type="checkbox"] {
 
   .nav a {
     text-align: center;
+  }
+
+  .risk-radar-grid {
+    grid-template-columns: 1fr;
   }
 
   .login-page {
