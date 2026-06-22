@@ -128,6 +128,29 @@ describe("catch-all AI routes", () => {
     expect(askProjectAssistantMock).toHaveBeenCalledWith("project-demo", "Что важно?");
   });
 
+  it("passes through controlled provider failures without turning them into raw 500s", async () => {
+    getCurrentUserMock.mockResolvedValue(authorizedUser);
+    projectFindUniqueMock.mockResolvedValue({ id: "project-demo" });
+    canProjectMock.mockResolvedValue(true);
+    askProjectAssistantMock.mockResolvedValue({
+      ok: false,
+      status: 502,
+      response: "AI-провайдер временно недоступен.",
+      error: "AI provider request failed"
+    });
+    const { POST } = await import("./route");
+
+    const response = await POST(postRequest(), { params: { path: ["projects", "project-demo", "ai", "chat"] } });
+
+    expect(response.status).toBe(502);
+    await expect(responseJson(response)).resolves.toEqual({
+      ok: false,
+      response: "AI-провайдер временно недоступен.",
+      error: "AI provider request failed"
+    });
+    expect(askProjectAssistantMock).toHaveBeenCalledWith("project-demo", "Что важно?");
+  });
+
   it("returns 404 for AI summary on a missing project before context fallback", async () => {
     getCurrentUserMock.mockResolvedValue(authorizedUser);
     projectFindUniqueMock.mockResolvedValue(null);
