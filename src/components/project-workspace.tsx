@@ -50,6 +50,19 @@ const aiQuickActions = [
   "Подготовить пояснительную записку"
 ];
 
+function compactMoney(value: number) {
+  const absolute = Math.abs(value);
+  if (absolute >= 1_000_000_000) return `${(value / 1_000_000_000).toLocaleString("ru-RU", { maximumFractionDigits: 1 })} млрд ₽`;
+  if (absolute >= 1_000_000) return `${(value / 1_000_000).toLocaleString("ru-RU", { maximumFractionDigits: 1 })} млн ₽`;
+  return money(value);
+}
+
+function formatDate(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString("ru-RU", { day: "2-digit", month: "2-digit", year: "2-digit" });
+}
+
 export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
   const [activeTab, setActiveTab] = useState(tabs[0]);
   const [budgetItems, setBudgetItems] = useState(initialBundle.budgetItems);
@@ -88,7 +101,10 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
   const delayedWorks = scheduleItems.filter((item) => item.status === "delayed");
   const activeRequests = initialBundle.procurementRequests.filter((request) => request.status !== "closed");
   const budgetDeviation = budget.totalForecastCost - budget.totalPlannedCost;
+  const urgentMaterial = materialStats.deficitItems[0];
+  const latestReport = reports[0];
   const aiAnswerTone = aiLoading ? "loading" : aiAnswer ? (/OPENAI_API_KEY|not configured|failed|ошибка|error|Project not found/i.test(aiAnswer) ? "error" : "ready") : "empty";
+  const aiDisplay = aiAnswerTone === "error" ? "AI-помощник сейчас недоступен. Проверьте подключение AI и повторите анализ позже." : aiAnswer;
 
   const loadAudit = useCallback(async () => {
     try {
@@ -415,18 +431,25 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
 
   return (
     <main className="page">
-      <div className="page-header">
+      <div className="page-header project-header">
         <div className="page-header-main">
           <div className="eyebrow">{initialBundle.project.customer}</div>
-          <h1>{initialBundle.project.name}</h1>
-          <p className="muted">
-            {initialBundle.project.object}, {initialBundle.project.address}. РП: {initialBundle.project.manager}
-          </p>
-          <div className="page-header-meta">
+          <div className="project-title-row">
+            <h1>{initialBundle.project.name}</h1>
             <StatusBadge tone="good">В работе</StatusBadge>
-            <StatusBadge tone={budgetDeviation > 0 ? "bad" : "good"}>Отклонение: {money(budgetDeviation)}</StatusBadge>
-            <StatusBadge tone={delayedWorks.length ? "bad" : "neutral"}>Просрочки: {delayedWorks.length}</StatusBadge>
-            <StatusBadge tone={activeRisks.length ? "warn" : "good"}>Риски: {activeRisks.length}</StatusBadge>
+          </div>
+          <div className="project-summary">
+            <span>{initialBundle.project.object}</span>
+            <span>{initialBundle.project.address}</span>
+            <span>РП: {initialBundle.project.manager}</span>
+          </div>
+          <div className="project-state-strip">
+            <StatePill label="Готовность" value={percent(works.completionPercent)} tone="info" />
+            <StatePill label="Срок" value={`${formatDate(initialBundle.project.startsAt)} - ${formatDate(initialBundle.project.endsAt)}`} tone={delayedWorks.length ? "bad" : "neutral"} />
+            <StatePill label="Бюджет" value={compactMoney(initialBundle.project.contractAmount)} tone="neutral" />
+            <StatePill label="Отклонение" value={compactMoney(budgetDeviation)} tone={budgetDeviation > 0 ? "bad" : "good"} />
+            <StatePill label="Риски" value={String(activeRisks.length)} tone={activeRisks.length ? "warn" : "good"} />
+            <StatePill label="Заявки" value={String(activeRequests.length)} tone={activeRequests.length ? "warn" : "good"} />
           </div>
         </div>
         <div className="page-header-actions">
@@ -446,13 +469,13 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
       </div>
 
       <section className="grid grid-4">
-        <Kpi title="Договор" value={money(initialBundle.project.contractAmount)} />
-        <Kpi title="Прогнозная прибыль" value={money(budget.forecastProfit)} tone={budget.forecastProfit > 0 ? "good" : "bad"} />
+        <Kpi title="Договор" value={compactMoney(initialBundle.project.contractAmount)} />
+        <Kpi title="Прогнозная прибыль" value={compactMoney(budget.forecastProfit)} tone={budget.forecastProfit > 0 ? "good" : "bad"} />
         <Kpi title="Готовность" value={percent(works.completionPercent)} />
-        <Kpi title="Кассовый разрыв" value={money(finance.cashGap)} tone={finance.cashGap < 0 ? "bad" : "good"} />
-        <Kpi title="Факт / прогноз" value={money(budget.totalForecastCost)} tone={budgetDeviation > 0 ? "bad" : "good"} />
-        <Kpi title="Остаток бюджета" value={money(Math.max(initialBundle.project.contractAmount - budget.totalForecastCost, 0))} />
-        <Kpi title="Срок проекта" value={`${initialBundle.project.startsAt} - ${initialBundle.project.endsAt}`} />
+        <Kpi title="Кассовый разрыв" value={compactMoney(finance.cashGap)} tone={finance.cashGap < 0 ? "bad" : "good"} />
+        <Kpi title="Факт / прогноз" value={compactMoney(budget.totalForecastCost)} tone={budgetDeviation > 0 ? "bad" : "good"} />
+        <Kpi title="Остаток бюджета" value={compactMoney(Math.max(initialBundle.project.contractAmount - budget.totalForecastCost, 0))} />
+        <Kpi title="Срок проекта" value={`${formatDate(initialBundle.project.startsAt)} - ${formatDate(initialBundle.project.endsAt)}`} />
         <Kpi title="Заявки" value={String(activeRequests.length)} tone={activeRequests.length ? "warn" : "good"} />
       </section>
 
@@ -475,16 +498,16 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
             <section className="grid grid-2">
               <Panel title="План / факт проекта" icon={<TimerReset size={18} />}>
                 <div className="grid grid-3">
-                  <Kpi title="Плановая себестоимость" value={money(budget.totalPlannedCost)} />
-                  <Kpi title="Фактическая себестоимость" value={money(budget.totalActualCost)} />
-                  <Kpi title="Прогнозная себестоимость" value={money(budget.totalForecastCost)} tone="warn" />
+                  <Kpi title="Плановая себестоимость" value={compactMoney(budget.totalPlannedCost)} />
+                  <Kpi title="Фактическая себестоимость" value={compactMoney(budget.totalActualCost)} />
+                  <Kpi title="Прогнозная себестоимость" value={compactMoney(budget.totalForecastCost)} tone="warn" />
                 </div>
               </Panel>
               <Panel title="Проблемные зоны" icon={<AlertTriangle size={18} />}>
                 <div className="stack">
                   {allRisks.slice(0, 4).map((risk) => (
                     <div key={risk.id} className="attention-item">
-                      <StatusBadge tone={risk.priority === "critical" ? "bad" : risk.priority === "high" ? "warn" : "info"}>{risk.priority}</StatusBadge>
+                      <StatusBadge tone={risk.priority === "critical" ? "bad" : risk.priority === "high" ? "warn" : "info"}>{readableStatus(risk.priority)}</StatusBadge>
                       <strong>{risk.title}</strong>
                       <div className="muted">{risk.reason}</div>
                     </div>
@@ -496,14 +519,14 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
                 <div className="grid grid-3">
                   <Kpi title="Дефицитные позиции" value={String(materialStats.deficitItems.length)} tone="bad" />
                   <Kpi title="Закуплено" value={`${materialStats.orderedQty.toLocaleString("ru-RU")} ед.`} />
-                  <Kpi title="Перерасход" value={money(materialStats.materialOverrun)} tone={materialStats.materialOverrun > 0 ? "bad" : "good"} />
+                  <Kpi title="Перерасход" value={compactMoney(materialStats.materialOverrun)} tone={materialStats.materialOverrun > 0 ? "bad" : "good"} />
                 </div>
               </Panel>
               <Panel title="Финансы" icon={<Landmark size={18} />}>
                 <div className="grid grid-3">
-                  <Kpi title="Поступления" value={money(finance.incomingPayments)} tone="good" />
-                  <Kpi title="Платежи" value={money(finance.outgoingPayments)} />
-                  <Kpi title="Потребность" value={money(finance.financingNeed)} tone={finance.financingNeed ? "bad" : "good"} />
+                  <Kpi title="Поступления" value={compactMoney(finance.incomingPayments)} tone="good" />
+                  <Kpi title="Платежи" value={compactMoney(finance.outgoingPayments)} />
+                  <Kpi title="Потребность" value={compactMoney(finance.financingNeed)} tone={finance.financingNeed ? "bad" : "good"} />
                 </div>
               </Panel>
             </section>
@@ -826,9 +849,15 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
             </button>
           </div>
           <div className={`ai-answer ${aiAnswerTone}`}>
-            {aiLoading
-              ? "AI анализирует контекст проекта..."
-              : aiAnswer || "Ответ появится здесь. AI использует контекст бюджета, графика, материалов, финансов и рисков проекта."}
+            <div className="ai-answer-header">
+              <strong>{aiAnswerTone === "ready" ? "Результат анализа" : aiAnswerTone === "error" ? "Состояние AI" : "Ожидание запроса"}</strong>
+              <span className="muted">Риски · Деньги · Сроки · Действия</span>
+            </div>
+            <div>
+              {aiLoading
+                ? "AI анализирует контекст проекта..."
+                : aiDisplay || "Ответ появится здесь. AI использует контекст бюджета, графика, материалов, финансов и рисков проекта."}
+            </div>
           </div>
         </Panel>
       )}
@@ -841,10 +870,22 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
             <p className="muted">Короткая панель для РП и ПТО: риски, сроки, снабжение и финансовые отклонения.</p>
           </div>
           <div className="attention-list">
-            <ContextItem title="Бюджет / факт" value={money(budgetDeviation)} tone={budgetDeviation > 0 ? "bad" : "good"} />
+            <ContextItem title="Бюджет / факт" value={compactMoney(budgetDeviation)} tone={budgetDeviation > 0 ? "bad" : "good"} />
             <ContextItem title="Просроченные работы" value={String(delayedWorks.length)} tone={delayedWorks.length ? "bad" : "good"} />
             <ContextItem title="Открытые риски" value={String(activeRisks.length)} tone={activeRisks.length ? "warn" : "good"} />
             <ContextItem title="Заявки снабжению" value={String(activeRequests.length)} tone={activeRequests.length ? "warn" : "good"} />
+          </div>
+          <div className="context-block">
+            <h3>Что сделать сегодня</h3>
+            <ul className="action-list">
+              <li>{delayedWorks[0]?.name ?? "Проверить график и подтвердить отсутствие новых просрочек"}</li>
+              <li>{urgentMaterial ? `Закрыть дефицит: ${urgentMaterial.name}` : "Сверить потребность материалов на ближайшие работы"}</li>
+              <li>{activeRisks[0]?.title ?? "Обновить реестр рисков после планерки"}</li>
+            </ul>
+          </div>
+          <div className="context-block">
+            <h3>Последнее событие</h3>
+            <p className="muted">{latestReport ? `${formatDate(latestReport.date)} · ${latestReport.completedWorks}` : "Рапортов пока нет. Добавьте ежедневный рапорт после смены."}</p>
           </div>
           <div className="stack">
             <h3>AI-рекомендации</h3>
@@ -1034,6 +1075,15 @@ function StatusBadge({ tone, children }: { tone: "good" | "warn" | "bad" | "info
   return <span className={`badge ${color}`}>{children}</span>;
 }
 
+function StatePill({ label, value, tone }: { label: string; value: string; tone: "good" | "warn" | "bad" | "info" | "neutral" }) {
+  return (
+    <span className={`state-pill ${tone}`}>
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </span>
+  );
+}
+
 function EmptyState({ text }: { text: string }) {
   return <div className="empty-state">{text}</div>;
 }
@@ -1065,10 +1115,21 @@ function readableStatus(value: string) {
     overdue: "Просрочено",
     open: "Открыт",
     draft: "Черновик",
+    active: "Активен",
+    inactive: "Отключен",
+    planning: "Планирование",
+    paused: "Пауза",
+    completed: "Завершен",
     critical: "Критично",
     high: "Высокий",
     medium: "Средний",
-    low: "Низкий"
+    low: "Низкий",
+    work: "Работа",
+    material: "Материал",
+    equipment: "Техника",
+    payroll: "ФОТ",
+    subcontract: "Субподряд",
+    overhead: "Накладные"
   };
   return labels[value] ?? value;
 }
@@ -1464,12 +1525,14 @@ function BudgetTable({ items, onEdit, onDelete }: { items: BudgetItem[]; onEdit:
         item.section,
         item.code,
         item.name,
-        <StatusBadge key="kind" tone="info">{item.kind}</StatusBadge>,
+        <StatusBadge key="kind" tone="info">{readableStatus(item.kind)}</StatusBadge>,
         `${item.qty.toLocaleString("ru-RU")} ${item.unit}`,
-        money(item.plannedUnitPrice),
-        money(item.actualUnitPrice),
-        money(item.qty * item.plannedUnitPrice),
-        money(item.qty * (item.forecastUnitPrice - item.actualUnitPrice)),
+        compactMoney(item.plannedUnitPrice),
+        compactMoney(item.actualUnitPrice),
+        compactMoney(item.qty * item.plannedUnitPrice),
+        <span className={item.qty * (item.forecastUnitPrice - item.actualUnitPrice) < 0 ? "delta-bad" : "delta-good"} key="margin">
+          {compactMoney(item.qty * (item.forecastUnitPrice - item.actualUnitPrice))}
+        </span>,
         <RowActions key="actions" onEdit={() => onEdit(item)} onDelete={() => onDelete(item)} />
       ])}
     />
@@ -1509,7 +1572,7 @@ function MaterialTable({ items, onEdit, onDelete }: { items: Material[]; onEdit:
         `${item.orderedQty} ${item.unit}`,
         `${item.deliveredQty} ${item.unit}`,
         `${item.consumedQty} ${item.unit}`,
-        `${money(item.plannedUnitPrice)} / ${money(item.actualUnitPrice)}`,
+        `${compactMoney(item.plannedUnitPrice)} / ${compactMoney(item.actualUnitPrice)}`,
         item.supplier,
         <StatusBadge key="status" tone={item.status === "required" ? "bad" : item.status === "delivered" ? "good" : "warn"}>{readableStatus(item.status)}</StatusBadge>,
         <RowActions key="actions" onEdit={() => onEdit(item)} onDelete={() => onDelete(item)} />
@@ -1546,7 +1609,7 @@ function PaymentTable({ items }: { items: Payment[] }) {
         item.counterparty,
         item.direction === "incoming" ? "Поступление" : "Платеж",
         item.plannedAt,
-        money(item.amount),
+        compactMoney(item.amount),
         item.category,
         <StatusBadge key="status" tone={item.status === "paid" ? "good" : item.status === "overdue" ? "bad" : "info"}>{readableStatus(item.status)}</StatusBadge>
       ])}
@@ -1719,7 +1782,7 @@ function DataTable({
             {rows.map((row, index) => (
               <tr key={index}>
                 {row.map((cell, cellIndex) => (
-                  <td className={numericColumns.includes(cellIndex) ? "numeric" : undefined} key={cellIndex}>{cell}</td>
+                  <td className={numericColumns.includes(cellIndex) ? "numeric" : undefined} data-label={headers[cellIndex]} key={cellIndex}>{cell}</td>
                 ))}
               </tr>
             ))}
