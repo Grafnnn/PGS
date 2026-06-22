@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { AlertTriangle, Bot, ClipboardList, FileText, Landmark, Package, Pencil, Plus, Send, Table2, TimerReset, Trash2, Truck, Users } from "lucide-react";
 import { budgetTotals, deriveAutoRisks, financeTotals, materialTotals, money, percent, workTotals } from "@/lib/calculations";
 import type { ImportPreview } from "@/lib/excel/import-types";
+import type { AiIntelligenceSummary, ProjectIntelligenceSnapshot } from "@/lib/project-intelligence";
 import type { AuditEvent, BudgetItem, DailyReport, Material, Payment, ProcurementRequest, ProjectDocument, ProjectDocumentVersion, ProjectMember, Risk, ScheduleItem } from "@/lib/types";
 
 type Bundle = {
@@ -29,6 +30,7 @@ type Bundle = {
 
 const tabs = [
   "Обзор",
+  "Аналитика",
   "Бюджет / ВОР",
   "График",
   "Материалы",
@@ -61,6 +63,10 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
   const [aiPrompt, setAiPrompt] = useState("Что сейчас самое важное по проекту?");
   const [aiAnswer, setAiAnswer] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
+  const [intelligence, setIntelligence] = useState<ProjectIntelligenceSnapshot | null>(null);
+  const [intelligenceLoading, setIntelligenceLoading] = useState(false);
+  const [intelligenceAi, setIntelligenceAi] = useState<AiIntelligenceSummary | null>(null);
+  const [intelligenceAiLoading, setIntelligenceAiLoading] = useState(false);
   const [saving, setSaving] = useState("");
   const [error, setError] = useState("");
   const [importFile, setImportFile] = useState<File | null>(null);
@@ -136,6 +142,40 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
     if (activeTab !== "Участники") return;
     void loadMembers();
   }, [activeTab, loadMembers]);
+
+  const loadIntelligence = useCallback(async () => {
+    setIntelligenceLoading(true);
+    try {
+      const response = await fetch(`/api/projects/${initialBundle.project.id}/intelligence`);
+      const data = (await response.json()) as { snapshot?: ProjectIntelligenceSnapshot; error?: string };
+      if (!response.ok || !data.snapshot) throw new Error(data.error ?? "Не удалось загрузить аналитику.");
+      setIntelligence(data.snapshot);
+    } catch (intelligenceError) {
+      setError(intelligenceError instanceof Error ? intelligenceError.message : "Ошибка загрузки аналитики.");
+    } finally {
+      setIntelligenceLoading(false);
+    }
+  }, [initialBundle.project.id]);
+
+  useEffect(() => {
+    if (activeTab !== "Аналитика" || intelligence) return;
+    void loadIntelligence();
+  }, [activeTab, intelligence, loadIntelligence]);
+
+  async function generateIntelligenceAiSummary() {
+    setIntelligenceAiLoading(true);
+    setError("");
+    try {
+      const response = await fetch(`/api/projects/${initialBundle.project.id}/intelligence/ai-summary`, { method: "POST" });
+      const data = (await response.json()) as { summary?: AiIntelligenceSummary; error?: string };
+      if (!response.ok || !data.summary) throw new Error(data.error ?? "Не удалось сформировать AI-сводку.");
+      setIntelligenceAi(data.summary);
+    } catch (summaryError) {
+      setError(summaryError instanceof Error ? summaryError.message : "Ошибка AI-сводки.");
+    } finally {
+      setIntelligenceAiLoading(false);
+    }
+  }
 
   async function askAi(prompt = aiPrompt) {
     setAiLoading(true);
@@ -508,6 +548,18 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
               </Panel>
             </section>
           )}
+
+          {activeTab === "Аналитика" && (
+            <IntelligenceTab
+              snapshot={intelligence}
+              aiSummary={intelligenceAi}
+              loading={intelligenceLoading}
+              aiLoading={intelligenceAiLoading}
+              onRefresh={() => void loadIntelligence()}
+              onGenerateAi={() => void generateIntelligenceAiSummary()}
+            />
+          )}
+
       {activeTab === "Бюджет / ВОР" && (
         <Panel title="Бюджет, ВОР и классификация затрат" icon={<Table2 size={18} />}>
           <ImportPanel
@@ -871,6 +923,231 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
       </div>
     </main>
   );
+}
+
+function IntelligenceTab({
+  snapshot,
+  aiSummary,
+  loading,
+  aiLoading,
+  onRefresh,
+  onGenerateAi
+}: {
+  snapshot: ProjectIntelligenceSnapshot | null;
+  aiSummary: AiIntelligenceSummary | null;
+  loading: boolean;
+  aiLoading: boolean;
+  onRefresh: () => void;
+  onGenerateAi: () => void;
+}) {
+  if (loading && !snapshot) return <Panel title="Аналитика проекта" icon={<AlertTriangle size={18} />}><EmptyState text="Загружаю расчетную аналитику..." /></Panel>;
+  if (!snapshot) {
+    return (
+      <Panel title="Аналитика проекта" icon={<AlertTriangle size={18} />}>
+        <EmptyState text="Недостаточно данных для аналитики или endpoint недоступен." />
+        <button className="button secondary" type="button" onClick={onRefresh}>Обновить</button>
+      </Panel>
+    );
+  }
+
+  return (
+    <section className="stack intelligence-view">
+      <Panel title="Executive Summary" icon={<ClipboardList size={18} />}>
+        <div className="toolbar">
+          <div>
+            <h3>{snapshot.executiveSummary.headline}</h3>
+            <p className="muted">{snapshot.deterministicSummary}</p>
+          </div>
+          <button className="button secondary" type="button" onClick={onRefresh} disabled={loading}>
+            Обновить
+          </button>
+        </div>
+        <div className="grid grid-4">
+          <Kpi title="Бюджет" value={money(snapshot.executiveSummary.budgetTotal)} />
+          <Kpi title="Маржа план" value={percent(snapshot.executiveSummary.plannedMarginPercent)} />
+          <Kpi title="Маржа прогноз" value={percent(snapshot.executiveSummary.forecastMarginPercent)} tone={snapshot.executiveSummary.forecastMarginPercent > 0 ? "good" : "bad"} />
+          <Kpi title="Оплачено" value={money(snapshot.executiveSummary.paymentFact)} />
+        </div>
+        <PreviewTable
+          title="Главные выводы"
+          headers={["Вывод"]}
+          rows={snapshot.executiveSummary.conclusions.map((item) => [item])}
+        />
+        {snapshot.executiveSummary.missingData.length > 0 && <MessageList title="Недостаточно данных" items={snapshot.executiveSummary.missingData} tone="warn" />}
+      </Panel>
+
+      <Panel title="Risk Radar" icon={<AlertTriangle size={18} />}>
+        <div className="risk-radar-grid">
+          {snapshot.radar.map((item) => (
+            <div className="risk-radar-card" key={item.category}>
+              <div className="toolbar">
+                <strong>{item.title}</strong>
+                <StatusBadge tone={riskTone(item.level)}>{readableStatus(item.level)}</StatusBadge>
+              </div>
+              <p>{item.shortReason}</p>
+              <p className="muted">{item.suggestedAction}</p>
+              <EvidenceList evidence={item.evidence} />
+            </div>
+          ))}
+        </div>
+      </Panel>
+
+      <section className="grid grid-2">
+        <Panel title="Budget Intelligence" icon={<Table2 size={18} />}>
+          <div className="grid grid-3">
+            <Kpi title="Без цены" value={String(snapshot.budget.missingPriceItems.length)} tone={snapshot.budget.missingPriceItems.length ? "bad" : "good"} />
+            <Kpi title="Без количества" value={String(snapshot.budget.zeroQuantityItems.length)} tone={snapshot.budget.zeroQuantityItems.length ? "bad" : "good"} />
+            <Kpi title="Дубли" value={String(snapshot.budget.duplicateItems.length)} tone={snapshot.budget.duplicateItems.length ? "warn" : "good"} />
+          </div>
+          <PreviewTable
+            title="Топ дорогих позиций"
+            headers={["Раздел", "Позиция", "Сумма", "Доля"]}
+            rows={snapshot.budget.topCostItems.slice(0, 10).map((item) => [item.section, item.name, money(item.amount), percent(item.sharePercent)])}
+          />
+          <IssueTable issues={snapshot.budget.issues.slice(0, 8)} />
+        </Panel>
+
+        <Panel title="Schedule Intelligence" icon={<TimerReset size={18} />}>
+          <div className="grid grid-3">
+            <Kpi title="Просрочено" value={String(snapshot.schedule.overdueTasks.length)} tone={snapshot.schedule.overdueTasks.length ? "bad" : "good"} />
+            <Kpi title="Без дат" value={String(snapshot.schedule.noDateTasks.length)} tone={snapshot.schedule.noDateTasks.length ? "warn" : "good"} />
+            <Kpi title="Без ответственного" value={String(snapshot.schedule.noOwnerTasks.length)} tone={snapshot.schedule.noOwnerTasks.length ? "warn" : "good"} />
+          </div>
+          <PreviewTable
+            title="Forecast сроков"
+            headers={["Окно", "Риск", "Сигналов", "Комментарий"]}
+            rows={snapshot.schedule.forecast.map((item) => [`${item.windowDays} дней`, <StatusBadge key="risk" tone={riskTone(item.riskLevel)}>{readableStatus(item.riskLevel)}</StatusBadge>, item.riskCount, item.summary])}
+          />
+          <IssueTable issues={snapshot.schedule.issues.slice(0, 8)} />
+        </Panel>
+      </section>
+
+      <section className="grid grid-2">
+        <Panel title="Рекомендации по закупкам" icon={<Truck size={18} />}>
+          <div className="grid grid-3">
+            <Kpi title="Дефицит" value={String(snapshot.procurement.deficitMaterials.length)} tone={snapshot.procurement.deficitMaterials.length ? "bad" : "good"} />
+            <Kpi title="Без поставщика" value={String(snapshot.procurement.missingSupplierMaterials.length)} tone={snapshot.procurement.missingSupplierMaterials.length ? "warn" : "good"} />
+            <Kpi title="Излишек" value={String(snapshot.procurement.overstockMaterials.length)} tone={snapshot.procurement.overstockMaterials.length ? "warn" : "good"} />
+          </div>
+          <ActionTable actions={snapshot.procurement.recommendations.slice(0, 8)} />
+        </Panel>
+
+        <Panel title="Finance Intelligence" icon={<Landmark size={18} />}>
+          <div className="grid grid-3">
+            <Kpi title="Не оплачено" value={money(snapshot.finance.unpaidAmount)} />
+            <Kpi title="Просрочено" value={money(snapshot.finance.overdueAmount)} tone={snapshot.finance.overdueAmount ? "bad" : "good"} />
+            <Kpi title="Cash gap" value={money(snapshot.finance.possibleCashGap)} tone={snapshot.finance.possibleCashGap < 0 ? "bad" : "good"} />
+          </div>
+          <PreviewTable
+            title="Cashflow forecast"
+            headers={["Окно", "Поступления", "Платежи", "Потребность"]}
+            rows={snapshot.finance.forecast.map((item) => [`${item.windowDays} дней`, money(item.incoming), money(item.outgoing), money(item.financingNeed)])}
+          />
+          <IssueTable issues={snapshot.finance.issues.slice(0, 8)} />
+        </Panel>
+      </section>
+
+      <section className="grid grid-2">
+        <Panel title="Документы и проверка" icon={<FileText size={18} />}>
+          <div className="grid grid-3">
+            <Kpi title="Нет ключевых" value={String(snapshot.documents.missingKeyDocuments.length)} tone={snapshot.documents.missingKeyDocuments.length ? "bad" : "good"} />
+            <Kpi title="Без категории" value={String(snapshot.documents.uncategorizedDocuments.length)} tone={snapshot.documents.uncategorizedDocuments.length ? "warn" : "good"} />
+            <Kpi title="Устаревшие" value={String(snapshot.documents.staleDocuments.length)} tone={snapshot.documents.staleDocuments.length ? "warn" : "good"} />
+          </div>
+          <p className="muted">{snapshot.documents.ragReadiness.message}</p>
+          <ActionTable actions={snapshot.documents.reviewRecommendations.slice(0, 8)} />
+        </Panel>
+
+        <Panel title="Action Plan" icon={<ClipboardList size={18} />}>
+          <ActionTable actions={snapshot.actions.slice(0, 12)} />
+        </Panel>
+      </section>
+
+      <Panel title="AI Summary" icon={<Bot size={18} />} className="ai-panel">
+        <div className="toolbar">
+          <div>
+            <StatusBadge tone={snapshot.ai.status === "available" ? "info" : "warn"}>{snapshot.ai.message}</StatusBadge>
+          </div>
+          <button className="button primary" type="button" disabled={aiLoading} onClick={onGenerateAi}>
+            {aiLoading ? "Формирую..." : "Сформировать AI-сводку"}
+          </button>
+        </div>
+        {aiSummary ? (
+          <div className={`ai-answer ${aiSummary.status === "success" ? "ready" : "error"}`}>
+            <strong>{aiSummary.managementNote}</strong>
+            <p>{aiSummary.executiveSummary}</p>
+            <PreviewTable title="AI рекомендации" headers={["Действие"]} rows={aiSummary.recommendedActions.map((item) => [item])} />
+          </div>
+        ) : (
+          <p className="muted">AI-сводка создается только по кнопке. Расчетная аналитика выше работает без OpenAI.</p>
+        )}
+      </Panel>
+    </section>
+  );
+}
+
+function IssueTable({ issues }: { issues: ProjectIntelligenceSnapshot["budget"]["issues"] }) {
+  return (
+    <PreviewTable
+      title="Сигналы"
+      headers={["Риск", "Уровень", "Причина", "Действие"]}
+      rows={issues.map((item) => [
+        item.title,
+        <StatusBadge key="level" tone={riskTone(item.level)}>{readableStatus(item.level)}</StatusBadge>,
+        item.reason,
+        item.suggestedAction
+      ])}
+    />
+  );
+}
+
+function ActionTable({ actions }: { actions: ProjectIntelligenceSnapshot["actions"] }) {
+  return (
+    <PreviewTable
+      title="Рекомендации"
+      headers={["Приоритет", "Категория", "Действие", "Следующий шаг"]}
+      rows={actions.map((item) => [
+        <StatusBadge key="priority" tone={riskTone(item.priority)}>{readableStatus(item.priority)}</StatusBadge>,
+        categoryLabel(item.category),
+        item.title,
+        item.suggestedNextStep
+      ])}
+    />
+  );
+}
+
+function EvidenceList({ evidence }: { evidence: ProjectIntelligenceSnapshot["radar"][number]["evidence"] }) {
+  return (
+    <ul className="evidence-list">
+      {evidence.slice(0, 3).map((item, index) => (
+        <li key={`${item.entityType}-${item.entityId ?? index}`}>
+          <strong>{item.label}</strong>
+          <span className="muted"> {item.explanation}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function riskTone(level: string): "good" | "warn" | "bad" | "info" | "neutral" {
+  if (level === "critical" || level === "high") return "bad";
+  if (level === "medium") return "warn";
+  if (level === "low") return "good";
+  return "neutral";
+}
+
+function categoryLabel(value: string) {
+  const labels: Record<string, string> = {
+    budget: "Бюджет",
+    schedule: "График",
+    procurement: "Закупки",
+    finance: "Финансы",
+    documents: "Документы",
+    risks: "Риски",
+    import: "Импорт",
+    ai: "AI"
+  };
+  return labels[value] ?? value;
 }
 
 function ImportPanel({

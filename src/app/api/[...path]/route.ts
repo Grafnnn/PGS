@@ -9,6 +9,9 @@ import { canProject, type ProjectAction } from "@/lib/auth/project-permissions";
 import { budgetTotals, deriveAutoRisks, financeTotals, materialTotals, workTotals } from "@/lib/calculations";
 import { demoState } from "@/lib/demo-data";
 import { getDemoContext, getProjectBundleFromDb, listProjectsFromDb } from "@/lib/project-data";
+import { generateAiIntelligenceSummary } from "@/lib/project-intelligence/ai-summary";
+import { collectProjectIntelligenceContext } from "@/lib/project-intelligence/collect-project-context";
+import { buildProjectIntelligence } from "@/lib/project-intelligence";
 import { prisma } from "@/lib/prisma";
 import {
   serializeBudgetItem,
@@ -108,6 +111,11 @@ export async function GET(request: NextRequest, { params }: { params: { path?: s
         if (!bundle) return json({ error: "Project not found" }, 404);
         return json({ items: [...bundle.risks, ...deriveAutoRisks(bundle.scheduleItems, bundle.materials, bundle.payments)] });
       }
+      if (resource === "intelligence") {
+        const context = await collectProjectIntelligenceContext(projectId);
+        if (!context) return json({ error: "Project not found" }, 404);
+        return json({ snapshot: buildProjectIntelligence(context) });
+      }
       if (resource === "ai" && path[3] === "summary") {
         return json(await buildProjectContext(projectId));
       }
@@ -181,6 +189,16 @@ export async function POST(request: NextRequest, { params }: { params: { path?: 
     if (path[0] === "projects" && path[1]) {
       const projectId = path[1];
       const resource = path[2];
+
+      if (resource === "intelligence" && path[3] === "ai-summary") {
+        const user = await getCurrentUser();
+        if (!user) return json({ error: "Forbidden" }, 403);
+        if (!(await canProject(user, projectId, "edit"))) return json({ error: "Forbidden" }, 403);
+        const context = await collectProjectIntelligenceContext(projectId);
+        if (!context) return json({ error: "Project not found" }, 404);
+        const snapshot = buildProjectIntelligence(context);
+        return json({ summary: await generateAiIntelligenceSummary(snapshot) });
+      }
 
       if (resource === "ai" && ["chat", "summary", "analyze-budget", "analyze-contract", "procurement-suggestion", "risk-review"].includes(path[3] ?? "")) {
         const user = await getCurrentUser();
