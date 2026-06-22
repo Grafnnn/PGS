@@ -31,6 +31,8 @@ STAGING_SMOKE_SECRET=<strong random secret>
 
 Do not set `STAGING_SMOKE_SECRET` in production. Do not print or paste the secret into tickets, logs, or PRs.
 
+When `PORT` is available in the runtime, the endpoint calls app routes through `http://127.0.0.1:$PORT` instead of the public Render URL. This keeps the smoke checks inside the live service and avoids public self-fetch networking failures. Set `STAGING_SMOKE_BASE_URL` only if an operator needs to override that internal base URL for a staging provider.
+
 ## Endpoint
 
 ```text
@@ -90,5 +92,6 @@ This performs exactly one authenticated AI request to `project-demo`.
 - The synthetic user password is generated in memory and is never returned.
 - Existing smoke-user sessions are revoked during rotation.
 - The endpoint uses the deployed app's runtime `DATABASE_URL`; operators never need to expose that URL to Codex.
+- If every HTTP check returns `fetch failed`, confirm the deployed revision includes loopback smoke routing and that `PORT` is present in the runtime.
 - If the endpoint returns `STAGING_SMOKE_SECRET_MISSING`, configure the secret in Render staging and redeploy/restart.
 - If it returns `STAGING_SMOKE_FAILED`, inspect Render logs for sanitized errors only.

@@ -29,6 +29,16 @@ function sanitizeError(error: unknown) {
   return error.message.replace(/postgres(ql)?:\/\/\S+/g, "[REDACTED_DATABASE_URL]").replace(/sk-[A-Za-z0-9_-]+/g, "[REDACTED_OPENAI_KEY]").slice(0, 200);
 }
 
+function stagingSmokeBaseUrl(fallbackOrigin: string) {
+  const explicitBaseUrl = process.env.STAGING_SMOKE_BASE_URL?.trim();
+  if (explicitBaseUrl) return explicitBaseUrl.replace(/\/+$/, "");
+
+  const port = process.env.PORT?.trim();
+  if (port) return `http://127.0.0.1:${port}`;
+
+  return fallbackOrigin;
+}
+
 export async function POST(request: NextRequest) {
   const requestId = getRequestId(request);
 
@@ -49,7 +59,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const result = await runStagingSmokeBootstrap({
-      baseUrl: request.nextUrl.origin,
+      baseUrl: stagingSmokeBaseUrl(request.nextUrl.origin),
       includeLiveAi: body.includeLiveAi === true,
       requestId
     });
