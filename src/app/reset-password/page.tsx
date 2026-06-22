@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { KeyRound } from "lucide-react";
+import { BrandLogo } from "@/components/brand-logo";
 
 function readError(data: { error?: string | { message?: string } }) {
   return typeof data.error === "string" ? data.error : data.error?.message ?? "Ошибка запроса.";
@@ -41,7 +42,10 @@ export default function ResetPasswordPage() {
 
   return (
     <main className="login-page">
-      <form className="login-box panel stack" onSubmit={(event) => void submit(event)}>
+      <form className="login-box panel stack auth-card" onSubmit={(event) => void submit(event)}>
+        <div className="auth-brand">
+          <BrandLogo href="/login" />
+        </div>
         <div>
           <div className="eyebrow">PGS auth</div>
           <h1>Сброс пароля</h1>

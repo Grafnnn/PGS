@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { LogIn, LogOut } from "lucide-react";
+import { BrandLogo } from "@/components/brand-logo";
 
 type CurrentUser = {
   id: string;
@@ -62,11 +63,14 @@ export default function LoginPage() {
 
   return (
     <main className="login-page">
-      <form className="login-box panel stack" onSubmit={(event) => void submit(event)}>
+      <form className="login-box panel stack auth-card" onSubmit={(event) => void submit(event)}>
+        <div className="auth-brand">
+          <BrandLogo href="/dashboard" />
+        </div>
         <div>
-          <div className="eyebrow">Локальный MVP</div>
-          <h1>Вход в систему управления строительством</h1>
-          <p className="muted">Доступ использует DB-backed session cookie. Роль назначается пользователю на сервере.</p>
+          <div className="eyebrow">Project workspace</div>
+          <h1>Вход в PGS</h1>
+          <p className="muted">Операционный контур для строительных проектов: бюджет, график, снабжение, финансы и риски.</p>
         </div>
         {currentUser && (
           <div className="inline-status">
@@ -92,7 +96,7 @@ export default function LoginPage() {
           <LogIn size={18} />
           {loading ? "Входим..." : "Войти"}
         </button>
-        <p className="muted">Auth API: POST /api/auth/login, POST /api/auth/logout, GET /api/auth/me.</p>
+        <p className="muted">Сессия и роль проверяются сервером.</p>
       </form>
     </main>
   );
