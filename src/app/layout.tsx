@@ -18,10 +18,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <nav className="nav">
               <Link href="/dashboard">Дашборд</Link>
               <Link href="/projects">Проекты</Link>
-              <Link href="/projects/project-demo">Демо объект</Link>
+              <Link href="/projects/project-demo">Бюджет / ВОР</Link>
+              <Link href="/projects/project-demo">График</Link>
+              <Link href="/projects/project-demo">Материалы</Link>
+              <Link href="/projects/project-demo">Заявки</Link>
+              <Link href="/projects/project-demo">Риски</Link>
+              <Link href="/projects/project-demo">AI</Link>
               <Link href="/admin/users">Пользователи</Link>
-              <Link href="/admin/integrations">Интеграции</Link>
-              <Link href="/login">Вход</Link>
             </nav>
           </header>
           {children}

@@ -42,6 +42,14 @@ const tabs = [
   "AI-помощник"
 ];
 
+const aiQuickActions = [
+  "Проверить риски проекта",
+  "Сравнить бюджет и факт",
+  "Найти просрочки",
+  "Сформировать заявку снабжения",
+  "Подготовить пояснительную записку"
+];
+
 export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
   const [activeTab, setActiveTab] = useState(tabs[0]);
   const [budgetItems, setBudgetItems] = useState(initialBundle.budgetItems);
@@ -76,6 +84,10 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
   const materialStats = useMemo(() => materialTotals(materials), [materials]);
   const finance = useMemo(() => financeTotals(payments), [payments]);
   const allRisks = useMemo(() => [...risks, ...deriveAutoRisks(scheduleItems, materials, payments)], [risks, scheduleItems, materials, payments]);
+  const activeRisks = allRisks.filter((risk) => risk.status !== "closed");
+  const delayedWorks = scheduleItems.filter((item) => item.status === "delayed");
+  const activeRequests = initialBundle.procurementRequests.filter((request) => request.status !== "closed");
+  const budgetDeviation = budget.totalForecastCost - budget.totalPlannedCost;
   const aiAnswerTone = aiLoading ? "loading" : aiAnswer ? (/OPENAI_API_KEY|not configured|failed|ошибка|error|Project not found/i.test(aiAnswer) ? "error" : "ready") : "empty";
 
   const loadAudit = useCallback(async () => {
@@ -403,15 +415,34 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
 
   return (
     <main className="page">
-      <div className="header-row">
-        <div>
+      <div className="page-header">
+        <div className="page-header-main">
           <div className="eyebrow">{initialBundle.project.customer}</div>
           <h1>{initialBundle.project.name}</h1>
           <p className="muted">
             {initialBundle.project.object}, {initialBundle.project.address}. РП: {initialBundle.project.manager}
           </p>
+          <div className="page-header-meta">
+            <StatusBadge tone="good">В работе</StatusBadge>
+            <StatusBadge tone={budgetDeviation > 0 ? "bad" : "good"}>Отклонение: {money(budgetDeviation)}</StatusBadge>
+            <StatusBadge tone={delayedWorks.length ? "bad" : "neutral"}>Просрочки: {delayedWorks.length}</StatusBadge>
+            <StatusBadge tone={activeRisks.length ? "warn" : "good"}>Риски: {activeRisks.length}</StatusBadge>
+          </div>
         </div>
-        <span className="badge green">В работе</span>
+        <div className="page-header-actions">
+          <button className="button secondary" type="button" onClick={() => setActiveTab("Бюджет / ВОР")}>
+            <Table2 size={18} />
+            Импорт ВОР
+          </button>
+          <button className="button secondary" type="button" onClick={() => setActiveTab("Рапорты")}>
+            <ClipboardList size={18} />
+            Добавить рапорт
+          </button>
+          <button className="button primary" type="button" onClick={() => setActiveTab("AI-помощник")}>
+            <Bot size={18} />
+            AI-анализ
+          </button>
+        </div>
       </div>
 
       <section className="grid grid-4">
@@ -419,58 +450,64 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
         <Kpi title="Прогнозная прибыль" value={money(budget.forecastProfit)} tone={budget.forecastProfit > 0 ? "good" : "bad"} />
         <Kpi title="Готовность" value={percent(works.completionPercent)} />
         <Kpi title="Кассовый разрыв" value={money(finance.cashGap)} tone={finance.cashGap < 0 ? "bad" : "good"} />
+        <Kpi title="Факт / прогноз" value={money(budget.totalForecastCost)} tone={budgetDeviation > 0 ? "bad" : "good"} />
+        <Kpi title="Остаток бюджета" value={money(Math.max(initialBundle.project.contractAmount - budget.totalForecastCost, 0))} />
+        <Kpi title="Срок проекта" value={`${initialBundle.project.startsAt} - ${initialBundle.project.endsAt}`} />
+        <Kpi title="Заявки" value={String(activeRequests.length)} tone={activeRequests.length ? "warn" : "good"} />
       </section>
 
-      <div className="tabs">
-        {tabs.map((tab) => (
-          <button className={`tab ${activeTab === tab ? "active" : ""}`} key={tab} onClick={() => setActiveTab(tab)}>
-            {tab}
-          </button>
-        ))}
-      </div>
-      {(saving || error) && (
-        <div className={`panel ${error ? "delta-bad" : "muted"}`} style={{ marginBottom: 16 }}>
-          {error || `Сохраняю: ${saving}`}
-        </div>
-      )}
-
-      {activeTab === "Обзор" && (
-        <section className="grid grid-2">
-          <Panel title="План / факт проекта" icon={<TimerReset size={18} />}>
-            <div className="grid grid-3">
-              <Kpi title="Плановая себестоимость" value={money(budget.totalPlannedCost)} />
-              <Kpi title="Фактическая себестоимость" value={money(budget.totalActualCost)} />
-              <Kpi title="Прогнозная себестоимость" value={money(budget.totalForecastCost)} tone="warn" />
+      <div className="workspace-layout" style={{ marginTop: 18 }}>
+        <div>
+          <div className="tabs">
+            {tabs.map((tab) => (
+              <button className={`tab ${activeTab === tab ? "active" : ""}`} key={tab} onClick={() => setActiveTab(tab)}>
+                {tab}
+              </button>
+            ))}
+          </div>
+          {(saving || error) && (
+            <div className={`panel ${error ? "delta-bad" : "muted"}`} style={{ marginBottom: 16 }}>
+              {error || `Сохраняю: ${saving}`}
             </div>
-          </Panel>
-          <Panel title="Проблемные зоны" icon={<AlertTriangle size={18} />}>
-            <div className="stack">
-              {allRisks.slice(0, 4).map((risk) => (
-                <div key={risk.id}>
-                  <span className={`badge ${risk.priority === "critical" ? "red" : risk.priority === "high" ? "yellow" : "blue"}`}>{risk.priority}</span>{" "}
-                  <strong>{risk.title}</strong>
-                  <div className="muted">{risk.reason}</div>
+          )}
+
+          {activeTab === "Обзор" && (
+            <section className="grid grid-2">
+              <Panel title="План / факт проекта" icon={<TimerReset size={18} />}>
+                <div className="grid grid-3">
+                  <Kpi title="Плановая себестоимость" value={money(budget.totalPlannedCost)} />
+                  <Kpi title="Фактическая себестоимость" value={money(budget.totalActualCost)} />
+                  <Kpi title="Прогнозная себестоимость" value={money(budget.totalForecastCost)} tone="warn" />
                 </div>
-              ))}
-            </div>
-          </Panel>
-          <Panel title="Материалы" icon={<Package size={18} />}>
-            <div className="grid grid-3">
-              <Kpi title="Дефицитные позиции" value={String(materialStats.deficitItems.length)} tone="bad" />
-              <Kpi title="Закуплено" value={`${materialStats.orderedQty.toLocaleString("ru-RU")} ед.`} />
-              <Kpi title="Перерасход" value={money(materialStats.materialOverrun)} tone={materialStats.materialOverrun > 0 ? "bad" : "good"} />
-            </div>
-          </Panel>
-          <Panel title="Финансы" icon={<Landmark size={18} />}>
-            <div className="grid grid-3">
-              <Kpi title="Поступления" value={money(finance.incomingPayments)} tone="good" />
-              <Kpi title="Платежи" value={money(finance.outgoingPayments)} />
-              <Kpi title="Потребность" value={money(finance.financingNeed)} tone={finance.financingNeed ? "bad" : "good"} />
-            </div>
-          </Panel>
-        </section>
-      )}
-
+              </Panel>
+              <Panel title="Проблемные зоны" icon={<AlertTriangle size={18} />}>
+                <div className="stack">
+                  {allRisks.slice(0, 4).map((risk) => (
+                    <div key={risk.id} className="attention-item">
+                      <StatusBadge tone={risk.priority === "critical" ? "bad" : risk.priority === "high" ? "warn" : "info"}>{risk.priority}</StatusBadge>
+                      <strong>{risk.title}</strong>
+                      <div className="muted">{risk.reason}</div>
+                    </div>
+                  ))}
+                  {!allRisks.length && <EmptyState text="Открытых рисков и авто-отклонений пока нет." />}
+                </div>
+              </Panel>
+              <Panel title="Материалы" icon={<Package size={18} />}>
+                <div className="grid grid-3">
+                  <Kpi title="Дефицитные позиции" value={String(materialStats.deficitItems.length)} tone="bad" />
+                  <Kpi title="Закуплено" value={`${materialStats.orderedQty.toLocaleString("ru-RU")} ед.`} />
+                  <Kpi title="Перерасход" value={money(materialStats.materialOverrun)} tone={materialStats.materialOverrun > 0 ? "bad" : "good"} />
+                </div>
+              </Panel>
+              <Panel title="Финансы" icon={<Landmark size={18} />}>
+                <div className="grid grid-3">
+                  <Kpi title="Поступления" value={money(finance.incomingPayments)} tone="good" />
+                  <Kpi title="Платежи" value={money(finance.outgoingPayments)} />
+                  <Kpi title="Потребность" value={money(finance.financingNeed)} tone={finance.financingNeed ? "bad" : "good"} />
+                </div>
+              </Panel>
+            </section>
+          )}
       {activeTab === "Бюджет / ВОР" && (
         <Panel title="Бюджет, ВОР и классификация затрат" icon={<Table2 size={18} />}>
           <ImportPanel
@@ -765,28 +802,25 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
       {activeTab === "AI-помощник" && (
         <Panel title="AI-помощник руководителя проекта" icon={<Bot size={18} />} className="ai-panel">
           <div className="toolbar ai-actions">
-            <button className="button secondary" onClick={() => void askAi("Сформируй отчет руководству.")}>
-              Сформировать отчет
-            </button>
-            <button className="button secondary" onClick={() => void askAi("Найди риски проекта.")}>
-              Найти риски
-            </button>
-            <button className="button secondary" onClick={() => void askAi("Проверь бюджет и перерасходы.")}>
-              Проверить бюджет
-            </button>
-            <button className="button secondary" onClick={() => void askAi("Что нужно заказать срочно?")}>
-              Что заказать?
-            </button>
-            <button className="button secondary" onClick={() => void askAi("Объясни отклонения по срокам и деньгам.")}>
-              Объяснить отклонения
-            </button>
+            {aiQuickActions.map((action) => (
+              <button className="button secondary" key={action} type="button" onClick={() => void askAi(action)}>
+                {action}
+              </button>
+            ))}
+          </div>
+          <div className="ai-source-row">
+            <StatusBadge tone="info">Источник: ВОР</StatusBadge>
+            <StatusBadge tone="info">График</StatusBadge>
+            <StatusBadge tone="info">Материалы</StatusBadge>
+            <StatusBadge tone="info">Финансы</StatusBadge>
+            <StatusBadge tone="info">Рапорты и риски</StatusBadge>
           </div>
           <div className="ai-composer">
             <label>
               Вопрос по проекту
               <textarea value={aiPrompt} onChange={(event) => setAiPrompt(event.target.value)} />
             </label>
-            <button className="button primary" disabled={aiLoading} onClick={() => void askAi()}>
+            <button className="button primary" disabled={aiLoading} type="button" onClick={() => void askAi()}>
               <Send size={18} />
               {aiLoading ? "Анализ..." : "Спросить AI"}
             </button>
@@ -798,6 +832,43 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
           </div>
         </Panel>
       )}
+        </div>
+
+        <aside className="panel stack context-panel">
+          <div>
+            <div className="eyebrow">Контекст проекта</div>
+            <h2>Что проверить</h2>
+            <p className="muted">Короткая панель для РП и ПТО: риски, сроки, снабжение и финансовые отклонения.</p>
+          </div>
+          <div className="attention-list">
+            <ContextItem title="Бюджет / факт" value={money(budgetDeviation)} tone={budgetDeviation > 0 ? "bad" : "good"} />
+            <ContextItem title="Просроченные работы" value={String(delayedWorks.length)} tone={delayedWorks.length ? "bad" : "good"} />
+            <ContextItem title="Открытые риски" value={String(activeRisks.length)} tone={activeRisks.length ? "warn" : "good"} />
+            <ContextItem title="Заявки снабжению" value={String(activeRequests.length)} tone={activeRequests.length ? "warn" : "good"} />
+          </div>
+          <div className="stack">
+            <h3>AI-рекомендации</h3>
+            <button className="button secondary" type="button" onClick={() => {
+              setActiveTab("AI-помощник");
+              void askAi("Проверь риски проекта и назови три первоочередных действия.");
+            }}>
+              Проверить риски проекта
+            </button>
+            <button className="button secondary" type="button" onClick={() => {
+              setActiveTab("AI-помощник");
+              void askAi("Сравни бюджет и факт, выдели перерасход и причины.");
+            }}>
+              Сравнить бюджет и факт
+            </button>
+            <button className="button secondary" type="button" onClick={() => {
+              setActiveTab("AI-помощник");
+              void askAi("Подготовь пояснительную записку руководству по текущему статусу проекта.");
+            }}>
+              Подготовить записку
+            </button>
+          </div>
+        </aside>
+      </div>
     </main>
   );
 }
@@ -956,6 +1027,50 @@ function Kpi({ title, value, tone }: { title: string; value: string; tone?: "goo
       <div className={`kpi-value ${tone === "good" ? "delta-good" : tone === "warn" ? "delta-warn" : tone === "bad" ? "delta-bad" : ""}`}>{value}</div>
     </div>
   );
+}
+
+function StatusBadge({ tone, children }: { tone: "good" | "warn" | "bad" | "info" | "neutral"; children: React.ReactNode }) {
+  const color = tone === "good" ? "green" : tone === "warn" ? "yellow" : tone === "bad" ? "red" : tone === "info" ? "blue" : "gray";
+  return <span className={`badge ${color}`}>{children}</span>;
+}
+
+function EmptyState({ text }: { text: string }) {
+  return <div className="empty-state">{text}</div>;
+}
+
+function ContextItem({ title, value, tone }: { title: string; value: string; tone: "good" | "warn" | "bad" }) {
+  return (
+    <div className="attention-item">
+      <div className="kpi-label">{title}</div>
+      <div className={`kpi-value ${tone === "good" ? "delta-good" : tone === "warn" ? "delta-warn" : "delta-bad"}`}>{value}</div>
+    </div>
+  );
+}
+
+function readableStatus(value: string) {
+  const labels: Record<string, string> = {
+    not_started: "Не начато",
+    in_progress: "В работе",
+    done: "Готово",
+    delayed: "Просрочено",
+    stopped: "Остановлено",
+    required: "Требуется",
+    requested: "Запрошено",
+    ordered: "Заказано",
+    in_transit: "В пути",
+    delivered: "Доставлено",
+    closed: "Закрыто",
+    planned: "План",
+    paid: "Оплачено",
+    overdue: "Просрочено",
+    open: "Открыт",
+    draft: "Черновик",
+    critical: "Критично",
+    high: "Высокий",
+    medium: "Средний",
+    low: "Низкий"
+  };
+  return labels[value] ?? value;
 }
 
 function BudgetForm({ onAdd }: { onAdd: (item: Omit<BudgetItem, "id" | "projectId" | "source" | "actualUnitPrice" | "forecastUnitPrice">) => Promise<void> }) {
@@ -1343,11 +1458,13 @@ function BudgetTable({ items, onEdit, onDelete }: { items: BudgetItem[]; onEdit:
   return (
     <DataTable
       headers={["Раздел", "Код", "Наименование", "Тип", "Кол-во", "Цена план", "Цена факт", "Сумма план", "Маржа", ""]}
+      numericColumns={[4, 5, 6, 7, 8]}
+      emptyMessage="ВОР пока пустая. Добавьте позицию вручную или импортируйте Excel."
       rows={items.map((item) => [
         item.section,
         item.code,
         item.name,
-        <span className="badge blue" key="kind">{item.kind}</span>,
+        <StatusBadge key="kind" tone="info">{item.kind}</StatusBadge>,
         `${item.qty.toLocaleString("ru-RU")} ${item.unit}`,
         money(item.plannedUnitPrice),
         money(item.actualUnitPrice),
@@ -1363,6 +1480,8 @@ function ScheduleTable({ items, onEdit, onDelete }: { items: ScheduleItem[]; onE
   return (
     <DataTable
       headers={["Работа", "Ответственный", "Начало", "Окончание", "План", "Факт", "Выполнение", "Статус", ""]}
+      numericColumns={[4, 5, 6]}
+      emptyMessage="График пока не заполнен. Добавьте первую работу или импортируйте план."
       rows={items.map((item) => [
         item.name,
         item.owner,
@@ -1371,7 +1490,7 @@ function ScheduleTable({ items, onEdit, onDelete }: { items: ScheduleItem[]; onE
         item.plannedQty,
         item.actualQty,
         percent(item.plannedQty ? (item.actualQty / item.plannedQty) * 100 : 0),
-        <span className={`badge ${item.status === "delayed" ? "red" : item.status === "done" ? "green" : "blue"}`} key="status">{item.status}</span>,
+        <StatusBadge key="status" tone={item.status === "delayed" ? "bad" : item.status === "done" ? "good" : "info"}>{readableStatus(item.status)}</StatusBadge>,
         <RowActions key="actions" onEdit={() => onEdit(item)} onDelete={() => onDelete(item)} />
       ])}
     />
@@ -1382,6 +1501,8 @@ function MaterialTable({ items, onEdit, onDelete }: { items: Material[]; onEdit:
   return (
     <DataTable
       headers={["Материал", "Потребность", "Заказано", "Доставлено", "Списано", "Цена план/факт", "Поставщик", "Статус", ""]}
+      numericColumns={[1, 2, 3, 4, 5]}
+      emptyMessage="Материалы пока не заведены. Добавьте позицию или загрузите ВОР."
       rows={items.map((item) => [
         item.name,
         `${item.requiredQty} ${item.unit}`,
@@ -1390,7 +1511,7 @@ function MaterialTable({ items, onEdit, onDelete }: { items: Material[]; onEdit:
         `${item.consumedQty} ${item.unit}`,
         `${money(item.plannedUnitPrice)} / ${money(item.actualUnitPrice)}`,
         item.supplier,
-        <span className={`badge ${item.status === "required" ? "red" : item.status === "delivered" ? "green" : "yellow"}`} key="status">{item.status}</span>,
+        <StatusBadge key="status" tone={item.status === "required" ? "bad" : item.status === "delivered" ? "good" : "warn"}>{readableStatus(item.status)}</StatusBadge>,
         <RowActions key="actions" onEdit={() => onEdit(item)} onDelete={() => onDelete(item)} />
       ])}
     />
@@ -1401,12 +1522,13 @@ function RequestTable({ items }: { items: ProcurementRequest[] }) {
   return (
     <DataTable
       headers={["Заявка", "Инициатор", "Требуется", "Приоритет", "Статус", "Позиции"]}
+      emptyMessage="Заявок снабжению пока нет."
       rows={items.map((item) => [
         item.title,
         item.initiator,
         item.neededAt,
-        <span className={`badge ${item.priority === "critical" ? "red" : "yellow"}`} key="priority">{item.priority}</span>,
-        <span className="badge blue" key="status">{item.status}</span>,
+        <StatusBadge key="priority" tone={item.priority === "critical" ? "bad" : "warn"}>{readableStatus(item.priority)}</StatusBadge>,
+        <StatusBadge key="status" tone="info">{readableStatus(item.status)}</StatusBadge>,
         item.items.map((requestItem) => `${requestItem.name}: ${requestItem.qty} ${requestItem.unit}`).join("; ")
       ])}
     />
@@ -1417,6 +1539,8 @@ function PaymentTable({ items }: { items: Payment[] }) {
   return (
     <DataTable
       headers={["Платеж", "Контрагент", "Тип", "Дата", "Сумма", "Категория", "Статус"]}
+      numericColumns={[4]}
+      emptyMessage="Платежи пока не заведены."
       rows={items.map((item) => [
         item.title,
         item.counterparty,
@@ -1424,7 +1548,7 @@ function PaymentTable({ items }: { items: Payment[] }) {
         item.plannedAt,
         money(item.amount),
         item.category,
-        <span className={`badge ${item.status === "paid" ? "green" : item.status === "overdue" ? "red" : "blue"}`} key="status">{item.status}</span>
+        <StatusBadge key="status" tone={item.status === "paid" ? "good" : item.status === "overdue" ? "bad" : "info"}>{readableStatus(item.status)}</StatusBadge>
       ])}
     />
   );
@@ -1434,6 +1558,7 @@ function ReportTable({ items }: { items: DailyReport[] }) {
   return (
     <DataTable
       headers={["Дата", "Автор", "Погода", "Люди", "Техника", "Выполнено", "Проблемы", "Статус"]}
+      emptyMessage="Рапортов пока нет."
       rows={items.map((item) => [
         item.date,
         item.author,
@@ -1442,7 +1567,7 @@ function ReportTable({ items }: { items: DailyReport[] }) {
         item.equipment,
         item.completedWorks,
         item.issues,
-        <span className="badge blue" key="status">{item.status}</span>
+        <StatusBadge key="status" tone="info">{readableStatus(item.status)}</StatusBadge>
       ])}
     />
   );
@@ -1452,13 +1577,14 @@ function RiskTable({ items }: { items: Risk[] }) {
   return (
     <DataTable
       headers={["Риск", "Причина", "Приоритет", "Ответственный", "Срок", "Статус"]}
+      emptyMessage="Риски пока не заведены."
       rows={items.map((item) => [
         item.title,
         item.reason,
-        <span className={`badge ${item.priority === "critical" ? "red" : item.priority === "high" ? "yellow" : "blue"}`} key="priority">{item.priority}</span>,
+        <StatusBadge key="priority" tone={item.priority === "critical" ? "bad" : item.priority === "high" ? "warn" : "info"}>{readableStatus(item.priority)}</StatusBadge>,
         item.owner,
         item.dueAt,
-        <span className={`badge ${item.status === "closed" ? "green" : "gray"}`} key="status">{item.status}</span>
+        <StatusBadge key="status" tone={item.status === "closed" ? "good" : "neutral"}>{readableStatus(item.status)}</StatusBadge>
       ])}
     />
   );
@@ -1468,6 +1594,7 @@ function AuditTable({ items }: { items: AuditEvent[] }) {
   return (
     <DataTable
       headers={["Дата", "Действие", "Сущность", "Описание", "Пользователь"]}
+      emptyMessage="История изменений пока пустая."
       rows={items.map((item) => [
         new Date(item.createdAt).toLocaleString("ru-RU"),
         item.action,
@@ -1497,6 +1624,8 @@ function DocumentTable({
   return (
     <DataTable
       headers={["Файл", "Категория", "Тип", "Версии", "Размер", "Загрузил", "Дата", "Действия"]}
+      numericColumns={[4]}
+      emptyMessage="Документы пока не загружены."
       rows={items.map((item) => [
         <a key="download" className="delta-good" href={`/api/projects/${projectId}/documents/${item.id}/download`}>
           {item.fileName ?? item.title}
@@ -1543,6 +1672,7 @@ function ProjectMembersTable({
   return (
     <DataTable
       headers={["Пользователь", "Email", "Проектная роль", "Глобальная роль", "Статус", "Добавлен", "Действия"]}
+      emptyMessage="Участники проекта пока не добавлены."
       rows={items.map((member) => [
         member.user.name,
         member.user.email,
@@ -1552,8 +1682,8 @@ function ProjectMembersTable({
           <option value="MANAGER">MANAGER</option>
           <option value="VIEWER">VIEWER</option>
         </select>,
-        <span className="badge blue" key="global-role">{member.user.role}</span>,
-        <span className={`badge ${member.user.isActive ? "green" : "gray"}`} key="status">{member.user.isActive ? "active" : "inactive"}</span>,
+        <StatusBadge key="global-role" tone="info">{member.user.role}</StatusBadge>,
+        <StatusBadge key="status" tone={member.user.isActive ? "good" : "neutral"}>{member.user.isActive ? "active" : "inactive"}</StatusBadge>,
         new Date(member.createdAt).toLocaleString("ru-RU"),
         <button className="icon-button" key="remove" title="Удалить участника" type="button" onClick={() => onRemove(member)}>
           <Trash2 size={16} />
@@ -1563,27 +1693,41 @@ function ProjectMembersTable({
   );
 }
 
-function DataTable({ headers, rows }: { headers: string[]; rows: React.ReactNode[][] }) {
+function DataTable({
+  headers,
+  rows,
+  numericColumns = [],
+  emptyMessage = "Нет данных для отображения."
+}: {
+  headers: string[];
+  rows: React.ReactNode[][];
+  numericColumns?: number[];
+  emptyMessage?: string;
+}) {
   return (
     <div className="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            {headers.map((header) => (
-              <th key={header}>{header}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row, index) => (
-            <tr key={index}>
-              {row.map((cell, cellIndex) => (
-                <td key={cellIndex}>{cell}</td>
+      {rows.length ? (
+        <table>
+          <thead>
+            <tr>
+              {headers.map((header, index) => (
+                <th className={numericColumns.includes(index) ? "numeric" : undefined} key={header}>{header}</th>
               ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {rows.map((row, index) => (
+              <tr key={index}>
+                {row.map((cell, cellIndex) => (
+                  <td className={numericColumns.includes(cellIndex) ? "numeric" : undefined} key={cellIndex}>{cell}</td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ) : (
+        <EmptyState text={emptyMessage} />
+      )}
     </div>
   );
 }
