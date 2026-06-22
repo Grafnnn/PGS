@@ -2,9 +2,11 @@ import { z } from "zod";
 
 const envSchema = z.object({
   NODE_ENV: z.string().default("development"),
+  APP_ENV: z.string().optional(),
   DATABASE_URL: z.string().url().optional(),
   APP_URL: z.string().url().default("http://localhost:3000"),
   OPENAI_API_KEY: z.string().optional(),
+  STAGING_SMOKE_SECRET: z.string().optional(),
   AUTH_REQUIRED: z.enum(["true", "false"]).default("false"),
   SESSION_SECRET: z.string().optional(),
   EMAIL_PROVIDER: z.enum(["console", "gmail", "smtp"]).default("console"),

@@ -47,6 +47,7 @@ Use placeholders only in tickets, docs, and chat. Do not paste real values into 
 | `DATABASE_URL` | yes | yes | Staging PostgreSQL URL only, never production |
 | `AUTH_REQUIRED` | yes | no | `true` |
 | `SESSION_SECRET` | yes | yes | Strong random value |
+| `STAGING_SMOKE_SECRET` | runtime smoke only | yes | Strong random staging-only secret for `/api/internal/staging-smoke` |
 | `FIRST_ADMIN_EMAIL` | first bootstrap | no | Initial staging admin email |
 | `FIRST_ADMIN_PASSWORD` | first bootstrap | yes | Temporary strong password; rotate/remove after first login |
 | `FIRST_ADMIN_NAME` | first bootstrap | no | Initial staging admin name |
@@ -218,6 +219,44 @@ Require HTTP 200 and `status: ok`.
 - Verify dashboard and project list access.
 - Verify unauthenticated protected pages/API return redirect, 401, or 403 as appropriate.
 - Verify cookie is HTTP-only and secure on HTTPS staging.
+
+### 2a. Runtime authenticated smoke without Render Shell
+
+If Render Shell or a safe external staging `DATABASE_URL` is unavailable, use the staging-only runtime smoke endpoint instead of direct DB access.
+
+Prerequisites:
+
+- `APP_ENV=staging`;
+- `STAGING_SMOKE_SECRET` configured on the staging service;
+- `/api/health` returns HTTP 200.
+
+Run from a trusted shell without printing the secret:
+
+```bash
+curl -sS -X POST "$APP_URL/api/internal/staging-smoke" \
+  -H "content-type: application/json" \
+  -H "authorization: Bearer $STAGING_SMOKE_SECRET" \
+  --data '{}'
+```
+
+Expected:
+
+- HTTP 200;
+- `ok: true`;
+- login, `/api/auth/me`, project read, unauth AI guard, and authenticated missing-project AI guard pass;
+- `liveAi.status` is `skip`;
+- response contains no passwords, cookies, session tokens, `DATABASE_URL`, `OPENAI_API_KEY`, or smoke secret.
+
+Optional one-request live AI smoke:
+
+```bash
+curl -sS -X POST "$APP_URL/api/internal/staging-smoke" \
+  -H "content-type: application/json" \
+  -H "authorization: Bearer $STAGING_SMOKE_SECRET" \
+  --data '{"includeLiveAi":true}'
+```
+
+Full runbook: `docs/staging_smoke.md`.
 
 ### 3. Project baseline
 
