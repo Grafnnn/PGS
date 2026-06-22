@@ -23,11 +23,11 @@ export default async function ProjectsPage() {
 
       <section className="panel stack">
         <div className="toolbar">
-          <label style={{ maxWidth: 420, width: "100%" }}>
+          <label className="search-label">
             Поиск
-            <span style={{ position: "relative" }}>
-              <Search size={17} style={{ left: 10, position: "absolute", top: 10 }} />
-              <input style={{ paddingLeft: 34 }} placeholder="Название, заказчик, адрес" />
+            <span className="search-field">
+              <Search size={17} />
+              <input placeholder="Название, заказчик, адрес" />
             </span>
           </label>
           <label>

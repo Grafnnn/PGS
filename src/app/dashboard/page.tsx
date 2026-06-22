@@ -35,7 +35,7 @@ export default async function DashboardPage() {
       </section>
 
       <section className="grid grid-2" style={{ marginTop: 16 }}>
-        <div className="panel stack">
+        <div className="panel stack panel-accent">
           <h2>Финансовая сводка</h2>
           <div className="grid grid-3">
             <Kpi title="Поступления" value={money(finance.incomingPayments)} tone="good" />
@@ -43,7 +43,7 @@ export default async function DashboardPage() {
             <Kpi title="Потребность" value={money(finance.financingNeed)} tone={finance.financingNeed ? "bad" : "good"} />
           </div>
         </div>
-        <div className="panel stack">
+        <div className="panel stack panel-accent">
           <h2>Снабжение</h2>
           <div className="grid grid-3">
             <Kpi title="Дефицитные позиции" value={String(materials.deficitItems.length)} tone="bad" />

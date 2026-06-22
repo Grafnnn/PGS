@@ -82,7 +82,9 @@ export default async function AdminIntegrationsPage() {
                   <td>
                     <span className={`badge ${connector.mode === "enabled" ? "green" : connector.mode === "read_only" ? "blue" : "gray"}`}>{connector.mode}</span>
                   </td>
-                  <td>{connector.configured ? "configured" : "not configured"}</td>
+                  <td>
+                    <span className={`badge ${connector.configured ? "green" : "gray"}`}>{connector.configured ? "configured" : "not configured"}</span>
+                  </td>
                   <td>{connector.metadata ? Object.entries(connector.metadata).map(([key, value]) => `${key}: ${value}`).join("; ") : "-"}</td>
                   <td>{connector.notes.join(" ")}</td>
                   <td className={connector.warnings.length ? "delta-warn" : "muted"}>{connector.warnings.join(" ") || "-"}</td>

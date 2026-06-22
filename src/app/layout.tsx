@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Building2 } from "lucide-react";
+import { BrandLogo } from "@/components/brand-logo";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -14,12 +14,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <div className="app-shell">
           <header className="topbar">
-            <Link className="brand" href="/dashboard">
-              <span className="brand-mark">
-                <Building2 size={20} />
-              </span>
-              <span>PGS Construction</span>
-            </Link>
+            <BrandLogo />
             <nav className="nav">
               <Link href="/dashboard">Дашборд</Link>
               <Link href="/projects">Проекты</Link>

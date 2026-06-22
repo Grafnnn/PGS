@@ -76,6 +76,7 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
   const materialStats = useMemo(() => materialTotals(materials), [materials]);
   const finance = useMemo(() => financeTotals(payments), [payments]);
   const allRisks = useMemo(() => [...risks, ...deriveAutoRisks(scheduleItems, materials, payments)], [risks, scheduleItems, materials, payments]);
+  const aiAnswerTone = aiLoading ? "loading" : aiAnswer ? (/OPENAI_API_KEY|not configured|failed|ошибка|error|Project not found/i.test(aiAnswer) ? "error" : "ready") : "empty";
 
   const loadAudit = useCallback(async () => {
     try {
@@ -762,33 +763,39 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
       )}
 
       {activeTab === "AI-помощник" && (
-        <Panel title="AI-помощник руководителя проекта" icon={<Bot size={18} />}>
-          <div className="toolbar">
-            <button className="button secondary" onClick={() => askAi("Сформируй отчет руководству.")}>
+        <Panel title="AI-помощник руководителя проекта" icon={<Bot size={18} />} className="ai-panel">
+          <div className="toolbar ai-actions">
+            <button className="button secondary" onClick={() => void askAi("Сформируй отчет руководству.")}>
               Сформировать отчет
             </button>
-            <button className="button secondary" onClick={() => askAi("Найди риски проекта.")}>
+            <button className="button secondary" onClick={() => void askAi("Найди риски проекта.")}>
               Найти риски
             </button>
-            <button className="button secondary" onClick={() => askAi("Проверь бюджет и перерасходы.")}>
+            <button className="button secondary" onClick={() => void askAi("Проверь бюджет и перерасходы.")}>
               Проверить бюджет
             </button>
-            <button className="button secondary" onClick={() => askAi("Что нужно заказать срочно?")}>
+            <button className="button secondary" onClick={() => void askAi("Что нужно заказать срочно?")}>
               Что заказать?
             </button>
-            <button className="button secondary" onClick={() => askAi("Объясни отклонения по срокам и деньгам.")}>
+            <button className="button secondary" onClick={() => void askAi("Объясни отклонения по срокам и деньгам.")}>
               Объяснить отклонения
             </button>
           </div>
-          <label>
-            Вопрос по проекту
-            <textarea value={aiPrompt} onChange={(event) => setAiPrompt(event.target.value)} />
-          </label>
-          <button className="button primary" disabled={aiLoading} onClick={() => askAi()}>
-            <Send size={18} />
-            {aiLoading ? "Анализ..." : "Спросить AI"}
-          </button>
-          <div className="ai-answer">{aiAnswer || "Ответ появится здесь. AI использует контекст бюджета, графика, материалов, финансов и рисков проекта."}</div>
+          <div className="ai-composer">
+            <label>
+              Вопрос по проекту
+              <textarea value={aiPrompt} onChange={(event) => setAiPrompt(event.target.value)} />
+            </label>
+            <button className="button primary" disabled={aiLoading} onClick={() => void askAi()}>
+              <Send size={18} />
+              {aiLoading ? "Анализ..." : "Спросить AI"}
+            </button>
+          </div>
+          <div className={`ai-answer ${aiAnswerTone}`}>
+            {aiLoading
+              ? "AI анализирует контекст проекта..."
+              : aiAnswer || "Ответ появится здесь. AI использует контекст бюджета, графика, материалов, финансов и рисков проекта."}
+          </div>
         </Panel>
       )}
     </main>
@@ -821,7 +828,7 @@ function ImportPanel({
   const canCommit = Boolean(preview && preview.summary.errors === 0 && confirmed && !loading);
 
   return (
-    <div className="panel stack" style={{ background: "#f8fafc" }}>
+    <div className="panel stack import-panel">
       <div className="toolbar" style={{ marginBottom: 0 }}>
         <div>
           <h3>Импорт Excel ВОР / сметы</h3>
@@ -897,8 +904,8 @@ function ImportPanel({
             headers={["Лист", "Строка", "Причина", "Значения"]}
             rows={preview.unknownRows.slice(0, 8).map((item) => [item.sheetName, item.rowNumber, item.reason, item.values.join(" | ")])}
           />
-          <label style={{ alignItems: "center", display: "flex", gridTemplateColumns: "auto 1fr", gap: 8 }}>
-            <input checked={confirmed} onChange={(event) => onConfirmChange(event.target.checked)} style={{ width: "auto" }} type="checkbox" />
+          <label className="checkbox-row">
+            <input checked={confirmed} onChange={(event) => onConfirmChange(event.target.checked)} type="checkbox" />
             Я проверил импортируемые данные
           </label>
         </div>
@@ -930,10 +937,10 @@ function PreviewTable({ title, headers, rows }: { title: string; headers: string
   );
 }
 
-function Panel({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) {
+function Panel({ title, icon, children, className = "" }: { title: string; icon: React.ReactNode; children: React.ReactNode; className?: string }) {
   return (
-    <section className="panel stack">
-      <div style={{ alignItems: "center", display: "flex", gap: 8 }}>
+    <section className={`panel stack ${className}`}>
+      <div className="panel-title">
         {icon}
         <h2>{title}</h2>
       </div>
@@ -1321,7 +1328,7 @@ function MaterialEditForm({ item, onSave, onCancel }: { item: Material; onSave: 
 
 function RowActions({ onEdit, onDelete }: { onEdit: () => void; onDelete: () => void }) {
   return (
-    <div style={{ display: "flex", gap: 6 }}>
+    <div className="row-actions">
       <button className="icon-button" title="Редактировать" type="button" onClick={onEdit}>
         <Pencil size={16} />
       </button>
