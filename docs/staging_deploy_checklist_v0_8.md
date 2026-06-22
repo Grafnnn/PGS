@@ -228,7 +228,10 @@ Prerequisites:
 
 - `APP_ENV=staging`;
 - `STAGING_SMOKE_SECRET` configured on the staging service;
-- `/api/health` returns HTTP 200.
+- `/api/health` returns HTTP 200;
+- deployed commit is confirmed through `/api/health.version.gitSha` or Render deploy metadata.
+
+On Render, the runtime endpoint uses `http://127.0.0.1:$PORT` for its internal app checks when `PORT` is available. If all smoke checks fail with `fetch failed`, verify the deployed revision includes this loopback behavior before trusting the smoke result.
 
 Run from a trusted shell without printing the secret:
 

@@ -43,6 +43,8 @@ const safeSmokeResult = {
 describe("staging smoke runtime endpoint", () => {
   beforeEach(() => {
     runStagingSmokeBootstrapMock.mockReset();
+    vi.stubEnv("PORT", "");
+    vi.stubEnv("STAGING_SMOKE_BASE_URL", "");
   });
 
   afterEach(() => {
@@ -90,6 +92,23 @@ describe("staging smoke runtime endpoint", () => {
     expect(runStagingSmokeBootstrapMock).toHaveBeenCalledWith({
       baseUrl: "https://pgs.local",
       includeLiveAi: true,
+      requestId: "test-request-id"
+    });
+  });
+
+  it("uses a loopback base URL when a runtime PORT is available", async () => {
+    vi.stubEnv("APP_ENV", "staging");
+    vi.stubEnv("PORT", "10000");
+    vi.stubEnv("STAGING_SMOKE_SECRET", "expected-secret");
+    runStagingSmokeBootstrapMock.mockResolvedValue(safeSmokeResult);
+    const { POST } = await import("./route");
+
+    const response = await POST(stagingRequest({ secret: "expected-secret", bearer: true }));
+
+    expect(response.status).toBe(200);
+    expect(runStagingSmokeBootstrapMock).toHaveBeenCalledWith({
+      baseUrl: "http://127.0.0.1:10000",
+      includeLiveAi: false,
       requestId: "test-request-id"
     });
   });
