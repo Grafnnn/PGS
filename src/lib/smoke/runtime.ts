@@ -1,10 +1,13 @@
 import { randomBytes } from "crypto";
+import * as XLSX from "xlsx";
 import { connectorSummary, getConnectorStatuses } from "@/lib/connectors/status";
 import { buildInviteEmail, getEmailProvider, getEmailProviderStatus } from "@/lib/email";
 import { getEnvStatus } from "@/lib/env";
+import { buildDeterministicImportExplanation } from "@/lib/excel/ai-import-summary";
+import type { ImportPreview } from "@/lib/excel/import-types";
 import { prisma } from "@/lib/prisma";
 import { getStorageProvider } from "@/lib/storage";
-import { SMOKE_PROJECT_ID } from "./cleanup";
+import { assertSmokeMutationTarget, SMOKE_PROJECT_ID } from "./cleanup";
 import { CREATE_STAGING_SMOKE_USER_CONFIRM, createOrRotateStagingSmokeUser, type StagingSmokeUserReport } from "./user";
 
 const STAGING_SMOKE_EMAIL = "smoke+staging-runtime@pgs.local";
@@ -53,6 +56,28 @@ export interface RuntimeSmokeResult {
       metadata?: Record<string, string>;
     }>;
   };
+  importSmoke?: RuntimeSmokeCheck & {
+    projectId: string;
+    importBatchId?: string;
+    operations: string[];
+    permissionScope?: "temporary-project-manager-restored" | "restore-failed";
+    preview?: {
+      budgetItems: number;
+      materials: number;
+      warnings: number;
+      errors: number;
+    };
+    explanation?: {
+      status: string;
+      confidence: number;
+    };
+    commit?: {
+      created: number;
+      budgetItems: number;
+      materials: number;
+    };
+    cleanup: "pass" | "fail" | "skip";
+  };
   secretsPrinted: false;
 }
 
@@ -62,6 +87,7 @@ export interface RuntimeSmokeInput {
   includeStorageSmoke?: boolean;
   includeEmailSmoke?: boolean;
   includeConnectorReadiness?: boolean;
+  includeImportSmoke?: boolean;
   requestId: string;
 }
 
@@ -238,6 +264,284 @@ async function postJson(baseUrl: string, path: string, body: unknown, cookie: st
   });
 }
 
+async function postForm(baseUrl: string, path: string, form: FormData, cookie: string, requestId: string) {
+  return await fetch(`${baseUrl}${path}`, {
+    method: "POST",
+    headers: {
+      "x-request-id": requestId,
+      ...(cookie ? { cookie } : {})
+    },
+    body: form
+  });
+}
+
+async function safeJson<T>(response: Response): Promise<T | null> {
+  return (await response.json().catch(() => null)) as T | null;
+}
+
+function smokeImportWorkbook(runKey: string) {
+  const workCode = `SMOKE-WORK-${runKey}`;
+  const materialCode = `SMOKE-MAT-${runKey}`;
+  const workbook = XLSX.utils.book_new();
+  const worksheet = XLSX.utils.aoa_to_sheet([
+    ["Локальная смета PGS smoke"],
+    ["Раздел", `SMOKE-IMPORT-${runKey}`, "", "", "", "", ""],
+    ["№", "Наименование работ", "Ед. изм.", "Кол-во", "Цена за ед.", "Сумма", "Примечание"],
+    [workCode, `SMOKE-${runKey} монтаж тестовой позиции`, "ед.", 2, 1000, 2000, "runtime import smoke"],
+    [materialCode, `SMOKE-${runKey} бетон В25`, "м3", 1, 5000, 5000, "runtime import smoke"],
+    ["", "Итого по разделу", "", "", "", 7000, ""]
+  ]);
+  XLSX.utils.book_append_sheet(workbook, worksheet, "ВОР");
+  return {
+    bytes: XLSX.write(workbook, { type: "buffer", bookType: "xlsx" }) as Buffer,
+    fileName: `SMOKE-${runKey}-vor.xlsx`,
+    workCode,
+    materialCode,
+    workName: `SMOKE-${runKey} монтаж тестовой позиции`,
+    materialName: `SMOKE-${runKey} бетон В25`,
+    sectionName: `SMOKE-IMPORT-${runKey}`
+  };
+}
+
+async function cleanupImportSmoke(input: { workCode: string; materialCode: string; workName: string; materialName: string; sectionName: string }) {
+  const [budgetItems, materials, sections] = await prisma.$transaction([
+    prisma.budgetItem.deleteMany({
+      where: {
+        projectId: SMOKE_PROJECT_ID,
+        OR: [{ code: { in: [input.workCode, input.materialCode] } }, { name: { in: [input.workName, input.materialName] } }]
+      }
+    }),
+    prisma.material.deleteMany({
+      where: {
+        projectId: SMOKE_PROJECT_ID,
+        name: input.materialName
+      }
+    }),
+    prisma.budgetSection.deleteMany({
+      where: {
+        projectId: SMOKE_PROJECT_ID,
+        name: input.sectionName
+      }
+    })
+  ]);
+  return budgetItems.count + materials.count + sections.count;
+}
+
+async function grantTemporaryImportRole() {
+  const user = await prisma.user.findUnique({ where: { email: STAGING_SMOKE_EMAIL }, select: { id: true } });
+  if (!user) throw new Error("Smoke import user is missing.");
+  const membership = await prisma.projectMember.findUnique({
+    where: { projectId_userId: { projectId: SMOKE_PROJECT_ID, userId: user.id } },
+    select: { role: true }
+  });
+  if (!membership) throw new Error("Smoke import user project membership is missing.");
+  if (membership.role !== "MANAGER") {
+    await prisma.projectMember.update({
+      where: { projectId_userId: { projectId: SMOKE_PROJECT_ID, userId: user.id } },
+      data: { role: "MANAGER" }
+    });
+  }
+  return { userId: user.id, previousRole: membership.role };
+}
+
+async function restoreTemporaryImportRole(input: { userId: string; previousRole: string }) {
+  await prisma.projectMember.update({
+    where: { projectId_userId: { projectId: SMOKE_PROJECT_ID, userId: input.userId } },
+    data: { role: input.previousRole }
+  });
+}
+
+async function cleanupImportRole(input: Awaited<ReturnType<typeof grantTemporaryImportRole>> | undefined, operations: string[]) {
+  if (!input) return "temporary-project-manager-restored" as const;
+  await restoreTemporaryImportRole(input);
+  operations.push("restore-import-role");
+  return "temporary-project-manager-restored" as const;
+}
+
+async function runImportSmoke(baseUrl: string, cookie: string, requestId: string): Promise<NonNullable<RuntimeSmokeResult["importSmoke"]>> {
+  const operations: string[] = [];
+  let cleanup: "pass" | "fail" | "skip" = "skip";
+  let permissionScope: NonNullable<RuntimeSmokeResult["importSmoke"]>["permissionScope"] | undefined;
+  let workbook: ReturnType<typeof smokeImportWorkbook> | undefined;
+  let importBatchId: string | undefined;
+  let temporaryRole: Awaited<ReturnType<typeof grantTemporaryImportRole>> | undefined;
+  try {
+    assertSmokeMutationTarget(SMOKE_PROJECT_ID, "staging");
+    const project = await prisma.project.findUnique({ where: { id: SMOKE_PROJECT_ID }, select: { id: true, isSmokeProject: true } });
+    if (!project?.isSmokeProject) {
+      return {
+        name: "import smoke",
+        status: "fail",
+        detail: `${SMOKE_PROJECT_ID} is missing or isSmokeProject=false`,
+        projectId: SMOKE_PROJECT_ID,
+        operations,
+        cleanup
+      };
+    }
+
+    temporaryRole = await grantTemporaryImportRole();
+    operations.push("temporary-import-role");
+
+    const runKey = requestId.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 18) || Date.now().toString();
+    workbook = smokeImportWorkbook(runKey);
+    const form = new FormData();
+    form.append(
+      "file",
+      new Blob([Uint8Array.from(workbook.bytes)], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }),
+      workbook.fileName
+    );
+
+    const previewResponse = await postForm(baseUrl, `/api/projects/${SMOKE_PROJECT_ID}/imports/budget/preview`, form, cookie, requestId);
+    operations.push("preview");
+    const preview = await safeJson<ImportPreview>(previewResponse);
+    importBatchId = preview?.importBatchId;
+    if (previewResponse.status !== 200 || !preview?.importBatchId) {
+      permissionScope = await cleanupImportRole(temporaryRole, operations);
+      temporaryRole = undefined;
+      return {
+        name: "import smoke",
+        status: "fail",
+        httpStatus: previewResponse.status,
+        detail: "Preview did not return a commit-ready import batch.",
+        projectId: SMOKE_PROJECT_ID,
+        operations,
+        permissionScope,
+        cleanup
+      };
+    }
+
+    const explanation = buildDeterministicImportExplanation(preview);
+    operations.push("deterministic-explanation");
+
+    const commitResponse = await postJson(
+      baseUrl,
+      `/api/projects/${SMOKE_PROJECT_ID}/imports/${preview.importBatchId}/commit`,
+      { mode: "append", replaceConfirmed: false },
+      cookie,
+      requestId
+    );
+    operations.push("commit");
+    const commit = await safeJson<{
+      ok?: boolean;
+      commitResult?: {
+        created: number;
+        budgetItems: number;
+        materials: number;
+      };
+    }>(commitResponse);
+    if (commitResponse.status !== 200 || commit?.ok !== true || !commit.commitResult || commit.commitResult.created < 2) {
+      const cleaned = await cleanupImportSmoke(workbook);
+      cleanup = cleaned > 0 ? "pass" : "skip";
+      operations.push("cleanup");
+      permissionScope = await cleanupImportRole(temporaryRole, operations);
+      temporaryRole = undefined;
+      return {
+        name: "import smoke",
+        status: "fail",
+        httpStatus: commitResponse.status,
+        detail: "Commit did not create the expected smoke import rows.",
+        projectId: SMOKE_PROJECT_ID,
+        importBatchId,
+        operations,
+        preview: {
+          budgetItems: preview.summary.budgetItems,
+          materials: preview.summary.materials,
+          warnings: preview.summary.warnings,
+          errors: preview.summary.errors
+        },
+        explanation: { status: explanation.status, confidence: explanation.confidence },
+        cleanup
+      };
+    }
+
+    const historyResponse = await get(baseUrl, `/api/projects/${SMOKE_PROJECT_ID}/imports`, cookie, requestId);
+    operations.push("history");
+    if (historyResponse.status !== 200) {
+      const cleaned = await cleanupImportSmoke(workbook);
+      cleanup = cleaned > 0 ? "pass" : "skip";
+      operations.push("cleanup");
+      permissionScope = await cleanupImportRole(temporaryRole, operations);
+      temporaryRole = undefined;
+      return {
+        name: "import smoke",
+        status: "fail",
+        httpStatus: historyResponse.status,
+        detail: "Import history did not respond after commit.",
+        projectId: SMOKE_PROJECT_ID,
+        importBatchId,
+        operations,
+        preview: {
+          budgetItems: preview.summary.budgetItems,
+          materials: preview.summary.materials,
+          warnings: preview.summary.warnings,
+          errors: preview.summary.errors
+        },
+        explanation: { status: explanation.status, confidence: explanation.confidence },
+        commit: commit.commitResult,
+        cleanup
+      };
+    }
+
+    const cleaned = await cleanupImportSmoke(workbook);
+    cleanup = cleaned >= 2 ? "pass" : "fail";
+    operations.push("cleanup");
+
+    if (temporaryRole) {
+      permissionScope = await cleanupImportRole(temporaryRole, operations);
+      temporaryRole = undefined;
+    }
+
+    return {
+      name: "import smoke",
+      status: cleanup === "pass" ? "pass" : "fail",
+      detail: cleanup === "pass" ? undefined : "Smoke import rows were not fully cleaned up.",
+      projectId: SMOKE_PROJECT_ID,
+      importBatchId,
+      operations,
+      permissionScope,
+      preview: {
+        budgetItems: preview.summary.budgetItems,
+        materials: preview.summary.materials,
+        warnings: preview.summary.warnings,
+        errors: preview.summary.errors
+      },
+      explanation: { status: explanation.status, confidence: explanation.confidence },
+      commit: commit.commitResult,
+      cleanup
+    };
+  } catch (error) {
+    if (temporaryRole) {
+      await restoreTemporaryImportRole(temporaryRole)
+        .then(() => {
+          permissionScope = "temporary-project-manager-restored";
+          operations.push("restore-import-role");
+        })
+        .catch(() => {
+          permissionScope = "restore-failed";
+        });
+    }
+    if (workbook) {
+      await cleanupImportSmoke(workbook)
+        .then(() => {
+          cleanup = "pass";
+        })
+        .catch(() => {
+          cleanup = "fail";
+        });
+    }
+    return {
+      name: "import smoke",
+      status: "fail",
+      detail: failureDetail(error),
+      projectId: SMOKE_PROJECT_ID,
+      importBatchId,
+      operations,
+      permissionScope,
+      cleanup
+    };
+  }
+}
+
 export async function runStagingSmokeBootstrap(input: RuntimeSmokeInput): Promise<RuntimeSmokeResult> {
   const password = generateSmokePassword();
   const smokeUser = await createOrRotateStagingSmokeUser(prisma, {
@@ -330,6 +634,7 @@ export async function runStagingSmokeBootstrap(input: RuntimeSmokeInput): Promis
   let storage: RuntimeSmokeResult["storage"];
   let email: RuntimeSmokeResult["email"];
   let connectors: RuntimeSmokeResult["connectors"];
+  let importSmoke: RuntimeSmokeResult["importSmoke"];
 
   if (input.includeStorageSmoke) {
     storage = await runStorageSmoke(input.requestId);
@@ -346,6 +651,11 @@ export async function runStagingSmokeBootstrap(input: RuntimeSmokeInput): Promis
     optionalChecks.push(connectors);
   }
 
+  if (input.includeImportSmoke) {
+    importSmoke = await runImportSmoke(input.baseUrl, sessionCookie, input.requestId);
+    optionalChecks.push(importSmoke);
+  }
+
   return {
     ok:
       checks.every((item) => item.status === "pass") &&
@@ -357,6 +667,7 @@ export async function runStagingSmokeBootstrap(input: RuntimeSmokeInput): Promis
     ...(storage ? { storage } : {}),
     ...(email ? { email } : {}),
     ...(connectors ? { connectors } : {}),
+    ...(importSmoke ? { importSmoke } : {}),
     secretsPrinted: false
   };
 }
