@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AlertTriangle, Bot, ClipboardList, FileText, Landmark, Package, Pencil, Plus, Send, Table2, TimerReset, Trash2, Truck, Users } from "lucide-react";
+import { AlertTriangle, Bot, ClipboardList, FileText, Landmark, LayoutList, Package, Pencil, Plus, Search, Send, Table2, TimerReset, Trash2, Truck, Users } from "lucide-react";
 import { budgetTotals, deriveAutoRisks, financeTotals, materialTotals, money, percent, workTotals } from "@/lib/calculations";
 import type { ImportPreview } from "@/lib/excel/import-types";
 import type { AuditEvent, BudgetItem, DailyReport, Material, Payment, ProcurementRequest, ProjectDocument, ProjectDocumentVersion, ProjectMember, Risk, ScheduleItem } from "@/lib/types";
@@ -42,6 +42,21 @@ const tabs = [
   "AI-помощник"
 ];
 
+const tabMeta: Record<string, { icon: React.ReactNode; hint: string }> = {
+  Обзор: { icon: <LayoutList size={16} />, hint: "Сводка" },
+  "Бюджет / ВОР": { icon: <Table2 size={16} />, hint: "Деньги" },
+  График: { icon: <TimerReset size={16} />, hint: "Сроки" },
+  Материалы: { icon: <Package size={16} />, hint: "Снабжение" },
+  Заявки: { icon: <Truck size={16} />, hint: "Закупки" },
+  Финансы: { icon: <Landmark size={16} />, hint: "Платежи" },
+  Рапорты: { icon: <ClipboardList size={16} />, hint: "Площадка" },
+  Риски: { icon: <AlertTriangle size={16} />, hint: "Контроль" },
+  Документы: { icon: <FileText size={16} />, hint: "Файлы" },
+  Участники: { icon: <Users size={16} />, hint: "Доступ" },
+  История: { icon: <ClipboardList size={16} />, hint: "Аудит" },
+  "AI-помощник": { icon: <Bot size={16} />, hint: "Анализ" }
+};
+
 const aiQuickActions = [
   "Проверить риски проекта",
   "Сравнить бюджет и факт",
@@ -49,6 +64,33 @@ const aiQuickActions = [
   "Сформировать заявку снабжения",
   "Подготовить пояснительную записку"
 ];
+
+function compactMoney(value: number) {
+  const absolute = Math.abs(value);
+  if (absolute >= 1_000_000_000) return `${(value / 1_000_000_000).toLocaleString("ru-RU", { maximumFractionDigits: 1 })} млрд ₽`;
+  if (absolute >= 1_000_000) return `${(value / 1_000_000).toLocaleString("ru-RU", { maximumFractionDigits: 1 })} млн ₽`;
+  return money(value);
+}
+
+function formatDate(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString("ru-RU", { day: "2-digit", month: "2-digit", year: "2-digit" });
+}
+
+function statusTone(value: string): "good" | "warn" | "bad" | "info" | "neutral" {
+  if (["done", "delivered", "paid", "closed", "active", "completed"].includes(value)) return "good";
+  if (["critical", "delayed", "overdue", "required", "stopped"].includes(value)) return "bad";
+  if (["high", "medium", "requested", "ordered", "in_transit", "planned", "draft"].includes(value)) return "warn";
+  if (["not_started", "low", "open", "planning"].includes(value)) return "info";
+  return "neutral";
+}
+
+function textFromCell(cell: React.ReactNode): string {
+  if (typeof cell === "string" || typeof cell === "number") return String(cell);
+  if (Array.isArray(cell)) return cell.map(textFromCell).join(" ");
+  return "";
+}
 
 export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
   const [activeTab, setActiveTab] = useState(tabs[0]);
@@ -88,7 +130,17 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
   const delayedWorks = scheduleItems.filter((item) => item.status === "delayed");
   const activeRequests = initialBundle.procurementRequests.filter((request) => request.status !== "closed");
   const budgetDeviation = budget.totalForecastCost - budget.totalPlannedCost;
+  const urgentMaterial = materialStats.deficitItems[0];
+  const latestReport = reports[0];
+  const latestAudit = auditEvents[0];
+  const priorityActions = [
+    budgetDeviation > 0 ? `Снять перерасход: ${compactMoney(budgetDeviation)}` : "Бюджет в зеленой зоне",
+    delayedWorks[0] ? `Вернуть в график: ${delayedWorks[0].name}` : "Критичных просрочек нет",
+    urgentMaterial ? `Закрыть дефицит: ${urgentMaterial.name}` : "Дефицит материалов не выявлен",
+    activeRisks[0] ? `Разобрать риск: ${activeRisks[0].title}` : "Открытых критичных рисков нет"
+  ];
   const aiAnswerTone = aiLoading ? "loading" : aiAnswer ? (/OPENAI_API_KEY|not configured|failed|ошибка|error|Project not found/i.test(aiAnswer) ? "error" : "ready") : "empty";
+  const aiDisplay = aiAnswerTone === "error" ? "AI-помощник сейчас недоступен. Проверьте подключение AI и повторите анализ позже." : aiAnswer;
 
   const loadAudit = useCallback(async () => {
     try {
@@ -104,6 +156,10 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
     if (activeTab !== "История") return;
     void loadAudit();
   }, [activeTab, loadAudit]);
+
+  useEffect(() => {
+    void loadAudit();
+  }, [loadAudit]);
 
   const loadDocuments = useCallback(async () => {
     try {
@@ -415,18 +471,25 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
 
   return (
     <main className="page">
-      <div className="page-header">
+      <div className="page-header project-header">
         <div className="page-header-main">
           <div className="eyebrow">{initialBundle.project.customer}</div>
-          <h1>{initialBundle.project.name}</h1>
-          <p className="muted">
-            {initialBundle.project.object}, {initialBundle.project.address}. РП: {initialBundle.project.manager}
-          </p>
-          <div className="page-header-meta">
+          <div className="project-title-row">
+            <h1>{initialBundle.project.name}</h1>
             <StatusBadge tone="good">В работе</StatusBadge>
-            <StatusBadge tone={budgetDeviation > 0 ? "bad" : "good"}>Отклонение: {money(budgetDeviation)}</StatusBadge>
-            <StatusBadge tone={delayedWorks.length ? "bad" : "neutral"}>Просрочки: {delayedWorks.length}</StatusBadge>
-            <StatusBadge tone={activeRisks.length ? "warn" : "good"}>Риски: {activeRisks.length}</StatusBadge>
+          </div>
+          <div className="project-summary">
+            <span>{initialBundle.project.object}</span>
+            <span>{initialBundle.project.address}</span>
+            <span>РП: {initialBundle.project.manager}</span>
+          </div>
+          <div className="project-state-strip">
+            <StatePill label="Готовность" value={percent(works.completionPercent)} tone="info" />
+            <StatePill label="Срок" value={`${formatDate(initialBundle.project.startsAt)} - ${formatDate(initialBundle.project.endsAt)}`} tone={delayedWorks.length ? "bad" : "neutral"} />
+            <StatePill label="Бюджет" value={compactMoney(initialBundle.project.contractAmount)} tone="neutral" />
+            <StatePill label="Отклонение" value={compactMoney(budgetDeviation)} tone={budgetDeviation > 0 ? "bad" : "good"} />
+            <StatePill label="Риски" value={String(activeRisks.length)} tone={activeRisks.length ? "warn" : "good"} />
+            <StatePill label="Заявки" value={String(activeRequests.length)} tone={activeRequests.length ? "warn" : "good"} />
           </div>
         </div>
         <div className="page-header-actions">
@@ -446,22 +509,35 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
       </div>
 
       <section className="grid grid-4">
-        <Kpi title="Договор" value={money(initialBundle.project.contractAmount)} />
-        <Kpi title="Прогнозная прибыль" value={money(budget.forecastProfit)} tone={budget.forecastProfit > 0 ? "good" : "bad"} />
+        <Kpi title="Договор" value={compactMoney(initialBundle.project.contractAmount)} />
+        <Kpi title="Прогнозная прибыль" value={compactMoney(budget.forecastProfit)} tone={budget.forecastProfit > 0 ? "good" : "bad"} />
         <Kpi title="Готовность" value={percent(works.completionPercent)} />
-        <Kpi title="Кассовый разрыв" value={money(finance.cashGap)} tone={finance.cashGap < 0 ? "bad" : "good"} />
-        <Kpi title="Факт / прогноз" value={money(budget.totalForecastCost)} tone={budgetDeviation > 0 ? "bad" : "good"} />
-        <Kpi title="Остаток бюджета" value={money(Math.max(initialBundle.project.contractAmount - budget.totalForecastCost, 0))} />
-        <Kpi title="Срок проекта" value={`${initialBundle.project.startsAt} - ${initialBundle.project.endsAt}`} />
+        <Kpi title="Кассовый разрыв" value={compactMoney(finance.cashGap)} tone={finance.cashGap < 0 ? "bad" : "good"} />
+        <Kpi title="Факт / прогноз" value={compactMoney(budget.totalForecastCost)} tone={budgetDeviation > 0 ? "bad" : "good"} />
+        <Kpi title="Остаток бюджета" value={compactMoney(Math.max(initialBundle.project.contractAmount - budget.totalForecastCost, 0))} />
+        <Kpi title="Срок проекта" value={`${formatDate(initialBundle.project.startsAt)} - ${formatDate(initialBundle.project.endsAt)}`} />
         <Kpi title="Заявки" value={String(activeRequests.length)} tone={activeRequests.length ? "warn" : "good"} />
+      </section>
+
+      <section className="priority-ribbon" aria-label="Приоритеты проекта">
+        {priorityActions.map((action, index) => (
+          <button className="priority-chip" key={action} type="button" onClick={() => setActiveTab(index === 0 ? "Бюджет / ВОР" : index === 1 ? "График" : index === 2 ? "Материалы" : "Риски")}>
+            <span>{index + 1}</span>
+            {action}
+          </button>
+        ))}
       </section>
 
       <div className="workspace-layout" style={{ marginTop: 18 }}>
         <div>
-          <div className="tabs">
+          <div className="tabs project-tabs" aria-label="Разделы проекта">
             {tabs.map((tab) => (
               <button className={`tab ${activeTab === tab ? "active" : ""}`} key={tab} onClick={() => setActiveTab(tab)}>
-                {tab}
+                {tabMeta[tab]?.icon}
+                <span>
+                  <strong>{tab}</strong>
+                  <small>{tabMeta[tab]?.hint}</small>
+                </span>
               </button>
             ))}
           </div>
@@ -475,16 +551,16 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
             <section className="grid grid-2">
               <Panel title="План / факт проекта" icon={<TimerReset size={18} />}>
                 <div className="grid grid-3">
-                  <Kpi title="Плановая себестоимость" value={money(budget.totalPlannedCost)} />
-                  <Kpi title="Фактическая себестоимость" value={money(budget.totalActualCost)} />
-                  <Kpi title="Прогнозная себестоимость" value={money(budget.totalForecastCost)} tone="warn" />
+                  <Kpi title="Плановая себестоимость" value={compactMoney(budget.totalPlannedCost)} />
+                  <Kpi title="Фактическая себестоимость" value={compactMoney(budget.totalActualCost)} />
+                  <Kpi title="Прогнозная себестоимость" value={compactMoney(budget.totalForecastCost)} tone="warn" />
                 </div>
               </Panel>
               <Panel title="Проблемные зоны" icon={<AlertTriangle size={18} />}>
                 <div className="stack">
                   {allRisks.slice(0, 4).map((risk) => (
                     <div key={risk.id} className="attention-item">
-                      <StatusBadge tone={risk.priority === "critical" ? "bad" : risk.priority === "high" ? "warn" : "info"}>{risk.priority}</StatusBadge>
+                      <StatusBadge tone={risk.priority === "critical" ? "bad" : risk.priority === "high" ? "warn" : "info"}>{readableStatus(risk.priority)}</StatusBadge>
                       <strong>{risk.title}</strong>
                       <div className="muted">{risk.reason}</div>
                     </div>
@@ -496,14 +572,14 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
                 <div className="grid grid-3">
                   <Kpi title="Дефицитные позиции" value={String(materialStats.deficitItems.length)} tone="bad" />
                   <Kpi title="Закуплено" value={`${materialStats.orderedQty.toLocaleString("ru-RU")} ед.`} />
-                  <Kpi title="Перерасход" value={money(materialStats.materialOverrun)} tone={materialStats.materialOverrun > 0 ? "bad" : "good"} />
+                  <Kpi title="Перерасход" value={compactMoney(materialStats.materialOverrun)} tone={materialStats.materialOverrun > 0 ? "bad" : "good"} />
                 </div>
               </Panel>
               <Panel title="Финансы" icon={<Landmark size={18} />}>
                 <div className="grid grid-3">
-                  <Kpi title="Поступления" value={money(finance.incomingPayments)} tone="good" />
-                  <Kpi title="Платежи" value={money(finance.outgoingPayments)} />
-                  <Kpi title="Потребность" value={money(finance.financingNeed)} tone={finance.financingNeed ? "bad" : "good"} />
+                  <Kpi title="Поступления" value={compactMoney(finance.incomingPayments)} tone="good" />
+                  <Kpi title="Платежи" value={compactMoney(finance.outgoingPayments)} />
+                  <Kpi title="Потребность" value={compactMoney(finance.financingNeed)} tone={finance.financingNeed ? "bad" : "good"} />
                 </div>
               </Panel>
             </section>
@@ -708,7 +784,7 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
 
       {activeTab === "Документы" && (
         <Panel title="Документы проекта" icon={<FileText size={18} />}>
-          <div className="form-grid">
+          <div className="form-grid form-surface">
             <label>
               Категория
               <select value={documentCategory} onChange={(event) => setDocumentCategory(event.target.value)}>
@@ -751,7 +827,7 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
 
       {activeTab === "Участники" && (
         <Panel title="Участники проекта" icon={<Users size={18} />}>
-          <div className="form-grid">
+          <div className="form-grid form-surface">
             <label>
               Email пользователя
               <input value={memberEmail} placeholder="manager@company.ru" onChange={(event) => setMemberEmail(event.target.value)} />
@@ -826,9 +902,15 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
             </button>
           </div>
           <div className={`ai-answer ${aiAnswerTone}`}>
-            {aiLoading
-              ? "AI анализирует контекст проекта..."
-              : aiAnswer || "Ответ появится здесь. AI использует контекст бюджета, графика, материалов, финансов и рисков проекта."}
+            <div className="ai-answer-header">
+              <strong>{aiAnswerTone === "ready" ? "Результат анализа" : aiAnswerTone === "error" ? "Состояние AI" : "Ожидание запроса"}</strong>
+              <span className="muted">Риски · Деньги · Сроки · Действия</span>
+            </div>
+            <div>
+              {aiLoading
+                ? "AI анализирует контекст проекта..."
+                : aiDisplay || "Ответ появится здесь. AI использует контекст бюджета, графика, материалов, финансов и рисков проекта."}
+            </div>
           </div>
         </Panel>
       )}
@@ -841,10 +923,33 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
             <p className="muted">Короткая панель для РП и ПТО: риски, сроки, снабжение и финансовые отклонения.</p>
           </div>
           <div className="attention-list">
-            <ContextItem title="Бюджет / факт" value={money(budgetDeviation)} tone={budgetDeviation > 0 ? "bad" : "good"} />
+            <ContextItem title="Бюджет / факт" value={compactMoney(budgetDeviation)} tone={budgetDeviation > 0 ? "bad" : "good"} />
             <ContextItem title="Просроченные работы" value={String(delayedWorks.length)} tone={delayedWorks.length ? "bad" : "good"} />
             <ContextItem title="Открытые риски" value={String(activeRisks.length)} tone={activeRisks.length ? "warn" : "good"} />
             <ContextItem title="Заявки снабжению" value={String(activeRequests.length)} tone={activeRequests.length ? "warn" : "good"} />
+          </div>
+          <div className="context-block">
+            <h3>Что сделать сегодня</h3>
+            <ul className="action-list">
+              <li>{delayedWorks[0]?.name ?? "Проверить график и подтвердить отсутствие новых просрочек"}</li>
+              <li>{urgentMaterial ? `Закрыть дефицит: ${urgentMaterial.name}` : "Сверить потребность материалов на ближайшие работы"}</li>
+              <li>{activeRisks[0]?.title ?? "Обновить реестр рисков после планерки"}</li>
+            </ul>
+          </div>
+          <div className="context-block">
+            <h3>Последнее событие</h3>
+            <p className="muted">{latestReport ? `${formatDate(latestReport.date)} · ${latestReport.completedWorks}` : "Рапортов пока нет. Добавьте ежедневный рапорт после смены."}</p>
+          </div>
+          <div className="context-block audit-glimpse">
+            <h3>След аудита</h3>
+            <p className="muted">
+              {latestAudit
+                ? `${new Date(latestAudit.createdAt).toLocaleString("ru-RU")} · ${latestAudit.actorName ?? "local-user"} · ${latestAudit.summary ?? latestAudit.action}`
+                : "История изменений появится после первого действия по проекту."}
+            </p>
+            <button className="button secondary" type="button" onClick={() => setActiveTab("История")}>
+              Открыть журнал
+            </button>
           </div>
           <div className="stack">
             <h3>AI-рекомендации</h3>
@@ -1034,6 +1139,15 @@ function StatusBadge({ tone, children }: { tone: "good" | "warn" | "bad" | "info
   return <span className={`badge ${color}`}>{children}</span>;
 }
 
+function StatePill({ label, value, tone }: { label: string; value: string; tone: "good" | "warn" | "bad" | "info" | "neutral" }) {
+  return (
+    <span className={`state-pill ${tone}`}>
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </span>
+  );
+}
+
 function EmptyState({ text }: { text: string }) {
   return <div className="empty-state">{text}</div>;
 }
@@ -1065,10 +1179,21 @@ function readableStatus(value: string) {
     overdue: "Просрочено",
     open: "Открыт",
     draft: "Черновик",
+    active: "Активен",
+    inactive: "Отключен",
+    planning: "Планирование",
+    paused: "Пауза",
+    completed: "Завершен",
     critical: "Критично",
     high: "Высокий",
     medium: "Средний",
-    low: "Низкий"
+    low: "Низкий",
+    work: "Работа",
+    material: "Материал",
+    equipment: "Техника",
+    payroll: "ФОТ",
+    subcontract: "Субподряд",
+    overhead: "Накладные"
   };
   return labels[value] ?? value;
 }
@@ -1076,7 +1201,7 @@ function readableStatus(value: string) {
 function BudgetForm({ onAdd }: { onAdd: (item: Omit<BudgetItem, "id" | "projectId" | "source" | "actualUnitPrice" | "forecastUnitPrice">) => Promise<void> }) {
   return (
     <form
-      className="form-grid"
+      className="form-grid form-surface"
       onSubmit={(event) => {
         event.preventDefault();
         const data = new FormData(event.currentTarget);
@@ -1141,7 +1266,7 @@ function BudgetForm({ onAdd }: { onAdd: (item: Omit<BudgetItem, "id" | "projectI
 function ScheduleForm({ onAdd }: { onAdd: (item: Omit<ScheduleItem, "id" | "projectId" | "actualQty" | "status">) => Promise<void> }) {
   return (
     <form
-      className="form-grid"
+      className="form-grid form-surface"
       onSubmit={(event) => {
         event.preventDefault();
         const data = new FormData(event.currentTarget);
@@ -1189,7 +1314,7 @@ function ScheduleForm({ onAdd }: { onAdd: (item: Omit<ScheduleItem, "id" | "proj
 function PaymentForm({ onAdd }: { onAdd: (payment: Omit<Payment, "id" | "projectId" | "status">) => Promise<void> }) {
   return (
     <form
-      className="form-grid"
+      className="form-grid form-surface"
       onSubmit={(event) => {
         event.preventDefault();
         const data = new FormData(event.currentTarget);
@@ -1252,7 +1377,7 @@ function PaymentForm({ onAdd }: { onAdd: (payment: Omit<Payment, "id" | "project
 function BudgetEditForm({ item, onSave, onCancel }: { item: BudgetItem; onSave: (payload: Partial<BudgetItem>) => Promise<void>; onCancel: () => void }) {
   return (
     <form
-      className="form-grid panel"
+      className="form-grid form-surface edit-surface"
       onSubmit={(event) => {
         event.preventDefault();
         const data = new FormData(event.currentTarget);
@@ -1305,7 +1430,7 @@ function BudgetEditForm({ item, onSave, onCancel }: { item: BudgetItem; onSave: 
 function ScheduleEditForm({ item, onSave, onCancel }: { item: ScheduleItem; onSave: (payload: Partial<ScheduleItem>) => Promise<void>; onCancel: () => void }) {
   return (
     <form
-      className="form-grid panel"
+      className="form-grid form-surface edit-surface"
       onSubmit={(event) => {
         event.preventDefault();
         const data = new FormData(event.currentTarget);
@@ -1347,11 +1472,11 @@ function ScheduleEditForm({ item, onSave, onCancel }: { item: ScheduleItem; onSa
       <label>
         Статус
         <select name="status" defaultValue={item.status}>
-          <option value="not_started">not_started</option>
-          <option value="in_progress">in_progress</option>
-          <option value="done">done</option>
-          <option value="delayed">delayed</option>
-          <option value="stopped">stopped</option>
+          <option value="not_started">Не начато</option>
+          <option value="in_progress">В работе</option>
+          <option value="done">Готово</option>
+          <option value="delayed">Просрочено</option>
+          <option value="stopped">Остановлено</option>
         </select>
       </label>
       <label>
@@ -1369,7 +1494,7 @@ function ScheduleEditForm({ item, onSave, onCancel }: { item: ScheduleItem; onSa
 function MaterialEditForm({ item, onSave, onCancel }: { item: Material; onSave: (payload: Partial<Material>) => Promise<void>; onCancel: () => void }) {
   return (
     <form
-      className="form-grid panel"
+      className="form-grid form-surface edit-surface"
       onSubmit={(event) => {
         event.preventDefault();
         const data = new FormData(event.currentTarget);
@@ -1421,12 +1546,12 @@ function MaterialEditForm({ item, onSave, onCancel }: { item: Material; onSave: 
       <label>
         Статус
         <select name="status" defaultValue={item.status}>
-          <option value="required">required</option>
-          <option value="requested">requested</option>
-          <option value="ordered">ordered</option>
-          <option value="in_transit">in_transit</option>
-          <option value="delivered">delivered</option>
-          <option value="closed">closed</option>
+          <option value="required">Требуется</option>
+          <option value="requested">Запрошено</option>
+          <option value="ordered">Заказано</option>
+          <option value="in_transit">В пути</option>
+          <option value="delivered">Доставлено</option>
+          <option value="closed">Закрыто</option>
         </select>
       </label>
       <label>
@@ -1464,12 +1589,14 @@ function BudgetTable({ items, onEdit, onDelete }: { items: BudgetItem[]; onEdit:
         item.section,
         item.code,
         item.name,
-        <StatusBadge key="kind" tone="info">{item.kind}</StatusBadge>,
+        <StatusBadge key="kind" tone="info">{readableStatus(item.kind)}</StatusBadge>,
         `${item.qty.toLocaleString("ru-RU")} ${item.unit}`,
-        money(item.plannedUnitPrice),
-        money(item.actualUnitPrice),
-        money(item.qty * item.plannedUnitPrice),
-        money(item.qty * (item.forecastUnitPrice - item.actualUnitPrice)),
+        compactMoney(item.plannedUnitPrice),
+        compactMoney(item.actualUnitPrice),
+        compactMoney(item.qty * item.plannedUnitPrice),
+        <span className={item.qty * (item.forecastUnitPrice - item.actualUnitPrice) < 0 ? "delta-bad" : "delta-good"} key="margin">
+          {compactMoney(item.qty * (item.forecastUnitPrice - item.actualUnitPrice))}
+        </span>,
         <RowActions key="actions" onEdit={() => onEdit(item)} onDelete={() => onDelete(item)} />
       ])}
     />
@@ -1490,7 +1617,7 @@ function ScheduleTable({ items, onEdit, onDelete }: { items: ScheduleItem[]; onE
         item.plannedQty,
         item.actualQty,
         percent(item.plannedQty ? (item.actualQty / item.plannedQty) * 100 : 0),
-        <StatusBadge key="status" tone={item.status === "delayed" ? "bad" : item.status === "done" ? "good" : "info"}>{readableStatus(item.status)}</StatusBadge>,
+        <StatusBadge key="status" tone={statusTone(item.status)}>{readableStatus(item.status)}</StatusBadge>,
         <RowActions key="actions" onEdit={() => onEdit(item)} onDelete={() => onDelete(item)} />
       ])}
     />
@@ -1509,9 +1636,9 @@ function MaterialTable({ items, onEdit, onDelete }: { items: Material[]; onEdit:
         `${item.orderedQty} ${item.unit}`,
         `${item.deliveredQty} ${item.unit}`,
         `${item.consumedQty} ${item.unit}`,
-        `${money(item.plannedUnitPrice)} / ${money(item.actualUnitPrice)}`,
+        `${compactMoney(item.plannedUnitPrice)} / ${compactMoney(item.actualUnitPrice)}`,
         item.supplier,
-        <StatusBadge key="status" tone={item.status === "required" ? "bad" : item.status === "delivered" ? "good" : "warn"}>{readableStatus(item.status)}</StatusBadge>,
+        <StatusBadge key="status" tone={statusTone(item.status)}>{readableStatus(item.status)}</StatusBadge>,
         <RowActions key="actions" onEdit={() => onEdit(item)} onDelete={() => onDelete(item)} />
       ])}
     />
@@ -1527,8 +1654,8 @@ function RequestTable({ items }: { items: ProcurementRequest[] }) {
         item.title,
         item.initiator,
         item.neededAt,
-        <StatusBadge key="priority" tone={item.priority === "critical" ? "bad" : "warn"}>{readableStatus(item.priority)}</StatusBadge>,
-        <StatusBadge key="status" tone="info">{readableStatus(item.status)}</StatusBadge>,
+        <StatusBadge key="priority" tone={statusTone(item.priority)}>{readableStatus(item.priority)}</StatusBadge>,
+        <StatusBadge key="status" tone={statusTone(item.status)}>{readableStatus(item.status)}</StatusBadge>,
         item.items.map((requestItem) => `${requestItem.name}: ${requestItem.qty} ${requestItem.unit}`).join("; ")
       ])}
     />
@@ -1546,9 +1673,9 @@ function PaymentTable({ items }: { items: Payment[] }) {
         item.counterparty,
         item.direction === "incoming" ? "Поступление" : "Платеж",
         item.plannedAt,
-        money(item.amount),
+        compactMoney(item.amount),
         item.category,
-        <StatusBadge key="status" tone={item.status === "paid" ? "good" : item.status === "overdue" ? "bad" : "info"}>{readableStatus(item.status)}</StatusBadge>
+        <StatusBadge key="status" tone={statusTone(item.status)}>{readableStatus(item.status)}</StatusBadge>
       ])}
     />
   );
@@ -1567,7 +1694,7 @@ function ReportTable({ items }: { items: DailyReport[] }) {
         item.equipment,
         item.completedWorks,
         item.issues,
-        <StatusBadge key="status" tone="info">{readableStatus(item.status)}</StatusBadge>
+        <StatusBadge key="status" tone={statusTone(item.status)}>{readableStatus(item.status)}</StatusBadge>
       ])}
     />
   );
@@ -1581,10 +1708,10 @@ function RiskTable({ items }: { items: Risk[] }) {
       rows={items.map((item) => [
         item.title,
         item.reason,
-        <StatusBadge key="priority" tone={item.priority === "critical" ? "bad" : item.priority === "high" ? "warn" : "info"}>{readableStatus(item.priority)}</StatusBadge>,
+        <StatusBadge key="priority" tone={statusTone(item.priority)}>{readableStatus(item.priority)}</StatusBadge>,
         item.owner,
         item.dueAt,
-        <StatusBadge key="status" tone={item.status === "closed" ? "good" : "neutral"}>{readableStatus(item.status)}</StatusBadge>
+        <StatusBadge key="status" tone={statusTone(item.status)}>{readableStatus(item.status)}</StatusBadge>
       ])}
     />
   );
@@ -1683,7 +1810,7 @@ function ProjectMembersTable({
           <option value="VIEWER">VIEWER</option>
         </select>,
         <StatusBadge key="global-role" tone="info">{member.user.role}</StatusBadge>,
-        <StatusBadge key="status" tone={member.user.isActive ? "good" : "neutral"}>{member.user.isActive ? "active" : "inactive"}</StatusBadge>,
+        <StatusBadge key="status" tone={member.user.isActive ? "good" : "neutral"}>{member.user.isActive ? "Активен" : "Отключен"}</StatusBadge>,
         new Date(member.createdAt).toLocaleString("ru-RU"),
         <button className="icon-button" key="remove" title="Удалить участника" type="button" onClick={() => onRemove(member)}>
           <Trash2 size={16} />
@@ -1704,27 +1831,54 @@ function DataTable({
   numericColumns?: number[];
   emptyMessage?: string;
 }) {
+  const [query, setQuery] = useState("");
+  const [density, setDensity] = useState<"comfortable" | "compact">("comfortable");
+  const normalizedQuery = query.trim().toLocaleLowerCase("ru-RU");
+  const filteredRows = normalizedQuery
+    ? rows.filter((row) => row.map(textFromCell).join(" ").toLocaleLowerCase("ru-RU").includes(normalizedQuery))
+    : rows;
+  const actionColumnIndex = headers.findIndex((header) => header === "" || header === "Действия");
+
   return (
-    <div className="table-wrap">
+    <div className={`data-table ${density}`}>
       {rows.length ? (
-        <table>
-          <thead>
-            <tr>
-              {headers.map((header, index) => (
-                <th className={numericColumns.includes(index) ? "numeric" : undefined} key={header}>{header}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row, index) => (
-              <tr key={index}>
-                {row.map((cell, cellIndex) => (
-                  <td className={numericColumns.includes(cellIndex) ? "numeric" : undefined} key={cellIndex}>{cell}</td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <>
+          <div className="table-toolbar">
+            <label className="table-search">
+              <Search size={15} />
+              <input value={query} placeholder="Найти в таблице" onChange={(event) => setQuery(event.target.value)} />
+            </label>
+            <div className="density-toggle" aria-label="Плотность таблицы">
+              <button className={density === "comfortable" ? "active" : ""} type="button" onClick={() => setDensity("comfortable")}>Обычная</button>
+              <button className={density === "compact" ? "active" : ""} type="button" onClick={() => setDensity("compact")}>Плотная</button>
+            </div>
+            <span className="table-count">{filteredRows.length} из {rows.length}</span>
+          </div>
+          <div className="table-wrap">
+            {filteredRows.length ? (
+              <table>
+                <thead>
+                  <tr>
+                    {headers.map((header, index) => (
+                      <th className={`${numericColumns.includes(index) ? "numeric" : ""} ${index === actionColumnIndex ? "action-column" : ""}`.trim() || undefined} key={`${header}-${index}`}>{header}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredRows.map((row, index) => (
+                    <tr key={index}>
+                      {row.map((cell, cellIndex) => (
+                        <td className={`${numericColumns.includes(cellIndex) ? "numeric" : ""} ${cellIndex === actionColumnIndex ? "action-column" : ""}`.trim() || undefined} data-label={headers[cellIndex]} key={cellIndex}>{cell}</td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <EmptyState text="По текущему фильтру строк нет." />
+            )}
+          </div>
+        </>
       ) : (
         <EmptyState text={emptyMessage} />
       )}

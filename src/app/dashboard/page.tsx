@@ -4,6 +4,13 @@ import { budgetTotals, deriveAutoRisks, financeTotals, materialTotals, money, pe
 import { demoState, getProjectBundle } from "@/lib/demo-data";
 import { getProjectBundleFromDb, listProjectsFromDb } from "@/lib/project-data";
 
+function compactMoney(value: number) {
+  const absolute = Math.abs(value);
+  if (absolute >= 1_000_000_000) return `${(value / 1_000_000_000).toLocaleString("ru-RU", { maximumFractionDigits: 1 })} млрд ₽`;
+  if (absolute >= 1_000_000) return `${(value / 1_000_000).toLocaleString("ru-RU", { maximumFractionDigits: 1 })} млн ₽`;
+  return money(value);
+}
+
 export default async function DashboardPage() {
   const bundle = (await getProjectBundleFromDb("project-demo").catch(() => null)) ?? getProjectBundle("project-demo");
   const projects = (await listProjectsFromDb().catch(() => null)) ?? demoState.projects;
@@ -48,14 +55,14 @@ export default async function DashboardPage() {
       </div>
 
       <section className="grid grid-4">
-        <Kpi title="Активные проекты" value={String(projects.length)} hint={money(totalContractAmount)} icon={<FolderKanban size={18} />} />
-        <Kpi title="Общий бюджет" value={money(totalContractAmount)} icon={<Banknote size={18} />} />
-        <Kpi title="Отклонение бюджета" value={money(budgetDeviation)} tone={budgetDeviation > 0 ? "bad" : "good"} />
-        <Kpi title="Ближайшие просрочки" value={String(delayedWorks.length)} tone={delayedWorks.length ? "bad" : "good"} icon={<CalendarClock size={18} />} />
-        <Kpi title="Открытые риски" value={String(activeRisks.length)} tone={activeRisks.length ? "bad" : "good"} icon={<AlertTriangle size={18} />} />
-        <Kpi title="Заявки в работе" value={String(activeRequests.length)} tone={activeRequests.length ? "warn" : "good"} icon={<ClipboardList size={18} />} />
-        <Kpi title="Готовность работ" value={percent(works.completionPercent)} icon={<CalendarClock size={18} />} />
-        <Kpi title="Прогнозная прибыль" value={money(budget.forecastProfit)} tone={budget.forecastProfit > 0 ? "good" : "bad"} />
+        <Kpi title="Активные проекты" value={String(projects.length)} hint={compactMoney(totalContractAmount)} icon={<FolderKanban size={18} />} />
+        <Kpi title="Общий бюджет" value={compactMoney(totalContractAmount)} hint="Договорная база" icon={<Banknote size={18} />} />
+        <Kpi title="Отклонение бюджета" value={compactMoney(budgetDeviation)} hint={budgetDeviation > 0 ? "Требует решения" : "В норме"} tone={budgetDeviation > 0 ? "bad" : "good"} />
+        <Kpi title="Ближайшие просрочки" value={String(delayedWorks.length)} hint={delayedWorks[0]?.name ?? "Нет критичных"} tone={delayedWorks.length ? "bad" : "good"} icon={<CalendarClock size={18} />} />
+        <Kpi title="Открытые риски" value={String(activeRisks.length)} hint={activeRisks[0]?.title ?? "Без открытых рисков"} tone={activeRisks.length ? "bad" : "good"} icon={<AlertTriangle size={18} />} />
+        <Kpi title="Заявки в работе" value={String(activeRequests.length)} hint={activeRequests[0]?.title ?? "Нет срочных"} tone={activeRequests.length ? "warn" : "good"} icon={<ClipboardList size={18} />} />
+        <Kpi title="Готовность работ" value={percent(works.completionPercent)} hint="План / факт" icon={<CalendarClock size={18} />} />
+        <Kpi title="Прогнозная прибыль" value={compactMoney(budget.forecastProfit)} hint="Маржинальность проекта" tone={budget.forecastProfit > 0 ? "good" : "bad"} />
       </section>
 
       <section className="grid grid-2" style={{ marginTop: 16 }}>
@@ -65,9 +72,9 @@ export default async function DashboardPage() {
             <h2>Финансовая сводка</h2>
           </div>
           <div className="grid grid-3">
-            <Kpi title="Поступления" value={money(finance.incomingPayments)} tone="good" />
-            <Kpi title="Платежи" value={money(finance.outgoingPayments)} />
-            <Kpi title="Потребность" value={money(finance.financingNeed)} tone={finance.financingNeed ? "bad" : "good"} />
+            <Kpi title="Поступления" value={compactMoney(finance.incomingPayments)} tone="good" />
+            <Kpi title="Платежи" value={compactMoney(finance.outgoingPayments)} />
+            <Kpi title="Потребность" value={compactMoney(finance.financingNeed)} tone={finance.financingNeed ? "bad" : "good"} />
           </div>
         </div>
         <div className="panel stack panel-accent">
@@ -77,7 +84,7 @@ export default async function DashboardPage() {
           </div>
           <div className="grid grid-3">
             <Kpi title="Дефицитные позиции" value={String(materials.deficitItems.length)} tone="bad" />
-            <Kpi title="Перерасход материалов" value={money(materials.materialOverrun)} tone={materials.materialOverrun > 0 ? "bad" : "good"} />
+            <Kpi title="Перерасход материалов" value={compactMoney(materials.materialOverrun)} tone={materials.materialOverrun > 0 ? "bad" : "good"} />
             <Kpi title="Доставлено" value={`${materials.deliveredQty.toLocaleString("ru-RU")} ед.`} />
           </div>
         </div>
@@ -98,7 +105,7 @@ export default async function DashboardPage() {
           <Attention title="Просроченные работы" value={String(delayedWorks.length)} tone={delayedWorks.length ? "bad" : "good"} detail={delayedWorks[0]?.name ?? "Критичных просрочек нет"} />
           <Attention title="Риски" value={String(activeRisks.length)} tone={activeRisks.length ? "bad" : "good"} detail={activeRisks[0]?.title ?? "Открытых рисков нет"} />
           <Attention title="Заявки" value={String(activeRequests.length)} tone={activeRequests.length ? "warn" : "good"} detail={activeRequests[0]?.title ?? "Снабжение без срочных заявок"} />
-          <Attention title="Перерасход" value={money(Math.max(budgetDeviation, materials.materialOverrun, 0))} tone={budgetDeviation > 0 || materials.materialOverrun > 0 ? "bad" : "good"} detail="Бюджет и материалы" />
+          <Attention title="Перерасход" value={compactMoney(Math.max(budgetDeviation, materials.materialOverrun, 0))} tone={budgetDeviation > 0 || materials.materialOverrun > 0 ? "bad" : "good"} detail="Бюджет и материалы" />
         </div>
       </section>
 
@@ -125,21 +132,21 @@ export default async function DashboardPage() {
             <tbody>
               {projects.map((project) => (
                 <tr key={project.id}>
-                  <td>
+                  <td data-label="Проект">
                     <Link href={`/projects/${project.id}`}>
                       <strong>{project.name}</strong>
                     </Link>
                   </td>
-                  <td>{project.customer}</td>
-                  <td>
+                  <td data-label="Заказчик">{project.customer}</td>
+                  <td data-label="Статус">
                     <span className="badge green">В работе</span>
                   </td>
-                  <td className="numeric">{money(project.contractAmount)}</td>
-                  <td>
+                  <td className="numeric" data-label="Договор">{compactMoney(project.contractAmount)}</td>
+                  <td data-label="Готовность">
                     <span className="badge blue">{percent(works.completionPercent)}</span>
                   </td>
-                  <td>{project.manager}</td>
-                  <td>
+                  <td data-label="Менеджер">{project.manager}</td>
+                  <td data-label="Период">
                     {project.startsAt} - {project.endsAt}
                   </td>
                 </tr>
