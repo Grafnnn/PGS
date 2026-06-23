@@ -161,6 +161,26 @@ describe("project data pipeline", () => {
     expect(draft.items[0].evidence[0]).toMatchObject({ importBatchId: "batch-1", importRowId: "batch-1:ВОР:3" });
   });
 
+  it("does not suggest duplicate procurement drafts for materials already in active requests", () => {
+    const draft = buildProcurementDraft({
+      ...baseData,
+      procurementRequests: [
+        {
+          id: "pr-1",
+          projectId: "project-demo",
+          title: "Заявка на бетон",
+          initiator: "ПТО",
+          neededAt: "2026-06-09",
+          priority: "high",
+          status: "draft",
+          items: [{ materialId: "m1", name: "Бетон В25", qty: 4, unit: "м3" }]
+        }
+      ]
+    } as any);
+    expect(draft.canCommit).toBe(false);
+    expect(draft.items).toEqual([]);
+  });
+
   it("builds grouped draft schedule and keeps it in preview mode", () => {
     const draft = buildScheduleDraft(baseData as any);
     expect(draft.summary.stages).toBe(1);

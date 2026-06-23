@@ -288,11 +288,17 @@ export function buildDocumentChecklist(data: PipelineData): DocumentChecklistIte
 
 export function buildProcurementDraft(data: PipelineData) {
   const materialByKey = new Map(data.materials.map((material) => [`${normalize(material.name)}|${normalize(material.unit)}`, material]));
+  const activeRequestMaterialIds = new Set(
+    data.procurementRequests
+      .filter((request) => !["closed", "rejected"].includes(request.status))
+      .flatMap((request) => request.items.map((item) => item.materialId).filter(Boolean))
+  );
   const rows = importedMaterialRows(data.importBatches[0]);
   const suggestions = data.materials
     .filter((material) => material.requiredQty > material.deliveredQty)
     .map((material) => {
       const deficit = Math.max(material.requiredQty - Math.max(material.orderedQty, material.deliveredQty), 0);
+      const alreadyRequested = activeRequestMaterialIds.has(material.id);
       return {
         materialId: material.id,
         material: material.name,
@@ -301,14 +307,14 @@ export function buildProcurementDraft(data: PipelineData) {
         orderedQty: material.orderedQty,
         deliveredQty: material.deliveredQty,
         deficit,
-        status: material.supplier && material.supplier !== "Не выбран" ? "planned" : "quote_needed",
-        suggestedAction: deficit > 0 ? "Создать черновик заявки снабжения" : "Проверить остатки и поставки",
+        status: alreadyRequested ? "already_exists" : material.supplier && material.supplier !== "Не выбран" ? "planned" : "quote_needed",
+        suggestedAction: alreadyRequested ? "Проверить существующую заявку снабжения" : deficit > 0 ? "Создать черновик заявки снабжения" : "Проверить остатки и поставки",
         evidence: rows
           .filter((row) => `${normalize(row.name ?? "")}|${normalize(row.unit ?? "")}` === `${normalize(material.name)}|${normalize(material.unit)}`)
           .map((row) => rowEvidence(data.importBatches[0], row, "Material was extracted from committed VOR import."))
       };
     })
-    .filter((item) => item.deficit > 0 || !materialByKey.has(`${normalize(item.material)}|${normalize(item.unit)}`));
+    .filter((item) => item.status !== "already_exists" && (item.deficit > 0 || !materialByKey.has(`${normalize(item.material)}|${normalize(item.unit)}`)));
 
   return {
     projectId: data.project.id,
