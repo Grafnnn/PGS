@@ -10,7 +10,7 @@ export interface AuditInput {
   actorEmail?: string | null;
   entity: string;
   entityId: string;
-  action: "create" | "update" | "delete" | "import_commit" | "accept" | "use";
+  action: "create" | "update" | "delete" | "import_preview" | "import_commit" | "accept" | "use";
   summary?: string;
   before?: unknown;
   after?: unknown;
@@ -24,6 +24,7 @@ export function auditSummary(input: Pick<AuditInput, "action" | "entity" | "summ
     create: "Создано",
     update: "Обновлено",
     delete: "Удалено",
+    import_preview: "Подготовлен импорт",
     import_commit: "Сохранен импорт",
     accept: "Принято",
     use: "Использовано"

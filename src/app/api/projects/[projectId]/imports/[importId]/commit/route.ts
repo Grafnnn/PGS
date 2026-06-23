@@ -1,17 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
-import { ZodError } from "zod";
+import { ZodError, z } from "zod";
 import { writeAudit } from "@/lib/audit";
 import { canProject } from "@/lib/auth/project-permissions";
 import { getCurrentUser } from "@/lib/auth/session";
 import { buildCommitPlan } from "@/lib/excel/import-parser";
-import { importCommitRequestSchema, importPreviewSchema, type ImportPreview } from "@/lib/excel/import-types";
+import { importModes, importPreviewSchema, type ImportPreview } from "@/lib/excel/import-types";
 import { prisma } from "@/lib/prisma";
 import { serializeBudgetItem, serializeMaterial, serializeScheduleItem } from "@/lib/serializers";
 
 export const runtime = "nodejs";
 
-export async function POST(request: NextRequest, { params }: { params: { projectId: string } }) {
+const commitBodySchema = z.object({
+  mode: z.enum(importModes).default("append"),
+  replaceConfirmed: z.boolean().default(false)
+});
+
+export async function POST(request: NextRequest, { params }: { params: { projectId: string; importId: string } }) {
   try {
     const user = await getCurrentUser();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -25,14 +30,14 @@ export async function POST(request: NextRequest, { params }: { params: { project
     });
     if (!project) return NextResponse.json({ error: "Project not found" }, { status: 404 });
 
-    const payload = importCommitRequestSchema.parse(await request.json().catch(() => ({})));
+    const payload = commitBodySchema.parse(await request.json().catch(() => ({})));
     if (payload.mode !== "append" && !payload.replaceConfirmed) {
       return NextResponse.json({ error: "Replacement import requires explicit confirmation." }, { status: 409 });
     }
 
     const batch = await prisma.importBatch.findFirst({
       where: {
-        id: payload.importBatchId,
+        id: params.importId,
         projectId: project.id
       }
     });
@@ -136,25 +141,24 @@ export async function POST(request: NextRequest, { params }: { params: { project
         )
       );
 
+      const commitResult = {
+        mode: plan.mode,
+        created: budgetItems.length + materials.length + scheduleItems.length,
+        updated: 0,
+        skipped: (preview.summary.skippedRows ?? 0) + preview.summary.unknownRows,
+        errors: preview.summary.errors,
+        warnings: preview.summary.warnings,
+        budgetItems: budgetItems.length,
+        materials: materials.length,
+        scheduleItems: scheduleItems.length
+      };
+
       await tx.importBatch.update({
         where: { id: batch.id },
         data: {
           status: "committed",
           mode: plan.mode,
-          summary: toJson({
-            ...preview.summary,
-            commitResult: {
-              mode: plan.mode,
-              created: budgetItems.length + materials.length + scheduleItems.length,
-              updated: 0,
-              skipped: (preview.summary.skippedRows ?? 0) + preview.summary.unknownRows,
-              errors: preview.summary.errors,
-              warnings: preview.summary.warnings,
-              budgetItems: budgetItems.length,
-              materials: materials.length,
-              scheduleItems: scheduleItems.length
-            }
-          }),
+          summary: toJson({ ...preview.summary, commitResult }),
           committedAt: new Date()
         }
       });
@@ -174,16 +178,15 @@ export async function POST(request: NextRequest, { params }: { params: { project
           mode: plan.mode,
           parserVersion: preview.parserVersion,
           summary: plan.summary,
-          budgetItems: budgetItems.length,
-          materials: materials.length,
-          scheduleItems: scheduleItems.length
+          commitResult
         }
       });
 
       return {
         budgetItems: budgetItems.map(serializeBudgetItem),
         materials: materials.map(serializeMaterial),
-        scheduleItems: scheduleItems.map(serializeScheduleItem)
+        scheduleItems: scheduleItems.map(serializeScheduleItem),
+        commitResult
       };
     });
 

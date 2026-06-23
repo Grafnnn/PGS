@@ -37,7 +37,7 @@ describe("AI provider resilience", () => {
 
     expect(result.status).toBe(503);
     expect(result.ok).toBe(false);
-    expect(result.error).toBe("OPENAI_API_KEY is not configured");
+    expect(result).toMatchObject({ error: "OPENAI_API_KEY is not configured" });
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
@@ -63,7 +63,7 @@ describe("AI provider resilience", () => {
 
     expect(result.status).toBe(502);
     expect(result.ok).toBe(false);
-    expect(result.error).toBe("AI provider request failed");
+    expect(result).toMatchObject({ error: "AI provider request failed" });
     expect(result.response).not.toMatch(/Error:|at\s+\S+\s+\(/);
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
@@ -88,7 +88,7 @@ describe("AI provider resilience", () => {
 
     expect(result.status).toBe(502);
     expect(result.ok).toBe(false);
-    expect(result.error).toBe("AI provider request failed");
+    expect(result).toMatchObject({ error: "AI provider request failed" });
     expect(serialized).not.toContain("sensitive-token-should-not-leak");
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });

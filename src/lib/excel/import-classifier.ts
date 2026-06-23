@@ -1,5 +1,5 @@
 import type { ColumnMap, ImportBudgetItem, ImportMaterial, ImportScheduleItem, ImportSection, RawSheetRow, UnknownImportRow } from "./import-types";
-import { cell, isEmptyRow, normalizeDate, normalizeNumber, normalizeText } from "./import-normalizer";
+import { cell, isEmptyRow, normalizeDate, normalizeText, parseMoney, parseQuantity } from "./import-normalizer";
 
 const materialKeywords = [
   "бетон",
@@ -37,17 +37,19 @@ export type ClassifiedRow =
 
 export function classifyRow(raw: RawSheetRow, columns: ColumnMap, state: ClassificationState): ClassifiedRow {
   if (isEmptyRow(raw.values)) return { kind: "ignored" };
+  if (raw.hidden) return { kind: "ignored" };
 
   const explicitSection = normalizeText(cell(raw.values, columns.section));
   const name = normalizeText(cell(raw.values, columns.name)) || explicitSection || firstTextCell(raw.values);
   const unit = normalizeText(cell(raw.values, columns.unit));
-  const qty = normalizeNumber(cell(raw.values, columns.qty));
-  const unitPrice = normalizeNumber(cell(raw.values, columns.unitPrice));
-  const total = normalizeNumber(cell(raw.values, columns.total));
+  const qty = parseQuantity(cell(raw.values, columns.qty));
+  const unitPrice = parseMoney(cell(raw.values, columns.unitPrice));
+  const total = parseMoney(cell(raw.values, columns.total));
   const startsAt = normalizeDate(cell(raw.values, columns.startsAt));
   const endsAt = normalizeDate(cell(raw.values, columns.endsAt));
 
   if (!name) return { kind: "ignored" };
+  if (isLikelyTotalRow(name)) return { kind: "ignored" };
 
   const hasMoney = unitPrice !== null || total !== null;
   const hasQty = qty !== null && qty > 0;
@@ -134,7 +136,7 @@ export function classifyRow(raw: RawSheetRow, columns: ColumnMap, state: Classif
     unknown: {
       sheetName: raw.sheetName,
       rowNumber: raw.rowNumber,
-      reason: "Не удалось определить тип строки: недостаточно признаков количества, цены, единицы или дат.",
+      reason: unknownReason({ unit, qty, unitPrice, total, startsAt, endsAt }),
       values: raw.values.map((value) => normalizeText(value)).filter(Boolean)
     }
   };
@@ -147,6 +149,26 @@ export function inferBudgetKind(name: string, unit: string): ImportBudgetItem["k
   if (overheadKeywords.some((keyword) => text.includes(keyword))) return "overhead";
   if (payrollKeywords.some((keyword) => text.includes(keyword))) return "payroll";
   return "work";
+}
+
+function isLikelyTotalRow(name: string) {
+  const text = name.toLowerCase();
+  return /^(итого|всего|сметная стоимость|накладные расходы итого|общая стоимость)/.test(text) || text.includes("итого по");
+}
+
+function unknownReason(input: {
+  unit: string;
+  qty: number | null;
+  unitPrice: number | null;
+  total: number | null;
+  startsAt: string | null;
+  endsAt: string | null;
+}) {
+  if (!input.unit && input.qty !== null) return "Есть количество, но не указана единица измерения.";
+  if (input.unit && (input.qty === null || input.qty <= 0)) return "Есть единица измерения, но не указано положительное количество.";
+  if (input.unit && input.qty !== null && input.unitPrice === null && input.total === null) return "Есть объем, но не указана цена или сумма.";
+  if ((input.startsAt || input.endsAt) && !input.unit && input.qty === null) return "Есть дата графика, но не хватает объема или наименования работы.";
+  return "Не удалось определить тип строки: недостаточно признаков количества, цены, единицы или дат.";
 }
 
 function firstTextCell(row: unknown[]) {

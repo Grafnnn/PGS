@@ -142,6 +142,7 @@ model Project {
   risks           Risk[]
   aiMessages      AiMessage[]
   auditLogs       AuditLog[]
+  importBatches   ImportBatch[]
 
   @@map("projects")
 }
@@ -513,6 +514,31 @@ model AiMessage {
   user        User     @relation(fields: [userId], references: [id])
 
   @@map("ai_messages")
+}
+
+model ImportBatch {
+  id             String   @id @default(cuid())
+  organizationId String   @map("organization_id")
+  projectId      String   @map("project_id")
+  createdBy      String?  @map("created_by")
+  fileName       String   @map("file_name")
+  fileSize       Int?     @map("file_size")
+  parserVersion  String   @map("parser_version")
+  status         String   @default("previewed")
+  mode           String?
+  sheets         Json?
+  mapping        Json?
+  summary        Json
+  previewJson    Json     @map("preview_json")
+  warnings       Json?
+  errors         Json?
+  committedAt    DateTime? @map("committed_at")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  project        Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, createdAt])
+  @@map("import_batches")
 }
 
 model AuditLog {
