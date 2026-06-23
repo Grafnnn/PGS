@@ -1,8 +1,8 @@
-import Link from "next/link";
-import { AlertTriangle, Plus, Search } from "lucide-react";
+import { Plus } from "lucide-react";
 import { demoState } from "@/lib/demo-data";
 import { money } from "@/lib/calculations";
 import { listProjectsFromDb } from "@/lib/project-data";
+import { ProjectsIndex } from "@/components/projects-index";
 
 function compactMoney(value: number) {
   const absolute = Math.abs(value);
@@ -33,79 +33,7 @@ export default async function ProjectsPage() {
         </button>
       </div>
 
-      <section className="panel stack">
-        <div className="toolbar">
-          <label className="search-label">
-            Поиск
-            <span className="search-field">
-              <Search size={17} />
-              <input placeholder="Название, заказчик, адрес" />
-            </span>
-          </label>
-          <label>
-            Статус
-            <select defaultValue="active">
-              <option value="active">В работе</option>
-              <option value="planning">Планирование</option>
-              <option value="paused">Приостановлен</option>
-              <option value="completed">Завершен</option>
-            </select>
-          </label>
-          <label>
-            Ответственный
-            <select defaultValue="all">
-              <option value="all">Все руководители</option>
-              {projects.map((project) => (
-                <option key={project.id} value={project.manager}>{project.manager}</option>
-              ))}
-            </select>
-          </label>
-        </div>
-        {projects.length ? (
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Название</th>
-                  <th>Объект</th>
-                  <th>Заказчик</th>
-                  <th className="numeric">Договорная сумма</th>
-                  <th>Руководитель</th>
-                  <th>Контроль</th>
-                  <th>Статус</th>
-                </tr>
-              </thead>
-              <tbody>
-                {projects.map((project) => (
-                  <tr key={project.id}>
-                    <td data-label="Название">
-                      <Link href={`/projects/${project.id}`}>
-                        <strong>{project.name}</strong>
-                      </Link>
-                      <div className="muted">{project.address}</div>
-                    </td>
-                    <td data-label="Объект">{project.object}</td>
-                    <td data-label="Заказчик">{project.customer}</td>
-                    <td className="numeric" data-label="Договорная сумма">{compactMoney(project.contractAmount)}</td>
-                    <td data-label="Руководитель">{project.manager}</td>
-                    <td data-label="Контроль">
-                      <span className="badge yellow">
-                        <AlertTriangle size={13} />
-                        План-факт
-                      </span>
-                    </td>
-                    <td data-label="Статус">
-                      <span className="badge green">В работе</span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <div className="empty-state">Проекты пока не заведены. Создайте первый объект или импортируйте демо-данные.</div>
-        )}
-      </section>
+      <ProjectsIndex projects={projects} />
     </main>
   );
 }

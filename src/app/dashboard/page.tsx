@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AlertTriangle, Banknote, CalendarClock, ClipboardList, FolderKanban, PackageCheck, Sparkles } from "lucide-react";
+import { AlertTriangle, Banknote, BarChart3, CalendarClock, ClipboardList, FileWarning, FolderKanban, PackageCheck, Sparkles, TrendingUp } from "lucide-react";
 import { budgetTotals, deriveAutoRisks, financeTotals, materialTotals, money, percent, workTotals } from "@/lib/calculations";
 import { demoState, getProjectBundle } from "@/lib/demo-data";
 import { getProjectBundleFromDb, listProjectsFromDb } from "@/lib/project-data";
@@ -24,6 +24,22 @@ export default async function DashboardPage() {
   const activeRequests = bundle.procurementRequests.filter((request) => request.status !== "closed");
   const budgetDeviation = budget.totalForecastCost - budget.totalPlannedCost;
   const totalContractAmount = projects.reduce((total, project) => total + project.contractAmount, 0);
+  const portfolioAttention = [
+    delayedWorks[0] ? `Просрочка: ${delayedWorks[0].name}` : "График без критичных просрочек",
+    materials.deficitItems[0] ? `Материал: закрыть дефицит ${materials.deficitItems[0].name}` : "Дефицит материалов не выявлен",
+    activeRisks[0] ? `Риск: ${activeRisks[0].title}` : "Новых критичных рисков нет",
+    budgetDeviation > 0 ? `Бюджет: перерасход ${compactMoney(budgetDeviation)}` : "Бюджет в допустимом коридоре"
+  ];
+  const cashFlowSeries = bundle.payments.slice(0, 6).map((payment) => ({
+    label: new Date(payment.plannedAt).toLocaleDateString("ru-RU", { day: "2-digit", month: "2-digit" }),
+    value: payment.direction === "incoming" ? payment.amount : -payment.amount
+  }));
+  const costStructure = Object.entries(
+    bundle.budgetItems.reduce<Record<string, number>>((acc, item) => {
+      acc[item.kind] = (acc[item.kind] ?? 0) + item.qty * item.forecastUnitPrice;
+      return acc;
+    }, {})
+  ).map(([label, value]) => ({ label, value }));
 
   return (
     <main className="page">
@@ -63,6 +79,37 @@ export default async function DashboardPage() {
         <Kpi title="Заявки в работе" value={String(activeRequests.length)} hint={activeRequests[0]?.title ?? "Нет срочных"} tone={activeRequests.length ? "warn" : "good"} icon={<ClipboardList size={18} />} />
         <Kpi title="Готовность работ" value={percent(works.completionPercent)} hint="План / факт" icon={<CalendarClock size={18} />} />
         <Kpi title="Прогнозная прибыль" value={compactMoney(budget.forecastProfit)} hint="Маржинальность проекта" tone={budget.forecastProfit > 0 ? "good" : "bad"} />
+      </section>
+
+      <section className="dashboard-command-grid">
+        <div className="panel stack ai-command-card">
+          <div className="section-title">
+            <Sparkles size={18} />
+            <h2>Что требует внимания сегодня</h2>
+          </div>
+          <div className="ai-insight-list">
+            {portfolioAttention.map((item, index) => (
+              <div className="ai-insight-item" key={item}>
+                <span>{index + 1}</span>
+                <p>{item}</p>
+              </div>
+            ))}
+          </div>
+          <div className="quick-actions">
+            <Link className="button secondary" href="/projects/project-demo">Сформировать отчет</Link>
+            <Link className="button secondary" href="/projects/project-demo">Проверить риски</Link>
+            <Link className="button secondary" href="/projects/project-demo">Собрать заявку</Link>
+            <Link className="button secondary" href="/projects/project-demo">Подготовить письмо</Link>
+          </div>
+        </div>
+        <div className="panel stack">
+          <div className="section-title">
+            <BarChart3 size={18} />
+            <h2>Портфельная аналитика</h2>
+          </div>
+          <MiniBars title="Cash-flow" items={cashFlowSeries} />
+          <MiniBars title="Структура затрат" items={costStructure} />
+        </div>
       </section>
 
       <section className="grid grid-2" style={{ marginTop: 16 }}>
@@ -107,6 +154,12 @@ export default async function DashboardPage() {
           <Attention title="Заявки" value={String(activeRequests.length)} tone={activeRequests.length ? "warn" : "good"} detail={activeRequests[0]?.title ?? "Снабжение без срочных заявок"} />
           <Attention title="Перерасход" value={compactMoney(Math.max(budgetDeviation, materials.materialOverrun, 0))} tone={budgetDeviation > 0 || materials.materialOverrun > 0 ? "bad" : "good"} detail="Бюджет и материалы" />
         </div>
+      </section>
+
+      <section className="grid grid-3" style={{ marginTop: 16 }}>
+        <SignalCard icon={<TrendingUp size={18} />} title="План / факт" value={percent(works.completionPercent)} detail="Работы в производстве и ближайшие контрольные точки" tone="info" />
+        <SignalCard icon={<FileWarning size={18} />} title="Документы" value="3" detail="КС, ИД и график требуют проверки перед отправкой" tone="warn" />
+        <SignalCard icon={<PackageCheck size={18} />} title="Поставки" value={String(materials.deficitItems.length)} detail="Критичные материалы для ближайших работ" tone={materials.deficitItems.length ? "bad" : "good"} />
       </section>
 
       <section className="panel" style={{ marginTop: 16 }}>
@@ -156,6 +209,36 @@ export default async function DashboardPage() {
         </div>
       </section>
     </main>
+  );
+}
+
+function MiniBars({ title, items }: { title: string; items: Array<{ label: string; value: number }> }) {
+  const max = Math.max(...items.map((item) => Math.abs(item.value)), 1);
+  return (
+    <div className="mini-chart">
+      <div className="mini-chart-title">{title}</div>
+      <div className="mini-bars">
+        {items.map((item) => (
+          <div className="mini-bar" key={item.label} title={`${item.label}: ${compactMoney(item.value)}`}>
+            <span className={item.value < 0 ? "negative" : ""} style={{ height: `${Math.max(8, (Math.abs(item.value) / max) * 100)}%` }} />
+            <small>{item.label}</small>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SignalCard({ icon, title, value, detail, tone }: { icon: React.ReactNode; title: string; value: string; detail: string; tone: "good" | "warn" | "bad" | "info" }) {
+  return (
+    <div className={`panel signal-card ${tone}`}>
+      <div className="section-title">
+        {icon}
+        <h3>{title}</h3>
+      </div>
+      <strong>{value}</strong>
+      <p className="muted">{detail}</p>
+    </div>
   );
 }
 

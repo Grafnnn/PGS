@@ -548,7 +548,28 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
           )}
 
           {activeTab === "Обзор" && (
-            <section className="grid grid-2">
+            <section className="stack">
+              <Panel title="AI-сводка объекта" icon={<Bot size={18} />} className="ai-panel">
+                <div className="overview-ai-grid">
+                  <div>
+                    <h3>Управленческий вывод</h3>
+                    <p className="muted">
+                      {budgetDeviation > 0
+                        ? `Проект требует финансового разбора: прогнозный перерасход ${compactMoney(budgetDeviation)}.`
+                        : "Финансовый контур проекта в допустимом коридоре, фокус на сроках и снабжении."}
+                    </p>
+                  </div>
+                  <div className="ai-insight-list compact">
+                    {priorityActions.map((action, index) => (
+                      <div className="ai-insight-item" key={action}>
+                        <span>{index + 1}</span>
+                        <p>{action}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </Panel>
+              <section className="grid grid-2">
               <Panel title="План / факт проекта" icon={<TimerReset size={18} />}>
                 <div className="grid grid-3">
                   <Kpi title="Плановая себестоимость" value={compactMoney(budget.totalPlannedCost)} />
@@ -582,10 +603,12 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
                   <Kpi title="Потребность" value={compactMoney(finance.financingNeed)} tone={finance.financingNeed ? "bad" : "good"} />
                 </div>
               </Panel>
+              </section>
             </section>
           )}
       {activeTab === "Бюджет / ВОР" && (
         <Panel title="Бюджет, ВОР и классификация затрат" icon={<Table2 size={18} />}>
+          <BudgetAnalytics items={budgetItems} contractAmount={initialBundle.project.contractAmount} paid={finance.incomingPayments} forecastProfit={budget.forecastProfit} />
           <ImportPanel
             file={importFile}
             mode={importMode}
@@ -637,6 +660,7 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
 
       {activeTab === "График" && (
         <Panel title="Календарный график работ" icon={<TimerReset size={18} />}>
+          <TimelineView items={scheduleItems} />
           <ScheduleForm
             onAdd={async (item) => {
               const saved = await createResource<ScheduleItem>("schedule", { actualQty: 0, status: "not_started", ...item });
@@ -667,6 +691,7 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
 
       {activeTab === "Материалы" && (
         <Panel title="Материалы и снабжение" icon={<Package size={18} />}>
+          <MaterialHealth items={materials} />
           {editingMaterial && (
             <MaterialEditForm
               item={editingMaterial}
@@ -714,12 +739,14 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
 
       {activeTab === "Заявки" && (
         <Panel title="Заявки снабжению" icon={<Truck size={18} />}>
+          <ProcurementPipeline items={initialBundle.procurementRequests} />
           <RequestTable items={initialBundle.procurementRequests} />
         </Panel>
       )}
 
       {activeTab === "Финансы" && (
         <Panel title="Платежи и кассовый план" icon={<Landmark size={18} />}>
+          <FinanceCommand payments={payments} contractAmount={initialBundle.project.contractAmount} forecastProfit={budget.forecastProfit} />
           <PaymentForm
             onAdd={async (payment) => {
               const saved = await createResource<Payment>("finance", { status: "planned", ...payment });
@@ -732,6 +759,7 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
 
       {activeTab === "Рапорты" && (
         <Panel title="Ежедневные рапорты стройплощадки" icon={<ClipboardList size={18} />}>
+          <ReportCards items={reports} />
           <button
             className="button primary"
             onClick={async () => {
@@ -761,6 +789,7 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
 
       {activeTab === "Риски" && (
         <Panel title="Риски и отклонения" icon={<AlertTriangle size={18} />}>
+          <RiskMatrix items={allRisks} />
           <button
             className="button primary"
             onClick={async () => {
@@ -822,6 +851,7 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
               void deleteDocument(document);
             }}
           />
+          <DocumentCards items={documents} projectId={initialBundle.project.id} />
         </Panel>
       )}
 
@@ -1817,6 +1847,221 @@ function ProjectMembersTable({
         </button>
       ])}
     />
+  );
+}
+
+function BudgetAnalytics({ items, contractAmount, paid, forecastProfit }: { items: BudgetItem[]; contractAmount: number; paid: number; forecastProfit: number }) {
+  const sections = Object.entries(
+    items.reduce<Record<string, number>>((acc, item) => {
+      acc[item.section] = (acc[item.section] ?? 0) + item.qty * item.forecastUnitPrice;
+      return acc;
+    }, {})
+  ).sort((left, right) => right[1] - left[1]);
+  const max = Math.max(...sections.map(([, value]) => value), 1);
+  const forecastCost = sections.reduce((total, [, value]) => total + value, 0);
+
+  return (
+    <div className="analytics-grid">
+      <div className="metric-strip">
+        <Kpi title="Договор" value={compactMoney(contractAmount)} />
+        <Kpi title="Прогноз затрат" value={compactMoney(forecastCost)} tone={forecastCost > contractAmount ? "bad" : "warn"} />
+        <Kpi title="Прогноз прибыли" value={compactMoney(forecastProfit)} tone={forecastProfit > 0 ? "good" : "bad"} />
+        <Kpi title="Оплачено" value={compactMoney(paid)} />
+      </div>
+      <div className="breakdown-panel">
+        <h3>Структура бюджета по разделам</h3>
+        {sections.slice(0, 6).map(([section, value]) => (
+          <div className="breakdown-row" key={section}>
+            <span>{section}</span>
+            <div><i style={{ width: `${Math.max(8, (value / max) * 100)}%` }} /></div>
+            <strong>{compactMoney(value)}</strong>
+          </div>
+        ))}
+      </div>
+      <div className="waterfall">
+        <h3>Договор → затраты → прибыль</h3>
+        <div className="waterfall-track">
+          <span style={{ width: "100%" }}>Договор {compactMoney(contractAmount)}</span>
+          <span className="warn" style={{ width: `${Math.min(100, (forecastCost / contractAmount) * 100)}%` }}>Затраты</span>
+          <span className={forecastProfit > 0 ? "good" : "bad"} style={{ width: `${Math.min(100, (Math.abs(forecastProfit) / contractAmount) * 100)}%` }}>Прибыль</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TimelineView({ items }: { items: ScheduleItem[] }) {
+  const times = items.flatMap((item) => [new Date(item.startsAt).getTime(), new Date(item.endsAt).getTime()]).filter(Number.isFinite);
+  const start = Math.min(...times);
+  const end = Math.max(...times);
+  const span = Math.max(end - start, 86_400_000);
+  const today = Date.now();
+  const todayLeft = Math.max(0, Math.min(100, ((today - start) / span) * 100));
+
+  return (
+    <div className="timeline-panel">
+      <div className="timeline-head">
+        <h3>График работ</h3>
+        <div className="segmented-control">
+          <button className="active" type="button">Неделя</button>
+          <button type="button">Месяц</button>
+          <button type="button">Квартал</button>
+        </div>
+      </div>
+      <div className="gantt" style={{ ["--today-left" as string]: `${todayLeft}%` }}>
+        {items.slice(0, 8).map((item) => {
+          const itemStart = new Date(item.startsAt).getTime();
+          const itemEnd = new Date(item.endsAt).getTime();
+          const left = Math.max(0, ((itemStart - start) / span) * 100);
+          const width = Math.max(8, ((itemEnd - itemStart) / span) * 100);
+          const completion = item.plannedQty ? Math.min(100, (item.actualQty / item.plannedQty) * 100) : 0;
+          return (
+            <div className="gantt-row" key={item.id}>
+              <div>
+                <strong>{item.name}</strong>
+                <span>{item.owner} · {formatDate(item.startsAt)} - {formatDate(item.endsAt)}</span>
+              </div>
+              <div className="gantt-track">
+                <span className={`gantt-bar ${statusTone(item.status)}`} style={{ left: `${left}%`, width: `${width}%` }}>
+                  <i style={{ width: `${completion}%` }} />
+                </span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function MaterialHealth({ items }: { items: Material[] }) {
+  const critical = items.filter((item) => item.requiredQty > item.orderedQty);
+  const today = new Date().toISOString().slice(0, 10);
+  const dueSoon = items.filter((item) => item.neededAt <= today && item.status !== "closed");
+
+  return (
+    <div className="metric-strip">
+      <Kpi title="Потребность" value={items.reduce((sum, item) => sum + item.requiredQty, 0).toLocaleString("ru-RU")} />
+      <Kpi title="Дефицит" value={String(critical.length)} tone={critical.length ? "bad" : "good"} />
+      <Kpi title="Нужно сегодня" value={String(dueSoon.length)} tone={dueSoon.length ? "warn" : "good"} />
+      <Kpi title="Поставщиков" value={String(new Set(items.map((item) => item.supplier)).size)} />
+    </div>
+  );
+}
+
+function ProcurementPipeline({ items }: { items: ProcurementRequest[] }) {
+  const columns = [
+    { key: "draft", label: "Требуется" },
+    { key: "submitted", label: "Заявка" },
+    { key: "approved", label: "Согласование" },
+    { key: "ordered", label: "Заказано" },
+    { key: "closed", label: "Закрыто" }
+  ];
+
+  return (
+    <div className="pipeline">
+      {columns.map((column) => {
+        const columnItems = items.filter((item) => item.status === column.key);
+        return (
+          <div className="pipeline-column" key={column.key}>
+            <div className="pipeline-title">
+              <strong>{column.label}</strong>
+              <span>{columnItems.length}</span>
+            </div>
+            {columnItems.length ? columnItems.map((item) => (
+              <div className="pipeline-card" key={item.id}>
+                <strong>{item.title}</strong>
+                <span>{item.initiator} · до {formatDate(item.neededAt)}</span>
+                <StatusBadge tone={statusTone(item.priority)}>{readableStatus(item.priority)}</StatusBadge>
+              </div>
+            )) : <div className="pipeline-empty">Нет заявок</div>}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function FinanceCommand({ payments, contractAmount, forecastProfit }: { payments: Payment[]; contractAmount: number; forecastProfit: number }) {
+  const incoming = payments.filter((payment) => payment.direction === "incoming").reduce((sum, payment) => sum + payment.amount, 0);
+  const outgoing = payments.filter((payment) => payment.direction === "outgoing").reduce((sum, payment) => sum + payment.amount, 0);
+  const overdue = payments.filter((payment) => payment.status === "overdue").reduce((sum, payment) => sum + payment.amount, 0);
+
+  return (
+    <div className="analytics-grid finance-grid">
+      <div className="metric-strip">
+        <Kpi title="Договор" value={compactMoney(contractAmount)} />
+        <Kpi title="Оплачено" value={compactMoney(incoming)} tone="good" />
+        <Kpi title="Кредиторка" value={compactMoney(outgoing)} />
+        <Kpi title="Просрочено" value={compactMoney(overdue)} tone={overdue ? "bad" : "good"} />
+      </div>
+      <div className="waterfall">
+        <h3>Cash-flow</h3>
+        <div className="cashflow-bars">
+          {payments.slice(0, 8).map((payment) => (
+            <span className={payment.direction === "incoming" ? "good" : "bad"} key={payment.id} title={`${payment.title}: ${compactMoney(payment.amount)}`}>
+              <i style={{ height: `${Math.max(14, Math.min(100, (payment.amount / contractAmount) * 220))}%` }} />
+              <small>{formatDate(payment.plannedAt)}</small>
+            </span>
+          ))}
+        </div>
+      </div>
+      <div className="waterfall">
+        <h3>Прогноз прибыли</h3>
+        <strong className={forecastProfit > 0 ? "delta-good" : "delta-bad"}>{compactMoney(forecastProfit)}</strong>
+        <p className="muted">С учетом текущего прогноза затрат и оплат.</p>
+      </div>
+    </div>
+  );
+}
+
+function RiskMatrix({ items }: { items: Risk[] }) {
+  const priorities: Risk["priority"][] = ["low", "medium", "high", "critical"];
+  return (
+    <div className="risk-matrix">
+      {priorities.map((priority) => {
+        const count = items.filter((item) => item.priority === priority && item.status !== "closed").length;
+        return (
+          <div className={`risk-cell ${statusTone(priority)}`} key={priority}>
+            <span>{readableStatus(priority)}</span>
+            <strong>{count}</strong>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function ReportCards({ items }: { items: DailyReport[] }) {
+  return (
+    <div className="report-card-grid">
+      {items.slice(0, 3).map((item) => (
+        <div className="report-card" key={item.id}>
+          <div>
+            <strong>{formatDate(item.date)}</strong>
+            <StatusBadge tone={statusTone(item.status)}>{readableStatus(item.status)}</StatusBadge>
+          </div>
+          <p>{item.completedWorks}</p>
+          <span>{item.workers} рабочих · {item.engineers} ИТР · {item.weather || "Погода не указана"}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function DocumentCards({ items, projectId }: { items: ProjectDocument[]; projectId: string }) {
+  if (!items.length) return null;
+  return (
+    <div className="document-card-grid">
+      {items.slice(0, 4).map((item) => (
+        <a className="document-card" href={`/api/projects/${projectId}/documents/${item.id}/download`} key={item.id}>
+          <FileText size={18} />
+          <strong>{item.fileName ?? item.title}</strong>
+          <span>{item.category} · v{item.version}</span>
+          <small>{item.uploadedAt ? formatDate(item.uploadedAt) : formatDate(item.createdAt)}</small>
+        </a>
+      ))}
+    </div>
   );
 }
 
