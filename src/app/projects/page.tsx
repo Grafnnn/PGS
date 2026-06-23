@@ -4,6 +4,13 @@ import { demoState } from "@/lib/demo-data";
 import { money } from "@/lib/calculations";
 import { listProjectsFromDb } from "@/lib/project-data";
 
+function compactMoney(value: number) {
+  const absolute = Math.abs(value);
+  if (absolute >= 1_000_000_000) return `${(value / 1_000_000_000).toLocaleString("ru-RU", { maximumFractionDigits: 1 })} млрд ₽`;
+  if (absolute >= 1_000_000) return `${(value / 1_000_000).toLocaleString("ru-RU", { maximumFractionDigits: 1 })} млн ₽`;
+  return money(value);
+}
+
 export default async function ProjectsPage() {
   const projects = (await listProjectsFromDb().catch(() => null)) ?? demoState.projects;
 
@@ -17,7 +24,7 @@ export default async function ProjectsPage() {
           <div className="page-header-meta">
             <span className="badge green">В работе</span>
             <span className="badge blue">{projects.length} объекта</span>
-            <span className="badge gray">Сумма договоров: {money(projects.reduce((total, project) => total + project.contractAmount, 0))}</span>
+            <span className="badge gray">Сумма договоров: {compactMoney(projects.reduce((total, project) => total + project.contractAmount, 0))}</span>
           </div>
         </div>
         <button className="button primary" type="button">
@@ -71,23 +78,23 @@ export default async function ProjectsPage() {
               <tbody>
                 {projects.map((project) => (
                   <tr key={project.id}>
-                    <td>
+                    <td data-label="Название">
                       <Link href={`/projects/${project.id}`}>
                         <strong>{project.name}</strong>
                       </Link>
                       <div className="muted">{project.address}</div>
                     </td>
-                    <td>{project.object}</td>
-                    <td>{project.customer}</td>
-                    <td className="numeric">{money(project.contractAmount)}</td>
-                    <td>{project.manager}</td>
-                    <td>
+                    <td data-label="Объект">{project.object}</td>
+                    <td data-label="Заказчик">{project.customer}</td>
+                    <td className="numeric" data-label="Договорная сумма">{compactMoney(project.contractAmount)}</td>
+                    <td data-label="Руководитель">{project.manager}</td>
+                    <td data-label="Контроль">
                       <span className="badge yellow">
                         <AlertTriangle size={13} />
                         План-факт
                       </span>
                     </td>
-                    <td>
+                    <td data-label="Статус">
                       <span className="badge green">В работе</span>
                     </td>
                   </tr>

@@ -27,6 +27,19 @@ type OpenAiChatCompletion = {
   }>;
 };
 
+type AskProjectAssistantResult =
+  | {
+      ok: true;
+      status: 200;
+      response: string;
+    }
+  | {
+      ok: false;
+      status: 502 | 503;
+      response: string;
+      error: string;
+    };
+
 export async function buildProjectContext(projectId: string) {
   const bundle = (await getProjectBundleFromDb(projectId).catch(() => null)) ?? getProjectBundle(projectId);
   const budget = budgetTotals(bundle.project.contractAmount, bundle.budgetItems);
@@ -120,7 +133,7 @@ function sanitizeProviderError(error: unknown) {
     .slice(0, 240);
 }
 
-function providerFailureResponse(prompt: string, projectId: string) {
+function providerFailureResponse(prompt: string, projectId: string): Extract<AskProjectAssistantResult, { ok: false }> {
   return {
     ok: false,
     status: 502,
@@ -166,7 +179,7 @@ async function requestOpenAiChatCompletion(apiKey: string, body: unknown): Promi
   return payload as OpenAiChatCompletion;
 }
 
-export async function askProjectAssistant(projectId: string, prompt: string) {
+export async function askProjectAssistant(projectId: string, prompt: string): Promise<AskProjectAssistantResult> {
   if (!process.env.OPENAI_API_KEY) {
     return {
       ok: false,

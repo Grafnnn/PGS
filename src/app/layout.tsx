@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { AppNav } from "@/components/app-nav";
 import { BrandLogo } from "@/components/brand-logo";
 import "./globals.css";
 
@@ -15,17 +15,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <div className="app-shell">
           <header className="topbar">
             <BrandLogo />
-            <nav className="nav">
-              <Link href="/dashboard">Дашборд</Link>
-              <Link href="/projects">Проекты</Link>
-              <Link href="/projects/project-demo">Бюджет / ВОР</Link>
-              <Link href="/projects/project-demo">График</Link>
-              <Link href="/projects/project-demo">Материалы</Link>
-              <Link href="/projects/project-demo">Заявки</Link>
-              <Link href="/projects/project-demo">Риски</Link>
-              <Link href="/projects/project-demo">AI</Link>
-              <Link href="/admin/users">Пользователи</Link>
-            </nav>
+            <AppNav />
           </header>
           {children}
         </div>
