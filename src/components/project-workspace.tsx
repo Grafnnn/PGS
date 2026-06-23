@@ -1,9 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AlertTriangle, Bot, ClipboardList, FileText, Landmark, LayoutList, Package, Pencil, Plus, Search, Send, Table2, TimerReset, Trash2, Truck, Users } from "lucide-react";
+import { AlertTriangle, BarChart3, Bot, ClipboardList, FileText, Landmark, LayoutList, Package, Pencil, Plus, Search, Send, Table2, TimerReset, Trash2, Truck, Users } from "lucide-react";
 import { budgetTotals, deriveAutoRisks, financeTotals, materialTotals, money, percent, workTotals } from "@/lib/calculations";
 import type { ImportExplanation, ImportMode, ImportPreview, ImportSheetMapping } from "@/lib/excel/import-types";
+import type { DocumentChecklistItem, PipelineAction, PipelineReadiness } from "@/lib/project-pipeline";
 import type { AuditEvent, BudgetItem, DailyReport, Material, Payment, ProcurementRequest, ProjectDocument, ProjectDocumentVersion, ProjectMember, Risk, ScheduleItem } from "@/lib/types";
 
 type Bundle = {
@@ -51,6 +52,7 @@ const tabs = [
   "Рапорты",
   "Риски",
   "Документы",
+  "Аналитика",
   "Участники",
   "История",
   "AI-помощник"
@@ -66,6 +68,7 @@ const tabMeta: Record<string, { icon: React.ReactNode; hint: string }> = {
   Рапорты: { icon: <ClipboardList size={16} />, hint: "Площадка" },
   Риски: { icon: <AlertTriangle size={16} />, hint: "Контроль" },
   Документы: { icon: <FileText size={16} />, hint: "Файлы" },
+  Аналитика: { icon: <BarChart3 size={16} />, hint: "Готовность" },
   Участники: { icon: <Users size={16} />, hint: "Доступ" },
   История: { icon: <ClipboardList size={16} />, hint: "Аудит" },
   "AI-помощник": { icon: <Bot size={16} />, hint: "Анализ" }
@@ -103,6 +106,28 @@ type AiInsightResponse = {
   dataLimitations: string[];
   generatedAt: string;
   provider: "deterministic" | "openai" | "degraded";
+};
+
+type PipelineDraftKind = "procurement" | "schedule" | "cashflow";
+
+type PipelineDraftState = {
+  kind: PipelineDraftKind;
+  mode: "preview" | "commit";
+  draft: {
+    sourceImportBatchId?: string | null;
+    summary: Record<string, unknown>;
+    items: Array<Record<string, unknown>>;
+  };
+  created?: unknown[];
+};
+
+type IntelligenceState = {
+  completenessScore: number;
+  summary: string;
+  topRisks: PipelineAction[];
+  nextActions: PipelineAction[];
+  missingData: string[];
+  quickActions: Array<{ title: string; prompt: string; deterministicAnswer: string }>;
 };
 
 const aiScenarios: Array<{ scenario: AiScenario; title: string; description: string; data: string[] }> = [
@@ -150,6 +175,7 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
   const [budgetItems, setBudgetItems] = useState(initialBundle.budgetItems);
   const [scheduleItems, setScheduleItems] = useState(initialBundle.scheduleItems);
   const [materials, setMaterials] = useState(initialBundle.materials);
+  const [procurementRequests, setProcurementRequests] = useState(initialBundle.procurementRequests);
   const [payments, setPayments] = useState(initialBundle.payments);
   const [reports, setReports] = useState(initialBundle.dailyReports);
   const [risks, setRisks] = useState(initialBundle.risks);
@@ -169,6 +195,8 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
   const [importHistory, setImportHistory] = useState<ImportHistoryItem[]>([]);
   const [importResult, setImportResult] = useState<Record<string, unknown> | null>(null);
   const [importPreviewFilter, setImportPreviewFilter] = useState("all");
+  const [budgetTableFilter, setBudgetTableFilter] = useState("all");
+  const [materialTableFilter, setMaterialTableFilter] = useState("all");
   const [editingBudget, setEditingBudget] = useState<BudgetItem | null>(null);
   const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
   const [editingSchedule, setEditingSchedule] = useState<ScheduleItem | null>(null);
@@ -180,6 +208,12 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
   const [members, setMembers] = useState<ProjectMember[]>([]);
   const [memberEmail, setMemberEmail] = useState("");
   const [memberRole, setMemberRole] = useState<ProjectMember["role"]>("VIEWER");
+  const [readiness, setReadiness] = useState<PipelineReadiness | null>(null);
+  const [postImportActions, setPostImportActions] = useState<PipelineAction[]>([]);
+  const [documentChecklist, setDocumentChecklist] = useState<DocumentChecklistItem[]>([]);
+  const [intelligence, setIntelligence] = useState<IntelligenceState | null>(null);
+  const [pipelineDraft, setPipelineDraft] = useState<PipelineDraftState | null>(null);
+  const [pipelineLoading, setPipelineLoading] = useState("");
 
   const budget = useMemo(() => budgetTotals(initialBundle.project.contractAmount, budgetItems), [budgetItems, initialBundle.project.contractAmount]);
   const works = useMemo(() => workTotals(scheduleItems), [scheduleItems]);
@@ -188,7 +222,7 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
   const allRisks = useMemo(() => [...risks, ...deriveAutoRisks(scheduleItems, materials, payments)], [risks, scheduleItems, materials, payments]);
   const activeRisks = allRisks.filter((risk) => risk.status !== "closed");
   const delayedWorks = scheduleItems.filter((item) => item.status === "delayed");
-  const activeRequests = initialBundle.procurementRequests.filter((request) => request.status !== "closed");
+  const activeRequests = procurementRequests.filter((request) => request.status !== "closed");
   const budgetDeviation = budget.totalForecastCost - budget.totalPlannedCost;
   const urgentMaterial = materialStats.deficitItems[0];
   const latestReport = reports[0];
@@ -263,6 +297,32 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
     void loadMembers();
   }, [activeTab, loadMembers]);
 
+  const loadPipeline = useCallback(async () => {
+    try {
+      const [readinessResponse, actionsResponse, checklistResponse, intelligenceResponse] = await Promise.all([
+        fetch(`/api/projects/${initialBundle.project.id}/data-readiness`),
+        fetch(`/api/projects/${initialBundle.project.id}/post-import-actions`),
+        fetch(`/api/projects/${initialBundle.project.id}/document-checklist`),
+        fetch(`/api/projects/${initialBundle.project.id}/intelligence`)
+      ]);
+      const readinessData = (await readinessResponse.json()) as { readiness?: PipelineReadiness };
+      const actionsData = (await actionsResponse.json()) as { items?: PipelineAction[] };
+      const checklistData = (await checklistResponse.json()) as { items?: DocumentChecklistItem[] };
+      const intelligenceData = (await intelligenceResponse.json()) as { intelligence?: IntelligenceState; calculatedRisks?: PipelineAction[]; readiness?: PipelineReadiness };
+      if (readinessResponse.ok && readinessData.readiness) setReadiness(readinessData.readiness);
+      if (actionsResponse.ok) setPostImportActions(actionsData.items ?? []);
+      if (checklistResponse.ok) setDocumentChecklist(checklistData.items ?? []);
+      if (intelligenceResponse.ok && intelligenceData.intelligence) setIntelligence(intelligenceData.intelligence);
+    } catch {
+      setPostImportActions([]);
+    }
+  }, [initialBundle.project.id]);
+
+  useEffect(() => {
+    if (!["Обзор", "Бюджет / ВОР", "Материалы", "Заявки", "График", "Финансы", "Документы", "Аналитика", "AI-помощник"].includes(activeTab)) return;
+    void loadPipeline();
+  }, [activeTab, loadPipeline]);
+
   async function askAi(prompt = aiPrompt) {
     setAiLoading(true);
     setAiPrompt(prompt);
@@ -323,6 +383,38 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
       throw saveError;
     } finally {
       setSaving("");
+    }
+  }
+
+  async function runPipelineDraft(kind: PipelineDraftKind, commit = false) {
+    const endpoint =
+      kind === "procurement"
+        ? "procurement/draft-from-import"
+        : kind === "schedule"
+          ? "schedule/draft-from-import"
+          : "finance/draft-cashflow-from-import";
+    setPipelineLoading(`${kind}-${commit ? "commit" : "preview"}`);
+    setError("");
+    try {
+      const response = await fetch(`/api/projects/${initialBundle.project.id}/${endpoint}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ commit, confirmed: commit })
+      });
+      const data = (await response.json()) as PipelineDraftState & { ok?: boolean; error?: string };
+      if (!response.ok || data.ok === false) throw new Error(data.error ?? "Pipeline draft недоступен.");
+      setPipelineDraft({ kind, mode: commit ? "commit" : "preview", draft: data.draft, created: data.created });
+      if (commit && kind === "procurement" && Array.isArray(data.created)) {
+        setProcurementRequests((current) => [...current, ...(data.created as ProcurementRequest[])]);
+      }
+      if (commit && kind === "schedule" && Array.isArray(data.created)) {
+        setScheduleItems((current) => [...current, ...(data.created as ScheduleItem[])]);
+      }
+      await loadPipeline();
+    } catch (draftError) {
+      setError(draftError instanceof Error ? draftError.message : "Ошибка pipeline draft.");
+    } finally {
+      setPipelineLoading("");
     }
   }
 
@@ -613,6 +705,7 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
       setError("");
       setAiAnswer(`Импорт сохранен: ВОР ${data.budgetItems?.length ?? 0}, материалы ${data.materials?.length ?? 0}, график ${data.scheduleItems?.length ?? 0}.`);
       void loadImportHistory();
+      void loadPipeline();
     } catch (commitError) {
       setError(commitError instanceof Error ? commitError.message : "Ошибка сохранения импорта.");
     } finally {
@@ -700,6 +793,7 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
 
           {activeTab === "Обзор" && (
             <section className="stack">
+              <DataReadinessPanel readiness={readiness} actions={postImportActions} onNavigate={setActiveTab} />
               <Panel title="AI-сводка объекта" icon={<Bot size={18} />} className="ai-panel">
                 <div className="overview-ai-grid">
                   <div>
@@ -785,6 +879,7 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
             onConfirmChange={setImportConfirmed}
             onCommit={() => void commitImport()}
           />
+          <PostImportActionPanel actions={postImportActions} result={importResult} onNavigate={setActiveTab} />
           <BudgetForm
             onAdd={async (item) => {
               const saved = await createResource<BudgetItem>("budget", {
@@ -809,6 +904,9 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
           )}
           <BudgetTable
             items={budgetItems}
+            importHistory={importHistory}
+            filter={budgetTableFilter}
+            onFilterChange={setBudgetTableFilter}
             onEdit={setEditingBudget}
             onDelete={async (item) => {
               await deleteResource("budget", item.id);
@@ -820,6 +918,13 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
 
       {activeTab === "График" && (
         <Panel title="Календарный график работ" icon={<TimerReset size={18} />}>
+          <PipelineDraftPanel
+            kind="schedule"
+            draft={pipelineDraft}
+            loading={pipelineLoading}
+            onPreview={() => void runPipelineDraft("schedule")}
+            onCommit={() => void runPipelineDraft("schedule", true)}
+          />
           <TimelineView items={scheduleItems} />
           <ScheduleForm
             onAdd={async (item) => {
@@ -865,6 +970,8 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
           )}
           <MaterialTable
             items={materials}
+            filter={materialTableFilter}
+            onFilterChange={setMaterialTableFilter}
             onEdit={setEditingMaterial}
             onDelete={async (item) => {
               await deleteResource("materials", item.id);
@@ -899,13 +1006,27 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
 
       {activeTab === "Заявки" && (
         <Panel title="Заявки снабжению" icon={<Truck size={18} />}>
-          <ProcurementPipeline items={initialBundle.procurementRequests} />
-          <RequestTable items={initialBundle.procurementRequests} />
+          <PipelineDraftPanel
+            kind="procurement"
+            draft={pipelineDraft}
+            loading={pipelineLoading}
+            onPreview={() => void runPipelineDraft("procurement")}
+            onCommit={() => void runPipelineDraft("procurement", true)}
+          />
+          <ProcurementPipeline items={procurementRequests} />
+          <RequestTable items={procurementRequests} />
         </Panel>
       )}
 
       {activeTab === "Финансы" && (
         <Panel title="Платежи и кассовый план" icon={<Landmark size={18} />}>
+          <PipelineDraftPanel
+            kind="cashflow"
+            draft={pipelineDraft}
+            loading={pipelineLoading}
+            onPreview={() => void runPipelineDraft("cashflow")}
+            onCommit={() => void runPipelineDraft("cashflow", true)}
+          />
           <FinanceCommand payments={payments} contractAmount={initialBundle.project.contractAmount} forecastProfit={budget.forecastProfit} />
           <PaymentForm
             onAdd={async (payment) => {
@@ -973,6 +1094,7 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
 
       {activeTab === "Документы" && (
         <Panel title="Документы проекта" icon={<FileText size={18} />}>
+          <DocumentChecklistPanel items={documentChecklist} />
           <div className="form-grid form-surface">
             <label>
               Категория
@@ -1012,6 +1134,12 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
             }}
           />
           <DocumentCards items={documents} projectId={initialBundle.project.id} />
+        </Panel>
+      )}
+
+      {activeTab === "Аналитика" && (
+        <Panel title="Project Intelligence" icon={<BarChart3 size={18} />}>
+          <ProjectIntelligencePanel readiness={readiness} intelligence={intelligence} actions={postImportActions} onNavigate={setActiveTab} />
         </Panel>
       )}
 
@@ -1155,6 +1283,225 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
         </aside>
       </div>
     </main>
+  );
+}
+
+function tabForAction(action: PipelineAction) {
+  const map: Record<string, string> = {
+    budget: "Бюджет / ВОР",
+    materials: "Материалы",
+    procurement: "Заявки",
+    schedule: "График",
+    finance: "Финансы",
+    documents: "Документы",
+    risks: "Риски",
+    import: "Бюджет / ВОР",
+    ai: "Аналитика"
+  };
+  return map[action.category] ?? "Обзор";
+}
+
+function DataReadinessPanel({ readiness, actions, onNavigate }: { readiness: PipelineReadiness | null; actions: PipelineAction[]; onNavigate: (tab: string) => void }) {
+  if (!readiness) {
+    return (
+      <Panel title="Готовность данных проекта" icon={<BarChart3 size={18} />}>
+        <EmptyState text="Данные pipeline еще загружаются." />
+      </Panel>
+    );
+  }
+  return (
+    <Panel title="Готовность данных проекта" icon={<BarChart3 size={18} />}>
+      <div className="metric-strip">
+        <Kpi title="Готовность" value={`${readiness.score}%`} tone={readiness.score >= 70 ? "good" : readiness.score >= 40 ? "warn" : "bad"} />
+        <Kpi title="Импорты" value={String(readiness.counts.committedImports)} />
+        <Kpi title="Материалы из ВОР" value={String(readiness.counts.importedMaterials)} />
+        <Kpi title="Расчетные риски" value={String(readiness.counts.calculatedRisks)} tone={readiness.counts.calculatedRisks ? "warn" : "good"} />
+      </div>
+      <p className="muted">{readiness.summary}</p>
+      <div className="readiness-grid">
+        {readiness.checks.map((check) => (
+          <div className="attention-item" key={check.key}>
+            <StatusBadge tone={check.passed ? "good" : "warn"}>{check.passed ? "OK" : "Нужно"}</StatusBadge>
+            <strong>{check.label}</strong>
+            <span className="muted">{check.detail}</span>
+          </div>
+        ))}
+      </div>
+      <PostImportActionPanel actions={actions.slice(0, 5)} onNavigate={onNavigate} compact />
+    </Panel>
+  );
+}
+
+function PostImportActionPanel({
+  actions,
+  result,
+  onNavigate,
+  compact = false
+}: {
+  actions: PipelineAction[];
+  result?: Record<string, unknown> | null;
+  onNavigate: (tab: string) => void;
+  compact?: boolean;
+}) {
+  if (!actions.length && !result) return null;
+  return (
+    <section className={`wizard-section ${compact ? "compact" : ""}`}>
+      <div className="toolbar" style={{ marginBottom: 0 }}>
+        <div>
+          <h3>Следующие шаги по проекту</h3>
+          <p className="muted">После загрузки ВОР система показывает, какие блоки можно обновить и где не хватает данных.</p>
+        </div>
+        {result && <StatusBadge tone="good">Данные проекта обновлены</StatusBadge>}
+      </div>
+      <div className="action-grid">
+        {actions.map((action) => (
+          <button
+            className="button secondary action-button"
+            disabled={action.enabled === false}
+            key={action.id}
+            title={action.enabled === false ? action.disabledReason ?? undefined : action.suggestedNextStep}
+            type="button"
+            onClick={() => onNavigate(tabForAction(action))}
+          >
+            <span>
+              <strong>{action.title}</strong>
+              <small>{action.enabled === false ? action.disabledReason : action.suggestedNextStep}</small>
+            </span>
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function PipelineDraftPanel({
+  kind,
+  draft,
+  loading,
+  onPreview,
+  onCommit
+}: {
+  kind: PipelineDraftKind;
+  draft: PipelineDraftState | null;
+  loading: string;
+  onPreview: () => void;
+  onCommit: () => void;
+}) {
+  const isCurrent = draft?.kind === kind;
+  const labels: Record<PipelineDraftKind, { title: string; preview: string; commit: string }> = {
+    procurement: { title: "Закупки из ВОР", preview: "Предпросмотр заявок", commit: "Создать черновики заявок" },
+    schedule: { title: "Черновой график из ВОР", preview: "Предпросмотр графика", commit: "Создать черновой график" },
+    cashflow: { title: "Черновой cashflow из ВОР", preview: "Предпросмотр cashflow", commit: "Создать cashflow" }
+  };
+  const rows = isCurrent ? draft.draft.items.slice(0, 12) : [];
+  const summary = isCurrent ? draft.draft.summary : {};
+  return (
+    <div className="wizard-section">
+      <div className="toolbar" style={{ marginBottom: 0 }}>
+        <div>
+          <h3>{labels[kind].title}</h3>
+          <p className="muted">Preview не меняет проект. Commit создает только черновые записи после явного подтверждения.</p>
+        </div>
+        <div className="row-actions">
+          <button className="button secondary" disabled={Boolean(loading)} type="button" onClick={onPreview}>
+            {loading === `${kind}-preview` ? "Готовлю..." : labels[kind].preview}
+          </button>
+          <button className="button primary" disabled={!isCurrent || !rows.length || Boolean(loading)} type="button" onClick={onCommit}>
+            {loading === `${kind}-commit` ? "Создаю..." : labels[kind].commit}
+          </button>
+        </div>
+      </div>
+      {isCurrent && (
+        <div className="stack">
+          <div className="import-meta">
+            {Object.entries(summary).map(([key, value]) => (
+              <span className="muted" key={key}>{key}: {String(value)}</span>
+            ))}
+            {draft.mode === "commit" && <StatusBadge tone="good">Commit выполнен</StatusBadge>}
+          </div>
+          <DataTable
+            headers={kind === "procurement" ? ["Материал", "Потребность", "Заказано", "Доставлено", "Дефицит", "Действие"] : kind === "schedule" ? ["Этап", "Работ", "Сумма", "Длительность", "Статус", "Warnings"] : ["Раздел", "Сумма", "Период", "Warning"]}
+            rows={rows.map((item) =>
+              kind === "procurement"
+                ? [String(item.material ?? "-"), String(item.requiredQty ?? 0), String(item.orderedQty ?? 0), String(item.deliveredQty ?? 0), String(item.deficit ?? 0), String(item.suggestedAction ?? "-")]
+                : kind === "schedule"
+                  ? [String(item.stage ?? item.name ?? "-"), String(item.works ?? 0), compactMoney(Number(item.amount ?? 0)), `${String(item.suggestedDurationDays ?? "-")} дн.`, String(item.status ?? "-"), Array.isArray(item.warnings) ? item.warnings.join("; ") : "-"]
+                  : [String(item.section ?? "-"), compactMoney(Number(item.amount ?? 0)), String(item.period ?? "нужны даты"), String(item.warning ?? "-")]
+            )}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DocumentChecklistPanel({ items }: { items: DocumentChecklistItem[] }) {
+  if (!items.length) return <EmptyState text="Checklist документов еще не загружен." />;
+  return (
+    <div className="wizard-section">
+      <h3>Checklist документов</h3>
+      <DataTable
+        headers={["Документ", "Статус", "Связи", "Следующий шаг"]}
+        rows={items.map((item) => [
+          item.title,
+          <StatusBadge key="status" tone={item.status === "present" ? "good" : "warn"}>{item.status === "present" ? "Есть" : "Не хватает"}</StatusBadge>,
+          item.documentIds.length ? item.documentIds.length : item.evidence.some((evidence) => evidence.importBatchId) ? "ВОР загружен" : "-",
+          item.suggestedNextStep
+        ])}
+      />
+    </div>
+  );
+}
+
+function ProjectIntelligencePanel({
+  readiness,
+  intelligence,
+  actions,
+  onNavigate
+}: {
+  readiness: PipelineReadiness | null;
+  intelligence: IntelligenceState | null;
+  actions: PipelineAction[];
+  onNavigate: (tab: string) => void;
+}) {
+  return (
+    <div className="stack">
+      {readiness && <DataReadinessPanel readiness={readiness} actions={actions} onNavigate={onNavigate} />}
+      {intelligence ? (
+        <>
+          <div className="grid grid-2">
+            <div className="panel">
+              <h3>Top risks</h3>
+              <div className="stack">
+                {intelligence.topRisks.slice(0, 6).map((risk) => (
+                  <div className="attention-item" key={risk.id}>
+                    <StatusBadge tone={risk.priority === "critical" || risk.priority === "high" ? "bad" : risk.priority === "medium" ? "warn" : "info"}>{readableStatus(risk.priority)}</StatusBadge>
+                    <strong>{risk.title}</strong>
+                    <span className="muted">{risk.description}</span>
+                  </div>
+                ))}
+                {!intelligence.topRisks.length && <EmptyState text="Расчетных рисков нет." />}
+              </div>
+            </div>
+            <div className="panel">
+              <h3>Missing data</h3>
+              <ul className="action-list">
+                {intelligence.missingData.slice(0, 10).map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+          <PreviewTable
+            title="Deterministic quick actions"
+            headers={["Действие", "Ответ без live AI"]}
+            rows={intelligence.quickActions.map((item) => [item.title, item.deterministicAnswer])}
+          />
+        </>
+      ) : (
+        <EmptyState text="Project intelligence еще загружается." />
+      )}
+    </div>
   );
 }
 
@@ -1654,6 +2001,10 @@ function readableStatus(value: string) {
     delivered: "Доставлено",
     closed: "Закрыто",
     planned: "План",
+    need_quote: "Нужно КП",
+    quote_needed: "Нужно КП",
+    needs_dates: "Нужны даты",
+    already_exists: "Уже есть",
     paid: "Оплачено",
     overdue: "Просрочено",
     open: "Открыт",
@@ -2061,27 +2412,94 @@ function RowActions({ onEdit, onDelete }: { onEdit: () => void; onDelete: () => 
   );
 }
 
-function BudgetTable({ items, onEdit, onDelete }: { items: BudgetItem[]; onEdit: (item: BudgetItem) => void; onDelete: (item: BudgetItem) => void }) {
+function BudgetTable({
+  items,
+  importHistory,
+  filter,
+  onFilterChange,
+  onEdit,
+  onDelete
+}: {
+  items: BudgetItem[];
+  importHistory: ImportHistoryItem[];
+  filter: string;
+  onFilterChange: (filter: string) => void;
+  onEdit: (item: BudgetItem) => void;
+  onDelete: (item: BudgetItem) => void;
+}) {
+  const importedRows = importHistory.flatMap((batch) =>
+    (batch as ImportHistoryItem & { preview?: ImportPreview }).preview?.previewRows?.map((row) => ({ ...row, importBatchId: batch.id, fileName: batch.fileName })) ?? []
+  );
+  const rowByKey = new Map(importedRows.map((row) => [`${row.section ?? ""}|${row.name ?? ""}|${row.unit ?? ""}`, row]));
+  const decorated = items.map((item) => {
+    const row = rowByKey.get(`${item.section}|${item.name}|${item.unit}`);
+    const imported = Boolean(row) || /excel|import|вор|смет/i.test(item.source);
+    const flags = row?.suspiciousFlags ?? [];
+    return {
+      item,
+      imported,
+      sourceRow: row,
+      flags,
+      hasWarning: Boolean(row?.warnings?.length || flags.length),
+      missingPrice: item.plannedUnitPrice <= 0 || flags.includes("missingPrice"),
+      missingQuantity: item.qty <= 0 || flags.includes("missingQuantity"),
+      duplicate: flags.includes("duplicate")
+    };
+  });
+  const filtered = decorated.filter((entry) => {
+    if (filter === "imported") return entry.imported;
+    if (filter === "warnings") return entry.hasWarning;
+    if (filter === "missingPrice") return entry.missingPrice;
+    if (filter === "missingQuantity") return entry.missingQuantity;
+    if (filter === "duplicate") return entry.duplicate;
+    return true;
+  });
+  const worksTotal = decorated.filter((entry) => entry.item.kind !== "material").reduce((sum, entry) => sum + entry.item.qty * entry.item.plannedUnitPrice, 0);
+  const materialsTotal = decorated.filter((entry) => entry.item.kind === "material").reduce((sum, entry) => sum + entry.item.qty * entry.item.plannedUnitPrice, 0);
+  const problematic = decorated.filter((entry) => entry.hasWarning || entry.missingPrice || entry.missingQuantity || entry.duplicate).length;
   return (
-    <DataTable
-      headers={["Раздел", "Код", "Наименование", "Тип", "Кол-во", "Цена план", "Цена факт", "Сумма план", "Маржа", ""]}
-      numericColumns={[4, 5, 6, 7, 8]}
-      emptyMessage="ВОР пока пустая. Добавьте позицию вручную или импортируйте Excel."
-      rows={items.map((item) => [
-        item.section,
-        item.code,
-        item.name,
-        <StatusBadge key="kind" tone="info">{readableStatus(item.kind)}</StatusBadge>,
-        `${item.qty.toLocaleString("ru-RU")} ${item.unit}`,
-        compactMoney(item.plannedUnitPrice),
-        compactMoney(item.actualUnitPrice),
-        compactMoney(item.qty * item.plannedUnitPrice),
-        <span className={item.qty * (item.forecastUnitPrice - item.actualUnitPrice) < 0 ? "delta-bad" : "delta-good"} key="margin">
-          {compactMoney(item.qty * (item.forecastUnitPrice - item.actualUnitPrice))}
-        </span>,
-        <RowActions key="actions" onEdit={() => onEdit(item)} onDelete={() => onDelete(item)} />
-      ])}
-    />
+    <div className="stack">
+      <div className="metric-strip">
+        <Kpi title="Работы" value={compactMoney(worksTotal)} />
+        <Kpi title="Материалы" value={compactMoney(materialsTotal)} />
+        <Kpi title="Всего ВОР" value={compactMoney(worksTotal + materialsTotal)} />
+        <Kpi title="Проблемные позиции" value={String(problematic)} tone={problematic ? "warn" : "good"} />
+      </div>
+      <div className="segmented-control">
+        {[
+          ["all", "Все"],
+          ["imported", "Импортированные"],
+          ["warnings", "С предупреждениями"],
+          ["missingPrice", "Без цены"],
+          ["missingQuantity", "Без количества"],
+          ["duplicate", "Дубли"]
+        ].map(([value, label]) => (
+          <button className={filter === value ? "active" : ""} key={value} type="button" onClick={() => onFilterChange(value)}>
+            {label}
+          </button>
+        ))}
+      </div>
+      <DataTable
+        headers={["Раздел", "Код", "Наименование", "Источник", "Флаги", "Тип", "Кол-во", "Цена план", "Сумма план", ""]}
+        numericColumns={[6, 7, 8]}
+        emptyMessage="ВОР пока пустая. Добавьте позицию вручную или импортируйте Excel."
+        rows={filtered.map(({ item, imported, sourceRow, flags, missingPrice, missingQuantity, duplicate }) => [
+          item.section,
+          item.code,
+          item.name,
+          <div className="stack" key="source">
+            <StatusBadge tone={imported ? "info" : "neutral"}>{imported ? "из ВОР" : "ручной ввод"}</StatusBadge>
+            <span className="muted">{sourceRow ? `${sourceRow.fileName} · ${sourceRow.sheetName}:${sourceRow.sourceRowNumber}` : item.source}</span>
+          </div>,
+          [missingPrice && "missingPrice", missingQuantity && "missingQuantity", duplicate && "duplicate", ...flags].filter(Boolean).join(", ") || "-",
+          <StatusBadge key="kind" tone="info">{readableStatus(item.kind)}</StatusBadge>,
+          `${item.qty.toLocaleString("ru-RU")} ${item.unit}`,
+          compactMoney(item.plannedUnitPrice),
+          compactMoney(item.qty * item.plannedUnitPrice),
+          <RowActions key="actions" onEdit={() => onEdit(item)} onDelete={() => onDelete(item)} />
+        ])}
+      />
+    </div>
   );
 }
 
@@ -2106,24 +2524,70 @@ function ScheduleTable({ items, onEdit, onDelete }: { items: ScheduleItem[]; onE
   );
 }
 
-function MaterialTable({ items, onEdit, onDelete }: { items: Material[]; onEdit: (item: Material) => void; onDelete: (item: Material) => void }) {
+function MaterialTable({
+  items,
+  filter,
+  onFilterChange,
+  onEdit,
+  onDelete
+}: {
+  items: Material[];
+  filter: string;
+  onFilterChange: (filter: string) => void;
+  onEdit: (item: Material) => void;
+  onDelete: (item: Material) => void;
+}) {
+  const filtered = items.filter((item) => {
+    const deficit = item.requiredQty > Math.max(item.orderedQty, item.deliveredQty);
+    const partial = item.deliveredQty > 0 && item.deliveredQty < item.requiredQty;
+    const overstock = item.deliveredQty > item.requiredQty;
+    if (filter === "missingPrice") return item.plannedUnitPrice <= 0;
+    if (filter === "missingSupplier") return !item.supplier || item.supplier === "Не выбран";
+    if (filter === "needPurchase") return deficit;
+    if (filter === "partial") return partial;
+    if (filter === "overstock") return overstock;
+    if (filter === "imported") return ["required", "need_quote", "planned"].includes(item.status) || item.supplier === "Не выбран";
+    return true;
+  });
   return (
-    <DataTable
-      headers={["Материал", "Потребность", "Заказано", "Доставлено", "Списано", "Цена план/факт", "Поставщик", "Статус", ""]}
-      numericColumns={[1, 2, 3, 4, 5]}
-      emptyMessage="Материалы пока не заведены. Добавьте позицию или загрузите ВОР."
-      rows={items.map((item) => [
-        item.name,
-        `${item.requiredQty} ${item.unit}`,
-        `${item.orderedQty} ${item.unit}`,
-        `${item.deliveredQty} ${item.unit}`,
-        `${item.consumedQty} ${item.unit}`,
-        `${compactMoney(item.plannedUnitPrice)} / ${compactMoney(item.actualUnitPrice)}`,
-        item.supplier,
-        <StatusBadge key="status" tone={statusTone(item.status)}>{readableStatus(item.status)}</StatusBadge>,
-        <RowActions key="actions" onEdit={() => onEdit(item)} onDelete={() => onDelete(item)} />
-      ])}
-    />
+    <div className="stack">
+      <div className="segmented-control">
+        {[
+          ["all", "Все"],
+          ["missingPrice", "Без цены"],
+          ["missingSupplier", "Без поставщика"],
+          ["needPurchase", "Требуется закупка"],
+          ["partial", "Частично закрыто"],
+          ["overstock", "Излишек"],
+          ["imported", "Из ВОР"]
+        ].map(([value, label]) => (
+          <button className={filter === value ? "active" : ""} key={value} type="button" onClick={() => onFilterChange(value)}>
+            {label}
+          </button>
+        ))}
+      </div>
+      <DataTable
+        headers={["Материал", "Потребность", "Заказано", "Доставлено", "Остаток", "Цена план/факт", "Поставщик", "Статус", ""]}
+        numericColumns={[1, 2, 3, 4, 5]}
+        emptyMessage="Материалы пока не заведены. Добавьте позицию или загрузите ВОР."
+        rows={filtered.map((item) => {
+          const remaining = item.requiredQty - item.deliveredQty;
+          return [
+            item.name,
+            `${item.requiredQty} ${item.unit}`,
+            `${item.orderedQty} ${item.unit}`,
+            `${item.deliveredQty} ${item.unit}`,
+            <span className={remaining > 0 ? "delta-bad" : remaining < 0 ? "delta-warn" : "delta-good"} key="remaining">
+              {remaining.toLocaleString("ru-RU")} {item.unit}
+            </span>,
+            `${compactMoney(item.plannedUnitPrice)} / ${compactMoney(item.actualUnitPrice)}`,
+            item.supplier,
+            <StatusBadge key="status" tone={statusTone(item.status)}>{readableStatus(item.status)}</StatusBadge>,
+            <RowActions key="actions" onEdit={() => onEdit(item)} onDelete={() => onDelete(item)} />
+          ];
+        })}
+      />
+    </div>
   );
 }
 
