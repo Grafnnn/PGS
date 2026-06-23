@@ -22,6 +22,26 @@ export interface RuntimeSmokeCheck {
   detail?: string;
 }
 
+export interface RuntimePipelineSmokeResult extends RuntimeSmokeCheck {
+  projectId: string;
+  operations: string[];
+  readiness?: {
+    status?: string;
+    score?: number;
+  };
+  procurement?: {
+    previewItems?: number;
+    created?: number;
+    cleanup: "pass" | "fail" | "skip";
+  };
+  schedule?: {
+    previewItems?: number;
+  };
+  cashflow?: {
+    previewItems?: number;
+  };
+}
+
 export interface RuntimeSmokeResult {
   ok: boolean;
   smokeUser: StagingSmokeUserReport;
@@ -77,6 +97,7 @@ export interface RuntimeSmokeResult {
       materials: number;
     };
     cleanup: "pass" | "fail" | "skip";
+    pipeline?: RuntimePipelineSmokeResult;
   };
   secretsPrinted: false;
 }
@@ -88,6 +109,7 @@ export interface RuntimeSmokeInput {
   includeEmailSmoke?: boolean;
   includeConnectorReadiness?: boolean;
   includeImportSmoke?: boolean;
+  includePipelineSmoke?: boolean;
   requestId: string;
 }
 
@@ -327,6 +349,140 @@ async function cleanupImportSmoke(input: { workCode: string; materialCode: strin
   return budgetItems.count + materials.count + sections.count;
 }
 
+async function cleanupPipelineSmokeProcurement(requestIds: string[]) {
+  if (!requestIds.length) return 0;
+  const deleted = await prisma.procurementRequest.deleteMany({
+    where: {
+      projectId: SMOKE_PROJECT_ID,
+      id: { in: requestIds }
+    }
+  });
+  return deleted.count;
+}
+
+async function runPipelineSmoke(baseUrl: string, cookie: string, requestId: string): Promise<RuntimePipelineSmokeResult> {
+  const operations: string[] = [];
+  const createdProcurementIds: string[] = [];
+  let procurementCleanup: "pass" | "fail" | "skip" = "skip";
+
+  try {
+    assertSmokeMutationTarget(SMOKE_PROJECT_ID, "staging");
+
+    const readinessResponse = await get(baseUrl, `/api/projects/${SMOKE_PROJECT_ID}/data-readiness`, cookie, requestId);
+    operations.push("readiness");
+    const readiness = await safeJson<{ readiness?: { status?: string; score?: number } }>(readinessResponse);
+
+    const actionsResponse = await get(baseUrl, `/api/projects/${SMOKE_PROJECT_ID}/post-import-actions`, cookie, requestId);
+    operations.push("post-import-actions");
+
+    const materialsResponse = await get(baseUrl, `/api/projects/${SMOKE_PROJECT_ID}/materials`, cookie, requestId);
+    operations.push("materials");
+
+    const procurementPreviewResponse = await postJson(baseUrl, `/api/projects/${SMOKE_PROJECT_ID}/procurement/draft-from-import`, {}, cookie, requestId);
+    operations.push("procurement-preview");
+    const procurementPreview = await safeJson<{ draft?: { items?: unknown[] } }>(procurementPreviewResponse);
+
+    const procurementCommitResponse = await postJson(
+      baseUrl,
+      `/api/projects/${SMOKE_PROJECT_ID}/procurement/draft-from-import`,
+      { commit: true, confirmed: true },
+      cookie,
+      requestId
+    );
+    operations.push("procurement-commit");
+    const procurementCommit = await safeJson<{ created?: Array<{ id?: string }> }>(procurementCommitResponse);
+    for (const item of procurementCommit?.created ?? []) {
+      if (item.id) createdProcurementIds.push(item.id);
+    }
+
+    const procurementResponse = await get(baseUrl, `/api/projects/${SMOKE_PROJECT_ID}/procurement`, cookie, requestId);
+    operations.push("procurement-read");
+
+    const schedulePreviewResponse = await postJson(baseUrl, `/api/projects/${SMOKE_PROJECT_ID}/schedule/draft-from-import`, {}, cookie, requestId);
+    operations.push("schedule-preview");
+    const schedulePreview = await safeJson<{ draft?: { items?: unknown[] } }>(schedulePreviewResponse);
+
+    const cashflowPreviewResponse = await postJson(baseUrl, `/api/projects/${SMOKE_PROJECT_ID}/finance/draft-cashflow-from-import`, {}, cookie, requestId);
+    operations.push("cashflow-preview");
+    const cashflowPreview = await safeJson<{ draft?: { items?: unknown[] } }>(cashflowPreviewResponse);
+
+    const checklistResponse = await get(baseUrl, `/api/projects/${SMOKE_PROJECT_ID}/document-checklist`, cookie, requestId);
+    operations.push("document-checklist");
+
+    const intelligenceResponse = await get(baseUrl, `/api/projects/${SMOKE_PROJECT_ID}/intelligence`, cookie, requestId);
+    operations.push("intelligence");
+
+    if (createdProcurementIds.length) {
+      const deleted = await cleanupPipelineSmokeProcurement(createdProcurementIds);
+      operations.push("procurement-cleanup");
+      procurementCleanup = deleted === createdProcurementIds.length ? "pass" : "fail";
+    }
+
+    const failedResponse = [
+      readinessResponse,
+      actionsResponse,
+      materialsResponse,
+      procurementPreviewResponse,
+      procurementCommitResponse,
+      procurementResponse,
+      schedulePreviewResponse,
+      cashflowPreviewResponse,
+      checklistResponse,
+      intelligenceResponse
+    ].find((response) => response.status !== 200);
+    const procurementCreated = procurementCommit?.created?.length ?? 0;
+    const status =
+      !failedResponse &&
+      (procurementPreview?.draft?.items?.length ?? 0) > 0 &&
+      procurementCreated > 0 &&
+      (procurementCleanup === "pass" || procurementCleanup === "skip")
+        ? "pass"
+        : "fail";
+
+    return {
+      name: "project data pipeline smoke",
+      status,
+      httpStatus: failedResponse?.status,
+      detail: status === "pass" ? undefined : "Pipeline smoke did not complete all expected checks.",
+      projectId: SMOKE_PROJECT_ID,
+      operations,
+      readiness: readiness?.readiness,
+      procurement: {
+        previewItems: procurementPreview?.draft?.items?.length ?? 0,
+        created: procurementCreated,
+        cleanup: procurementCleanup
+      },
+      schedule: {
+        previewItems: schedulePreview?.draft?.items?.length ?? 0
+      },
+      cashflow: {
+        previewItems: cashflowPreview?.draft?.items?.length ?? 0
+      }
+    };
+  } catch (error) {
+    if (createdProcurementIds.length) {
+      await cleanupPipelineSmokeProcurement(createdProcurementIds)
+        .then((deleted) => {
+          operations.push("procurement-cleanup");
+          procurementCleanup = deleted === createdProcurementIds.length ? "pass" : "fail";
+        })
+        .catch(() => {
+          procurementCleanup = "fail";
+        });
+    }
+    return {
+      name: "project data pipeline smoke",
+      status: "fail",
+      detail: failureDetail(error),
+      projectId: SMOKE_PROJECT_ID,
+      operations,
+      procurement: {
+        cleanup: procurementCleanup
+      }
+    };
+  }
+}
+
 async function grantTemporaryImportRole() {
   const user = await prisma.user.findUnique({ where: { email: STAGING_SMOKE_EMAIL }, select: { id: true } });
   if (!user) throw new Error("Smoke import user is missing.");
@@ -358,7 +514,7 @@ async function cleanupImportRole(input: Awaited<ReturnType<typeof grantTemporary
   return "temporary-project-manager-restored" as const;
 }
 
-async function runImportSmoke(baseUrl: string, cookie: string, requestId: string): Promise<NonNullable<RuntimeSmokeResult["importSmoke"]>> {
+async function runImportSmoke(baseUrl: string, cookie: string, requestId: string, includePipelineSmoke = false): Promise<NonNullable<RuntimeSmokeResult["importSmoke"]>> {
   const operations: string[] = [];
   let cleanup: "pass" | "fail" | "skip" = "skip";
   let permissionScope: NonNullable<RuntimeSmokeResult["importSmoke"]>["permissionScope"] | undefined;
@@ -482,6 +638,9 @@ async function runImportSmoke(baseUrl: string, cookie: string, requestId: string
       };
     }
 
+    const pipeline = includePipelineSmoke ? await runPipelineSmoke(baseUrl, cookie, requestId) : undefined;
+    if (pipeline) operations.push("pipeline-smoke");
+
     const cleaned = await cleanupImportSmoke(workbook);
     cleanup = cleaned >= 2 ? "pass" : "fail";
     operations.push("cleanup");
@@ -493,8 +652,13 @@ async function runImportSmoke(baseUrl: string, cookie: string, requestId: string
 
     return {
       name: "import smoke",
-      status: cleanup === "pass" ? "pass" : "fail",
-      detail: cleanup === "pass" ? undefined : "Smoke import rows were not fully cleaned up.",
+      status: cleanup === "pass" && (!pipeline || pipeline.status === "pass") ? "pass" : "fail",
+      detail:
+        cleanup !== "pass"
+          ? "Smoke import rows were not fully cleaned up."
+          : pipeline && pipeline.status !== "pass"
+            ? "Pipeline smoke failed after import commit."
+            : undefined,
       projectId: SMOKE_PROJECT_ID,
       importBatchId,
       operations,
@@ -507,7 +671,8 @@ async function runImportSmoke(baseUrl: string, cookie: string, requestId: string
       },
       explanation: { status: explanation.status, confidence: explanation.confidence },
       commit: commit.commitResult,
-      cleanup
+      cleanup,
+      ...(pipeline ? { pipeline } : {})
     };
   } catch (error) {
     if (temporaryRole) {
@@ -664,7 +829,7 @@ export async function runStagingSmokeBootstrap(input: RuntimeSmokeInput): Promis
   }
 
   if (input.includeImportSmoke) {
-    importSmoke = await runImportSmoke(input.baseUrl, sessionCookie, input.requestId);
+    importSmoke = await runImportSmoke(input.baseUrl, sessionCookie, input.requestId, input.includePipelineSmoke);
     optionalChecks.push(importSmoke);
   }
 
