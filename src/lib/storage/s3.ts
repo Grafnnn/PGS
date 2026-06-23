@@ -85,11 +85,14 @@ function signRequest(method: S3Method, url: URL, body: Buffer, contentType?: str
 async function request(method: S3Method, storageKey: string, body: Buffer = Buffer.alloc(0), contentType?: string) {
   const url = objectUrl(storageKey);
   const bodyInit = body.buffer.slice(body.byteOffset, body.byteOffset + body.byteLength) as ArrayBuffer;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 5_000);
   const response = await fetch(url, {
     method,
     headers: signRequest(method, url, body, contentType),
-    body: method === "PUT" ? bodyInit : undefined
-  });
+    body: method === "PUT" ? bodyInit : undefined,
+    signal: controller.signal
+  }).finally(() => clearTimeout(timeout));
   if (!response.ok && !(method === "DELETE" && response.status === 404)) {
     throw new Error(`S3 ${method} failed with HTTP ${response.status}`);
   }

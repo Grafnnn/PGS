@@ -5,6 +5,7 @@ const originalEnv = { ...process.env };
 
 afterEach(() => {
   process.env = { ...originalEnv };
+  vi.useRealTimers();
   vi.restoreAllMocks();
 });
 
@@ -35,5 +36,23 @@ describe("s3 storage provider", () => {
     expect(fetchMock).toHaveBeenCalledTimes(3);
     const [, init] = fetchMock.mock.calls[0];
     expect((init?.headers as Record<string, string>).authorization).toContain("AWS4-HMAC-SHA256");
+    expect(init?.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it("aborts hanging health requests", async () => {
+    vi.useFakeTimers();
+    setS3Env();
+    vi.spyOn(globalThis, "fetch").mockImplementation(
+      (_input, init) =>
+        new Promise<Response>((_resolve, reject) => {
+          const signal = init?.signal as AbortSignal | undefined;
+          signal?.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")));
+        })
+    );
+
+    const result = s3StorageProvider.checkWritable();
+    await vi.advanceTimersByTimeAsync(5_000);
+
+    await expect(result).resolves.toBe(false);
   });
 });
