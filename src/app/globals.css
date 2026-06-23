@@ -1029,6 +1029,39 @@ tr:last-child td {
   padding-top: 16px;
 }
 
+.wizard-section.compact {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.readiness-grid,
+.action-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+}
+
+.action-button {
+  align-items: flex-start;
+  display: flex;
+  height: auto;
+  justify-content: flex-start;
+  min-height: 58px;
+  text-align: left;
+  white-space: normal;
+}
+
+.action-button span {
+  display: grid;
+  gap: 4px;
+}
+
+.action-button small {
+  color: var(--muted);
+  font-weight: 600;
+  line-height: 1.35;
+}
+
 .mapping-card {
   border: 1px solid var(--line);
   border-radius: var(--radius);
