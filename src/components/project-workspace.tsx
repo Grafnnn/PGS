@@ -79,6 +79,45 @@ const aiQuickActions = [
   "Подготовить пояснительную записку"
 ];
 
+type AiScenario =
+  | "summary"
+  | "budget-review"
+  | "schedule-review"
+  | "procurement-review"
+  | "finance-review"
+  | "risk-review"
+  | "document-review"
+  | "daily-report-summary"
+  | "executive-report"
+  | "draft-text";
+
+type AiInsightResponse = {
+  title: string;
+  scenario: AiScenario;
+  overallStatus?: "on_track" | "attention" | "critical" | "unknown";
+  summary: string;
+  findings: Array<{ severity: "low" | "medium" | "high" | "critical"; title: string; description: string; source?: string; recommendation?: string }>;
+  recommendedActions: Array<{ priority: "low" | "medium" | "high"; title: string; description: string }>;
+  draftText?: string;
+  dataUsed: string[];
+  dataLimitations: string[];
+  generatedAt: string;
+  provider: "deterministic" | "openai" | "degraded";
+};
+
+const aiScenarios: Array<{ scenario: AiScenario; title: string; description: string; data: string[] }> = [
+  { scenario: "summary", title: "Сводка по проекту", description: "Общий статус, отклонения, риски и действия на 7 дней.", data: ["Проект", "ВОР", "График", "Финансы", "Риски"] },
+  { scenario: "budget-review", title: "Проверить ВОР", description: "Нулевые цены, дубли, подозрительные объемы и недооценка.", data: ["ВОР", "Разделы", "План/факт"] },
+  { scenario: "schedule-review", title: "Проверить график", description: "Просрочки, владельцы, ближайшие контрольные точки.", data: ["График", "Зависимости", "Факт"] },
+  { scenario: "procurement-review", title: "Проверить снабжение", description: "Дефицит, поставщики, сроки потребности и draft заявки.", data: ["Материалы", "Заявки", "Поставщики"] },
+  { scenario: "finance-review", title: "Финансовый анализ", description: "Cash gap, оплаты, просрочки, маржа и проблемные статьи.", data: ["Платежи", "Бюджет", "Договор"] },
+  { scenario: "risk-review", title: "Собрать риски", description: "Top рисков, владельцы, меры и источники.", data: ["Риски", "График", "Финансы", "Материалы"] },
+  { scenario: "document-review", title: "Документы", description: "Метаданные документов и ограничения без OCR.", data: ["Документы", "Категории", "Версии"] },
+  { scenario: "daily-report-summary", title: "Рапорты", description: "Проблемы площадки, люди, техника и текст отчета.", data: ["Рапорты", "График"] },
+  { scenario: "executive-report", title: "Отчет руководителю", description: "Короткая деловая записка по объекту.", data: ["Все разделы"] },
+  { scenario: "draft-text", title: "Подготовить письмо", description: "Draft письма/пояснительной записки по данным проекта.", data: ["Контекст проекта", "Отклонения"] }
+];
+
 function compactMoney(value: number) {
   const absolute = Math.abs(value);
   if (absolute >= 1_000_000_000) return `${(value / 1_000_000_000).toLocaleString("ru-RU", { maximumFractionDigits: 1 })} млрд ₽`;
@@ -117,6 +156,9 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
   const [aiPrompt, setAiPrompt] = useState("Что сейчас самое важное по проекту?");
   const [aiAnswer, setAiAnswer] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
+  const [aiScenarioLoading, setAiScenarioLoading] = useState<AiScenario | null>(null);
+  const [aiResults, setAiResults] = useState<Partial<Record<AiScenario, AiInsightResponse>>>({});
+  const [aiErrors, setAiErrors] = useState<Partial<Record<AiScenario, string>>>({});
   const [saving, setSaving] = useState("");
   const [error, setError] = useState("");
   const [importFile, setImportFile] = useState<File | null>(null);
@@ -236,6 +278,28 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
       setAiAnswer(error instanceof Error ? error.message : "Ошибка AI-запроса.");
     } finally {
       setAiLoading(false);
+    }
+  }
+
+  async function runAiCommandScenario(scenario: AiScenario) {
+    setAiScenarioLoading(scenario);
+    setAiErrors((current) => ({ ...current, [scenario]: undefined }));
+    try {
+      const response = await fetch(`/api/projects/${initialBundle.project.id}/ai/${scenario}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          topic: scenario === "draft-text" ? "Пояснительная записка по текущему статусу объекта" : undefined,
+          instructions: aiPrompt
+        })
+      });
+      const data = (await response.json()) as { ok?: boolean; insight?: AiInsightResponse; error?: string; message?: string };
+      if (!response.ok || !data.insight) throw new Error(data.message ?? data.error ?? "AI-сценарий недоступен.");
+      setAiResults((current) => ({ ...current, [scenario]: data.insight }));
+    } catch (scenarioError) {
+      setAiErrors((current) => ({ ...current, [scenario]: scenarioError instanceof Error ? scenarioError.message : "Ошибка AI-сценария." }));
+    } finally {
+      setAiScenarioLoading(null);
     }
   }
 
@@ -1002,14 +1066,7 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
       )}
 
       {activeTab === "AI-помощник" && (
-        <Panel title="AI-помощник руководителя проекта" icon={<Bot size={18} />} className="ai-panel">
-          <div className="toolbar ai-actions">
-            {aiQuickActions.map((action) => (
-              <button className="button secondary" key={action} type="button" onClick={() => void askAi(action)}>
-                {action}
-              </button>
-            ))}
-          </div>
+        <Panel title="AI Command Layer" icon={<Bot size={18} />} className="ai-panel">
           <div className="ai-source-row">
             <StatusBadge tone="info">Источник: ВОР</StatusBadge>
             <StatusBadge tone="info">График</StatusBadge>
@@ -1019,24 +1076,21 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
           </div>
           <div className="ai-composer">
             <label>
-              Вопрос по проекту
+              Дополнительные указания для сценариев
               <textarea value={aiPrompt} onChange={(event) => setAiPrompt(event.target.value)} />
             </label>
-            <button className="button primary" disabled={aiLoading} type="button" onClick={() => void askAi()}>
-              <Send size={18} />
-              {aiLoading ? "Анализ..." : "Спросить AI"}
-            </button>
           </div>
-          <div className={`ai-answer ${aiAnswerTone}`}>
-            <div className="ai-answer-header">
-              <strong>{aiAnswerTone === "ready" ? "Результат анализа" : aiAnswerTone === "error" ? "Состояние AI" : "Ожидание запроса"}</strong>
-              <span className="muted">Риски · Деньги · Сроки · Действия</span>
-            </div>
-            <div>
-              {aiLoading
-                ? "AI анализирует контекст проекта..."
-                : aiDisplay || "Ответ появится здесь. AI использует контекст бюджета, графика, материалов, финансов и рисков проекта."}
-            </div>
+          <div className="ai-scenario-grid">
+            {aiScenarios.map((scenario) => (
+              <AiScenarioCard
+                key={scenario.scenario}
+                config={scenario}
+                error={aiErrors[scenario.scenario]}
+                loading={aiScenarioLoading === scenario.scenario}
+                result={aiResults[scenario.scenario]}
+                onRun={() => void runAiCommandScenario(scenario.scenario)}
+              />
+            ))}
           </div>
         </Panel>
       )}
@@ -1081,19 +1135,19 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
             <h3>AI-рекомендации</h3>
             <button className="button secondary" type="button" onClick={() => {
               setActiveTab("AI-помощник");
-              void askAi("Проверь риски проекта и назови три первоочередных действия.");
+              void runAiCommandScenario("risk-review");
             }}>
               Проверить риски проекта
             </button>
             <button className="button secondary" type="button" onClick={() => {
               setActiveTab("AI-помощник");
-              void askAi("Сравни бюджет и факт, выдели перерасход и причины.");
+              void runAiCommandScenario("budget-review");
             }}>
               Сравнить бюджет и факт
             </button>
             <button className="button secondary" type="button" onClick={() => {
               setActiveTab("AI-помощник");
-              void askAi("Подготовь пояснительную записку руководству по текущему статусу проекта.");
+              void runAiCommandScenario("executive-report");
             }}>
               Подготовить записку
             </button>
@@ -1618,7 +1672,10 @@ function readableStatus(value: string) {
     equipment: "Техника",
     payroll: "ФОТ",
     subcontract: "Субподряд",
-    overhead: "Накладные"
+    overhead: "Накладные",
+    on_track: "В норме",
+    attention: "Внимание",
+    unknown: "Недостаточно данных"
   };
   return labels[value] ?? value;
 }
@@ -2243,6 +2300,122 @@ function ProjectMembersTable({
       ])}
     />
   );
+}
+
+function AiScenarioCard({
+  config,
+  loading,
+  result,
+  error,
+  onRun
+}: {
+  config: { scenario: AiScenario; title: string; description: string; data: string[] };
+  loading: boolean;
+  result?: AiInsightResponse;
+  error?: string;
+  onRun: () => void;
+}) {
+  return (
+    <article className="ai-scenario-card">
+      <div className="ai-scenario-head">
+        <div>
+          <h3>{config.title}</h3>
+          <p className="muted">{config.description}</p>
+        </div>
+        {result?.overallStatus && <StatusBadge tone={result.overallStatus === "critical" ? "bad" : result.overallStatus === "attention" ? "warn" : result.overallStatus === "on_track" ? "good" : "neutral"}>{readableStatus(result.overallStatus)}</StatusBadge>}
+      </div>
+      <div className="ai-data-used">
+        {config.data.map((item) => (
+          <span key={item}>{item}</span>
+        ))}
+      </div>
+      <div className="row-actions">
+        <button className="button primary" disabled={loading} type="button" onClick={onRun}>
+          <Bot size={16} />
+          {loading ? "Анализ..." : result ? "Повторить" : "Запустить"}
+        </button>
+        {result && (
+          <button className="button secondary" type="button" onClick={() => void navigator.clipboard?.writeText(formatAiResultForCopy(result))}>
+            Копировать
+          </button>
+        )}
+      </div>
+      {error && <p className="error-text">{error}</p>}
+      {result && <AiScenarioResult result={result} />}
+    </article>
+  );
+}
+
+function AiScenarioResult({ result }: { result: AiInsightResponse }) {
+  return (
+    <div className="ai-result">
+      <div className="ai-result-summary">
+        <strong>{result.title}</strong>
+        <span className="muted">{new Date(result.generatedAt).toLocaleString("ru-RU")} · {result.provider}</span>
+        <p>{result.summary}</p>
+      </div>
+      {!!result.findings.length && (
+        <details open>
+          <summary>Найденные проблемы</summary>
+          <div className="ai-result-list">
+            {result.findings.map((finding, index) => (
+              <div className="ai-result-item" key={`${finding.title}-${index}`}>
+                <StatusBadge tone={finding.severity === "critical" ? "bad" : finding.severity === "high" || finding.severity === "medium" ? "warn" : "info"}>{readableStatus(finding.severity)}</StatusBadge>
+                <strong>{finding.title}</strong>
+                <p>{finding.description}</p>
+                {finding.recommendation && <span>{finding.recommendation}</span>}
+              </div>
+            ))}
+          </div>
+        </details>
+      )}
+      {!!result.recommendedActions.length && (
+        <details open>
+          <summary>Рекомендованные действия</summary>
+          <div className="ai-result-list">
+            {result.recommendedActions.map((actionItem, index) => (
+              <div className="ai-result-item" key={`${actionItem.title}-${index}`}>
+                <StatusBadge tone={actionItem.priority === "high" ? "warn" : "info"}>{readableStatus(actionItem.priority)}</StatusBadge>
+                <strong>{actionItem.title}</strong>
+                <p>{actionItem.description}</p>
+              </div>
+            ))}
+          </div>
+        </details>
+      )}
+      {result.draftText && (
+        <details open>
+          <summary>Draft text</summary>
+          <pre className="ai-draft-text">{result.draftText}</pre>
+        </details>
+      )}
+      {!!result.dataLimitations.length && (
+        <details>
+          <summary>Ограничения данных</summary>
+          <ul className="action-list">
+            {result.dataLimitations.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+        </details>
+      )}
+    </div>
+  );
+}
+
+function formatAiResultForCopy(result: AiInsightResponse) {
+  return [
+    result.title,
+    result.summary,
+    "",
+    "Проблемы:",
+    ...result.findings.map((item) => `- [${item.severity}] ${item.title}: ${item.description}${item.recommendation ? ` Рекомендация: ${item.recommendation}` : ""}`),
+    "",
+    "Действия:",
+    ...result.recommendedActions.map((item) => `- [${item.priority}] ${item.title}: ${item.description}`),
+    result.draftText ? `\nDraft:\n${result.draftText}` : "",
+    result.dataLimitations.length ? `\nОграничения:\n${result.dataLimitations.map((item) => `- ${item}`).join("\n")}` : ""
+  ].join("\n");
 }
 
 function BudgetAnalytics({ items, contractAmount, paid, forecastProfit }: { items: BudgetItem[]; contractAmount: number; paid: number; forecastProfit: number }) {

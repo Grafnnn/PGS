@@ -462,6 +462,23 @@ AI endpoint собирает контекст проекта:
 
 Если `OPENAI_API_KEY` есть, `/api/projects/project-demo/ai/chat` отправляет контекст в OpenAI. Если ключ отсутствует, endpoint не падает и возвращает локальный fallback с понятной причиной.
 
+AI Command Layer v1 добавляет сценарные endpoints для управленческого анализа:
+
+- `POST /api/projects/:id/ai/summary`
+- `POST /api/projects/:id/ai/budget-review`
+- `POST /api/projects/:id/ai/schedule-review`
+- `POST /api/projects/:id/ai/procurement-review`
+- `POST /api/projects/:id/ai/finance-review`
+- `POST /api/projects/:id/ai/risk-review`
+- `POST /api/projects/:id/ai/document-review`
+- `POST /api/projects/:id/ai/daily-report-summary`
+- `POST /api/projects/:id/ai/executive-report`
+- `POST /api/projects/:id/ai/draft-text`
+
+Эти endpoints возвращают структурированный результат: статус, вывод, найденные проблемы, рекомендации, draft text и ограничения данных. Без `OPENAI_API_KEY` они работают в deterministic fallback-режиме и не требуют live provider call.
+
+Подробности: `docs/ai_command_layer_v1.md`.
+
 ## Импорт Excel ВОР / сметы
 
 Вкладка “Бюджет / ВОР” содержит блок импорта:
