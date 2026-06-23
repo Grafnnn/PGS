@@ -584,7 +584,7 @@ export async function runStagingSmokeBootstrap(input: RuntimeSmokeInput): Promis
   }
 
   try {
-    checks.push(check("unauth AI guard", await postJson(input.baseUrl, "/api/projects/project-demo/ai/chat", { prompt: "access-control smoke" }, "", input.requestId), [403]));
+    checks.push(check("unauth AI guard", await postJson(input.baseUrl, "/api/projects/project-demo/ai/summary", {}, "", input.requestId), [403]));
   } catch (error) {
     checks.push(failed("unauth AI guard", error));
   }
@@ -593,7 +593,7 @@ export async function runStagingSmokeBootstrap(input: RuntimeSmokeInput): Promis
     checks.push(
       check(
         "authenticated missing-project AI guard",
-        await postJson(input.baseUrl, "/api/projects/project-missing-ai/ai/chat", { prompt: "access-control smoke" }, sessionCookie, input.requestId),
+        await postJson(input.baseUrl, "/api/projects/project-missing-ai/ai/summary", {}, sessionCookie, input.requestId),
         [404]
       )
     );
