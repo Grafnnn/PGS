@@ -615,15 +615,27 @@ export async function runStagingSmokeBootstrap(input: RuntimeSmokeInput): Promis
       requested: true
     };
     try {
-      const response = await postJson(input.baseUrl, "/api/projects/project-demo/ai/chat", { prompt: AI_SMOKE_PROMPT }, sessionCookie, input.requestId);
-      const body = (await response.json().catch(() => null)) as { ok?: boolean; response?: string; error?: string } | null;
+      const response = await postJson(
+        input.baseUrl,
+        "/api/projects/project-demo/ai/summary",
+        { instructions: AI_SMOKE_PROMPT },
+        sessionCookie,
+        input.requestId
+      );
+      const body = (await response.json().catch(() => null)) as {
+        ok?: boolean;
+        insight?: { summary?: string; draftText?: string };
+        error?: string;
+        message?: string;
+      } | null;
+      const responseText = body?.insight?.summary ?? body?.insight?.draftText ?? "";
       liveAi = {
         name: "live AI smoke",
-        status: response.status === 200 && body?.ok === true && Boolean(body.response) ? "pass" : "fail",
+        status: response.status === 200 && body?.ok === true && Boolean(responseText) ? "pass" : "fail",
         requested: true,
         httpStatus: response.status,
-        responseChars: typeof body?.response === "string" ? body.response.length : 0,
-        providerError: body?.error
+        responseChars: responseText.length,
+        providerError: body?.error ?? body?.message
       };
     } catch (error) {
       liveAi = { ...liveAi, detail: error instanceof Error ? error.message.slice(0, 160) : "request failed" };
