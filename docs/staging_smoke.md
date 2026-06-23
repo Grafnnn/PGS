@@ -21,6 +21,7 @@ The endpoint:
 - optionally checks configured storage provider write/read/version/delete with synthetic `project-smoke` keys;
 - optionally checks email safe mode without real delivery;
 - optionally returns connector readiness statuses without token/secret values;
+- optionally runs Project Data Pipeline smoke after a synthetic import on `project-smoke`;
 - returns only statuses and safe metadata.
 
 ## Required Render env
@@ -110,9 +111,31 @@ Expected:
 - `connectors.status: pass`;
 - no passwords, cookies, session tokens, S3 credentials, OAuth tokens, `DATABASE_URL`, `OPENAI_API_KEY`, or smoke secret.
 
+## Optional Project Data Pipeline smoke
+
+Run only after core smoke is green. This creates a synthetic VOR import on `project-smoke`, commits it, checks the post-import pipeline, and cleans up synthetic budget/material/procurement records before returning.
+
+```bash
+curl -sS -X POST "$APP_URL/api/internal/staging-smoke" \
+  -H "content-type: application/json" \
+  -H "authorization: Bearer $STAGING_SMOKE_SECRET" \
+  --data '{"includeImportSmoke":true,"includePipelineSmoke":true}'
+```
+
+Expected:
+
+- HTTP `200`;
+- `ok: true`;
+- `importSmoke.status: pass`;
+- `importSmoke.pipeline.status: pass`;
+- import operations include preview, deterministic explanation, commit, history, pipeline smoke, cleanup, and role restore;
+- pipeline operations include readiness, post-import actions, materials, procurement preview/commit/read/cleanup, schedule preview, cashflow preview, document checklist, and intelligence;
+- `liveAi.status: skip`;
+- no passwords, cookies, session tokens, `DATABASE_URL`, `OPENAI_API_KEY`, or smoke secret.
+
 ## Safety notes
 
-- The endpoint must not be used for mutation smoke.
+- The endpoint must not be used for arbitrary mutation smoke; only built-in synthetic `project-smoke` checks with cleanup are allowed.
 - The synthetic user password is generated in memory and is never returned.
 - Existing smoke-user sessions are revoked during rotation.
 - The endpoint uses the deployed app's runtime `DATABASE_URL`; operators never need to expose that URL to Codex.

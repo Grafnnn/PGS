@@ -61,6 +61,7 @@ export async function POST(request: NextRequest) {
     includeEmailSmoke?: unknown;
     includeConnectorReadiness?: unknown;
     includeImportSmoke?: unknown;
+    includePipelineSmoke?: unknown;
   };
 
   try {
@@ -71,6 +72,7 @@ export async function POST(request: NextRequest) {
       includeEmailSmoke: body.includeEmailSmoke === true,
       includeConnectorReadiness: body.includeConnectorReadiness === true,
       includeImportSmoke: body.includeImportSmoke === true,
+      includePipelineSmoke: body.includePipelineSmoke === true,
       requestId
     });
 
