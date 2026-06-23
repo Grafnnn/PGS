@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AlertTriangle, Bot, ClipboardList, FileText, Landmark, LayoutList, Package, Pencil, Plus, Search, Send, Table2, TimerReset, Trash2, Truck, Users } from "lucide-react";
 import { budgetTotals, deriveAutoRisks, financeTotals, materialTotals, money, percent, workTotals } from "@/lib/calculations";
-import type { ImportPreview } from "@/lib/excel/import-types";
+import type { ImportExplanation, ImportMode, ImportPreview, ImportSheetMapping } from "@/lib/excel/import-types";
 import type { AuditEvent, BudgetItem, DailyReport, Material, Payment, ProcurementRequest, ProjectDocument, ProjectDocumentVersion, ProjectMember, Risk, ScheduleItem } from "@/lib/types";
 
 type Bundle = {
@@ -25,6 +25,20 @@ type Bundle = {
   payments: Payment[];
   dailyReports: DailyReport[];
   risks: Risk[];
+};
+
+type ImportHistoryItem = {
+  id: string;
+  fileName: string;
+  status: string;
+  mode: string | null;
+  summary: ImportPreview["summary"] & { commitResult?: Record<string, unknown> };
+  commitResult?: Record<string, unknown> | null;
+  warnings?: string[];
+  errors?: string[];
+  createdBy?: string | null;
+  createdAt: string;
+  committedAt: string | null;
 };
 
 const tabs = [
@@ -108,7 +122,11 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importPreview, setImportPreview] = useState<ImportPreview | null>(null);
   const [importConfirmed, setImportConfirmed] = useState(false);
-  const [importMode, setImportMode] = useState<"append" | "replace_budget" | "replace_materials" | "replace_schedule">("append");
+  const [importMode, setImportMode] = useState<ImportMode>("append");
+  const [importExplanation, setImportExplanation] = useState<ImportExplanation | null>(null);
+  const [importHistory, setImportHistory] = useState<ImportHistoryItem[]>([]);
+  const [importResult, setImportResult] = useState<Record<string, unknown> | null>(null);
+  const [importPreviewFilter, setImportPreviewFilter] = useState("all");
   const [editingBudget, setEditingBudget] = useState<BudgetItem | null>(null);
   const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
   const [editingSchedule, setEditingSchedule] = useState<ScheduleItem | null>(null);
@@ -152,10 +170,20 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
     }
   }, [initialBundle.project.id]);
 
+  const loadImportHistory = useCallback(async () => {
+    try {
+      const response = await fetch(`/api/projects/${initialBundle.project.id}/imports`);
+      const data = (await response.json()) as { items?: ImportHistoryItem[] };
+      if (response.ok) setImportHistory(data.items ?? []);
+    } catch {
+      setImportHistory([]);
+    }
+  }, [initialBundle.project.id]);
+
   useEffect(() => {
-    if (activeTab !== "История") return;
-    void loadAudit();
-  }, [activeTab, loadAudit]);
+    if (activeTab !== "Бюджет / ВОР") return;
+    void loadImportHistory();
+  }, [activeTab, loadImportHistory]);
 
   useEffect(() => {
     void loadAudit();
@@ -413,6 +441,8 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
     setSaving("import-preview");
     setError("");
     setImportConfirmed(false);
+    setImportExplanation(null);
+    setImportResult(null);
     try {
       const formData = new FormData();
       formData.append("file", importFile);
@@ -423,6 +453,8 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
       const data = (await response.json()) as ImportPreview | { error?: string };
       if (!response.ok && "error" in data) throw new Error(data.error ?? "Не удалось проверить файл.");
       setImportPreview(data as ImportPreview);
+      setImportPreviewFilter("all");
+      void loadImportHistory();
     } catch (previewError) {
       setImportPreview(null);
       setError(previewError instanceof Error ? previewError.message : "Ошибка проверки Excel-файла.");
@@ -431,37 +463,92 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
     }
   }
 
+  async function remapImport(mapping: ImportSheetMapping[]) {
+    if (!importPreview?.importBatchId) return;
+    setSaving("import-remap");
+    setError("");
+    setImportExplanation(null);
+    setImportResult(null);
+    try {
+      const response = await fetch(`/api/projects/${initialBundle.project.id}/imports/${importPreview.importBatchId}/remap`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mapping: mapping.map((item) => ({
+            sheetName: item.sheetName,
+            headerRow: item.headerRow,
+            included: item.included ?? true,
+            columns: item.columns
+          }))
+        })
+      });
+      const data = (await response.json()) as ImportPreview | { error?: string };
+      if (!response.ok && "error" in data) throw new Error(data.error ?? "Не удалось применить mapping.");
+      setImportPreview(data as ImportPreview);
+      setImportConfirmed(false);
+      void loadImportHistory();
+    } catch (remapError) {
+      setError(remapError instanceof Error ? remapError.message : "Ошибка применения mapping.");
+    } finally {
+      setSaving("");
+    }
+  }
+
+  async function explainImport() {
+    if (!importPreview?.importBatchId) return;
+    setSaving("import-explain");
+    setError("");
+    try {
+      const response = await fetch(`/api/projects/${initialBundle.project.id}/imports/${importPreview.importBatchId}/explain`, { method: "POST" });
+      const data = (await response.json()) as { explanation?: ImportExplanation; error?: string };
+      if (!response.ok || !data.explanation) throw new Error(data.error ?? "Не удалось сформировать объяснение.");
+      setImportExplanation(data.explanation);
+      setImportPreview((current) => (current ? { ...current, explanation: data.explanation } : current));
+      void loadImportHistory();
+    } catch (explainError) {
+      setError(explainError instanceof Error ? explainError.message : "Ошибка объяснения импорта.");
+    } finally {
+      setSaving("");
+    }
+  }
+
   async function commitImport() {
-    if (!importPreview || !importConfirmed || importPreview.summary.errors > 0) return;
+    if (!importPreview?.importBatchId || !importConfirmed || importPreview.summary.errors > 0) return;
     setSaving("import-commit");
     setError("");
     try {
-      const response = await fetch(`/api/projects/${initialBundle.project.id}/imports/budget/commit`, {
+      const response = await fetch(`/api/projects/${initialBundle.project.id}/imports/${importPreview.importBatchId}/commit`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           mode: importMode,
-          sections: importPreview.sections,
-          budgetItems: importPreview.budgetItems,
-          materials: importPreview.materials,
-          scheduleItems: importPreview.scheduleItems
+          replaceConfirmed: importMode !== "append" ? importConfirmed : false
         })
       });
-      const data = (await response.json()) as { ok?: boolean; budgetItems?: BudgetItem[]; materials?: Material[]; scheduleItems?: ScheduleItem[]; error?: string };
+      const data = (await response.json()) as {
+        ok?: boolean;
+        budgetItems?: BudgetItem[];
+        materials?: Material[];
+        scheduleItems?: ScheduleItem[];
+        commitResult?: Record<string, unknown>;
+        error?: string;
+      };
       if (!response.ok || !data.ok) throw new Error(data.error ?? "Не удалось сохранить импорт.");
 
-      if (importMode === "replace_budget") setBudgetItems(data.budgetItems ?? []);
+      if (importMode === "replace_budget" || importMode === "replace_all") setBudgetItems(data.budgetItems ?? []);
       else setBudgetItems((current) => [...current, ...(data.budgetItems ?? [])]);
 
-      if (importMode === "replace_materials") setMaterials(data.materials ?? []);
+      if (importMode === "replace_materials" || importMode === "replace_all") setMaterials(data.materials ?? []);
       else setMaterials((current) => [...current, ...(data.materials ?? [])]);
 
-      if (importMode === "replace_schedule") setScheduleItems(data.scheduleItems ?? []);
+      if (importMode === "replace_schedule" || importMode === "replace_all") setScheduleItems(data.scheduleItems ?? []);
       else setScheduleItems((current) => [...current, ...(data.scheduleItems ?? [])]);
 
       setImportConfirmed(false);
+      setImportResult(data.commitResult ?? data);
       setError("");
       setAiAnswer(`Импорт сохранен: ВОР ${data.budgetItems?.length ?? 0}, материалы ${data.materials?.length ?? 0}, график ${data.scheduleItems?.length ?? 0}.`);
+      void loadImportHistory();
     } catch (commitError) {
       setError(commitError instanceof Error ? commitError.message : "Ошибка сохранения импорта.");
     } finally {
@@ -613,15 +700,24 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
             file={importFile}
             mode={importMode}
             preview={importPreview}
+            explanation={importExplanation}
+            history={importHistory}
+            result={importResult}
+            previewFilter={importPreviewFilter}
             confirmed={importConfirmed}
-            loading={saving === "import-preview" || saving === "import-commit"}
+            loading={saving.startsWith("import-")}
             onFileChange={(file) => {
               setImportFile(file);
               setImportPreview(null);
+              setImportExplanation(null);
+              setImportResult(null);
               setImportConfirmed(false);
             }}
             onModeChange={setImportMode}
+            onPreviewFilterChange={setImportPreviewFilter}
             onPreview={() => void previewImport()}
+            onRemap={(mapping) => void remapImport(mapping)}
+            onExplain={() => void explainImport()}
             onConfirmChange={setImportConfirmed}
             onCommit={() => void commitImport()}
           />
@@ -1012,77 +1108,252 @@ function ImportPanel({
   file,
   mode,
   preview,
+  explanation,
+  history,
+  result,
+  previewFilter,
   confirmed,
   loading,
   onFileChange,
   onModeChange,
+  onPreviewFilterChange,
   onPreview,
+  onRemap,
+  onExplain,
   onConfirmChange,
   onCommit
 }: {
   file: File | null;
-  mode: "append" | "replace_budget" | "replace_materials" | "replace_schedule";
+  mode: ImportMode;
   preview: ImportPreview | null;
+  explanation: ImportExplanation | null;
+  history: ImportHistoryItem[];
+  result: Record<string, unknown> | null;
+  previewFilter: string;
   confirmed: boolean;
   loading: boolean;
   onFileChange: (file: File | null) => void;
-  onModeChange: (mode: "append" | "replace_budget" | "replace_materials" | "replace_schedule") => void;
+  onModeChange: (mode: ImportMode) => void;
+  onPreviewFilterChange: (filter: string) => void;
   onPreview: () => void;
+  onRemap: (mapping: ImportSheetMapping[]) => void;
+  onExplain: () => void;
   onConfirmChange: (confirmed: boolean) => void;
   onCommit: () => void;
 }) {
-  const canCommit = Boolean(preview && preview.summary.errors === 0 && confirmed && !loading);
+  const canCommit = Boolean(preview?.importBatchId && preview.summary.errors === 0 && confirmed && !loading);
+  const replacementMode = mode !== "append";
+  const explanationToShow = explanation ?? preview?.explanation ?? null;
+  const [mappingDraft, setMappingDraft] = useState<ImportSheetMapping[]>([]);
+
+  useEffect(() => {
+    setMappingDraft(preview?.mapping ?? []);
+  }, [preview?.importBatchId, preview?.mapping]);
+
+  const filteredRows = (preview?.previewRows ?? []).filter((row) => {
+    if (previewFilter === "all") return true;
+    if (previewFilter === "ready") return row.status === "ready";
+    if (previewFilter === "warnings") return row.status === "warning";
+    if (previewFilter === "errors") return row.status === "error";
+    if (previewFilter === "skipped") return row.status === "skipped";
+    if (previewFilter === "works") return row.entityType === "budgetItem";
+    if (previewFilter === "materials") return row.entityType === "material";
+    if (previewFilter === "unknown") return row.entityType === "unknown";
+    return true;
+  });
+  const visiblePreviewRows = filteredRows.slice(0, 160);
+  const wizardSteps = [
+    ["Upload", Boolean(file)],
+    ["Sheets", Boolean(preview)],
+    ["Mapping", Boolean(preview)],
+    ["Preview", Boolean(preview)],
+    ["AI / Explanation", Boolean(explanationToShow)],
+    ["Commit", Boolean(result)],
+    ["Result", Boolean(result)]
+  ] as const;
 
   return (
-    <div className="panel stack import-panel">
+    <div className="panel stack import-panel import-wizard">
       <div className="toolbar" style={{ marginBottom: 0 }}>
         <div>
-          <h3>Импорт Excel ВОР / сметы</h3>
-          <p className="muted">Файл сначала проверяется и показывается в preview. Запись в БД происходит только после подтверждения.</p>
+          <h3>AI-assisted импорт ВОР / сметы</h3>
+          <p className="muted">Файл проходит preview, mapping, объяснение ошибок и только потом транзакционный commit.</p>
         </div>
       </div>
-      <div className="form-grid">
-        <label>
-          Excel-файл
-          <input accept=".xlsx,.xls" type="file" onChange={(event) => onFileChange(event.target.files?.[0] ?? null)} />
-        </label>
-        <label>
-          Режим сохранения
-          <select value={mode} onChange={(event) => onModeChange(event.target.value as typeof mode)}>
-            <option value="append">Добавить к текущим данным</option>
-            <option value="replace_budget">Заменить только бюджет</option>
-            <option value="replace_materials">Заменить только материалы</option>
-            <option value="replace_schedule">Заменить только график</option>
-          </select>
-        </label>
-        <label>
-          &nbsp;
-          <button className="button secondary" disabled={!file || loading} onClick={onPreview} type="button">
-            Проверить файл
-          </button>
-        </label>
-        <label>
-          &nbsp;
-          <button className="button primary" disabled={!canCommit} onClick={onCommit} type="button">
-            Сохранить импорт
-          </button>
-        </label>
+
+      <div className="wizard-steps">
+        {wizardSteps.map(([step, done], index) => (
+          <span className={`wizard-step ${done ? "done" : ""}`} key={step}>
+            <strong>{index + 1}</strong>
+            {step}
+          </span>
+        ))}
       </div>
 
-      {file && <p className="muted">Выбран файл: {file.name}</p>}
+      <section className="wizard-section">
+        <div>
+          <h3>1. Upload</h3>
+          <p className="muted">Поддерживаются `.xlsx`, `.xls`, `.xlsm`; макросы не выполняются, формулы читаются по сохраненным значениям.</p>
+        </div>
+        <div className="form-grid">
+          <label>
+            Excel-файл
+            <input accept=".xlsx,.xls,.xlsm" type="file" onChange={(event) => onFileChange(event.target.files?.[0] ?? null)} />
+          </label>
+          <label>
+            &nbsp;
+            <button className="button secondary" disabled={!file || loading} onClick={onPreview} type="button">
+              {loading ? "Проверяю..." : "Предпросмотр"}
+            </button>
+          </label>
+        </div>
+        {file && <p className="muted">Выбран файл: {file.name}</p>}
+      </section>
 
       {preview && (
         <div className="stack">
-          <div className="grid grid-4">
-            <Kpi title="Разделы" value={String(preview.summary.sections)} />
-            <Kpi title="ВОР" value={String(preview.summary.budgetItems)} />
-            <Kpi title="Материалы" value={String(preview.summary.materials)} />
-            <Kpi title="Неизвестные" value={String(preview.summary.unknownRows)} tone={preview.summary.unknownRows ? "warn" : undefined} />
-          </div>
-          <div className="grid grid-3">
-            <Kpi title="График" value={String(preview.summary.scheduleItems)} />
-            <Kpi title="Ошибки" value={String(preview.summary.errors)} tone={preview.summary.errors ? "bad" : "good"} />
-            <Kpi title="Предупреждения" value={String(preview.summary.warnings)} tone={preview.summary.warnings ? "warn" : undefined} />
+          <section className="wizard-section">
+            <div className="import-meta">
+              <StatusBadge tone={preview.importBatchId ? "good" : "warn"}>{preview.importBatchId ? "Batch сохранен" : "Batch недоступен"}</StatusBadge>
+              <span className="muted">Parser: {preview.parserVersion}</span>
+              <span className="muted">Листы: {preview.sheets.join(", ") || "-"}</span>
+            </div>
+            <div className="grid grid-4">
+              <Kpi title="Строки" value={String(preview.summary.totalRows)} />
+              <Kpi title="Ready" value={String(preview.summary.readyRows ?? 0)} tone={(preview.summary.readyRows ?? 0) ? "good" : undefined} />
+              <Kpi title="Warnings" value={String(preview.summary.warningRows ?? preview.summary.warnings)} tone={preview.summary.warnings ? "warn" : undefined} />
+              <Kpi title="Errors" value={String(preview.summary.errorRows ?? preview.summary.errors)} tone={preview.summary.errors ? "bad" : "good"} />
+            </div>
+            <div className="grid grid-4">
+              <Kpi title="ВОР" value={String(preview.summary.budgetItems)} />
+              <Kpi title="Материалы" value={String(preview.summary.materials)} />
+              <Kpi title="График" value={String(preview.summary.scheduleItems)} />
+              <Kpi title="Сумма preview" value={compactMoney(preview.summary.estimatedTotalAmount ?? 0)} />
+            </div>
+          </section>
+
+          <section className="wizard-section">
+            <h3>2. Sheets</h3>
+            <DataTable
+              headers={["Вкл.", "Лист", "Тип", "Confidence", "Header", "Строк", "Распознано", "Warnings"]}
+              rows={mappingDraft.map((item, index) => [
+                <input
+                  aria-label={`Включить лист ${item.sheetName}`}
+                  checked={item.included ?? true}
+                  key={`${item.sheetName}-include`}
+                  onChange={(event) =>
+                    setMappingDraft((current) => current.map((candidate, candidateIndex) => (candidateIndex === index ? { ...candidate, included: event.target.checked } : candidate)))
+                  }
+                  type="checkbox"
+                />,
+                item.sheetName,
+                readableImportSheetType(item.detectedType ?? "unknown"),
+                `${Math.round((item.confidence ?? 0) * 100)}%`,
+                item.headerRow ?? "-",
+                item.rows,
+                item.parsedRows,
+                item.warnings.length
+              ])}
+            />
+          </section>
+
+          <section className="wizard-section">
+            <div className="toolbar" style={{ marginBottom: 0 }}>
+              <div>
+                <h3>3. Mapping</h3>
+                <p className="muted">Поменяйте target field, если автоопределение выбрало не ту колонку. Изменения применяются server-side.</p>
+              </div>
+              <button className="button secondary" disabled={loading} onClick={() => onRemap(mappingDraft)} type="button">
+                Применить mapping
+              </button>
+            </div>
+            {mappingDraft.map((sheet, sheetIndex) => (
+              <div className="mapping-card" key={sheet.sheetName}>
+                <div className="mapping-card-header">
+                  <strong>{sheet.sheetName}</strong>
+                  <StatusBadge tone={(sheet.confidence ?? 0) >= 0.7 ? "good" : (sheet.confidence ?? 0) >= 0.45 ? "warn" : "bad"}>
+                    {Math.round((sheet.confidence ?? 0) * 100)}%
+                  </StatusBadge>
+                </div>
+                <div className="mapping-grid">
+                  {(["name", "unit", "qty", "unitPrice", "total", "section", "note", "startsAt", "endsAt"] as const).map((target) => (
+                    <label key={target}>
+                      {readableColumnTarget(target)}
+                      <select
+                        value={sheet.columns[target] ?? ""}
+                        onChange={(event) => {
+                          const nextValue = event.target.value === "" ? undefined : Number(event.target.value);
+                          setMappingDraft((current) =>
+                            current.map((candidate, candidateIndex) =>
+                              candidateIndex === sheetIndex
+                                ? {
+                                    ...candidate,
+                                    columns: {
+                                      ...candidate.columns,
+                                      [target]: nextValue
+                                    }
+                                  }
+                                : candidate
+                            )
+                          );
+                        }}
+                      >
+                        <option value="">Исключить</option>
+                        {(sheet.sampleRows?.[0] ?? []).map((header, index) => (
+                          <option key={`${sheet.sheetName}-${target}-${index}`} value={index}>
+                            {index + 1}. {header || "Пусто"}
+                          </option>
+                        ))}
+                      </select>
+                      <span className="muted">{sampleForColumn(sheet, sheet.columns[target])}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </section>
+
+          <section className="wizard-section">
+            <div className="toolbar" style={{ marginBottom: 0 }}>
+              <div>
+                <h3>4. Preview</h3>
+                <p className="muted">Показаны первые 160 строк из {filteredRows.length}. Commit блокируется при errors.</p>
+              </div>
+              <select value={previewFilter} onChange={(event) => onPreviewFilterChange(event.target.value)}>
+                <option value="all">Все</option>
+                <option value="ready">Ready</option>
+                <option value="warnings">Warnings</option>
+                <option value="errors">Errors</option>
+                <option value="skipped">Skipped</option>
+                <option value="works">Works</option>
+                <option value="materials">Materials</option>
+                <option value="unknown">Unknown</option>
+              </select>
+            </div>
+            <DataTable
+              headers={["Статус", "Тип", "Лист", "Строка", "Раздел", "Наименование", "Кол-во", "Цена", "Сумма", "Флаги"]}
+              rows={visiblePreviewRows.map((row) => [
+                <StatusBadge key={`${row.id}-status`} tone={row.status === "ready" ? "good" : row.status === "warning" ? "warn" : row.status === "error" ? "bad" : "neutral"}>
+                  {row.status}
+                </StatusBadge>,
+                readableImportEntity(row.entityType),
+                row.sheetName,
+                row.sourceRowNumber,
+                row.section ?? "-",
+                row.name ?? "-",
+                row.quantity !== undefined ? `${row.quantity} ${row.unit ?? ""}` : "-",
+                row.unitPrice !== undefined ? money(row.unitPrice) : "-",
+                row.totalAmount !== undefined ? money(row.totalAmount) : "-",
+                row.suspiciousFlags.join(", ") || "-"
+              ])}
+            />
+          </section>
+
+          <div className="import-meta">
+            <StatusBadge tone={preview.summary.errors ? "bad" : "good"}>{preview.summary.errors ? "Commit заблокирован" : "Commit возможен после подтверждения"}</StatusBadge>
+            <span className="muted">Скрытые строки: {preview.summary.hiddenRows}</span>
+            <span className="muted">Формулы: {preview.summary.formulaCells}</span>
+            <span className="muted">Дубли: {preview.summary.duplicateRows}</span>
           </div>
 
           {(preview.errors.length > 0 || preview.warnings.length > 0) && (
@@ -1092,32 +1363,156 @@ function ImportPanel({
             </div>
           )}
 
-          <PreviewTable
-            title="Распознанные позиции"
-            headers={["Лист", "Строка", "Раздел", "Наименование", "Тип", "Кол-во", "Цена"]}
-            rows={preview.budgetItems.slice(0, 12).map((item) => [
-              item.sheetName,
-              item.rowNumber,
-              item.section,
-              item.name,
-              item.kind,
-              `${item.qty} ${item.unit}`,
-              money(item.plannedUnitPrice)
-            ])}
-          />
-          <PreviewTable
-            title="Неизвестные строки"
-            headers={["Лист", "Строка", "Причина", "Значения"]}
-            rows={preview.unknownRows.slice(0, 8).map((item) => [item.sheetName, item.rowNumber, item.reason, item.values.join(" | ")])}
-          />
-          <label className="checkbox-row">
-            <input checked={confirmed} onChange={(event) => onConfirmChange(event.target.checked)} type="checkbox" />
-            Я проверил импортируемые данные
-          </label>
+          <section className="wizard-section">
+            <div className="toolbar" style={{ marginBottom: 0 }}>
+              <div>
+                <h3>5. AI / Assistant Explanation</h3>
+                <p className="muted">AI получает только sanitized summary. Без OpenAI показывается расчетное объяснение.</p>
+              </div>
+              <button className="button secondary" disabled={!preview.importBatchId || loading} onClick={onExplain} type="button">
+                Объяснить ошибки и риски
+              </button>
+            </div>
+            {explanationToShow ? (
+              <div className="explanation-box">
+                <StatusBadge tone={explanationToShow.status === "ai" ? "good" : explanationToShow.status === "degraded" ? "warn" : "info"}>
+                  {explanationToShow.status === "ai" ? "AI" : explanationToShow.status === "degraded" ? "Degraded fallback" : "Deterministic fallback"}
+                </StatusBadge>
+                <p>{explanationToShow.summary}</p>
+                <div className="grid grid-2">
+                  <MessageList title="Блокирующие ошибки" items={explanationToShow.blockingIssues} tone="bad" />
+                  <MessageList title="Что проверить" items={explanationToShow.warningsToReview} tone="warn" />
+                </div>
+                <PreviewTable
+                  title="Рекомендации"
+                  headers={["Тип", "Действие"]}
+                  rows={[
+                    ...explanationToShow.suggestedMappingFixes.map((item) => ["Mapping", item]),
+                    ...explanationToShow.recommendedNextSteps.map((item) => ["Next step", item])
+                  ]}
+                />
+                <p className="muted">{explanationToShow.managementNote}</p>
+              </div>
+            ) : (
+              <p className="muted">Нажмите “Объяснить ошибки и риски”, чтобы получить AI или deterministic explanation.</p>
+            )}
+          </section>
+
+          <section className="wizard-section">
+            <h3>6. Commit</h3>
+            <div className="form-grid">
+              <label>
+                Режим сохранения
+                <select value={mode} onChange={(event) => onModeChange(event.target.value as typeof mode)}>
+                  <option value="append">Добавить к текущим данным</option>
+                  <option value="replace_budget">Заменить только бюджет</option>
+                  <option value="replace_materials">Заменить только материалы</option>
+                  <option value="replace_budget_materials">Заменить бюджет и материалы</option>
+                </select>
+              </label>
+              <label className="checkbox-row">
+                <input checked={confirmed} onChange={(event) => onConfirmChange(event.target.checked)} type="checkbox" />
+                {replacementMode ? "Я понимаю, что выбранные данные проекта будут заменены" : "Я проверил импортируемые данные"}
+              </label>
+              <label>
+                &nbsp;
+                <button className="button primary" disabled={!canCommit} onClick={onCommit} type="button">
+                  {mode === "append" ? "Добавить строки" : "Выполнить замену"}
+                </button>
+              </label>
+            </div>
+          </section>
         </div>
       )}
+
+      {result && (
+        <section className="wizard-section">
+          <h3>7. Result</h3>
+          <div className="grid grid-4">
+            <Kpi title="Created" value={String(result.created ?? 0)} tone="good" />
+            <Kpi title="Skipped" value={String(result.skipped ?? 0)} tone={Number(result.skipped ?? 0) ? "warn" : undefined} />
+            <Kpi title="Warnings" value={String(result.warnings ?? 0)} tone={Number(result.warnings ?? 0) ? "warn" : undefined} />
+            <Kpi title="Errors" value={String(result.errors ?? 0)} tone={Number(result.errors ?? 0) ? "bad" : "good"} />
+          </div>
+          <div className="toolbar" style={{ marginBottom: 0 }}>
+            <button className="button secondary" type="button">
+              Перейти к бюджету
+            </button>
+            <button className="button secondary" type="button">
+              Перейти к материалам
+            </button>
+          </div>
+        </section>
+      )}
+
+      <section className="wizard-section">
+        <h3>История импортов</h3>
+        <DataTable
+          headers={["Дата", "Файл", "Статус", "Режим", "Created", "Skipped", "Warnings", "Errors", "Commit"]}
+          rows={history.map((item) => {
+            const commit = (item.summary?.commitResult ?? item.commitResult ?? {}) as Record<string, unknown>;
+            return [
+              formatDate(item.createdAt),
+              item.fileName,
+              readableStatus(item.status),
+              item.mode ?? "-",
+              String(commit.created ?? 0),
+              String(commit.skipped ?? item.summary?.skippedRows ?? 0),
+              String(commit.warnings ?? item.summary?.warnings ?? 0),
+              String(commit.errors ?? item.summary?.errors ?? 0),
+              item.committedAt ? formatDate(item.committedAt) : "-"
+            ];
+          })}
+        />
+      </section>
     </div>
   );
+}
+
+function readableImportSheetType(value: string) {
+  const labels: Record<string, string> = {
+    works: "Работы",
+    materials: "Материалы",
+    schedule: "График",
+    mixed: "Смешанный",
+    unknown: "Неизвестно"
+  };
+  return labels[value] ?? value;
+}
+
+function readableImportEntity(value: string) {
+  const labels: Record<string, string> = {
+    budgetItem: "ВОР",
+    material: "Материал",
+    scheduleItem: "График",
+    section: "Раздел",
+    unknown: "Неизвестно"
+  };
+  return labels[value] ?? value;
+}
+
+function readableColumnTarget(value: string) {
+  const labels: Record<string, string> = {
+    name: "Наименование",
+    unit: "Ед. изм.",
+    qty: "Количество",
+    unitPrice: "Цена",
+    total: "Сумма",
+    section: "Раздел",
+    note: "Примечание",
+    startsAt: "Дата начала",
+    endsAt: "Дата окончания"
+  };
+  return labels[value] ?? value;
+}
+
+function sampleForColumn(sheet: ImportSheetMapping, index: number | undefined) {
+  if (index === undefined) return "Колонка исключена";
+  const samples = (sheet.sampleRows ?? [])
+    .slice(1, 4)
+    .map((row) => row[index])
+    .filter(Boolean);
+  return samples.length ? samples.join(" / ") : "Нет примеров";
 }
 
 function MessageList({ title, items, tone }: { title: string; items: string[]; tone: "bad" | "warn" }) {

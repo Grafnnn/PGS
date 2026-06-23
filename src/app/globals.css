@@ -984,6 +984,84 @@ tr:last-child td {
   white-space: nowrap;
 }
 
+.import-wizard {
+  gap: 18px;
+}
+
+.wizard-steps {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.wizard-step {
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  color: var(--muted);
+  display: flex;
+  gap: 8px;
+  min-height: 42px;
+  padding: 8px 10px;
+}
+
+.wizard-step strong {
+  align-items: center;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  display: inline-flex;
+  height: 22px;
+  justify-content: center;
+  min-width: 22px;
+}
+
+.wizard-step.done {
+  border-color: var(--blue);
+  color: var(--text);
+}
+
+.wizard-section {
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 14px;
+  padding-top: 16px;
+}
+
+.mapping-card {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+}
+
+.mapping-card-header {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+
+.mapping-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.mapping-grid label {
+  gap: 5px;
+}
+
+.explanation-box {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+}
+
 .button.primary {
   background: var(--blue);
   border-color: #174f9f;
@@ -1117,6 +1195,11 @@ textarea {
   min-height: 36px;
   padding: 7px 9px;
   width: 100%;
+}
+
+.form-grid.panel {
+  background: var(--panel-muted);
+  border-style: dashed;
 }
 
 input:hover,
@@ -1375,6 +1458,13 @@ input[type="checkbox"] {
 
 .import-panel {
   background: var(--panel-muted);
+}
+
+.import-meta {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
 }
 
 .checkbox-row {
@@ -1998,6 +2088,10 @@ input[type="checkbox"] {
   .state-pill {
     justify-content: space-between;
     white-space: normal;
+  }
+
+  .wizard-steps {
+    grid-template-columns: 1fr;
   }
 
   .login-page {
