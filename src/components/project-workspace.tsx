@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AlertTriangle, BarChart3, Bot, ClipboardList, FileText, Landmark, LayoutList, Package, Pencil, Plus, Search, Send, Table2, TimerReset, Trash2, Truck, Users } from "lucide-react";
+import { ProjectCommandCenter } from "@/components/project-command-center";
 import { budgetTotals, deriveAutoRisks, financeTotals, materialTotals, money, percent, workTotals } from "@/lib/calculations";
 import type { ImportExplanation, ImportMode, ImportPreview, ImportSheetMapping } from "@/lib/excel/import-types";
 import type { DocumentChecklistItem, PipelineAction, PipelineReadiness } from "@/lib/project-pipeline";
@@ -795,62 +796,25 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
 
           {activeTab === "Обзор" && (
             <section className="stack">
-              <DataReadinessPanel readiness={readiness} actions={postImportActions} onNavigate={setActiveTab} />
-              <Panel title="AI-сводка объекта" icon={<Bot size={18} />} className="ai-panel">
-                <div className="overview-ai-grid">
-                  <div>
-                    <h3>Управленческий вывод</h3>
-                    <p className="muted">
-                      {budgetDeviation > 0
-                        ? `Проект требует финансового разбора: прогнозный перерасход ${compactMoney(budgetDeviation)}.`
-                        : "Финансовый контур проекта в допустимом коридоре, фокус на сроках и снабжении."}
-                    </p>
-                  </div>
-                  <div className="ai-insight-list compact">
-                    {priorityActions.map((action, index) => (
-                      <div className="ai-insight-item" key={action}>
-                        <span>{index + 1}</span>
-                        <p>{action}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </Panel>
-              <section className="grid grid-2">
-              <Panel title="План / факт проекта" icon={<TimerReset size={18} />}>
-                <div className="grid grid-3">
-                  <Kpi title="Плановая себестоимость" value={compactMoney(budget.totalPlannedCost)} />
-                  <Kpi title="Фактическая себестоимость" value={compactMoney(budget.totalActualCost)} />
-                  <Kpi title="Прогнозная себестоимость" value={compactMoney(budget.totalForecastCost)} tone="warn" />
-                </div>
-              </Panel>
-              <Panel title="Проблемные зоны" icon={<AlertTriangle size={18} />}>
-                <div className="stack">
-                  {allRisks.slice(0, 4).map((risk) => (
-                    <div key={risk.id} className="attention-item">
-                      <StatusBadge tone={risk.priority === "critical" ? "bad" : risk.priority === "high" ? "warn" : "info"}>{readableStatus(risk.priority)}</StatusBadge>
-                      <strong>{risk.title}</strong>
-                      <div className="muted">{risk.reason}</div>
-                    </div>
-                  ))}
-                  {!allRisks.length && <EmptyState text="Открытых рисков и авто-отклонений пока нет." />}
-                </div>
-              </Panel>
-              <Panel title="Материалы" icon={<Package size={18} />}>
-                <div className="grid grid-3">
-                  <Kpi title="Дефицитные позиции" value={String(materialStats.deficitItems.length)} tone="bad" />
-                  <Kpi title="Закуплено" value={`${materialStats.orderedQty.toLocaleString("ru-RU")} ед.`} />
-                  <Kpi title="Перерасход" value={compactMoney(materialStats.materialOverrun)} tone={materialStats.materialOverrun > 0 ? "bad" : "good"} />
-                </div>
-              </Panel>
-              <Panel title="Финансы" icon={<Landmark size={18} />}>
-                <div className="grid grid-3">
-                  <Kpi title="Поступления" value={compactMoney(finance.incomingPayments)} tone="good" />
-                  <Kpi title="Платежи" value={compactMoney(finance.outgoingPayments)} />
-                  <Kpi title="Потребность" value={compactMoney(finance.financingNeed)} tone={finance.financingNeed ? "bad" : "good"} />
-                </div>
-              </Panel>
-              </section>
+              <ProjectCommandCenter
+                project={initialBundle.project}
+                budgetItems={budgetItems}
+                scheduleItems={scheduleItems}
+                materials={materials}
+                procurementRequests={procurementRequests}
+                payments={payments}
+                dailyReports={reports}
+                risks={risks}
+                readiness={readiness}
+                documentChecklist={documentChecklist}
+                intelligence={intelligence}
+                aiInsight={aiResults.summary ?? aiResults["executive-report"] ?? null}
+                aiLoading={aiScenarioLoading === "summary" || aiScenarioLoading === "executive-report"}
+                onNavigate={setActiveTab}
+                onRunAiSummary={() => {
+                  void runAiCommandScenario("summary");
+                }}
+              />
             </section>
           )}
       {activeTab === "Бюджет / ВОР" && (
