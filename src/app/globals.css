@@ -86,9 +86,15 @@ textarea {
 }
 
 .app-shell {
+  --sidebar-width: 264px;
   display: grid;
-  grid-template-columns: 248px minmax(0, 1fr);
+  grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
   min-height: 100vh;
+  position: relative;
+}
+
+.app-shell[data-sidebar="collapsed"] {
+  --sidebar-width: 72px;
 }
 
 .sidebar {
@@ -97,10 +103,12 @@ textarea {
   display: flex;
   flex-direction: column;
   gap: 18px;
-  min-height: 100vh;
-  padding: 18px 14px;
+  height: 100vh;
+  min-height: 0;
+  padding: 0 14px 14px;
   position: sticky;
   top: 0;
+  z-index: 30;
 }
 
 .app-main {
@@ -120,6 +128,108 @@ textarea {
   position: sticky;
   top: 0;
   z-index: 20;
+}
+
+.sidebar-header {
+  align-items: center;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  margin: 0 -14px;
+  min-height: 64px;
+  padding: 0 14px;
+}
+
+.app-sidebar.is-collapsed {
+  gap: 12px;
+  padding: 0 8px 12px;
+}
+
+.app-sidebar.is-collapsed .sidebar-header {
+  justify-content: center;
+  margin: 0 -8px;
+  padding: 0 8px;
+}
+
+.app-sidebar.is-collapsed .brand {
+  justify-content: center;
+  min-width: 0;
+}
+
+.app-sidebar.is-collapsed .brand-copy,
+.app-sidebar.is-collapsed .sidebar-pin-button,
+.app-sidebar.is-collapsed .sidebar-system-card {
+  display: none;
+}
+
+.sidebar-overlay {
+  box-shadow: var(--shadow-md);
+  display: flex;
+  height: 100vh;
+  left: 72px;
+  opacity: 0;
+  pointer-events: none;
+  position: fixed;
+  top: 0;
+  transform: translateX(-8px);
+  transition:
+    opacity 160ms ease,
+    transform 160ms ease;
+  width: 264px;
+  z-index: 50;
+}
+
+.sidebar-overlay.open {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(0);
+}
+
+.sidebar-overlay-scrim {
+  background: transparent;
+  inset: 0;
+  left: 72px;
+  pointer-events: none;
+  position: fixed;
+  z-index: 45;
+}
+
+.sidebar-overlay-scrim.open {
+  pointer-events: auto;
+}
+
+.drawer-backdrop {
+  background: rgba(15, 23, 42, 0.32);
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+  position: fixed;
+  transition: opacity 180ms ease;
+  z-index: 70;
+}
+
+.drawer-backdrop.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.mobile-drawer {
+  box-shadow: var(--shadow-md);
+  display: none;
+  height: 100dvh;
+  left: 0;
+  max-width: min(320px, 88vw);
+  position: fixed;
+  top: 0;
+  transform: translateX(-102%);
+  transition: transform 190ms ease;
+  width: 304px;
+  z-index: 80;
+}
+
+.mobile-drawer.open {
+  transform: translateX(0);
 }
 
 .brand {
@@ -176,6 +286,8 @@ textarea {
   flex: 1;
   gap: 5px;
   justify-content: stretch;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .nav a {
@@ -188,18 +300,26 @@ textarea {
   font-weight: 600;
   gap: 9px;
   padding: 8px 11px;
+  position: relative;
 }
 
 .sidebar-nav a {
   min-height: 44px;
 }
 
-.sidebar-nav a span {
-  display: grid;
-  gap: 1px;
+.nav-icon {
+  align-items: center;
+  display: inline-flex;
+  justify-content: center;
 }
 
-.sidebar-nav a small {
+.sidebar-nav a .nav-copy {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+
+.sidebar-nav a .nav-copy small {
   color: var(--muted-soft);
   font-size: 10px;
   font-weight: 650;
@@ -221,6 +341,43 @@ textarea {
 .nav a.active small,
 .nav a[aria-current="page"] small {
   color: rgba(255, 255, 255, 0.72);
+}
+
+.app-sidebar.is-collapsed .sidebar-nav {
+  gap: 6px;
+}
+
+.app-sidebar.is-collapsed .sidebar-nav a {
+  justify-content: center;
+  min-height: 40px;
+  padding: 8px;
+}
+
+.app-sidebar.is-collapsed .nav-copy {
+  height: 1px;
+  opacity: 0;
+  overflow: hidden;
+  position: absolute;
+  width: 1px;
+}
+
+.app-sidebar.is-collapsed .sidebar-nav a:hover::after,
+.app-sidebar.is-collapsed .sidebar-nav a:focus-visible::after {
+  background: #111827;
+  border-radius: 6px;
+  color: #fff;
+  content: attr(data-tooltip);
+  font-size: 12px;
+  font-weight: 650;
+  left: calc(100% + 10px);
+  line-height: 1;
+  padding: 8px 9px;
+  pointer-events: none;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  white-space: nowrap;
+  z-index: 90;
 }
 
 .sidebar-system-card {
@@ -280,11 +437,16 @@ textarea {
   white-space: nowrap;
 }
 
+.mobile-menu-button {
+  display: none;
+}
+
 .page {
   animation: page-in 260ms ease both;
   margin: 0 auto;
-  max-width: 1440px;
+  max-width: none;
   padding: 30px 28px 42px;
+  width: 100%;
 }
 
 .header-row,
@@ -1130,6 +1292,10 @@ tr:last-child td {
   min-height: 32px;
   padding: 6px;
   width: 32px;
+}
+
+.mobile-menu-button {
+  display: none;
 }
 
 .tabs {
@@ -2018,23 +2184,6 @@ input[type="checkbox"] {
 }
 
 @media (max-width: 1100px) {
-  .app-shell {
-    grid-template-columns: 1fr;
-  }
-
-  .sidebar {
-    min-height: auto;
-    position: static;
-  }
-
-  .sidebar-nav {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-
-  .sidebar-system-card {
-    display: none;
-  }
-
   .dashboard-command-grid,
   .overview-ai-grid {
     grid-template-columns: 1fr;
@@ -2057,7 +2206,6 @@ input[type="checkbox"] {
   }
 
   .topbar {
-    align-items: flex-start;
     flex-direction: row;
     gap: 12px;
     padding: 14px 20px;
@@ -2118,6 +2266,36 @@ input[type="checkbox"] {
   }
 }
 
+@media (max-width: 767px) {
+  .app-shell {
+    display: block;
+  }
+
+  .app-sidebar,
+  .sidebar-overlay,
+  .sidebar-overlay-scrim,
+  .desktop-menu-button {
+    display: none;
+  }
+
+  .mobile-drawer {
+    display: flex;
+  }
+
+  .mobile-menu-button {
+    display: inline-flex;
+  }
+
+  .topbar {
+    flex-direction: row;
+    padding: 12px 14px;
+  }
+
+  .global-search {
+    max-width: none;
+  }
+}
+
 @media (max-width: 640px) {
   body {
     font-size: 13px;
@@ -2134,14 +2312,6 @@ input[type="checkbox"] {
     grid-template-columns: 1fr;
   }
 
-  .sidebar {
-    padding: 12px;
-  }
-
-  .sidebar-nav {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
   .page {
     padding: 22px 14px 34px;
   }
@@ -2154,26 +2324,12 @@ input[type="checkbox"] {
     white-space: normal;
   }
 
-  .topbar {
-    position: static;
-  }
-
   .topbar-context {
     display: none;
   }
 
   .brand-subtitle {
     display: none;
-  }
-
-  .nav {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    width: 100%;
-  }
-
-  .nav a {
-    text-align: center;
   }
 
   .sidebar-nav a {
