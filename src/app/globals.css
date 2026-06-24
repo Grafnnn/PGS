@@ -445,8 +445,13 @@ textarea {
   animation: page-in 260ms ease both;
   margin: 0 auto;
   max-width: none;
+  min-width: 0;
   padding: 30px 28px 42px;
   width: 100%;
+}
+
+.page > * {
+  min-width: 0;
 }
 
 .header-row,
@@ -750,6 +755,11 @@ textarea {
   display: grid;
   gap: 18px;
   grid-template-columns: minmax(0, 1fr) 320px;
+  min-width: 0;
+}
+
+.workspace-layout > * {
+  min-width: 0;
 }
 
 .context-panel {
@@ -857,6 +867,11 @@ p:last-child {
 .grid {
   display: grid;
   gap: 16px;
+  min-width: 0;
+}
+
+.grid > * {
+  min-width: 0;
 }
 
 .grid-4 {
@@ -876,6 +891,7 @@ p:last-child {
   border: 1px solid var(--line);
   border-radius: var(--radius);
   box-shadow: var(--shadow-sm);
+  min-width: 0;
   padding: 16px;
 }
 
@@ -1305,6 +1321,8 @@ tr:last-child td {
   display: flex;
   gap: 5px;
   margin: 22px 0 18px;
+  max-width: 100%;
+  min-width: 0;
   overflow-x: auto;
   padding: 5px;
 }
@@ -1312,6 +1330,8 @@ tr:last-child td {
 .project-tabs {
   display: grid;
   grid-template-columns: repeat(6, minmax(112px, 1fr));
+  max-width: 100%;
+  min-width: 0;
   overflow-x: visible;
 }
 
