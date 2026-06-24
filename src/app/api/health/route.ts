@@ -50,7 +50,7 @@ export async function GET() {
       storage: { provider: env.uploadProvider, writable: storageWritable, maxUploadMb: env.maxUploadMb },
       connectors: connectorSummary(getConnectorStatuses()),
       migrations,
-      version: { appVersion: env.appVersion, gitSha: env.gitSha ?? null },
+      version: { appVersion: env.appVersion, gitSha: env.gitSha, gitShaSource: env.gitShaSource },
       missing: env.missing,
       timestamp: new Date().toISOString()
     },

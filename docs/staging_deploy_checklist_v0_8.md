@@ -75,7 +75,7 @@ Use placeholders only in tickets, docs, and chat. Do not paste real values into 
 | `LOGIN_RATE_LIMIT_MAX` | optional | no | Default `8` |
 | `RESET_RATE_LIMIT_WINDOW_MS` | optional | no | Default `900000` |
 | `RESET_RATE_LIMIT_MAX` | optional | no | Default `5` |
-| `GIT_SHA` | optional | no | Set to deployed commit for `/api/health` version trace |
+| `GIT_SHA` | optional | no | Fallback only for non-Render environments; Render should report `RENDER_GIT_COMMIT` automatically |
 
 `NEXTAUTH_SECRET` appears in `.env.example` for older local scaffolding but is not part of the current runtime env schema. Use `SESSION_SECRET` for the current staging requirement.
 
@@ -229,7 +229,7 @@ Prerequisites:
 - `APP_ENV=staging`;
 - `STAGING_SMOKE_SECRET` configured on the staging service;
 - `/api/health` returns HTTP 200;
-- deployed commit is confirmed through `/api/health.version.gitSha` or Render deploy metadata.
+- deployed commit is confirmed through `/api/health.version.gitSha` with `gitShaSource: "RENDER_GIT_COMMIT"` or Render deploy metadata.
 
 On Render, the runtime endpoint uses `http://127.0.0.1:$PORT` for its internal app checks when `PORT` is available. If all smoke checks fail with `fetch failed`, verify the deployed revision includes this loopback behavior before trusting the smoke result.
 
