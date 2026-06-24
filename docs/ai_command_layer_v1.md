@@ -24,11 +24,11 @@ Backward-compatible aliases are kept for older callers where possible.
 The AI context is built server-side and bounded:
 
 - project metadata;
-- aggregated budget/ВОР signals;
-- delayed and upcoming schedule work;
-- deficit and over-budget materials;
-- active procurement requests;
-- finance totals and overdue payments;
+- aggregated budget/ВОР signals, duplicate names, zero prices/qty, missing units, large items;
+- delayed, upcoming, owner/date schedule signals;
+- deficit, due-soon, supplierless, and over-budget materials;
+- active procurement requests and bounded supplier quote metadata when present;
+- finance totals, paid/unpaid direction totals, cash gap, overdue payments;
 - open risks;
 - daily report summaries;
 - document metadata only.
@@ -39,7 +39,7 @@ Large tables are limited to top problem rows and section aggregates. Document OC
 
 If `OPENAI_API_KEY` is absent, endpoints return deterministic structured management analysis and do not fail. This keeps health, smoke, tests, and local development independent from live AI.
 
-If `OPENAI_API_KEY` is present, scenarios reuse the existing safe OpenAI wrapper to enrich the scenario summary. Provider failures return degraded deterministic results without leaking secrets.
+If `OPENAI_API_KEY` is present, scenarios call OpenAI server-side with a bounded sanitized context and require structured JSON. The response is validated with Zod before it is returned to the UI. Provider failures, non-success responses, or invalid JSON return degraded deterministic results without leaking provider errors or secrets.
 
 ## Guardrails
 
@@ -60,6 +60,7 @@ The project AI tab shows scenario cards. Each card lists the data used, runs one
 - summary;
 - findings;
 - recommended actions;
+- subject and recommended attachments for draft/report scenarios;
 - optional draft text;
 - data limitations;
 - copy/retry actions.
