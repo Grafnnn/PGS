@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getCurrentUser } from "@/lib/auth/session";
 import { canProject } from "@/lib/auth/project-permissions";
 import { prisma } from "@/lib/prisma";
@@ -19,9 +19,14 @@ vi.mock("@/lib/prisma", () => ({
     },
     document: {
       findMany: vi.fn(async () => [])
+    },
+    supplierQuote: {
+      findMany: vi.fn(async () => [])
     }
   }
 }));
+
+const originalDatabaseUrl = process.env.DATABASE_URL;
 
 function request(body: unknown = {}) {
   return new NextRequest("https://pgs.local/api/projects/project-demo/ai/summary", {
@@ -34,11 +39,17 @@ function request(body: unknown = {}) {
 describe("AI scenario endpoint", () => {
   beforeEach(() => {
     delete process.env.OPENAI_API_KEY;
+    delete process.env.DATABASE_URL;
     vi.clearAllMocks();
     vi.mocked(getCurrentUser).mockResolvedValue({ id: "user-demo", name: "Demo", email: "demo@pgs.local", role: "OWNER", authenticated: false });
     vi.mocked(canProject).mockResolvedValue(true);
     vi.mocked(prisma.project.findUnique).mockResolvedValue(null);
     vi.unstubAllGlobals();
+  });
+
+  afterEach(() => {
+    if (originalDatabaseUrl) process.env.DATABASE_URL = originalDatabaseUrl;
+    else delete process.env.DATABASE_URL;
   });
 
   it("rejects unknown scenarios", async () => {

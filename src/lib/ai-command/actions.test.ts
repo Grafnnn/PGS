@@ -1,16 +1,23 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { buildAiProjectContext, runAiScenario } from "./index";
 
 const originalOpenAiKey = process.env.OPENAI_API_KEY;
+const originalDatabaseUrl = process.env.DATABASE_URL;
 
 afterEach(() => {
   if (originalOpenAiKey) process.env.OPENAI_API_KEY = originalOpenAiKey;
   else delete process.env.OPENAI_API_KEY;
+  if (originalDatabaseUrl) process.env.DATABASE_URL = originalDatabaseUrl;
+  else delete process.env.DATABASE_URL;
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
 });
 
 describe("AI command layer", () => {
+  beforeEach(() => {
+    delete process.env.DATABASE_URL;
+  });
+
   it("builds bounded project context with management signals", async () => {
     const context = await buildAiProjectContext("project-demo");
 
