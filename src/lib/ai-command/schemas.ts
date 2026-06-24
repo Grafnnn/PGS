@@ -21,7 +21,9 @@ export const aiInsightResponseSchema = z.object({
       description: z.string()
     })
   ),
+  subject: z.string().optional(),
   draftText: z.string().optional(),
+  recommendedAttachments: z.array(z.string()).optional(),
   dataUsed: z.array(z.string()),
   dataLimitations: z.array(z.string()),
   generatedAt: z.string(),

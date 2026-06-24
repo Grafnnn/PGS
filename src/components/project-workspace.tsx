@@ -101,7 +101,9 @@ type AiInsightResponse = {
   summary: string;
   findings: Array<{ severity: "low" | "medium" | "high" | "critical"; title: string; description: string; source?: string; recommendation?: string }>;
   recommendedActions: Array<{ priority: "low" | "medium" | "high"; title: string; description: string }>;
+  subject?: string;
   draftText?: string;
+  recommendedAttachments?: string[];
   dataUsed: string[];
   dataLimitations: string[];
   generatedAt: string;
@@ -2816,6 +2818,7 @@ function AiScenarioResult({ result }: { result: AiInsightResponse }) {
       <div className="ai-result-summary">
         <strong>{result.title}</strong>
         <span className="muted">{new Date(result.generatedAt).toLocaleString("ru-RU")} · {result.provider}</span>
+        {result.subject && <span className="muted">Тема: {result.subject}</span>}
         <p>{result.summary}</p>
       </div>
       {!!result.findings.length && (
@@ -2853,6 +2856,16 @@ function AiScenarioResult({ result }: { result: AiInsightResponse }) {
           <pre className="ai-draft-text">{result.draftText}</pre>
         </details>
       )}
+      {!!result.recommendedAttachments?.length && (
+        <details>
+          <summary>Рекомендуемые приложения</summary>
+          <ul className="action-list">
+            {result.recommendedAttachments.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+        </details>
+      )}
       {!!result.dataLimitations.length && (
         <details>
           <summary>Ограничения данных</summary>
@@ -2877,6 +2890,7 @@ function formatAiResultForCopy(result: AiInsightResponse) {
     "",
     "Действия:",
     ...result.recommendedActions.map((item) => `- [${item.priority}] ${item.title}: ${item.description}`),
+    result.recommendedAttachments?.length ? `\nПриложения:\n${result.recommendedAttachments.map((item) => `- ${item}`).join("\n")}` : "",
     result.draftText ? `\nDraft:\n${result.draftText}` : "",
     result.dataLimitations.length ? `\nОграничения:\n${result.dataLimitations.map((item) => `- ${item}`).join("\n")}` : ""
   ].join("\n");
