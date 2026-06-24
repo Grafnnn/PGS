@@ -416,9 +416,11 @@ Health response показывает:
 - `auth.required` и `auth.mode`;
 - `storage.provider`, `storage.writable`, `storage.maxUploadMb`;
 - `ai.configured`;
-- `version.appVersion` и `version.gitSha`, если `GIT_SHA` задан;
+- `version.appVersion`, `version.gitSha` и `version.gitShaSource`;
 - `migrations.status/count`, если PostgreSQL доступен;
 - `missing` для обязательных production/staging env.
+
+На Render `version.gitSha` берется из `RENDER_GIT_COMMIT`. Ручной `GIT_SHA` используется только как fallback для окружений, где платформа не предоставляет commit SHA.
 
 AI key, `DATABASE_URL`, `SESSION_SECRET`, S3 secrets и абсолютный upload path не раскрываются.
 

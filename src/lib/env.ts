@@ -38,6 +38,7 @@ const envSchema = z.object({
   S3_PUBLIC_BASE_URL: z.string().optional(),
   S3_ACCESS_KEY_ID: z.string().optional(),
   S3_SECRET_ACCESS_KEY: z.string().optional(),
+  RENDER_GIT_COMMIT: z.string().optional(),
   GIT_SHA: z.string().optional()
 });
 
@@ -51,8 +52,28 @@ export function getEnv(): AppEnv {
   return parsed.data;
 }
 
+function cleanEnvValue(value: string | undefined) {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : undefined;
+}
+
+export function getDeployVersion(env: AppEnv) {
+  const renderGitCommit = cleanEnvValue(env.RENDER_GIT_COMMIT);
+  if (renderGitCommit) {
+    return { gitSha: renderGitCommit, gitShaSource: "RENDER_GIT_COMMIT" };
+  }
+
+  const configuredGitSha = cleanEnvValue(env.GIT_SHA);
+  if (configuredGitSha) {
+    return { gitSha: configuredGitSha, gitShaSource: "GIT_SHA" };
+  }
+
+  return { gitSha: "unknown", gitShaSource: "unknown" };
+}
+
 export function getEnvStatus() {
   const env = getEnv();
+  const deployVersion = getDeployVersion(env);
   const production = env.NODE_ENV === "production";
   const missing: string[] = [];
   if (!env.DATABASE_URL) missing.push("DATABASE_URL");
@@ -75,7 +96,8 @@ export function getEnvStatus() {
     uploadProvider: env.UPLOAD_STORAGE_PROVIDER,
     maxUploadMb: env.MAX_UPLOAD_MB,
     appVersion: process.env.npm_package_version ?? "0.1.0",
-    gitSha: env.GIT_SHA,
+    gitSha: deployVersion.gitSha,
+    gitShaSource: deployVersion.gitShaSource,
     missing
   };
 }
