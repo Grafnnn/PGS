@@ -27,6 +27,7 @@ type ProjectCommandCenterProps = {
   aiInsight?: CommandCenterAiInsight | null;
   aiLoading?: boolean;
   onNavigate: (tab: string) => void;
+  onDrilldown?: (sectionId: string) => void;
   onRunAiSummary: () => void;
 };
 
@@ -53,6 +54,26 @@ function tabForRecommendedApp(app: string) {
   return app;
 }
 
+function drilldownForTab(tab: string) {
+  if (tab === "Документы") return "documents";
+  if (tab === "Риски") return "risks";
+  if (tab === "График") return "schedule";
+  if (tab === "Бюджет / ВОР" || tab === "Финансы") return "finance-vor";
+  if (tab === "Материалы" || tab === "Заявки") return "procurement";
+  if (tab === "Рапорты") return "reports";
+  if (tab === "AI-помощник" || tab === "Аналитика") return "ai-recommendations";
+  return null;
+}
+
+function drilldownForKpi(key: string) {
+  if (key === "budget" || key === "cash") return "finance-vor";
+  if (key === "schedule") return "schedule";
+  if (key === "risks") return "risks";
+  if (key === "materials") return "procurement";
+  if (key === "readiness") return "documents";
+  return null;
+}
+
 export function ProjectCommandCenter({
   project,
   budgetItems,
@@ -68,6 +89,7 @@ export function ProjectCommandCenter({
   aiInsight,
   aiLoading = false,
   onNavigate,
+  onDrilldown,
   onRunAiSummary
 }: ProjectCommandCenterProps) {
   const model = buildProjectCommandCenterModel({
@@ -84,6 +106,16 @@ export function ProjectCommandCenter({
     intelligence,
     aiInsight
   });
+  const openTabOrDrilldown = (tab: string) => {
+    const section = drilldownForTab(tab);
+    if (section && onDrilldown) onDrilldown(section);
+    else onNavigate(tab);
+  };
+  const openKpi = (key: string) => {
+    const section = drilldownForKpi(key);
+    if (section && onDrilldown) onDrilldown(section);
+    else onNavigate(key === "cash" ? "Финансы" : key === "schedule" ? "График" : key === "materials" ? "Материалы" : key === "risks" ? "Риски" : key === "readiness" ? "Аналитика" : "Бюджет / ВОР");
+  };
 
   return (
     <section className="command-center" aria-label="Project command center">
@@ -112,7 +144,7 @@ export function ProjectCommandCenter({
 
       <div className="command-kpi-grid">
         {model.kpis.map((kpi) => (
-          <button className={`command-kpi tone-${kpi.tone}`} key={kpi.key} type="button" onClick={() => onNavigate(kpi.key === "cash" ? "Финансы" : kpi.key === "schedule" ? "График" : kpi.key === "materials" ? "Материалы" : kpi.key === "risks" ? "Риски" : kpi.key === "readiness" ? "Аналитика" : "Бюджет / ВОР")}>
+          <button className={`command-kpi tone-${kpi.tone}`} key={kpi.key} type="button" onClick={() => openKpi(kpi.key)}>
             <span className="command-kpi-icon">{icons[kpi.key as keyof typeof icons] ?? <CheckCircle2 size={18} />}</span>
             <span className="command-kpi-copy">
               <small>{kpi.label}</small>
@@ -143,7 +175,7 @@ export function ProjectCommandCenter({
           </div>
           <div className="command-apps">
             {model.aiSummary.recommendedApps.map((app) => (
-              <button className="app-chip" key={app} type="button" onClick={() => onNavigate(tabForRecommendedApp(app))}>
+              <button className="app-chip" key={app} type="button" onClick={() => openTabOrDrilldown(tabForRecommendedApp(app))}>
                 {app}
               </button>
             ))}
@@ -153,7 +185,7 @@ export function ProjectCommandCenter({
               <Bot size={18} />
               {aiLoading ? "Готовлю сводку..." : model.aiSummary.empty ? "Сформировать AI-сводку" : "Обновить AI-сводку"}
             </button>
-            <button className="button secondary" type="button" onClick={() => onNavigate("AI-помощник")}>
+            <button className="button secondary" type="button" onClick={() => openTabOrDrilldown("AI-помощник")}>
               Открыть сценарии
             </button>
           </div>
@@ -189,7 +221,7 @@ export function ProjectCommandCenter({
           </div>
           <div className="status-board-grid">
             {model.statusBoard.map((item) => (
-              <button className="status-board-item" key={item.key} type="button" onClick={() => onNavigate(item.tab)}>
+              <button className="status-board-item" key={item.key} type="button" onClick={() => openTabOrDrilldown(item.tab)}>
                 <span className={`status-dot tone-${item.tone}`} />
                 <span>
                   <small>{item.label}</small>
@@ -208,7 +240,7 @@ export function ProjectCommandCenter({
           </div>
           <div className="action-center-list">
             {model.nextActions.map((action, index) => (
-              <button className={`action-center-item tone-${action.tone}`} key={action.key} type="button" onClick={() => onNavigate(action.tab)}>
+              <button className={`action-center-item tone-${action.tone}`} key={action.key} type="button" onClick={() => openTabOrDrilldown(action.tab)}>
                 <span>{index + 1}</span>
                 <strong>{action.title}</strong>
                 <small>{action.detail}</small>

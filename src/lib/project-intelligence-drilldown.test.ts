@@ -1,0 +1,65 @@
+import { describe, expect, it } from "vitest";
+import { getProjectBundle } from "@/lib/demo-data";
+import { buildProjectIntelligenceDrilldownModel, drilldownAiScenarios } from "@/lib/project-intelligence-drilldown";
+
+describe("project intelligence drill-down model", () => {
+  it("builds drill-down sections from project data", () => {
+    const bundle = getProjectBundle("project-demo");
+    const model = buildProjectIntelligenceDrilldownModel({
+      ...bundle,
+      readiness: {
+        status: "ready",
+        score: 85,
+        summary: "Pipeline ready.",
+        checks: [],
+        counts: {
+          committedImports: 1,
+          importedBudgetItems: bundle.budgetItems.length,
+          importedMaterials: bundle.materials.length,
+          importedWarnings: 0,
+          budgetItems: bundle.budgetItems.length,
+          materials: bundle.materials.length,
+          procurementRequests: bundle.procurementRequests.length,
+          scheduleItems: bundle.scheduleItems.length,
+          cashflowPeriods: 0,
+          documents: 2,
+          calculatedRisks: bundle.risks.length
+        }
+      },
+      documentChecklist: [
+        { key: "contract", title: "Договор", status: "present", categoryHints: ["договор"], documentIds: ["doc-1"], evidence: [], suggestedNextStep: "Проверить версию." },
+        { key: "estimate", title: "Смета / ВОР", status: "missing", categoryHints: ["смета"], documentIds: [], evidence: [], suggestedNextStep: "Загрузить ВОР." }
+      ],
+      intelligence: {
+        completenessScore: 85,
+        summary: "Ready",
+        topRisks: [],
+        nextActions: [],
+        missingData: ["Нет КС"],
+        quickActions: [{ title: "Проверить риски", prompt: "risk", deterministicAnswer: "Есть риски." }]
+      }
+    });
+
+    expect(model.nav.map((item) => item.id)).toEqual(["documents", "risks", "schedule", "finance-vor", "procurement", "reports", "ai-recommendations"]);
+    expect(model.documents).toMatchObject({ present: 1, total: 2, ctaTab: "Документы" });
+    expect(model.risks.total).toBeGreaterThan(0);
+    expect(model.schedule.ctaTab).toBe("График");
+    expect(model.financeVor.financeTab).toBe("Финансы");
+    expect(model.procurement.requestTab).toBe("Заявки");
+    expect(model.reports.executiveScenario).toBe("executive-report");
+    expect(model.ai.scenarios).toHaveLength(drilldownAiScenarios.length);
+    expect(model.ai.limitations).toContain("Нет КС");
+  });
+
+  it("is null-safe for an empty project", () => {
+    const model = buildProjectIntelligenceDrilldownModel({ project: { id: "empty" } });
+
+    expect(model.documents.empty).toBe(true);
+    expect(model.risks.empty).toBe(true);
+    expect(model.schedule.empty).toBe(true);
+    expect(model.financeVor.empty).toBe(true);
+    expect(model.procurement.empty).toBe(true);
+    expect(model.reports.empty).toBe(true);
+    expect(model.ai.scenarios.some((scenario) => scenario.scenario === "executive-report")).toBe(true);
+  });
+});
