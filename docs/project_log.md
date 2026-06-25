@@ -1,5 +1,46 @@
 # PGS Project Log
 
+## 2026-06-25 - Dashboard Command Center v1 shipped online
+
+Status: shipped baseline for Dashboard / Project Overview Command Center v1.
+
+- Online URL: https://pgs-frankfurt.onrender.com
+- Online commit: `bb979068397328369d16d0b678e26c30558932ad`
+- Result: Dashboard Command Center v1 is merged, deployed online, and smoke-validated
+- Git SHA source: `RENDER_GIT_COMMIT`
+
+Validation summary:
+
+- health: GO
+- `/dashboard`: GO
+- `/projects`: GO
+- `/projects/project-demo`: GO
+- Command Center present on the project overview page
+- AI summary and recommended apps UI present
+- sidebar shell present
+- desktop collapse and overlay behavior: GO
+- mobile drawer open/close behavior: GO
+- mobile overflow: GO, `scrollWidth=390`, `innerWidth=390`
+- unauth `/api/auth/me`: 401
+- unauth AI endpoint: 403
+- unauth pipeline readiness endpoint: 401
+
+Release management:
+
+- PR #35 Dashboard Command Center v1 was squash-merged into `main`
+- remote feature branch `codex/dashboard-command-center-v1` was deleted after merge
+- GitHub Actions main CI run #75 completed successfully
+- no Render env/secrets changes
+- no DB/schema/migration changes
+- no live AI call
+- no mutation smoke
+- no manual deploy action
+
+Next product train:
+
+- Project Intelligence Drill-down v1
+- focus: drill-down working zones from the command center for documents, risks, schedule, budget/VOR, finance, procurement, executive reporting, and AI recommendations
+
 ## 2026-06-25 - AI Command Layer v1 production validation
 
 Status: production promotion smoke train fully green for `main@877f94274312ae1a7e48db5b065d07ce75d29d36`.
