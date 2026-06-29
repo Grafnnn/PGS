@@ -1,0 +1,331 @@
+import { budgetTotals, deriveAutoRisks, financeTotals, materialTotals, workTotals } from "@/lib/calculations";
+import type { DocumentChecklistItem, PipelineAction, PipelineReadiness } from "@/lib/project-pipeline";
+import type { BudgetItem, DailyReport, Material, Payment, ProcurementRequest, Project, Risk, ScheduleItem } from "@/lib/types";
+
+export type DrilldownTone = "good" | "warn" | "bad" | "info" | "neutral";
+
+export type AiScenario =
+  | "summary"
+  | "budget-review"
+  | "schedule-review"
+  | "procurement-review"
+  | "finance-review"
+  | "risk-review"
+  | "document-review"
+  | "daily-report-summary"
+  | "executive-report"
+  | "draft-text";
+
+export type AiInsightResponse = {
+  title: string;
+  scenario: AiScenario;
+  overallStatus?: "on_track" | "attention" | "critical" | "unknown";
+  summary: string;
+  findings: Array<{ severity: "low" | "medium" | "high" | "critical"; title: string; description: string; source?: string; recommendation?: string }>;
+  recommendedActions: Array<{ priority: "low" | "medium" | "high"; title: string; description: string }>;
+  subject?: string;
+  draftText?: string;
+  recommendedAttachments?: string[];
+  dataUsed: string[];
+  dataLimitations: string[];
+  generatedAt: string;
+  provider: "deterministic" | "openai" | "degraded";
+};
+
+export const drilldownAiScenarios: Array<{ scenario: AiScenario; title: string; description: string; data: string[]; target: string }> = [
+  { scenario: "summary", title: "Сводка по проекту", description: "Общий статус, отклонения, риски и действия на 7 дней.", data: ["Проект", "ВОР", "График", "Финансы", "Риски"], target: "AI-помощник" },
+  { scenario: "budget-review", title: "Проверить ВОР", description: "Нулевые цены, дубли, подозрительные объемы и недооценка.", data: ["ВОР", "Разделы", "План/факт"], target: "Бюджет / ВОР" },
+  { scenario: "schedule-review", title: "Проверить график", description: "Просрочки, владельцы, ближайшие контрольные точки.", data: ["График", "Зависимости", "Факт"], target: "График" },
+  { scenario: "procurement-review", title: "Проверить снабжение", description: "Дефицит, поставщики, сроки потребности и draft заявки.", data: ["Материалы", "Заявки", "Поставщики"], target: "Материалы" },
+  { scenario: "finance-review", title: "Финансовый анализ", description: "Cash gap, оплаты, просрочки, маржа и проблемные статьи.", data: ["Платежи", "Бюджет", "Договор"], target: "Финансы" },
+  { scenario: "risk-review", title: "Собрать риски", description: "Top рисков, владельцы, меры и источники.", data: ["Риски", "График", "Финансы", "Материалы"], target: "Риски" },
+  { scenario: "document-review", title: "Документы", description: "Метаданные документов и ограничения без OCR.", data: ["Документы", "Категории", "Версии"], target: "Документы" },
+  { scenario: "daily-report-summary", title: "Рапорты", description: "Проблемы площадки, люди, техника и текст отчета.", data: ["Рапорты", "График"], target: "Рапорты" },
+  { scenario: "executive-report", title: "Отчет руководителю", description: "Короткая деловая записка по объекту.", data: ["Все разделы"], target: "AI-помощник" },
+  { scenario: "draft-text", title: "Подготовить письмо", description: "Draft письма/пояснительной записки по данным проекта.", data: ["Контекст проекта", "Отклонения"], target: "AI-помощник" }
+];
+
+export type ProjectIntelligenceInput = {
+  project?: Partial<Project> | null;
+  budgetItems?: BudgetItem[] | null;
+  scheduleItems?: ScheduleItem[] | null;
+  materials?: Material[] | null;
+  procurementRequests?: ProcurementRequest[] | null;
+  payments?: Payment[] | null;
+  dailyReports?: DailyReport[] | null;
+  risks?: Risk[] | null;
+  readiness?: PipelineReadiness | null;
+  documentChecklist?: DocumentChecklistItem[] | null;
+  intelligence?: {
+    completenessScore: number;
+    summary: string;
+    topRisks: PipelineAction[];
+    nextActions: PipelineAction[];
+    missingData: string[];
+    quickActions?: Array<{ title: string; prompt: string; deterministicAnswer: string }>;
+  } | null;
+};
+
+export type ProjectIntelligenceDrilldownModel = {
+  nav: Array<{ id: string; label: string; tone: DrilldownTone; count?: number }>;
+  documents: {
+    tone: DrilldownTone;
+    score: number;
+    present: number;
+    total: number;
+    missing: DocumentChecklistItem[];
+    presentItems: DocumentChecklistItem[];
+    empty: boolean;
+    ctaTab: "Документы";
+  };
+  risks: {
+    tone: DrilldownTone;
+    total: number;
+    critical: number;
+    high: number;
+    top: Array<{ title: string; detail: string; priority: string; owner?: string; dueAt?: string; tone: DrilldownTone }>;
+    empty: boolean;
+    ctaTab: "Риски";
+  };
+  schedule: {
+    tone: DrilldownTone;
+    completionPercent: number;
+    overdueCount: number;
+    delayDays: number;
+    timeline: Array<{ title: string; detail: string; status: string; tone: DrilldownTone }>;
+    empty: boolean;
+    ctaTab: "График";
+  };
+  financeVor: {
+    tone: DrilldownTone;
+    plannedCost: string;
+    forecastCost: string;
+    forecastProfit: string;
+    budgetDeviation: string;
+    cashGap: string;
+    financingNeed: string;
+    empty: boolean;
+    ctaTab: "Бюджет / ВОР";
+    financeTab: "Финансы";
+  };
+  procurement: {
+    tone: DrilldownTone;
+    deficitCount: number;
+    activeRequestCount: number;
+    deficitItems: Array<{ name: string; detail: string; tone: DrilldownTone }>;
+    requests: Array<{ title: string; detail: string; tone: DrilldownTone }>;
+    empty: boolean;
+    ctaTab: "Материалы";
+    requestTab: "Заявки";
+  };
+  reports: {
+    tone: DrilldownTone;
+    latestReport?: { title: string; detail: string; status: string };
+    nextExecutiveAction: string;
+    empty: boolean;
+    reportTab: "Рапорты";
+    executiveScenario: "executive-report";
+  };
+  ai: {
+    tone: DrilldownTone;
+    scenarios: typeof drilldownAiScenarios;
+    dataUsed: string[];
+    limitations: string[];
+    hasResult: boolean;
+  };
+};
+
+function clampPercent(value: number) {
+  if (!Number.isFinite(value)) return 0;
+  return Math.max(0, Math.min(100, Math.round(value)));
+}
+
+function compactMoney(value: number) {
+  const safeValue = Number.isFinite(value) ? value : 0;
+  const absolute = Math.abs(safeValue);
+  if (absolute >= 1_000_000_000) return `${(safeValue / 1_000_000_000).toLocaleString("ru-RU", { maximumFractionDigits: 1 })} млрд ₽`;
+  if (absolute >= 1_000_000) return `${(safeValue / 1_000_000).toLocaleString("ru-RU", { maximumFractionDigits: 1 })} млн ₽`;
+  return `${Math.round(safeValue).toLocaleString("ru-RU")} ₽`;
+}
+
+function readableDate(value?: string) {
+  if (!value) return "дата не задана";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString("ru-RU", { day: "2-digit", month: "2-digit", year: "2-digit" });
+}
+
+function toneFromPercent(score: number): DrilldownTone {
+  if (score >= 75) return "good";
+  if (score >= 45) return "warn";
+  return "bad";
+}
+
+function toneFromRiskPriority(priority: string): DrilldownTone {
+  if (priority === "critical" || priority === "high") return "bad";
+  if (priority === "medium") return "warn";
+  if (priority === "low") return "info";
+  return "neutral";
+}
+
+function toneFromScheduleStatus(status: string): DrilldownTone {
+  if (status === "done") return "good";
+  if (status === "delayed" || status === "stopped") return "bad";
+  if (status === "in_progress") return "warn";
+  return "info";
+}
+
+function toneFromRequestPriority(priority: string): DrilldownTone {
+  if (priority === "critical") return "bad";
+  if (priority === "high" || priority === "medium") return "warn";
+  return "info";
+}
+
+export function buildProjectIntelligenceDrilldownModel(input: ProjectIntelligenceInput): ProjectIntelligenceDrilldownModel {
+  const project = input.project ?? {};
+  const budgetItems = input.budgetItems ?? [];
+  const scheduleItems = input.scheduleItems ?? [];
+  const materials = input.materials ?? [];
+  const procurementRequests = input.procurementRequests ?? [];
+  const payments = input.payments ?? [];
+  const reports = input.dailyReports ?? [];
+  const risks = input.risks ?? [];
+  const documentChecklist = input.documentChecklist ?? [];
+  const contractAmount = project.contractAmount ?? 0;
+
+  const budget = budgetTotals(contractAmount, budgetItems);
+  const works = workTotals(scheduleItems);
+  const materialStats = materialTotals(materials);
+  const finance = financeTotals(payments);
+  const autoRisks = deriveAutoRisks(scheduleItems, materials, payments);
+  const allRisks = [...risks, ...autoRisks].filter((risk) => risk.status !== "closed");
+  const criticalRisks = allRisks.filter((risk) => risk.priority === "critical");
+  const highRisks = allRisks.filter((risk) => risk.priority === "high");
+  const presentDocuments = documentChecklist.filter((item) => item.status === "present");
+  const missingDocuments = documentChecklist.filter((item) => item.status !== "present");
+  const documentScore = documentChecklist.length ? (presentDocuments.length / documentChecklist.length) * 100 : 0;
+  const budgetDeviation = budget.totalForecastCost - budget.totalPlannedCost;
+  const activeRequests = procurementRequests.filter((request) => !["closed", "rejected"].includes(request.status));
+  const financeTone: DrilldownTone = finance.cashGap < 0 || budgetDeviation > 0 ? "bad" : budget.forecastProfit < 0 ? "warn" : "good";
+  const procurementTone: DrilldownTone = materialStats.deficitItems.length ? "bad" : activeRequests.length ? "warn" : materials.length ? "good" : "info";
+  const scheduleTone: DrilldownTone = works.overdueItems.length ? "bad" : scheduleItems.length ? "info" : "neutral";
+  const riskTone: DrilldownTone = criticalRisks.length ? "bad" : highRisks.length || allRisks.length ? "warn" : "good";
+  const reportsTone: DrilldownTone = reports.length ? "info" : "warn";
+
+  const aiDataUsed = Array.from(
+    new Set([
+      ...(input.intelligence?.quickActions?.map((item) => item.title) ?? []),
+      ...drilldownAiScenarios.flatMap((item) => item.data)
+    ])
+  ).slice(0, 10);
+
+  return {
+    nav: [
+      { id: "documents", label: "Документы", tone: documentChecklist.length ? toneFromPercent(documentScore) : "info", count: missingDocuments.length },
+      { id: "risks", label: "Риски", tone: riskTone, count: allRisks.length },
+      { id: "schedule", label: "График", tone: scheduleTone, count: works.overdueItems.length },
+      { id: "finance-vor", label: "ВОР / финансы", tone: financeTone },
+      { id: "procurement", label: "Снабжение", tone: procurementTone, count: materialStats.deficitItems.length },
+      { id: "reports", label: "Executive", tone: reportsTone },
+      { id: "ai-recommendations", label: "AI", tone: "info", count: drilldownAiScenarios.length }
+    ],
+    documents: {
+      tone: documentChecklist.length ? toneFromPercent(documentScore) : "info",
+      score: clampPercent(documentScore),
+      present: presentDocuments.length,
+      total: documentChecklist.length,
+      missing: missingDocuments.slice(0, 6),
+      presentItems: presentDocuments.slice(0, 4),
+      empty: documentChecklist.length === 0,
+      ctaTab: "Документы"
+    },
+    risks: {
+      tone: riskTone,
+      total: allRisks.length,
+      critical: criticalRisks.length,
+      high: highRisks.length,
+      top: allRisks
+        .slice()
+        .sort((left, right) => {
+          const rank = { critical: 4, high: 3, medium: 2, low: 1 };
+          return (rank[right.priority] ?? 0) - (rank[left.priority] ?? 0);
+        })
+        .slice(0, 5)
+        .map((risk) => ({
+          title: risk.title,
+          detail: risk.reason,
+          priority: risk.priority,
+          owner: risk.owner,
+          dueAt: readableDate(risk.dueAt),
+          tone: toneFromRiskPriority(risk.priority)
+        })),
+      empty: allRisks.length === 0,
+      ctaTab: "Риски"
+    },
+    schedule: {
+      tone: scheduleTone,
+      completionPercent: clampPercent(works.completionPercent),
+      overdueCount: works.overdueItems.length,
+      delayDays: works.delayDays,
+      timeline: scheduleItems.slice(0, 6).map((item) => ({
+        title: item.name,
+        detail: `${readableDate(item.startsAt)} - ${readableDate(item.endsAt)} · ${item.owner}`,
+        status: item.status,
+        tone: toneFromScheduleStatus(item.status)
+      })),
+      empty: scheduleItems.length === 0,
+      ctaTab: "График"
+    },
+    financeVor: {
+      tone: financeTone,
+      plannedCost: compactMoney(budget.totalPlannedCost),
+      forecastCost: compactMoney(budget.totalForecastCost),
+      forecastProfit: compactMoney(budget.forecastProfit),
+      budgetDeviation: compactMoney(budgetDeviation),
+      cashGap: compactMoney(finance.cashGap),
+      financingNeed: compactMoney(finance.financingNeed),
+      empty: budgetItems.length === 0 && payments.length === 0,
+      ctaTab: "Бюджет / ВОР",
+      financeTab: "Финансы"
+    },
+    procurement: {
+      tone: procurementTone,
+      deficitCount: materialStats.deficitItems.length,
+      activeRequestCount: activeRequests.length,
+      deficitItems: materialStats.deficitItems.slice(0, 5).map((material) => ({
+        name: material.name,
+        detail: `Требуется ${material.requiredQty} ${material.unit}, доставлено ${material.deliveredQty} ${material.unit}, нужно к ${readableDate(material.neededAt)}`,
+        tone: material.status === "required" ? "bad" : "warn"
+      })),
+      requests: activeRequests.slice(0, 4).map((request) => ({
+        title: request.title,
+        detail: `${request.items.length} поз. · ${readableDate(request.neededAt)} · ${request.status}`,
+        tone: toneFromRequestPriority(request.priority)
+      })),
+      empty: materials.length === 0 && procurementRequests.length === 0,
+      ctaTab: "Материалы",
+      requestTab: "Заявки"
+    },
+    reports: {
+      tone: reportsTone,
+      latestReport: reports[0]
+        ? {
+            title: `${readableDate(reports[0].date)} · ${reports[0].author}`,
+            detail: reports[0].issues || reports[0].completedWorks || "Рапорт без проблемных заметок.",
+            status: reports[0].status
+          }
+        : undefined,
+      nextExecutiveAction: allRisks[0]?.title ?? materialStats.deficitItems[0]?.name ?? works.overdueItems[0]?.name ?? "Подготовить управленческую сводку по текущему срезу.",
+      empty: reports.length === 0,
+      reportTab: "Рапорты",
+      executiveScenario: "executive-report"
+    },
+    ai: {
+      tone: "info",
+      scenarios: drilldownAiScenarios,
+      dataUsed: aiDataUsed,
+      limitations: input.intelligence?.missingData?.slice(0, 6) ?? [],
+      hasResult: false
+    }
+  };
+}

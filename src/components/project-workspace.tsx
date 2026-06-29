@@ -3,8 +3,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AlertTriangle, BarChart3, Bot, ClipboardList, FileText, Landmark, LayoutList, Package, Pencil, Plus, Search, Send, Table2, TimerReset, Trash2, Truck, Users } from "lucide-react";
 import { ProjectCommandCenter } from "@/components/project-command-center";
+import { ProjectIntelligenceDrilldown } from "@/components/project-intelligence-drilldown";
 import { budgetTotals, deriveAutoRisks, financeTotals, materialTotals, money, percent, workTotals } from "@/lib/calculations";
 import type { ImportExplanation, ImportMode, ImportPreview, ImportSheetMapping } from "@/lib/excel/import-types";
+import { drilldownAiScenarios, type AiInsightResponse, type AiScenario } from "@/lib/project-intelligence-drilldown";
 import type { DocumentChecklistItem, PipelineAction, PipelineReadiness } from "@/lib/project-pipeline";
 import type { AuditEvent, BudgetItem, DailyReport, Material, Payment, ProcurementRequest, ProjectDocument, ProjectDocumentVersion, ProjectMember, Risk, ScheduleItem } from "@/lib/types";
 
@@ -75,42 +77,6 @@ const tabMeta: Record<string, { icon: React.ReactNode; hint: string }> = {
   "AI-помощник": { icon: <Bot size={16} />, hint: "Анализ" }
 };
 
-const aiQuickActions = [
-  "Проверить риски проекта",
-  "Сравнить бюджет и факт",
-  "Найти просрочки",
-  "Сформировать заявку снабжения",
-  "Подготовить пояснительную записку"
-];
-
-type AiScenario =
-  | "summary"
-  | "budget-review"
-  | "schedule-review"
-  | "procurement-review"
-  | "finance-review"
-  | "risk-review"
-  | "document-review"
-  | "daily-report-summary"
-  | "executive-report"
-  | "draft-text";
-
-type AiInsightResponse = {
-  title: string;
-  scenario: AiScenario;
-  overallStatus?: "on_track" | "attention" | "critical" | "unknown";
-  summary: string;
-  findings: Array<{ severity: "low" | "medium" | "high" | "critical"; title: string; description: string; source?: string; recommendation?: string }>;
-  recommendedActions: Array<{ priority: "low" | "medium" | "high"; title: string; description: string }>;
-  subject?: string;
-  draftText?: string;
-  recommendedAttachments?: string[];
-  dataUsed: string[];
-  dataLimitations: string[];
-  generatedAt: string;
-  provider: "deterministic" | "openai" | "degraded";
-};
-
 type PipelineDraftKind = "procurement" | "schedule" | "cashflow";
 
 type PipelineDraftState = {
@@ -132,19 +98,6 @@ type IntelligenceState = {
   missingData: string[];
   quickActions: Array<{ title: string; prompt: string; deterministicAnswer: string }>;
 };
-
-const aiScenarios: Array<{ scenario: AiScenario; title: string; description: string; data: string[] }> = [
-  { scenario: "summary", title: "Сводка по проекту", description: "Общий статус, отклонения, риски и действия на 7 дней.", data: ["Проект", "ВОР", "График", "Финансы", "Риски"] },
-  { scenario: "budget-review", title: "Проверить ВОР", description: "Нулевые цены, дубли, подозрительные объемы и недооценка.", data: ["ВОР", "Разделы", "План/факт"] },
-  { scenario: "schedule-review", title: "Проверить график", description: "Просрочки, владельцы, ближайшие контрольные точки.", data: ["График", "Зависимости", "Факт"] },
-  { scenario: "procurement-review", title: "Проверить снабжение", description: "Дефицит, поставщики, сроки потребности и draft заявки.", data: ["Материалы", "Заявки", "Поставщики"] },
-  { scenario: "finance-review", title: "Финансовый анализ", description: "Cash gap, оплаты, просрочки, маржа и проблемные статьи.", data: ["Платежи", "Бюджет", "Договор"] },
-  { scenario: "risk-review", title: "Собрать риски", description: "Top рисков, владельцы, меры и источники.", data: ["Риски", "График", "Финансы", "Материалы"] },
-  { scenario: "document-review", title: "Документы", description: "Метаданные документов и ограничения без OCR.", data: ["Документы", "Категории", "Версии"] },
-  { scenario: "daily-report-summary", title: "Рапорты", description: "Проблемы площадки, люди, техника и текст отчета.", data: ["Рапорты", "График"] },
-  { scenario: "executive-report", title: "Отчет руководителю", description: "Короткая деловая записка по объекту.", data: ["Все разделы"] },
-  { scenario: "draft-text", title: "Подготовить письмо", description: "Draft письма/пояснительной записки по данным проекта.", data: ["Контекст проекта", "Отклонения"] }
-];
 
 function compactMoney(value: number) {
   const absolute = Math.abs(value);
@@ -217,6 +170,10 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
   const [intelligence, setIntelligence] = useState<IntelligenceState | null>(null);
   const [pipelineDraft, setPipelineDraft] = useState<PipelineDraftState | null>(null);
   const [pipelineLoading, setPipelineLoading] = useState("");
+  const openIntelligenceSection = useCallback((sectionId: string) => {
+    const element = document.getElementById(sectionId);
+    if (element) element.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, []);
 
   const budget = useMemo(() => budgetTotals(initialBundle.project.contractAmount, budgetItems), [budgetItems, initialBundle.project.contractAmount]);
   const works = useMemo(() => workTotals(scheduleItems), [scheduleItems]);
@@ -811,8 +768,29 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
                 aiInsight={aiResults.summary ?? aiResults["executive-report"] ?? null}
                 aiLoading={aiScenarioLoading === "summary" || aiScenarioLoading === "executive-report"}
                 onNavigate={setActiveTab}
+                onDrilldown={openIntelligenceSection}
                 onRunAiSummary={() => {
                   void runAiCommandScenario("summary");
+                }}
+              />
+              <ProjectIntelligenceDrilldown
+                project={initialBundle.project}
+                budgetItems={budgetItems}
+                scheduleItems={scheduleItems}
+                materials={materials}
+                procurementRequests={procurementRequests}
+                payments={payments}
+                dailyReports={reports}
+                risks={risks}
+                readiness={readiness}
+                documentChecklist={documentChecklist}
+                intelligence={intelligence}
+                aiResults={aiResults}
+                aiErrors={aiErrors}
+                aiLoading={aiScenarioLoading}
+                onNavigate={setActiveTab}
+                onRunAiScenario={(scenario) => {
+                  void runAiCommandScenario(scenario);
                 }}
               />
             </section>
@@ -1175,7 +1153,7 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
             </label>
           </div>
           <div className="ai-scenario-grid">
-            {aiScenarios.map((scenario) => (
+            {drilldownAiScenarios.map((scenario) => (
               <AiScenarioCard
                 key={scenario.scenario}
                 config={scenario}
