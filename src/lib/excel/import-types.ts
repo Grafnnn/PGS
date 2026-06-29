@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 export type ImportRowKind = "ignored" | "section" | "budget_item" | "material" | "schedule_item" | "unknown";
+export type AssistedImportRowKind = "section_header" | "stage" | "work_item" | "material_item" | "equipment_item" | "labor_item" | "subtotal" | "note" | "unknown";
 export type ImportEntityType = "budgetItem" | "material" | "scheduleItem" | "section" | "unknown";
 export type ImportRowStatus = "ready" | "warning" | "error" | "skipped";
 export type ImportMode = "append" | "replace_budget" | "replace_materials" | "replace_budget_materials" | "replace_schedule" | "replace_all";
@@ -128,6 +129,10 @@ export interface ImportPreviewRow {
   id: string;
   sheetName: string;
   sourceRowNumber: number;
+  originalNumber?: string;
+  normalizedNumber?: string;
+  rowKind?: AssistedImportRowKind;
+  confidence?: number;
   status: ImportRowStatus;
   entityType: ImportEntityType;
   section?: string;
@@ -339,6 +344,10 @@ export const importPreviewRowSchema = z.object({
   id: z.string(),
   sheetName: z.string(),
   sourceRowNumber: z.coerce.number().int().positive(),
+  originalNumber: z.string().optional(),
+  normalizedNumber: z.string().optional(),
+  rowKind: z.enum(["section_header", "stage", "work_item", "material_item", "equipment_item", "labor_item", "subtotal", "note", "unknown"]).optional(),
+  confidence: z.coerce.number().min(0).max(1).optional(),
   status: z.enum(["ready", "warning", "error", "skipped"]),
   entityType: z.enum(["budgetItem", "material", "scheduleItem", "section", "unknown"]),
   section: z.string().optional(),
