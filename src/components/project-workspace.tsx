@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { AlertTriangle, BarChart3, Bot, ClipboardList, FileText, Landmark, LayoutList, Package, Pencil, Plus, Search, Send, Table2, TimerReset, Trash2, Truck, Users } from "lucide-react";
 import { ProjectCommandCenter } from "@/components/project-command-center";
 import { ProjectIntelligenceDrilldown } from "@/components/project-intelligence-drilldown";
@@ -58,6 +58,7 @@ const tabs = [
   "Аналитика",
   "Участники",
   "История",
+  "Настройки",
   "AI-помощник"
 ];
 
@@ -74,7 +75,15 @@ const tabMeta: Record<string, { icon: React.ReactNode; hint: string }> = {
   Аналитика: { icon: <BarChart3 size={16} />, hint: "Готовность" },
   Участники: { icon: <Users size={16} />, hint: "Доступ" },
   История: { icon: <ClipboardList size={16} />, hint: "Аудит" },
+  Настройки: { icon: <Trash2 size={16} />, hint: "Админ" },
   "AI-помощник": { icon: <Bot size={16} />, hint: "Анализ" }
+};
+
+type CurrentUser = {
+  role?: "OWNER" | "ADMIN" | "MANAGER" | "VIEWER";
+  authenticated?: boolean;
+  name?: string;
+  email?: string;
 };
 
 type PipelineDraftKind = "procurement" | "schedule" | "cashflow";
@@ -170,6 +179,11 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
   const [intelligence, setIntelligence] = useState<IntelligenceState | null>(null);
   const [pipelineDraft, setPipelineDraft] = useState<PipelineDraftState | null>(null);
   const [pipelineLoading, setPipelineLoading] = useState("");
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
+  const [currentUserLoaded, setCurrentUserLoaded] = useState(false);
+  const [deleteProjectName, setDeleteProjectName] = useState("");
+  const [deleteProjectConfirm, setDeleteProjectConfirm] = useState(false);
+  const [deleteProjectDone, setDeleteProjectDone] = useState(false);
   const openIntelligenceSection = useCallback((sectionId: string) => {
     const element = document.getElementById(sectionId);
     if (element) element.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -195,6 +209,25 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
   ];
   const aiAnswerTone = aiLoading ? "loading" : aiAnswer ? (/OPENAI_API_KEY|not configured|failed|ошибка|error|Project not found/i.test(aiAnswer) ? "error" : "ready") : "empty";
   const aiDisplay = aiAnswerTone === "error" ? "AI-помощник сейчас недоступен. Проверьте подключение AI и повторите анализ позже." : aiAnswer;
+  const canDeleteCurrentProject = currentUser?.role === "OWNER" || currentUser?.role === "ADMIN";
+
+  useEffect(() => {
+    let active = true;
+    fetch("/api/auth/me")
+      .then(async (response) => {
+        const data = (await response.json()) as { user?: CurrentUser | null };
+        if (active) setCurrentUser(response.ok ? (data.user ?? null) : null);
+      })
+      .catch(() => {
+        if (active) setCurrentUser(null);
+      })
+      .finally(() => {
+        if (active) setCurrentUserLoaded(true);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const loadAudit = useCallback(async () => {
     try {
@@ -673,6 +706,32 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
     }
   }
 
+  async function deleteProject() {
+    if (!canDeleteCurrentProject || deleteProjectName !== initialBundle.project.name || !deleteProjectConfirm) {
+      setError("Для удаления нужен OWNER/ADMIN, чекбокс и точное имя проекта.");
+      return;
+    }
+    setSaving("project-delete");
+    setError("");
+    try {
+      const response = await fetch(`/api/projects/${initialBundle.project.id}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ confirm: true, projectName: deleteProjectName })
+      });
+      const data = (await response.json()) as { ok?: boolean; error?: string };
+      if (!response.ok || !data.ok) throw new Error(data.error ?? "Не удалось удалить проект.");
+      setDeleteProjectDone(true);
+      window.setTimeout(() => {
+        window.location.assign("/projects");
+      }, 700);
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : "Ошибка удаления проекта.");
+    } finally {
+      setSaving("");
+    }
+  }
+
   return (
     <main className="page">
       <div className="page-header project-header">
@@ -1135,6 +1194,24 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
             </a>
           </div>
           <AuditTable items={auditEvents} />
+        </Panel>
+      )}
+
+      {activeTab === "Настройки" && (
+        <Panel title="Настройки проекта" icon={<Trash2 size={18} />}>
+          <ProjectDeleteDangerZone
+            projectName={initialBundle.project.name}
+            canDelete={canDeleteCurrentProject}
+            roleLoaded={currentUserLoaded}
+            role={currentUser?.role}
+            confirmationName={deleteProjectName}
+            confirmed={deleteProjectConfirm}
+            saving={saving === "project-delete"}
+            deleted={deleteProjectDone}
+            onNameChange={setDeleteProjectName}
+            onConfirmChange={setDeleteProjectConfirm}
+            onDelete={() => void deleteProject()}
+          />
         </Panel>
       )}
 
@@ -3142,6 +3219,77 @@ function DocumentCards({ items, projectId }: { items: ProjectDocument[]; project
           <small>{item.uploadedAt ? formatDate(item.uploadedAt) : formatDate(item.createdAt)}</small>
         </a>
       ))}
+    </div>
+  );
+}
+
+export function ProjectDeleteDangerZone({
+  projectName,
+  canDelete,
+  roleLoaded,
+  role,
+  confirmationName,
+  confirmed,
+  saving,
+  deleted,
+  onNameChange,
+  onConfirmChange,
+  onDelete
+}: {
+  projectName: string;
+  canDelete: boolean;
+  roleLoaded: boolean;
+  role?: CurrentUser["role"];
+  confirmationName: string;
+  confirmed: boolean;
+  saving: boolean;
+  deleted: boolean;
+  onNameChange: (value: string) => void;
+  onConfirmChange: (value: boolean) => void;
+  onDelete: () => void;
+}) {
+  const exactMatch = confirmationName === projectName;
+  const disabled = !canDelete || !exactMatch || !confirmed || saving || deleted;
+  const disabledReason = !roleLoaded
+    ? "Проверяю роль пользователя."
+    : !canDelete
+      ? `Удаление доступно только OWNER/ADMIN. Текущая роль: ${role ?? "не определена"}.`
+      : !exactMatch
+        ? "Введите точное имя проекта для подтверждения."
+        : !confirmed
+          ? "Подтвердите понимание последствий удаления."
+          : null;
+
+  return (
+    <div className="danger-zone">
+      <div className="danger-zone-card">
+        <div>
+          <div className="eyebrow">Danger zone</div>
+          <h3>Удаление проекта</h3>
+          <p className="muted">
+            Операция удалит проект и связанные рабочие данные: ВОР, график, материалы, заявки, платежи, документы, рапорты, риски, импорт и AI-историю. Пользователи организации не удаляются.
+          </p>
+        </div>
+        <div className="form-grid danger-form">
+          <label>
+            Точное имя проекта
+            <input value={confirmationName} placeholder={projectName} onChange={(event) => onNameChange(event.target.value)} />
+          </label>
+          <label className="checkbox-row">
+            <input checked={confirmed} type="checkbox" onChange={(event) => onConfirmChange(event.target.checked)} />
+            <span>Я понимаю, что проект будет удален без восстановления из интерфейса.</span>
+          </label>
+          <label>
+            &nbsp;
+            <button className="button danger-button" type="button" disabled={disabled} onClick={onDelete}>
+              <Trash2 size={18} />
+              {saving ? "Удаляю..." : deleted ? "Удалено" : "Удалить проект"}
+            </button>
+          </label>
+        </div>
+        {disabledReason && <p className="muted">{disabledReason}</p>}
+        {deleted && <StatusBadge tone="good">Проект удален. Перехожу к списку проектов.</StatusBadge>}
+      </div>
     </div>
   );
 }

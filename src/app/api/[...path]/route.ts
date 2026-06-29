@@ -9,6 +9,7 @@ import { canProject, type ProjectAction } from "@/lib/auth/project-permissions";
 import { budgetTotals, deriveAutoRisks, financeTotals, materialTotals, workTotals } from "@/lib/calculations";
 import { demoState } from "@/lib/demo-data";
 import { getDemoContext, getProjectBundleFromDb, listProjectsFromDb } from "@/lib/project-data";
+import { deleteProjectWithConfirmation, ProjectDeleteError } from "@/lib/project-delete";
 import { prisma } from "@/lib/prisma";
 import {
   serializeBudgetItem,
@@ -245,15 +246,16 @@ export async function PATCH(request: NextRequest, { params }: { params: { path?:
   }
 }
 
-export async function DELETE(_request: NextRequest, { params }: { params: { path?: string[] } }) {
+export async function DELETE(request: NextRequest, { params }: { params: { path?: string[] } }) {
   const path = pathOf(params);
 
   try {
     if (path[0] === "projects" && path[1] && path.length === 2) {
       const user = await getCurrentUser();
+      if (!user) return json({ error: "Unauthorized" }, 401);
       if (!(await canProject(user, path[1], "delete"))) return json({ error: "Forbidden" }, 403);
-      await prisma.project.delete({ where: { id: path[1] } });
-      return json({ ok: true, deletedId: path[1] });
+      const body = await request.json().catch(() => ({}));
+      return json(await deleteProjectWithConfirmation({ projectId: path[1], actor: user, confirmation: body }));
     }
 
     const direct = directResource(path);
@@ -712,6 +714,9 @@ function auditActor(user?: AppUser | null) {
 }
 
 function handleError(error: unknown) {
+  if (error instanceof ProjectDeleteError) {
+    return json({ error: error.message }, error.status);
+  }
   if (error instanceof ZodError) {
     return json({ error: "Validation error", issues: error.issues }, 400);
   }
