@@ -1,5 +1,76 @@
 # PGS Project Log
 
+## 2026-06-29 - AI-Assisted ВОР Import v1 online CORE GO
+
+Status: online CORE GO for AI-Assisted ВОР Import v1.
+
+- Online URL: https://pgs-frankfurt.onrender.com
+- Online commit: `d1783b1cebfd9cc4e1a29df09cc7cce9a1b17ce9`
+- Result: AI-Assisted ВОР Import v1 is merged, deployed online, and validated at the core online gate
+- Git SHA source: `RENDER_GIT_COMMIT`
+
+Health:
+
+- `/api/health`: HTTP 200 / `ok`
+- DB: `ok`
+- migrations: `ok`, count `6`
+- auth required: `true`
+- AI configured: `true`
+
+Pages:
+
+- `/dashboard`: 200
+- `/projects`: 200
+- `/projects/project-demo`: 200
+
+UI and DOM markers:
+
+- Command Center present
+- Project Intelligence Drill-down present
+- ВОР / Finance Intelligence present
+- import entry point present, button `Импорт ВОР`
+- ImportPanel / ВОР import UI: blocked by unauth/browser interaction; not SSR-visible until tab/action hydration
+- Preview UI: partially visible by static markers only; full interactive preview was not run
+- sidebar shell present
+- mobile drawer present
+- project tabs present
+
+Unauth guards:
+
+- `/api/auth/me`: 401
+- import preview POST with empty/no file request: 401
+- import commit POST with empty fake import id: 401
+- AI endpoint POST: 403
+- pipeline readiness: 401
+
+AI safety:
+
+- AI auto-call on page load observed: no
+- provider response observed in unauth smoke: no
+- raw internal/provider errors exposed: no
+- checked for `PrismaClient`, `DATABASE_URL`, `ZodError`, and `OPENAI_API_KEY` markers; not present
+
+Not run / not touched:
+
+- browser/viewport smoke: blocked by local browser tooling; HTTP/DOM/static smoke used
+- full authenticated ImportPanel interaction: not run
+- live AI: not run
+- mutation smoke: not run
+- upload/commit/import mutation: not run
+- deploy/redeploy: not triggered
+- Render env/secrets: unchanged
+- DB/schema/migrations: unchanged
+- old stale branch `codex/ai-assisted-vor-import-v1`: untouched
+- dirty checkout `/Users/ag/Documents/PGS`: untouched
+
+Decision:
+
+- CORE GO
+
+Next follow-up:
+
+- full authenticated/browser ImportPanel interaction smoke when browser/auth tooling is available
+
 ## 2026-06-29 - Project Intelligence Drill-down v1 shipped online
 
 Status: shipped baseline for Project Intelligence Drill-down v1.
