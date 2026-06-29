@@ -1,5 +1,60 @@
 # PGS Project Log
 
+## 2026-06-29 - Project Intelligence Drill-down v1 shipped online
+
+Status: shipped baseline for Project Intelligence Drill-down v1.
+
+- Online URL: https://pgs-frankfurt.onrender.com
+- Online commit: `57dcabe512279ae8162f6b553616483e70822751`
+- Result: Project Intelligence Drill-down v1 is merged, deployed online, and smoke-validated at the core online gate
+- Git SHA source: `RENDER_GIT_COMMIT`
+
+Validation summary:
+
+- health: GO
+- DB: `ok`
+- migrations: `ok`, count `6`
+- auth required: `true`
+- AI configured: `true`
+- `/dashboard`: GO
+- `/projects`: GO
+- `/projects/project-demo`: GO
+- Command Center present on the project overview page
+- Project Intelligence Drill-down present
+- Documents Intelligence present
+- Risk Intelligence present
+- Schedule / График Intelligence present
+- ВОР / Finance Intelligence present
+- Procurement / Снабжение Intelligence present
+- Reports / Executive Output present
+- AI Recommendations Drill-down present
+- sidebar shell present
+- mobile menu markup present
+- project tabs present
+- unauth `/api/auth/me`: 401
+- unauth AI endpoint: 403
+- unauth pipeline readiness endpoint: 401
+
+Release management:
+
+- PR #39 Project Intelligence Drill-down v1 was squash-merged into `main`
+- no Render env/secrets changes
+- no DB/schema/migration changes
+- no live AI call
+- no authenticated smoke
+- no mutation smoke
+- no manual deploy action
+
+Known follow-up:
+
+- full real-browser desktop/mobile overflow smoke remains a small manual/browser-tooling follow-up
+- this is not a code NO-GO because online health, deployed commit, core page responses, UI markers, and unauth guards were validated
+
+Next product train:
+
+- AI-Assisted ВОР Import v1
+- focus: improve the working data intake layer that feeds budget, finance, schedule, procurement, risks, documents, and AI recommendations
+
 ## 2026-06-25 - Dashboard Command Center v1 shipped online
 
 Status: shipped baseline for Dashboard / Project Overview Command Center v1.
