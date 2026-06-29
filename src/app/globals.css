@@ -1682,6 +1682,16 @@ tr:last-child td {
   background: #174f9f;
 }
 
+.button.danger-button {
+  background: #b42318;
+  border-color: #912018;
+  color: #fff;
+}
+
+.button.danger-button:hover:not(:disabled) {
+  background: #912018;
+}
+
 .button.secondary,
 .icon-button {
   background: #fff;
@@ -1845,6 +1855,44 @@ input[type="file"] {
 input[type="checkbox"] {
   accent-color: var(--blue);
   min-height: auto;
+}
+
+.danger-zone {
+  display: grid;
+  gap: 14px;
+}
+
+.danger-zone-card {
+  background: #fff7f6;
+  border: 1px solid #fecdca;
+  border-radius: var(--radius);
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+}
+
+.danger-zone-card h3 {
+  color: #7a271a;
+  margin: 4px 0 6px;
+}
+
+.danger-form {
+  background: #fff;
+  grid-template-columns: minmax(220px, 1fr) minmax(260px, 1.1fr) auto;
+}
+
+.checkbox-row {
+  align-items: center;
+  color: var(--text);
+  display: flex;
+  flex-direction: row;
+  font-size: 13px;
+  font-weight: 600;
+  gap: 8px;
+}
+
+.checkbox-row input {
+  width: auto;
 }
 
 .login-page {

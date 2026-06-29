@@ -105,7 +105,7 @@ interface ImportBatchSnapshot {
   commitResult: Record<string, unknown> | null;
 }
 
-interface PipelineData {
+export interface PipelineData {
   project: { id: string; organizationId: string; contractAmount: number; startsAt: string; endsAt: string; name: string };
   budgetItems: BudgetItem[];
   materials: Material[];
@@ -637,6 +637,10 @@ function buildReadiness(data: PipelineData, checklist: DocumentChecklistItem[], 
 export async function buildPipelineSnapshot(projectId: string): Promise<PipelineSnapshot | null> {
   const data = await loadPipelineData(projectId);
   if (!data) return null;
+  return buildPipelineSnapshotFromData(data);
+}
+
+export function buildPipelineSnapshotFromData(data: PipelineData): PipelineSnapshot {
   const documentChecklist = buildDocumentChecklist(data);
   const calculatedRisks = calculatedRiskActions(data, documentChecklist);
   const readiness = buildReadiness(data, documentChecklist, calculatedRisks);
@@ -647,7 +651,7 @@ export async function buildPipelineSnapshot(projectId: string): Promise<Pipeline
   ];
   const nextActions = postImportActions.filter((item) => item.enabled !== false).slice(0, 7);
   return {
-    projectId,
+    projectId: data.project.id,
     latestImport: data.importBatches[0] ?? null,
     readiness,
     postImportActions,

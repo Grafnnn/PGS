@@ -7,6 +7,16 @@ const askProjectAssistantMock = vi.fn();
 const buildProjectContextMock = vi.fn();
 const localAiFallbackMock = vi.fn();
 const projectFindUniqueMock = vi.fn();
+const deleteProjectWithConfirmationMock = vi.fn();
+
+class MockProjectDeleteError extends Error {
+  constructor(
+    public readonly status: number,
+    message: string
+  ) {
+    super(message);
+  }
+}
 
 vi.mock("@/lib/auth/session", () => ({
   getCurrentUser: getCurrentUserMock
@@ -28,6 +38,11 @@ vi.mock("@/lib/prisma", () => ({
       findUnique: projectFindUniqueMock
     }
   }
+}));
+
+vi.mock("@/lib/project-delete", () => ({
+  deleteProjectWithConfirmation: deleteProjectWithConfirmationMock,
+  ProjectDeleteError: MockProjectDeleteError
 }));
 
 const authorizedUser: AppUser = {
@@ -62,6 +77,7 @@ describe("catch-all AI routes", () => {
     buildProjectContextMock.mockReset();
     localAiFallbackMock.mockReset();
     projectFindUniqueMock.mockReset();
+    deleteProjectWithConfirmationMock.mockReset();
   });
 
   it("keeps unauthenticated AI requests forbidden before project lookup", async () => {
@@ -162,5 +178,51 @@ describe("catch-all AI routes", () => {
     await expect(responseJson(response)).resolves.toEqual({ error: "Project not found" });
     expect(canProjectMock).not.toHaveBeenCalled();
     expect(buildProjectContextMock).not.toHaveBeenCalled();
+  });
+
+  it("requires authentication before project delete confirmation parsing", async () => {
+    const jsonMock = vi.fn().mockResolvedValue({ confirm: true, projectName: "Демо" });
+    getCurrentUserMock.mockResolvedValue(null);
+    const { DELETE } = await import("./route");
+
+    const response = await DELETE({ json: jsonMock } as never, { params: { path: ["projects", "project-demo"] } });
+
+    expect(response.status).toBe(401);
+    await expect(responseJson(response)).resolves.toEqual({ error: "Unauthorized" });
+    expect(jsonMock).not.toHaveBeenCalled();
+    expect(canProjectMock).not.toHaveBeenCalled();
+    expect(deleteProjectWithConfirmationMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects project delete for users without delete access before confirmation parsing", async () => {
+    const jsonMock = vi.fn().mockResolvedValue({ confirm: true, projectName: "Демо" });
+    getCurrentUserMock.mockResolvedValue(authorizedUser);
+    canProjectMock.mockResolvedValue(false);
+    const { DELETE } = await import("./route");
+
+    const response = await DELETE({ json: jsonMock } as never, { params: { path: ["projects", "project-demo"] } });
+
+    expect(response.status).toBe(403);
+    await expect(responseJson(response)).resolves.toEqual({ error: "Forbidden" });
+    expect(canProjectMock).toHaveBeenCalledWith(authorizedUser, "project-demo", "delete");
+    expect(jsonMock).not.toHaveBeenCalled();
+    expect(deleteProjectWithConfirmationMock).not.toHaveBeenCalled();
+  });
+
+  it("requires exact project delete confirmation for users with delete access", async () => {
+    getCurrentUserMock.mockResolvedValue(authorizedUser);
+    canProjectMock.mockResolvedValue(true);
+    deleteProjectWithConfirmationMock.mockRejectedValue(new MockProjectDeleteError(400, "Exact project name confirmation is required."));
+    const { DELETE } = await import("./route");
+
+    const response = await DELETE(postRequest({}) as never, { params: { path: ["projects", "project-demo"] } });
+
+    expect(response.status).toBe(400);
+    await expect(responseJson(response)).resolves.toEqual({ error: "Exact project name confirmation is required." });
+    expect(deleteProjectWithConfirmationMock).toHaveBeenCalledWith({
+      projectId: "project-demo",
+      actor: authorizedUser,
+      confirmation: {}
+    });
   });
 });
