@@ -822,6 +822,7 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
             onExplain={() => void explainImport()}
             onConfirmChange={setImportConfirmed}
             onCommit={() => void commitImport()}
+            onNavigate={setActiveTab}
           />
           <PostImportActionPanel actions={postImportActions} result={importResult} onNavigate={setActiveTab} />
           <BudgetForm
@@ -1466,7 +1467,8 @@ function ImportPanel({
   onRemap,
   onExplain,
   onConfirmChange,
-  onCommit
+  onCommit,
+  onNavigate
 }: {
   file: File | null;
   mode: ImportMode;
@@ -1485,6 +1487,7 @@ function ImportPanel({
   onExplain: () => void;
   onConfirmChange: (confirmed: boolean) => void;
   onCommit: () => void;
+  onNavigate: (tab: string) => void;
 }) {
   const canCommit = Boolean(preview?.importBatchId && preview.summary.errors === 0 && confirmed && !loading);
   const replacementMode = mode !== "append";
@@ -1507,6 +1510,18 @@ function ImportPanel({
     return true;
   });
   const visiblePreviewRows = filteredRows.slice(0, 160);
+  const warningRows = preview?.summary.warningRows ?? preview?.previewRows?.filter((row) => row.status === "warning").length ?? 0;
+  const previewStatus = !preview ? "idle" : preview.summary.errors > 0 ? "blocked" : warningRows > 0 || preview.summary.unknownRows > 0 ? "needs_review" : "good";
+  const importableRows = (preview?.summary.budgetItems ?? 0) + (preview?.summary.materials ?? 0) + (preview?.summary.scheduleItems ?? 0);
+  const commitImpact = preview
+    ? [
+        `Режим: ${readableImportMode(mode)}`,
+        `К сохранению: ${importableRows} записей`,
+        `Warnings: ${preview.summary.warnings || warningRows}`,
+        `Unknown: ${preview.summary.unknownRows}`,
+        `Проект: ${preview.projectId}`
+      ]
+    : [];
   const wizardSteps = [
     ["Upload", Boolean(file)],
     ["Sheets", Boolean(preview)],
@@ -1522,8 +1537,11 @@ function ImportPanel({
       <div className="toolbar" style={{ marginBottom: 0 }}>
         <div>
           <h3>AI-assisted импорт ВОР / сметы</h3>
-          <p className="muted">Файл проходит preview, mapping, объяснение ошибок и только потом транзакционный commit.</p>
+          <p className="muted">Сначала безопасный preview без записи в рабочие данные проекта, затем ручная проверка, optional AI explanation по клику и только потом явный commit.</p>
         </div>
+        <StatusBadge tone={previewStatus === "blocked" ? "bad" : previewStatus === "needs_review" ? "warn" : previewStatus === "good" ? "good" : "info"}>
+          {readableImportPreviewStatus(previewStatus)}
+        </StatusBadge>
       </div>
 
       <div className="wizard-steps">
@@ -1539,6 +1557,7 @@ function ImportPanel({
         <div>
           <h3>1. Upload</h3>
           <p className="muted">Поддерживаются `.xlsx`, `.xls`, `.xlsm`; макросы не выполняются, формулы читаются по сохраненным значениям.</p>
+          <p className="muted">Preview сохраняет только import batch и audit trail. Бюджет, материалы и график меняются только после нажатия commit.</p>
         </div>
         <div className="form-grid">
           <label>
@@ -1560,19 +1579,24 @@ function ImportPanel({
           <section className="wizard-section">
             <div className="import-meta">
               <StatusBadge tone={preview.importBatchId ? "good" : "warn"}>{preview.importBatchId ? "Batch сохранен" : "Batch недоступен"}</StatusBadge>
+              <StatusBadge tone={previewStatus === "blocked" ? "bad" : previewStatus === "needs_review" ? "warn" : "good"}>{readableImportPreviewStatus(previewStatus)}</StatusBadge>
+              <span className="muted">Файл: {preview.fileName}</span>
+              <span className="muted">Размер: {preview.fileSize ? `${Math.round(preview.fileSize / 1024)} KB` : "-"}</span>
               <span className="muted">Parser: {preview.parserVersion}</span>
               <span className="muted">Листы: {preview.sheets.join(", ") || "-"}</span>
             </div>
             <div className="grid grid-4">
               <Kpi title="Строки" value={String(preview.summary.totalRows)} />
+              <Kpi title="Parsed" value={String(preview.summary.parsedRows)} tone={preview.summary.parsedRows ? "good" : "bad"} />
               <Kpi title="Ready" value={String(preview.summary.readyRows ?? 0)} tone={(preview.summary.readyRows ?? 0) ? "good" : undefined} />
-              <Kpi title="Warnings" value={String(preview.summary.warningRows ?? preview.summary.warnings)} tone={preview.summary.warnings ? "warn" : undefined} />
+              <Kpi title="Warnings" value={String(warningRows)} tone={warningRows ? "warn" : undefined} />
               <Kpi title="Errors" value={String(preview.summary.errorRows ?? preview.summary.errors)} tone={preview.summary.errors ? "bad" : "good"} />
             </div>
             <div className="grid grid-4">
               <Kpi title="ВОР" value={String(preview.summary.budgetItems)} />
               <Kpi title="Материалы" value={String(preview.summary.materials)} />
               <Kpi title="График" value={String(preview.summary.scheduleItems)} />
+              <Kpi title="Unknown" value={String(preview.summary.unknownRows)} tone={preview.summary.unknownRows ? "warn" : "good"} />
               <Kpi title="Сумма preview" value={compactMoney(preview.summary.estimatedTotalAmount ?? 0)} />
             </div>
           </section>
@@ -1676,23 +1700,44 @@ function ImportPanel({
               </select>
             </div>
             <DataTable
-              headers={["Статус", "Тип", "Лист", "Строка", "Раздел", "Наименование", "Кол-во", "Цена", "Сумма", "Флаги"]}
+              headers={["Статус", "№", "Тип", "Категория", "Лист", "Строка", "Раздел", "Наименование", "Ед.", "Кол-во", "Цена", "Сумма", "Conf.", "Флаги"]}
               rows={visiblePreviewRows.map((row) => [
                 <StatusBadge key={`${row.id}-status`} tone={row.status === "ready" ? "good" : row.status === "warning" ? "warn" : row.status === "error" ? "bad" : "neutral"}>
                   {row.status}
                 </StatusBadge>,
+                row.originalNumber || row.normalizedNumber || "-",
                 readableImportEntity(row.entityType),
+                readableImportRowKind(row.rowKind ?? "unknown"),
                 row.sheetName,
                 row.sourceRowNumber,
                 row.section ?? "-",
                 row.name ?? "-",
-                row.quantity !== undefined ? `${row.quantity} ${row.unit ?? ""}` : "-",
+                row.unit ?? "-",
+                row.quantity !== undefined ? String(row.quantity) : "-",
                 row.unitPrice !== undefined ? money(row.unitPrice) : "-",
                 row.totalAmount !== undefined ? money(row.totalAmount) : "-",
+                row.confidence !== undefined ? `${Math.round(row.confidence * 100)}%` : "-",
                 row.suspiciousFlags.join(", ") || "-"
               ])}
             />
           </section>
+
+          {preview.unknownRows.length > 0 && (
+            <section className="wizard-section">
+              <div className="toolbar" style={{ marginBottom: 0 }}>
+                <div>
+                  <h3>Unknown / skipped review</h3>
+                  <p className="muted">Эти строки не попадут в рабочий ВОР как реальные позиции. Проверьте их вручную или поправьте mapping.</p>
+                </div>
+                <StatusBadge tone="warn">{preview.unknownRows.length} строк</StatusBadge>
+              </div>
+              <DataTable
+                headers={["Лист", "Строка", "Причина", "Значения"]}
+                rows={preview.unknownRows.slice(0, 40).map((row) => [row.sheetName, row.rowNumber, row.reason, row.values.join(" · ")])}
+              />
+              {preview.unknownRows.length > 40 && <p className="muted">Показаны первые 40 unknown rows из {preview.unknownRows.length}.</p>}
+            </section>
+          )}
 
           <div className="import-meta">
             <StatusBadge tone={preview.summary.errors ? "bad" : "good"}>{preview.summary.errors ? "Commit заблокирован" : "Commit возможен после подтверждения"}</StatusBadge>
@@ -1745,6 +1790,11 @@ function ImportPanel({
 
           <section className="wizard-section">
             <h3>6. Commit</h3>
+            <div className="import-commit-summary">
+              {commitImpact.map((item) => (
+                <span key={item}>{item}</span>
+              ))}
+            </div>
             <div className="form-grid">
               <label>
                 Режим сохранения
@@ -1780,11 +1830,17 @@ function ImportPanel({
             <Kpi title="Errors" value={String(result.errors ?? 0)} tone={Number(result.errors ?? 0) ? "bad" : "good"} />
           </div>
           <div className="toolbar" style={{ marginBottom: 0 }}>
-            <button className="button secondary" type="button">
+            <button className="button secondary" type="button" onClick={() => onNavigate("Бюджет / ВОР")}>
               Перейти к бюджету
             </button>
-            <button className="button secondary" type="button">
+            <button className="button secondary" type="button" onClick={() => onNavigate("Материалы")}>
               Перейти к материалам
+            </button>
+            <button className="button secondary" type="button" onClick={() => onNavigate("Обзор")}>
+              Project Intelligence
+            </button>
+            <button className="button secondary" type="button" onClick={() => onNavigate("AI-помощник")}>
+              AI-рекомендации
             </button>
           </div>
         </section>
@@ -1832,6 +1888,43 @@ function readableImportEntity(value: string) {
     scheduleItem: "График",
     section: "Раздел",
     unknown: "Неизвестно"
+  };
+  return labels[value] ?? value;
+}
+
+function readableImportRowKind(value: string) {
+  const labels: Record<string, string> = {
+    section_header: "Раздел",
+    stage: "Этап",
+    work_item: "Работа",
+    material_item: "Материал",
+    equipment_item: "Техника",
+    labor_item: "ФОТ",
+    subtotal: "Итог",
+    note: "Примечание",
+    unknown: "Неизвестно"
+  };
+  return labels[value] ?? value;
+}
+
+function readableImportPreviewStatus(value: string) {
+  const labels: Record<string, string> = {
+    idle: "Ожидает файл",
+    good: "Готов к commit",
+    needs_review: "Нужна проверка",
+    blocked: "Заблокирован"
+  };
+  return labels[value] ?? value;
+}
+
+function readableImportMode(value: ImportMode) {
+  const labels: Record<ImportMode, string> = {
+    append: "добавить к текущим данным",
+    replace_budget: "заменить бюджет",
+    replace_materials: "заменить материалы",
+    replace_budget_materials: "заменить бюджет и материалы",
+    replace_schedule: "заменить график",
+    replace_all: "заменить все импортируемые блоки"
   };
   return labels[value] ?? value;
 }

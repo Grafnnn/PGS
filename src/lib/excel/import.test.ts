@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import * as XLSX from "xlsx";
 import { classifyRow } from "./import-classifier";
-import { buildCommitPlan, buildPreview, detectSheets, parseExcelBuffer, remapImportPreview, validateRows } from "./import-parser";
+import { buildCommitPlan, buildPreview, detectSheets, normalizeVorNumber, parseExcelBuffer, remapImportPreview, validateRows } from "./import-parser";
 import { detectColumns, detectHeaderRow, normalizeNumber, parseMoney } from "./import-normalizer";
 import { importPreviewCommitSchema } from "./import-types";
 
@@ -18,12 +18,29 @@ describe("excel budget import", () => {
     expect(map.note).toBe(6);
   });
 
+  it("detects alternate Russian VOR headers", () => {
+    const map = detectColumns(["№ п/п", "Наименование работ и затрат", "Единицы измерения", "Объем работ", "Расценка", "Общая стоимость"]);
+
+    expect(map.index).toBe(0);
+    expect(map.name).toBe(1);
+    expect(map.unit).toBe(2);
+    expect(map.qty).toBe(3);
+    expect(map.unitPrice).toBe(4);
+    expect(map.total).toBe(5);
+  });
+
   it("normalizes localized numbers", () => {
     expect(normalizeNumber("1 250,50")).toBe(1250.5);
     expect(normalizeNumber("6 100 руб.")).toBe(6100);
     expect(parseMoney("1.234.567,89 ₽")).toBe(1234567.89);
     expect(parseMoney("1,234.56")).toBe(1234.56);
     expect(normalizeNumber("")).toBeNull();
+  });
+
+  it("normalizes VOR row numbers with stable fallback", () => {
+    expect(normalizeVorNumber(" 1,1.2 ")).toBe("1.1.2");
+    expect(normalizeVorNumber("№ 2/А")).toBe("2/А");
+    expect(normalizeVorNumber("", 12)).toBe("row-12");
   });
 
   it("finds header rows below title blocks", () => {
@@ -114,6 +131,34 @@ describe("excel budget import", () => {
     expect(preview.summary.skippedRows).toBeGreaterThanOrEqual(1);
     expect(preview.previewRows?.some((row) => row.suspiciousFlags.includes("skippedTotalRow"))).toBe(true);
     expect(preview.sourceRows?.length).toBeGreaterThan(0);
+  });
+
+  it("parses messy Russian VOR with repeated headers, material rows and missing price warnings", () => {
+    const worksheet = XLSX.utils.aoa_to_sheet([
+      ["Локальная смета № 12"],
+      ["Объект: административное здание"],
+      ["Раздел 1. Земляные работы"],
+      ["№ п/п", "Наименование работ и затрат", "Единицы измерения", "Объем работ", "Расценка", "Общая стоимость"],
+      ["1", "Разработка грунта экскаватором", "м3", "1 250,5", "650 руб.", "812 825"],
+      ["1.1", "Поставка песка", "т", "25", "", ""],
+      ["", "Итого по разделу", "", "", "", "812 825"],
+      ["№ п/п", "Наименование работ и затрат", "Единицы измерения", "Объем работ", "Расценка", "Общая стоимость"],
+      ["2", "Неясная строка с примечанием", "м2", "", "", ""]
+    ]);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "ВОР");
+    const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" }) as Buffer;
+
+    const preview = parseExcelBuffer(buffer, "messy-vor.xlsx", "project-demo");
+
+    expect(preview.errors).toHaveLength(0);
+    expect(preview.summary.budgetItems).toBeGreaterThanOrEqual(2);
+    expect(preview.summary.materials).toBeGreaterThanOrEqual(1);
+    expect(preview.previewRows?.some((row) => row.rowKind === "material_item" && row.suspiciousFlags.includes("missingPrice"))).toBe(true);
+    expect(preview.previewRows?.some((row) => row.status === "skipped" && row.warnings.some((warning) => warning.includes("Повторная строка заголовков")))).toBe(true);
+    expect(preview.previewRows?.some((row) => row.normalizedNumber === "1.1")).toBe(true);
+    expect(preview.summary.unknownRows).toBeGreaterThanOrEqual(1);
+    expect(buildCommitPlan(preview, "append").budgetItems.length).toBeGreaterThanOrEqual(2);
   });
 
   it("detects hidden rows from workbook metadata before import", () => {

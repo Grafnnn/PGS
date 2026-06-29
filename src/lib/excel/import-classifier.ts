@@ -16,12 +16,22 @@ const materialKeywords = [
   "плита",
   "профиль",
   "лист",
-  "утепл"
+  "утепл",
+  "расходник",
+  "поставка",
+  "поставк",
+  "закладн",
+  "метизы",
+  "праймер",
+  "штукатур",
+  "шпатлев",
+  "герметик",
+  "клей"
 ];
 
-const equipmentKeywords = ["экскаватор", "кран", "самосвал", "техника", "механизм", "машино"];
+const equipmentKeywords = ["экскаватор", "кран", "самосвал", "техника", "механизм", "машино", "оборудование", "агрегат", "подъемник", "погрузчик"];
 const overheadKeywords = ["наклад", "управление", "администр", "охрана", "бытов"];
-const payrollKeywords = ["фот", "зарплат", "рабоч", "персонал"];
+const payrollKeywords = ["фот", "зарплат", "рабоч", "персонал", "трудозатрат", "чел час", "человеко"];
 
 export interface ClassificationState {
   currentSection: string;
@@ -86,7 +96,7 @@ export function classifyRow(raw: RawSheetRow, columns: ColumnMap, state: Classif
     };
   }
 
-  if (hasUnit && hasQty && hasMoney) {
+  if (hasUnit && hasQty) {
     const plannedUnitPrice = unitPrice ?? (total && qty ? total / qty : 0);
     const kind = inferBudgetKind(name, unit);
     const budgetItem: ImportBudgetItem = {

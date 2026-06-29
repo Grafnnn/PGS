@@ -2,6 +2,7 @@ import * as XLSX from "xlsx";
 import type {
   ColumnMap,
   ColumnTarget,
+  AssistedImportRowKind,
   ImportCommitPlan,
   ImportMode,
   ImportPreview,
@@ -165,6 +166,7 @@ export function parseExcelBuffer(buffer: Buffer, fileName: string, projectId: st
             columns,
             status: "skipped",
             entityType: "unknown",
+            rowKind: "note",
             warnings: ["Строка скрыта в Excel и не импортируется по умолчанию."],
             flags: ["hiddenRow"],
             normalizedJson: { values: rowValues(sheet.rows[rowIndex]) }
@@ -180,6 +182,22 @@ export function parseExcelBuffer(buffer: Buffer, fileName: string, projectId: st
         formulaCells: sheet.formulaCellsByRow.get(rowNumber),
         hidden
       };
+      if (looksLikeHeader(raw.values)) {
+        ignoredRows += 1;
+        previewRows.push(
+          previewRow({
+            raw,
+            columns,
+            status: "skipped",
+            entityType: "unknown",
+            rowKind: "note",
+            warnings: ["Повторная строка заголовков распознана и будет пропущена."],
+            flags: ["lowConfidence"],
+            normalizedJson: { values: rowValues(raw.values) }
+          })
+        );
+        continue;
+      }
       if (isLikelyTotalRow(raw, columns)) {
         ignoredRows += 1;
         previewRows.push(
@@ -188,6 +206,7 @@ export function parseExcelBuffer(buffer: Buffer, fileName: string, projectId: st
             columns,
             status: "skipped",
             entityType: "unknown",
+            rowKind: "subtotal",
             warnings: ["Итоговая строка распознана и будет пропущена."],
             flags: ["skippedTotalRow"],
             normalizedJson: { values: rowValues(raw.values) }
@@ -329,6 +348,13 @@ export function validateRows(preview: ImportPreview) {
   for (const item of preview.scheduleItems) {
     if (new Date(item.endsAt) < new Date(item.startsAt)) {
       errors.push(`Строка ${item.sheetName}:${item.rowNumber}: дата окончания раньше даты начала.`);
+    }
+  }
+
+  const budgetSections = new Set(preview.budgetItems.map((item) => item.section.toLowerCase()));
+  for (const section of preview.sections) {
+    if (!budgetSections.has(section.name.toLowerCase())) {
+      warnings.push(`Раздел "${section.name}" распознан, но внутри него нет импортируемых позиций ВОР.`);
     }
   }
 
@@ -528,8 +554,26 @@ export function remapImportPreview(preview: ImportPreview, mappingOverrides: Arr
             columns,
             status: "skipped",
             entityType: "unknown",
+            rowKind: "note",
             warnings: ["Строка скрыта в Excel и не импортируется по умолчанию."],
             flags: ["hiddenRow"],
+            normalizedJson: { values: source.values }
+          })
+        );
+        continue;
+      }
+
+      if (looksLikeHeader(raw.values)) {
+        ignoredRows += 1;
+        previewRows.push(
+          previewRow({
+            raw,
+            columns,
+            status: "skipped",
+            entityType: "unknown",
+            rowKind: "note",
+            warnings: ["Повторная строка заголовков распознана и будет пропущена."],
+            flags: ["lowConfidence"],
             normalizedJson: { values: source.values }
           })
         );
@@ -544,6 +588,7 @@ export function remapImportPreview(preview: ImportPreview, mappingOverrides: Arr
             columns,
             status: "skipped",
             entityType: "unknown",
+            rowKind: "subtotal",
             warnings: ["Итоговая строка распознана и будет пропущена."],
             flags: ["skippedTotalRow"],
             normalizedJson: { values: source.values }
@@ -647,6 +692,7 @@ function previewRowFromClassified(raw: RawSheetRow, columns: ColumnMap, classifi
       columns,
       status: "ready",
       entityType: "section",
+      rowKind: rowKindForClassified(classified),
       section: classified.section.name,
       name: classified.section.name,
       normalizedJson: toRecord(classified.section)
@@ -664,6 +710,7 @@ function previewRowFromClassified(raw: RawSheetRow, columns: ColumnMap, classifi
       columns,
       status: "ready",
       entityType: "scheduleItem",
+      rowKind: "work_item",
       name: classified.scheduleItem.name,
       quantity: classified.scheduleItem.plannedQty,
       normalizedJson: toRecord(classified.scheduleItem)
@@ -675,6 +722,7 @@ function previewRowFromClassified(raw: RawSheetRow, columns: ColumnMap, classifi
       columns,
       status: "warning",
       entityType: "unknown",
+      rowKind: "unknown",
       name: classified.unknown.values[0],
       warnings: [classified.unknown.reason],
       flags: ["unknownClassification"],
@@ -714,6 +762,7 @@ function previewRowFromBudget(raw: RawSheetRow, columns: ColumnMap, item: Import
     columns,
     status: errors.length ? "error" : warnings.length ? "warning" : "ready",
     entityType,
+    rowKind: rowKindForBudgetKind(item.kind, entityType),
     section: item.section,
     name: item.name,
     unit: item.unit,
@@ -732,6 +781,7 @@ function previewRow(input: {
   columns: ColumnMap;
   status: ImportPreviewRow["status"];
   entityType: ImportPreviewRow["entityType"];
+  rowKind?: AssistedImportRowKind;
   section?: string;
   name?: string;
   unit?: string;
@@ -746,10 +796,15 @@ function previewRow(input: {
   const quantity = input.quantity ?? parseQuantity(cell(input.raw.values, input.columns.qty)) ?? undefined;
   const unitPrice = input.unitPrice ?? parseMoney(cell(input.raw.values, input.columns.unitPrice)) ?? undefined;
   const totalAmount = input.totalAmount ?? parseMoney(cell(input.raw.values, input.columns.total)) ?? undefined;
+  const originalNumber = normalizeText(cell(input.raw.values, input.columns.index)) || undefined;
   return {
     id: `${input.raw.sheetName}:${input.raw.rowNumber}`,
     sheetName: input.raw.sheetName,
     sourceRowNumber: input.raw.rowNumber,
+    originalNumber,
+    normalizedNumber: normalizeVorNumber(originalNumber, input.raw.rowNumber),
+    rowKind: input.rowKind ?? rowKindForPreview(input.entityType, input.status),
+    confidence: confidenceForPreview(input.status, input.entityType, input.flags ?? [], input.warnings ?? [], input.errors ?? []),
     status: input.status,
     entityType: input.entityType,
     section: input.section,
@@ -763,6 +818,48 @@ function previewRow(input: {
     errors: input.errors ?? [],
     suspiciousFlags: Array.from(new Set(input.flags ?? []))
   };
+}
+
+export function normalizeVorNumber(value: unknown, fallbackRowNumber?: number) {
+  const text = normalizeText(value)
+    .replace(/^№\s*/i, "")
+    .replace(/\s+/g, "")
+    .replace(/[,;]/g, ".")
+    .replace(/[^\d.a-zа-я/-]/gi, "");
+  if (text && /[\dа-яa-z]/i.test(text)) return text;
+  return fallbackRowNumber ? `row-${fallbackRowNumber}` : "";
+}
+
+function rowKindForClassified(classified: ClassifiedRow): AssistedImportRowKind {
+  if (classified.kind === "section") return /этап/i.test(classified.section.name) ? "stage" : "section_header";
+  if (classified.kind === "schedule_item") return "work_item";
+  if (classified.kind === "unknown") return "unknown";
+  if (classified.kind === "budget_item") return rowKindForBudgetKind(classified.budgetItem.kind, "budgetItem");
+  if (classified.kind === "material") return "material_item";
+  return "unknown";
+}
+
+function rowKindForBudgetKind(kind: ImportPreview["budgetItems"][number]["kind"], entityType: "budgetItem" | "material"): AssistedImportRowKind {
+  if (entityType === "material" || kind === "material") return "material_item";
+  if (kind === "equipment") return "equipment_item";
+  if (kind === "payroll") return "labor_item";
+  return "work_item";
+}
+
+function rowKindForPreview(entityType: ImportPreviewRow["entityType"], status: ImportPreviewRow["status"]): AssistedImportRowKind {
+  if (status === "skipped") return "note";
+  if (entityType === "section") return "section_header";
+  if (entityType === "material") return "material_item";
+  if (entityType === "scheduleItem" || entityType === "budgetItem") return "work_item";
+  return "unknown";
+}
+
+function confidenceForPreview(status: ImportPreviewRow["status"], entityType: ImportPreviewRow["entityType"], flags: ImportSuspiciousFlag[], warnings: string[], errors: string[]) {
+  if (status === "error" || errors.length) return 0.2;
+  if (entityType === "unknown") return 0.25;
+  if (status === "skipped") return flags.includes("skippedTotalRow") ? 0.85 : 0.55;
+  const penalty = Math.min(warnings.length * 0.12 + flags.filter((flag) => flag !== "amountMismatch").length * 0.1, 0.35);
+  return Number(Math.max(0.35, Math.min(0.98, 0.92 - penalty)).toFixed(2));
 }
 
 function markRowWarning(row: ImportPreviewRow | undefined, warning: string, flag: ImportSuspiciousFlag) {

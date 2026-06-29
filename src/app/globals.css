@@ -2084,6 +2084,24 @@ input[type="checkbox"] {
   gap: 8px 12px;
 }
 
+.import-commit-summary {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.import-commit-summary span {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 650;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  padding: 8px 10px;
+}
+
 .checkbox-row {
   align-items: center;
   display: flex;
