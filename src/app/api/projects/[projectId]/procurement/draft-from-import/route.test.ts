@@ -44,6 +44,15 @@ describe("procurement draft-from-import route", () => {
     expect(commitProcurementDraftMock).not.toHaveBeenCalled();
   });
 
+  it("rejects unauthenticated preview before building draft data", async () => {
+    requireProjectAccessMock.mockResolvedValue({ response: new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 }) });
+    const response = await POST(request({}), { params: { projectId: "project-demo" } });
+    expect(response!.status).toBe(401);
+    expect(loadPipelineDataMock).not.toHaveBeenCalled();
+    expect(buildProcurementDraftMock).not.toHaveBeenCalled();
+    expect(commitProcurementDraftMock).not.toHaveBeenCalled();
+  });
+
   it("requires edit permission and explicit confirmation for commit", async () => {
     const response = await POST(request({ commit: true }), { params: { projectId: "project-demo" } });
     expect(response!.status).toBe(409);
