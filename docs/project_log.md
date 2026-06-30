@@ -1,5 +1,83 @@
 # PGS Project Log
 
+## 2026-07-01 - Procurement & Materials Intelligence v1 online CORE GO
+
+Status: shipped baseline for Procurement & Materials Intelligence v1.
+
+- Online URL: https://pgs-frankfurt.onrender.com
+- Online commit: `a73046c52eb1082a56164d9565c521b0a7447a80`
+- Feature commit: `1663e363b02093adfba1f78574fda5b07daca003`
+- PR: #45 Procurement & Materials Intelligence v1
+- Result: Procurement & Materials Intelligence v1 is merged, deployed online, and validated at the core online gate
+- Git SHA source: `RENDER_GIT_COMMIT`
+
+Deployment note:
+
+- Render did not auto-deploy immediately after PR #45 merge.
+- Empty trigger commit `a73046c52eb1082a56164d9565c521b0a7447a80` was pushed to `main` to retrigger Render deploy.
+- The trigger commit changes no application code; it contains PR #45 through parent commit `1663e363b02093adfba1f78574fda5b07daca003`.
+
+Health:
+
+- `/api/health`: HTTP 200 / `ok`
+- migrations: `ok`, count `6`
+- auth required: `true`
+- AI configured: `true`
+
+Pages:
+
+- `/dashboard`: 200
+- `/projects`: 200
+- `/projects/project-demo`: 200
+
+UI and DOM markers:
+
+- `Материалы`: present
+- Procurement / `Снабжение` / `Заявки`: present
+- Project Intelligence: present
+- `Импорт` / `ВОР`: present
+- procurement workspace SSR marker: not visible in static HTML fetch because the project workspace is client-rendered; covered by component render tests
+
+Unauth guards:
+
+- `/api/auth/me`: 401
+- unauth procurement preview: 401
+- unauth procurement commit: 401
+- unauth AI summary: 403
+- unauth project DELETE: 401
+
+Safety:
+
+- preview remains read-only
+- procurement commit remains an explicit authenticated user action
+- unknown/incomplete rows are not silently inserted into supply draft items
+- no live AI run
+- no authenticated mutation smoke
+- no upload/import/procurement commit run
+- no Render env/secrets changes
+- no DB/schema/migration changes
+- no real client files used
+- secrets printed: `false`
+
+Validation already passed before merge:
+
+- GitHub Actions CI #91: success
+- `pnpm test`: 151/151
+- `pnpm lint`: pass
+- `pnpm prisma generate`: pass
+- `pnpm prisma validate`: pass
+- `pnpm exec tsc --noEmit`: pass
+- `pnpm build`: pass
+
+Known follow-up:
+
+- Full browser/hydration viewport proof is not claimed in this gate because local Playwright/Chrome tooling was unavailable.
+- Authenticated procurement mutation smoke remains optional and should use a disposable project/session only.
+
+Conclusion:
+
+- Procurement & Materials Intelligence v1 is online/core green and recorded as shipped baseline.
+
 ## 2026-06-30 - PR #43 ImportPanel/data-flow API SMOKE GO
 
 Status: API SMOKE GO for PR #43 Authenticated ImportPanel E2E + ВОР-to-Intelligence Data Flow v1 + Admin Project Delete.
