@@ -218,6 +218,8 @@ export function ProjectIntelligenceDrilldown({
           </SectionHeader>
           <div className="intelligence-metrics">
             <StatusInsightCard title="Дефицит" value={String(model.procurement.deficitCount)} detail="материалы ниже потребности" tone={model.procurement.deficitCount ? "bad" : "good"} />
+            <StatusInsightCard title="Кандидаты" value={String(model.procurement.candidateCount)} detail={model.procurement.readinessLabel} tone={model.procurement.candidateCount ? "warn" : model.procurement.tone} />
+            <StatusInsightCard title="Оценка draft" value={model.procurement.estimatedDraftTotal} detail={`Warning ${model.procurement.warningCount}`} tone={model.procurement.warningCount ? "warn" : "info"} />
             <StatusInsightCard title="Активные заявки" value={String(model.procurement.activeRequestCount)} detail="draft/submitted/ordered" tone={model.procurement.activeRequestCount ? "warn" : "info"} />
           </div>
           {model.procurement.empty ? (

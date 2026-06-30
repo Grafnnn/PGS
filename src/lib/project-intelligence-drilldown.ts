@@ -1,4 +1,5 @@
 import { budgetTotals, deriveAutoRisks, financeTotals, materialTotals, workTotals } from "@/lib/calculations";
+import { buildProcurementIntelligenceModel } from "@/lib/procurement-intelligence";
 import type { DocumentChecklistItem, PipelineAction, PipelineReadiness } from "@/lib/project-pipeline";
 import type { BudgetItem, DailyReport, Material, Payment, ProcurementRequest, Project, Risk, ScheduleItem } from "@/lib/types";
 
@@ -111,7 +112,11 @@ export type ProjectIntelligenceDrilldownModel = {
   procurement: {
     tone: DrilldownTone;
     deficitCount: number;
+    candidateCount: number;
     activeRequestCount: number;
+    readinessLabel: string;
+    estimatedDraftTotal: string;
+    warningCount: number;
     deficitItems: Array<{ name: string; detail: string; tone: DrilldownTone }>;
     requests: Array<{ title: string; detail: string; tone: DrilldownTone }>;
     empty: boolean;
@@ -198,6 +203,11 @@ export function buildProjectIntelligenceDrilldownModel(input: ProjectIntelligenc
   const materialStats = materialTotals(materials);
   const finance = financeTotals(payments);
   const autoRisks = deriveAutoRisks(scheduleItems, materials, payments);
+  const procurementIntelligence = buildProcurementIntelligenceModel({
+    projectName: project.name ?? "Проект",
+    materials,
+    procurementRequests
+  });
   const allRisks = [...risks, ...autoRisks].filter((risk) => risk.status !== "closed");
   const criticalRisks = allRisks.filter((risk) => risk.priority === "critical");
   const highRisks = allRisks.filter((risk) => risk.priority === "high");
@@ -207,7 +217,7 @@ export function buildProjectIntelligenceDrilldownModel(input: ProjectIntelligenc
   const budgetDeviation = budget.totalForecastCost - budget.totalPlannedCost;
   const activeRequests = procurementRequests.filter((request) => !["closed", "rejected"].includes(request.status));
   const financeTone: DrilldownTone = finance.cashGap < 0 || budgetDeviation > 0 ? "bad" : budget.forecastProfit < 0 ? "warn" : "good";
-  const procurementTone: DrilldownTone = materialStats.deficitItems.length ? "bad" : activeRequests.length ? "warn" : materials.length ? "good" : "info";
+  const procurementTone: DrilldownTone = procurementIntelligence.tone === "neutral" ? "info" : procurementIntelligence.tone;
   const scheduleTone: DrilldownTone = works.overdueItems.length ? "bad" : scheduleItems.length ? "info" : "neutral";
   const riskTone: DrilldownTone = criticalRisks.length ? "bad" : highRisks.length || allRisks.length ? "warn" : "good";
   const reportsTone: DrilldownTone = reports.length ? "info" : "warn";
@@ -218,6 +228,17 @@ export function buildProjectIntelligenceDrilldownModel(input: ProjectIntelligenc
       ...drilldownAiScenarios.flatMap((item) => item.data)
     ])
   ).slice(0, 10);
+  const procurementSignals = procurementIntelligence.candidates.length
+    ? procurementIntelligence.candidates.slice(0, 5).map((material) => ({
+        name: material.name,
+        detail: `${material.deficitQty} ${material.unit} · ${material.sourceSection} · ${material.suggestedAction}`,
+        tone: material.warnings.length ? "warn" as const : "bad" as const
+      }))
+    : materialStats.deficitItems.slice(0, 5).map((material) => ({
+        name: material.name,
+        detail: `Требуется ${material.requiredQty} ${material.unit}, доставлено ${material.deliveredQty} ${material.unit}, нужно к ${readableDate(material.neededAt)}`,
+        tone: material.status === "required" ? "bad" as const : "warn" as const
+      }));
 
   return {
     nav: [
@@ -225,7 +246,7 @@ export function buildProjectIntelligenceDrilldownModel(input: ProjectIntelligenc
       { id: "risks", label: "Риски", tone: riskTone, count: allRisks.length },
       { id: "schedule", label: "График", tone: scheduleTone, count: works.overdueItems.length },
       { id: "finance-vor", label: "ВОР / финансы", tone: financeTone },
-      { id: "procurement", label: "Снабжение", tone: procurementTone, count: materialStats.deficitItems.length },
+      { id: "procurement", label: "Снабжение", tone: procurementTone, count: procurementIntelligence.summary.candidates || materialStats.deficitItems.length },
       { id: "reports", label: "Executive", tone: reportsTone },
       { id: "ai-recommendations", label: "AI", tone: "info", count: drilldownAiScenarios.length }
     ],
@@ -291,12 +312,12 @@ export function buildProjectIntelligenceDrilldownModel(input: ProjectIntelligenc
     procurement: {
       tone: procurementTone,
       deficitCount: materialStats.deficitItems.length,
+      candidateCount: procurementIntelligence.summary.candidates,
       activeRequestCount: activeRequests.length,
-      deficitItems: materialStats.deficitItems.slice(0, 5).map((material) => ({
-        name: material.name,
-        detail: `Требуется ${material.requiredQty} ${material.unit}, доставлено ${material.deliveredQty} ${material.unit}, нужно к ${readableDate(material.neededAt)}`,
-        tone: material.status === "required" ? "bad" : "warn"
-      })),
+      readinessLabel: procurementIntelligence.readiness.label,
+      estimatedDraftTotal: compactMoney(procurementIntelligence.summary.estimatedTotal),
+      warningCount: procurementIntelligence.summary.warnings + procurementIntelligence.summary.missingRows,
+      deficitItems: procurementSignals,
       requests: activeRequests.slice(0, 4).map((request) => ({
         title: request.title,
         detail: `${request.items.length} поз. · ${readableDate(request.neededAt)} · ${request.status}`,

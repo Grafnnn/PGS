@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { AlertTriangle, BarChart3, Bot, ClipboardList, FileText, Landmark, LayoutList, Package, Pencil, Plus, Search, Send, Table2, TimerReset, Trash2, Truck, Users } from "lucide-react";
 import { ProjectCommandCenter } from "@/components/project-command-center";
 import { ProjectIntelligenceDrilldown } from "@/components/project-intelligence-drilldown";
+import { ProcurementIntelligenceWorkspace } from "@/components/procurement-intelligence-workspace";
 import { budgetTotals, deriveAutoRisks, financeTotals, materialTotals, money, percent, workTotals } from "@/lib/calculations";
 import type { ImportExplanation, ImportMode, ImportPreview, ImportSheetMapping } from "@/lib/excel/import-types";
 import { drilldownAiScenarios, type AiInsightResponse, type AiScenario } from "@/lib/project-intelligence-drilldown";
@@ -43,6 +44,7 @@ type ImportHistoryItem = {
   createdBy?: string | null;
   createdAt: string;
   committedAt: string | null;
+  preview?: Pick<ImportPreview, "previewRows" | "unknownRows" | "summary">;
 };
 
 const tabs = [
@@ -250,7 +252,7 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
   }, [initialBundle.project.id]);
 
   useEffect(() => {
-    if (activeTab !== "Бюджет / ВОР") return;
+    if (!["Бюджет / ВОР", "Материалы", "Заявки", "Аналитика"].includes(activeTab)) return;
     void loadImportHistory();
   }, [activeTab, loadImportHistory]);
 
@@ -960,6 +962,17 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
 
       {activeTab === "Материалы" && (
         <Panel title="Материалы и снабжение" icon={<Package size={18} />}>
+          <ProcurementIntelligenceWorkspace
+            projectName={initialBundle.project.name}
+            materials={materials}
+            procurementRequests={procurementRequests}
+            importHistory={importHistory}
+            draft={pipelineDraft}
+            loading={pipelineLoading}
+            onPreview={() => void runPipelineDraft("procurement")}
+            onCommit={() => void runPipelineDraft("procurement", true)}
+            onNavigate={setActiveTab}
+          />
           <MaterialHealth items={materials} />
           {editingMaterial && (
             <MaterialEditForm

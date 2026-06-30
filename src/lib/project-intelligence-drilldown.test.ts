@@ -46,6 +46,9 @@ describe("project intelligence drill-down model", () => {
     expect(model.schedule.ctaTab).toBe("График");
     expect(model.financeVor.financeTab).toBe("Финансы");
     expect(model.procurement.requestTab).toBe("Заявки");
+    expect(model.procurement.candidateCount).toBeGreaterThanOrEqual(0);
+    expect(model.procurement.readinessLabel).toBeTruthy();
+    expect(model.procurement.estimatedDraftTotal).toContain("₽");
     expect(model.reports.executiveScenario).toBe("executive-report");
     expect(model.ai.scenarios).toHaveLength(drilldownAiScenarios.length);
     expect(model.ai.limitations).toContain("Нет КС");
