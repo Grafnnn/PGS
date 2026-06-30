@@ -1,5 +1,86 @@
 # PGS Project Log
 
+## 2026-06-30 - PR #43 ImportPanel/data-flow API SMOKE GO
+
+Status: API SMOKE GO for PR #43 Authenticated ImportPanel E2E + ВОР-to-Intelligence Data Flow v1 + Admin Project Delete.
+
+- Online URL: https://pgs-frankfurt.onrender.com
+- Online commit: `3fc08932cc9f30289b80a42622d7f5b3092bcf11`
+- GitHub `main`: `3fc08932cc9f30289b80a42622d7f5b3092bcf11`
+- Render SHA: `3fc08932cc9f30289b80a42622d7f5b3092bcf11`
+- Result: backend/data-flow online readiness is green; full browser proof is not claimed
+- Git SHA source: `RENDER_GIT_COMMIT`
+
+Health:
+
+- `/api/health`: HTTP 200 / `ok`
+- DB: `ok`
+- migrations: `ok`, count `6`
+- storage: local, writable
+- auth required: `true`
+- AI configured: `true`
+
+Validated:
+
+- online/core smoke passed
+- authenticated runtime/API smoke passed through the protected staging smoke endpoint
+- runtime login passed
+- `/api/auth/me` passed under smoke auth
+- `project-demo` read passed
+- `project-smoke` read passed
+- synthetic ВОР preview passed
+- deterministic explanation passed
+- explicit import commit passed
+- committed 3 synthetic records
+- import history read passed
+- data-flow passed through readiness, post-import actions, materials, procurement preview, procurement commit, procurement cleanup, schedule draft, cashflow draft, document checklist, and intelligence
+- cleanup passed
+- temporary import role was restored
+- unauth `/api/auth/me`: 401
+- unauth import preview: 401
+- unauth project DELETE: 401
+- unauth AI summary: 403
+- `project-demo` page remained readable after cleanup
+- `project-smoke` page remained readable after cleanup
+- secrets printed: `false`
+
+Runtime import smoke details:
+
+- project: `project-smoke`
+- preview: 2 budget items, 1 material, 0 warnings, 0 errors
+- commit mode: `append`
+- commit result: 3 created, 0 updated, 1 skipped, 0 errors, 0 warnings
+- commit split: 2 budget items, 1 material, 0 schedule items
+- cleanup: `pass`
+- temporary permission scope: restored
+
+Pipeline smoke details:
+
+- readiness: `partial`, score `40`
+- procurement preview items: `1`
+- procurement created: `1`
+- procurement cleanup: `pass`
+- schedule preview items: `1`
+- cashflow preview items: `1`
+
+Not run / not touched:
+
+- full browser upload interaction: not claimed
+- full browser commit click: not claimed
+- admin browser delete execution of a disposable project: not claimed
+- live AI: not run
+- real client files: not used
+- `project-demo`: not mutated or deleted
+- Render env/secrets: unchanged
+- DB/schema/migrations: unchanged
+- manual deploy/redeploy: not triggered
+- dirty checkout `/Users/ag/Documents/PGS`: untouched
+
+Conclusion:
+
+- PR #43 is green for backend/data-flow online readiness.
+- Full browser proof remains an optional follow-up gate requiring approved `SMOKE_EMAIL` / `SMOKE_PASSWORD` or another safe authenticated admin browser session.
+
 ## 2026-06-29 - AI-Assisted ВОР Import v1 online CORE GO
 
 Status: online CORE GO for AI-Assisted ВОР Import v1.
