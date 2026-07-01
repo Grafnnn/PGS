@@ -3,6 +3,8 @@ import { money } from "@/lib/calculations";
 import { loadProjectsForPage } from "@/lib/project-page-data";
 import { ProjectsIndex } from "@/components/projects-index";
 
+export const dynamic = "force-dynamic";
+
 function compactMoney(value: number) {
   const absolute = Math.abs(value);
   if (absolute >= 1_000_000_000) return `${(value / 1_000_000_000).toLocaleString("ru-RU", { maximumFractionDigits: 1 })} млрд ₽`;
