@@ -1,8 +1,8 @@
 import Link from "next/link";
+import type { Route } from "next";
 import { AlertTriangle, Banknote, BarChart3, CalendarClock, ClipboardList, FileWarning, FolderKanban, PackageCheck, Sparkles, TrendingUp } from "lucide-react";
 import { budgetTotals, deriveAutoRisks, financeTotals, materialTotals, money, percent, workTotals } from "@/lib/calculations";
-import { demoState, getProjectBundle } from "@/lib/demo-data";
-import { getProjectBundleFromDb, listProjectsFromDb } from "@/lib/project-data";
+import { loadDashboardData } from "@/lib/project-page-data";
 
 function compactMoney(value: number) {
   const absolute = Math.abs(value);
@@ -12,8 +12,19 @@ function compactMoney(value: number) {
 }
 
 export default async function DashboardPage() {
-  const bundle = (await getProjectBundleFromDb("project-demo").catch(() => null)) ?? getProjectBundle("project-demo");
-  const projects = (await listProjectsFromDb().catch(() => null)) ?? demoState.projects;
+  const { projects, bundle: loadedBundle, primaryProjectHref } = await loadDashboardData();
+  const primaryProjectRoute = primaryProjectHref as Route;
+  const bundle = loadedBundle ?? {
+    project: { contractAmount: 0 },
+    budgetItems: [],
+    scheduleItems: [],
+    materials: [],
+    procurementRequests: [],
+    payments: [],
+    dailyReports: [],
+    risks: [],
+    aiMessages: []
+  };
   const budget = budgetTotals(bundle.project.contractAmount, bundle.budgetItems);
   const works = workTotals(bundle.scheduleItems);
   const finance = financeTotals(bundle.payments);
@@ -55,15 +66,15 @@ export default async function DashboardPage() {
           </div>
         </div>
         <div className="page-header-actions">
-          <Link className="button secondary" href="/projects/project-demo">
+          <Link className="button secondary" href={primaryProjectRoute}>
             <PackageCheck size={18} />
             Импорт ВОР
           </Link>
-          <Link className="button secondary" href="/projects/project-demo">
+          <Link className="button secondary" href={primaryProjectRoute}>
             <ClipboardList size={18} />
             Добавить рапорт
           </Link>
-          <Link className="button primary" href="/projects/project-demo">
+          <Link className="button primary" href={primaryProjectRoute}>
             <FolderKanban size={18} />
             Открыть объект
           </Link>
@@ -96,10 +107,10 @@ export default async function DashboardPage() {
             ))}
           </div>
           <div className="quick-actions">
-            <Link className="button secondary" href="/projects/project-demo">Сформировать отчет</Link>
-            <Link className="button secondary" href="/projects/project-demo">Проверить риски</Link>
-            <Link className="button secondary" href="/projects/project-demo">Собрать заявку</Link>
-            <Link className="button secondary" href="/projects/project-demo">Подготовить письмо</Link>
+            <Link className="button secondary" href={primaryProjectRoute}>Сформировать отчет</Link>
+            <Link className="button secondary" href={primaryProjectRoute}>Проверить риски</Link>
+            <Link className="button secondary" href={primaryProjectRoute}>Собрать заявку</Link>
+            <Link className="button secondary" href={primaryProjectRoute}>Подготовить письмо</Link>
           </div>
         </div>
         <div className="panel stack">
@@ -143,7 +154,7 @@ export default async function DashboardPage() {
             <h2>Требует внимания</h2>
             <p className="muted">Сводка по просрочкам, рискам, заявкам и перерасходу, которые стоит разобрать первыми.</p>
           </div>
-          <Link className="button secondary" href="/projects/project-demo">
+          <Link className="button secondary" href={primaryProjectRoute}>
             <Sparkles size={18} />
             Открыть AI-анализ
           </Link>
