@@ -1,7 +1,6 @@
 import { Plus } from "lucide-react";
-import { demoState } from "@/lib/demo-data";
 import { money } from "@/lib/calculations";
-import { listProjectsFromDb } from "@/lib/project-data";
+import { loadProjectsForPage } from "@/lib/project-page-data";
 import { ProjectsIndex } from "@/components/projects-index";
 
 function compactMoney(value: number) {
@@ -12,7 +11,7 @@ function compactMoney(value: number) {
 }
 
 export default async function ProjectsPage() {
-  const projects = (await listProjectsFromDb().catch(() => null)) ?? demoState.projects;
+  const { projects } = await loadProjectsForPage();
 
   return (
     <main className="page">
