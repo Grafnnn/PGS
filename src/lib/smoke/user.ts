@@ -48,7 +48,7 @@ export function validateStagingSmokeUserConfig(env: Record<string, string | unde
   const passwordError = validatePasswordCandidate(password);
   if (passwordError) throw new Error(passwordError);
 
-  const includeDemoProject = env.SMOKE_INCLUDE_PROJECT_DEMO !== "false";
+  const includeDemoProject = env.SMOKE_INCLUDE_PROJECT_DEMO === "true";
   return {
     email,
     password,

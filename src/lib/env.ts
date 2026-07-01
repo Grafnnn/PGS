@@ -28,6 +28,7 @@ const envSchema = z.object({
   FIRST_ADMIN_EMAIL: z.string().email().optional(),
   FIRST_ADMIN_PASSWORD: z.string().optional(),
   FIRST_ADMIN_NAME: z.string().default("PGS Admin"),
+  SEED_DEMO_PROJECT: z.enum(["true", "false"]).optional(),
   MAX_UPLOAD_MB: z.coerce.number().positive().max(250).default(50),
   UPLOAD_DIR: z.string().default("./storage/uploads"),
   UPLOAD_STORAGE_PROVIDER: z.enum(["local", "s3"]).default("local"),

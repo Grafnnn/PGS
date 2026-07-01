@@ -11,7 +11,7 @@ import { assertSmokeMutationTarget, SMOKE_PROJECT_ID } from "./cleanup";
 import { CREATE_STAGING_SMOKE_USER_CONFIRM, createOrRotateStagingSmokeUser, type StagingSmokeUserReport } from "./user";
 
 const STAGING_SMOKE_EMAIL = "smoke+staging-runtime@pgs.local";
-const AI_SMOKE_PROMPT = "Кратко перечисли 3 риска по демо-проекту на основании доступного контекста. Если данных недостаточно, так и скажи.";
+const AI_SMOKE_PROMPT = "Кратко проверь smoke-проект и скажи, каких данных не хватает для управленческого анализа.";
 
 type SmokeStatus = "pass" | "fail" | "skip";
 
@@ -737,19 +737,13 @@ export async function runStagingSmokeBootstrap(input: RuntimeSmokeInput): Promis
   }
 
   try {
-    checks.push(check("project-demo read", await get(input.baseUrl, "/api/projects/project-demo", sessionCookie, input.requestId), [200]));
-  } catch (error) {
-    checks.push(failed("project-demo read", error));
-  }
-
-  try {
     checks.push(check("project-smoke read", await get(input.baseUrl, "/api/projects/project-smoke", sessionCookie, input.requestId), [200]));
   } catch (error) {
     checks.push(failed("project-smoke read", error));
   }
 
   try {
-    checks.push(check("unauth AI guard", await postJson(input.baseUrl, "/api/projects/project-demo/ai/summary", {}, "", input.requestId), [403]));
+    checks.push(check("unauth AI guard", await postJson(input.baseUrl, "/api/projects/project-smoke/ai/summary", {}, "", input.requestId), [403]));
   } catch (error) {
     checks.push(failed("unauth AI guard", error));
   }
@@ -782,7 +776,7 @@ export async function runStagingSmokeBootstrap(input: RuntimeSmokeInput): Promis
     try {
       const response = await postJson(
         input.baseUrl,
-        "/api/projects/project-demo/ai/summary",
+        "/api/projects/project-smoke/ai/summary",
         { instructions: AI_SMOKE_PROMPT },
         sessionCookie,
         input.requestId

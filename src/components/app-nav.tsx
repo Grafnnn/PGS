@@ -37,11 +37,11 @@ type NavItem = {
 const navItems: NavItem[] = [
   { href: "/dashboard", icon: <Gauge size={17} />, label: "Дашборд", section: "Портфель", match: ["/dashboard"] },
   { href: "/projects", icon: <BriefcaseBusiness size={17} />, label: "Проекты", section: "Объекты", match: ["/projects"] },
-  { href: "/projects/project-demo", icon: <PackageCheck size={17} />, label: "Снабжение", section: "Операции" },
-  { href: "/projects/project-demo", icon: <Landmark size={17} />, label: "Финансы", section: "Деньги" },
-  { href: "/projects/project-demo", icon: <FileText size={17} />, label: "Документы", section: "Контроль" },
-  { href: "/projects/project-demo", icon: <ShieldAlert size={17} />, label: "Риски", section: "Контроль" },
-  { href: "/projects/project-demo", icon: <Bot size={17} />, label: "AI", section: "Анализ" },
+  { href: "/projects", icon: <PackageCheck size={17} />, label: "Снабжение", section: "Операции" },
+  { href: "/projects", icon: <Landmark size={17} />, label: "Финансы", section: "Деньги" },
+  { href: "/projects", icon: <FileText size={17} />, label: "Документы", section: "Контроль" },
+  { href: "/projects", icon: <ShieldAlert size={17} />, label: "Риски", section: "Контроль" },
+  { href: "/projects", icon: <Bot size={17} />, label: "AI", section: "Анализ" },
   { href: "/admin/users", icon: <Users size={17} />, label: "Администрирование", section: "Настройки", match: ["/admin"] }
 ];
 
