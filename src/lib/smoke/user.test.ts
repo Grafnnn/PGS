@@ -30,9 +30,9 @@ describe("staging smoke user safety", () => {
     expect(() => validateStagingSmokeUserConfig({ ...validEnv, SMOKE_PASSWORD: "password-admin" })).toThrow("obvious");
   });
 
-  it("targets only smoke and demo projects for read-only AI smoke", () => {
-    expect(validateStagingSmokeUserConfig(validEnv).projectIds).toEqual([SMOKE_PROJECT_ID, DEMO_PROJECT_ID]);
-    expect(validateStagingSmokeUserConfig({ ...validEnv, SMOKE_INCLUDE_PROJECT_DEMO: "false" }).projectIds).toEqual([SMOKE_PROJECT_ID]);
+  it("targets only the smoke project by default and includes demo only by explicit opt-in", () => {
+    expect(validateStagingSmokeUserConfig(validEnv).projectIds).toEqual([SMOKE_PROJECT_ID]);
+    expect(validateStagingSmokeUserConfig({ ...validEnv, SMOKE_INCLUDE_PROJECT_DEMO: "true" }).projectIds).toEqual([SMOKE_PROJECT_ID, DEMO_PROJECT_ID]);
   });
 
   it("builds a non-secret report", () => {
