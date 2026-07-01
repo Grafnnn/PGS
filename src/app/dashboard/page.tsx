@@ -4,6 +4,8 @@ import { AlertTriangle, Banknote, BarChart3, CalendarClock, ClipboardList, FileW
 import { budgetTotals, deriveAutoRisks, financeTotals, materialTotals, money, percent, workTotals } from "@/lib/calculations";
 import { loadDashboardData } from "@/lib/project-page-data";
 
+export const dynamic = "force-dynamic";
+
 function compactMoney(value: number) {
   const absolute = Math.abs(value);
   if (absolute >= 1_000_000_000) return `${(value / 1_000_000_000).toLocaleString("ru-RU", { maximumFractionDigits: 1 })} млрд ₽`;
