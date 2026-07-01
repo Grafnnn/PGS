@@ -1,5 +1,39 @@
 # PGS Project Log
 
+## 2026-07-01 - Demo project removal online fix
+
+Status: demo project removal fix merged; Render redeploy trigger recorded.
+
+- Target URL: https://pgs-frankfurt.onrender.com
+- Cleanup baseline commit: `24c2ce047a0e7e3db38f7016769d274f4feac9d2`
+- Trigger type: docs-only project log update
+- Reason: Render still served previous cleanup commit `e7c975e04259b6c5de9265a57ae38a84bd5d3d76` after the final temporary endpoint removal commit reached `main`
+
+Root causes fixed:
+
+- project pages now opt out of build-time static fallback with dynamic rendering
+- staging seed no longer creates `project-demo` unless `SEED_DEMO_PROJECT=true`
+- runtime smoke uses `project-smoke` by default instead of `project-demo`
+- sidebar operation links point to `/projects` instead of hardcoded `project-demo`
+- temporary staging delete endpoint was removed after the final cleanup deletion
+
+Safety:
+
+- no Render env/secrets changes
+- no DB/schema/migration changes
+- no live AI run
+- no direct SQL
+- no real client files used
+- secrets printed: `false`
+
+Follow-up gate:
+
+- confirm Render deployed this entry's commit or a later main commit
+- confirm `/projects/project-demo` returns 404
+- confirm `/api/internal/staging-delete-demo-project` returns 404
+- confirm `/projects` remains 200
+- confirm runtime smoke still passes with `project-smoke` only
+
 ## 2026-07-01 - Procurement & Materials Intelligence v1 online CORE GO
 
 Status: shipped baseline for Procurement & Materials Intelligence v1.
