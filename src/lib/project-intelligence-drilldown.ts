@@ -1,6 +1,7 @@
 import { budgetTotals, deriveAutoRisks, financeTotals, materialTotals, workTotals } from "@/lib/calculations";
 import { buildProcurementIntelligenceModel } from "@/lib/procurement-intelligence";
 import type { DocumentChecklistItem, PipelineAction, PipelineReadiness } from "@/lib/project-pipeline";
+import { buildScheduleCashflowIntelligenceModel } from "@/lib/schedule-cashflow-intelligence";
 import type { BudgetItem, DailyReport, Material, Payment, ProcurementRequest, Project, Risk, ScheduleItem } from "@/lib/types";
 
 export type DrilldownTone = "good" | "warn" | "bad" | "info" | "neutral";
@@ -93,6 +94,10 @@ export type ProjectIntelligenceDrilldownModel = {
     completionPercent: number;
     overdueCount: number;
     delayDays: number;
+    packageCount: number;
+    blockedPackageCount: number;
+    readinessLabel: string;
+    nextPlanLabel: string;
     timeline: Array<{ title: string; detail: string; status: string; tone: DrilldownTone }>;
     empty: boolean;
     ctaTab: "График";
@@ -105,6 +110,9 @@ export type ProjectIntelligenceDrilldownModel = {
     budgetDeviation: string;
     cashGap: string;
     financingNeed: string;
+    cashflowStatus: string;
+    peakCashWeek: string;
+    peakCashNeed: string;
     empty: boolean;
     ctaTab: "Бюджет / ВОР";
     financeTab: "Финансы";
@@ -208,6 +216,14 @@ export function buildProjectIntelligenceDrilldownModel(input: ProjectIntelligenc
     materials,
     procurementRequests
   });
+  const scheduleCashflow = buildScheduleCashflowIntelligenceModel({
+    project,
+    budgetItems,
+    scheduleItems,
+    materials,
+    procurementRequests,
+    payments
+  });
   const allRisks = [...risks, ...autoRisks].filter((risk) => risk.status !== "closed");
   const criticalRisks = allRisks.filter((risk) => risk.priority === "critical");
   const highRisks = allRisks.filter((risk) => risk.priority === "high");
@@ -288,6 +304,10 @@ export function buildProjectIntelligenceDrilldownModel(input: ProjectIntelligenc
       completionPercent: clampPercent(works.completionPercent),
       overdueCount: works.overdueItems.length,
       delayDays: works.delayDays,
+      packageCount: scheduleCashflow.summary.packageCount,
+      blockedPackageCount: scheduleCashflow.summary.blockedPackages,
+      readinessLabel: scheduleCashflow.readiness.label,
+      nextPlanLabel: scheduleCashflow.timeline[0]?.label ?? "нужен ВОР / график",
       timeline: scheduleItems.slice(0, 6).map((item) => ({
         title: item.name,
         detail: `${readableDate(item.startsAt)} - ${readableDate(item.endsAt)} · ${item.owner}`,
@@ -305,6 +325,9 @@ export function buildProjectIntelligenceDrilldownModel(input: ProjectIntelligenc
       budgetDeviation: compactMoney(budgetDeviation),
       cashGap: compactMoney(finance.cashGap),
       financingNeed: compactMoney(finance.financingNeed),
+      cashflowStatus: scheduleCashflow.readiness.label,
+      peakCashWeek: scheduleCashflow.summary.peakCashWeek,
+      peakCashNeed: compactMoney(scheduleCashflow.summary.peakCashNeed),
       empty: budgetItems.length === 0 && payments.length === 0,
       ctaTab: "Бюджет / ВОР",
       financeTab: "Финансы"

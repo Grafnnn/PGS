@@ -1745,6 +1745,189 @@ tr:last-child td {
   padding: 10px;
 }
 
+.schedule-cashflow-workspace {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+  padding: 16px;
+}
+
+.schedule-cashflow-header,
+.schedule-cashflow-actions {
+  align-items: flex-start;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: space-between;
+  min-width: 0;
+}
+
+.schedule-cashflow-actions {
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.schedule-cashflow-summary-grid,
+.executive-plan-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  min-width: 0;
+}
+
+.schedule-cashflow-metric,
+.schedule-cashflow-card,
+.schedule-cashflow-readiness,
+.schedule-cashflow-draft-preview {
+  background: var(--panel-muted);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  min-width: 0;
+}
+
+.schedule-cashflow-metric {
+  display: grid;
+  gap: 5px;
+  padding: 12px;
+}
+
+.schedule-cashflow-metric small {
+  color: var(--muted-soft);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.schedule-cashflow-metric strong {
+  color: var(--text);
+  font-size: 20px;
+  line-height: 1.1;
+}
+
+.schedule-cashflow-metric span,
+.schedule-cashflow-card small,
+.timeline-week-card small,
+.cashflow-week-card small {
+  color: var(--muted);
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+.schedule-cashflow-metric.tone-good {
+  border-color: rgba(34, 197, 94, 0.28);
+}
+
+.schedule-cashflow-metric.tone-warn {
+  border-color: rgba(245, 158, 11, 0.34);
+}
+
+.schedule-cashflow-metric.tone-bad {
+  border-color: rgba(239, 68, 68, 0.32);
+}
+
+.schedule-cashflow-readiness {
+  align-items: flex-start;
+  display: flex;
+  gap: 10px;
+  padding: 12px;
+}
+
+.schedule-cashflow-readiness svg {
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+
+.schedule-cashflow-readiness.tone-good {
+  background: var(--green-soft);
+}
+
+.schedule-cashflow-readiness.tone-warn,
+.schedule-cashflow-readiness.tone-bad {
+  background: var(--yellow-soft);
+}
+
+.schedule-cashflow-readiness.tone-info {
+  background: var(--blue-soft);
+}
+
+.schedule-cashflow-readiness ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+}
+
+.schedule-cashflow-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  min-width: 0;
+}
+
+.schedule-cashflow-card,
+.schedule-cashflow-draft-preview {
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+}
+
+.schedule-cashflow-card.wide,
+.executive-plan-card {
+  grid-column: 1 / -1;
+}
+
+.schedule-cashflow-card table {
+  min-width: 860px;
+}
+
+.timeline-week-list,
+.cashflow-week-list,
+.schedule-risk-list {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.timeline-week-card,
+.cashflow-week-card,
+.schedule-risk-list div,
+.executive-plan-grid > div {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  padding: 10px;
+}
+
+.timeline-week-card.tone-warn,
+.cashflow-week-card.tone-warn {
+  border-color: rgba(245, 158, 11, 0.34);
+}
+
+.cashflow-week-card.tone-bad {
+  border-color: rgba(239, 68, 68, 0.32);
+}
+
+.cashflow-week-card.tone-good {
+  border-color: rgba(34, 197, 94, 0.28);
+}
+
+.executive-plan-grid ul {
+  margin: 4px 0 0;
+  padding-left: 18px;
+}
+
+.executive-draft-text {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  color: var(--ink);
+  line-height: 1.55;
+  padding: 12px;
+}
+
 .procurement-warning-list div {
   border-color: #f4df9f;
 }
@@ -3094,6 +3277,25 @@ input[type="checkbox"] {
   .procurement-header-actions .button,
   .procurement-shortcuts .button {
     width: 100%;
+  }
+
+  .schedule-cashflow-workspace {
+    padding: 12px;
+  }
+
+  .schedule-cashflow-header,
+  .schedule-cashflow-actions {
+    align-items: stretch;
+    display: grid;
+    width: 100%;
+  }
+
+  .schedule-cashflow-actions .button {
+    width: 100%;
+  }
+
+  .schedule-cashflow-grid {
+    grid-template-columns: 1fr;
   }
 
   .login-page {
