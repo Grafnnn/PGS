@@ -5,6 +5,7 @@ import { AlertTriangle, BarChart3, Bot, ClipboardList, FileText, Landmark, Layou
 import { ProjectCommandCenter } from "@/components/project-command-center";
 import { ProjectIntelligenceDrilldown } from "@/components/project-intelligence-drilldown";
 import { ProcurementIntelligenceWorkspace } from "@/components/procurement-intelligence-workspace";
+import { ScheduleCashflowWorkspace } from "@/components/schedule-cashflow-workspace";
 import { budgetTotals, deriveAutoRisks, financeTotals, materialTotals, money, percent, workTotals } from "@/lib/calculations";
 import type { ImportExplanation, ImportMode, ImportPreview, ImportSheetMapping } from "@/lib/excel/import-types";
 import { drilldownAiScenarios, type AiInsightResponse, type AiScenario } from "@/lib/project-intelligence-drilldown";
@@ -252,7 +253,7 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
   }, [initialBundle.project.id]);
 
   useEffect(() => {
-    if (!["Бюджет / ВОР", "Материалы", "Заявки", "Аналитика"].includes(activeTab)) return;
+    if (!["Бюджет / ВОР", "График", "Материалы", "Заявки", "Финансы", "Аналитика"].includes(activeTab)) return;
     void loadImportHistory();
   }, [activeTab, loadImportHistory]);
 
@@ -924,6 +925,25 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
 
       {activeTab === "График" && (
         <Panel title="Календарный график работ" icon={<TimerReset size={18} />}>
+          <ScheduleCashflowWorkspace
+            projectName={initialBundle.project.name}
+            projectStartsAt={initialBundle.project.startsAt}
+            projectEndsAt={initialBundle.project.endsAt}
+            contractAmount={initialBundle.project.contractAmount}
+            budgetItems={budgetItems}
+            scheduleItems={scheduleItems}
+            materials={materials}
+            procurementRequests={procurementRequests}
+            payments={payments}
+            importHistory={importHistory}
+            draft={pipelineDraft}
+            loading={pipelineLoading}
+            onSchedulePreview={() => void runPipelineDraft("schedule")}
+            onScheduleCommit={() => void runPipelineDraft("schedule", true)}
+            onCashflowPreview={() => void runPipelineDraft("cashflow")}
+            onCashflowCommit={() => void runPipelineDraft("cashflow", true)}
+            onNavigate={setActiveTab}
+          />
           <PipelineDraftPanel
             kind="schedule"
             draft={pipelineDraft}
@@ -1037,6 +1057,25 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
 
       {activeTab === "Финансы" && (
         <Panel title="Платежи и кассовый план" icon={<Landmark size={18} />}>
+          <ScheduleCashflowWorkspace
+            projectName={initialBundle.project.name}
+            projectStartsAt={initialBundle.project.startsAt}
+            projectEndsAt={initialBundle.project.endsAt}
+            contractAmount={initialBundle.project.contractAmount}
+            budgetItems={budgetItems}
+            scheduleItems={scheduleItems}
+            materials={materials}
+            procurementRequests={procurementRequests}
+            payments={payments}
+            importHistory={importHistory}
+            draft={pipelineDraft}
+            loading={pipelineLoading}
+            onSchedulePreview={() => void runPipelineDraft("schedule")}
+            onScheduleCommit={() => void runPipelineDraft("schedule", true)}
+            onCashflowPreview={() => void runPipelineDraft("cashflow")}
+            onCashflowCommit={() => void runPipelineDraft("cashflow", true)}
+            onNavigate={setActiveTab}
+          />
           <PipelineDraftPanel
             kind="cashflow"
             draft={pipelineDraft}

@@ -44,7 +44,11 @@ describe("project intelligence drill-down model", () => {
     expect(model.documents).toMatchObject({ present: 1, total: 2, ctaTab: "Документы" });
     expect(model.risks.total).toBeGreaterThan(0);
     expect(model.schedule.ctaTab).toBe("График");
+    expect(model.schedule.packageCount).toBeGreaterThan(0);
+    expect(model.schedule.readinessLabel).toBeTruthy();
     expect(model.financeVor.financeTab).toBe("Финансы");
+    expect(model.financeVor.cashflowStatus).toBeTruthy();
+    expect(model.financeVor.peakCashNeed).toContain("₽");
     expect(model.procurement.requestTab).toBe("Заявки");
     expect(model.procurement.candidateCount).toBeGreaterThanOrEqual(0);
     expect(model.procurement.readinessLabel).toBeTruthy();

@@ -179,6 +179,8 @@ export function ProjectIntelligenceDrilldown({
           <div className="intelligence-metrics">
             <StatusInsightCard title="План / факт" value={`${model.schedule.completionPercent}%`} detail="Накопительное выполнение" tone={model.schedule.tone} />
             <StatusInsightCard title="Просрочки" value={String(model.schedule.overdueCount)} detail={`${model.schedule.delayDays} дней max`} tone={model.schedule.overdueCount ? "bad" : "good"} />
+            <StatusInsightCard title="Пакеты из ВОР" value={String(model.schedule.packageCount)} detail={`${model.schedule.readinessLabel} · ${model.schedule.nextPlanLabel}`} tone={model.schedule.blockedPackageCount ? "warn" : "info"} />
+            <StatusInsightCard title="Блокеры пакетов" value={String(model.schedule.blockedPackageCount)} detail="цены, объемы, материалы" tone={model.schedule.blockedPackageCount ? "bad" : "good"} />
           </div>
           <SignalList
             emptyText="График пока пустой. Создайте работы вручную или через draft из ВОР."
@@ -203,6 +205,7 @@ export function ProjectIntelligenceDrilldown({
               <StatusInsightCard title="Прогнозная себестоимость" value={model.financeVor.forecastCost} detail={`Отклонение ${model.financeVor.budgetDeviation}`} tone={model.financeVor.tone} />
               <StatusInsightCard title="Прогноз прибыли" value={model.financeVor.forecastProfit} detail="контракт минус прогноз" tone={model.financeVor.tone} />
               <StatusInsightCard title="Cash gap" value={model.financeVor.cashGap} detail={`Потребность ${model.financeVor.financingNeed}`} tone={model.financeVor.tone} />
+              <StatusInsightCard title="Draft cashflow" value={model.financeVor.peakCashNeed} detail={`${model.financeVor.cashflowStatus} · ${model.financeVor.peakCashWeek}`} tone={model.financeVor.peakCashNeed === "0 ₽" ? "good" : "warn"} />
             </div>
           )}
         </article>
