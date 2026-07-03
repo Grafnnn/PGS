@@ -1,9 +1,10 @@
 import { budgetTotals, deriveAutoRisks, financeTotals, materialTotals, workTotals } from "@/lib/calculations";
+import { buildDocumentComplianceIntelligence } from "@/lib/document-compliance-intelligence";
 import { buildProcurementIntelligenceModel } from "@/lib/procurement-intelligence";
 import type { DocumentChecklistItem, PipelineAction, PipelineReadiness } from "@/lib/project-pipeline";
 import { buildRiskExecutiveIntelligence, type RiskExecutiveImportHistoryItem } from "@/lib/risk-executive-intelligence";
 import { buildScheduleCashflowIntelligenceModel } from "@/lib/schedule-cashflow-intelligence";
-import type { BudgetItem, DailyReport, Material, Payment, ProcurementRequest, Project, Risk, ScheduleItem } from "@/lib/types";
+import type { BudgetItem, DailyReport, Material, Payment, ProcurementRequest, Project, ProjectDocument, Risk, ScheduleItem } from "@/lib/types";
 
 export type DrilldownTone = "good" | "warn" | "bad" | "info" | "neutral";
 
@@ -57,6 +58,7 @@ export type ProjectIntelligenceInput = {
   payments?: Payment[] | null;
   dailyReports?: DailyReport[] | null;
   risks?: Risk[] | null;
+  documents?: ProjectDocument[] | null;
   readiness?: PipelineReadiness | null;
   documentChecklist?: DocumentChecklistItem[] | null;
   importHistory?: RiskExecutiveImportHistoryItem[] | null;
@@ -79,6 +81,12 @@ export type ProjectIntelligenceDrilldownModel = {
     total: number;
     missing: DocumentChecklistItem[];
     presentItems: DocumentChecklistItem[];
+    complianceReadiness: string;
+    ksReadiness: string;
+    executivePackageReadiness: string;
+    missingCritical: number;
+    weeklyActions: Array<{ title: string; detail: string; tone: DrilldownTone }>;
+    blockingPackages: Array<{ title: string; detail: string; tone: DrilldownTone }>;
     empty: boolean;
     ctaTab: "Документы";
   };
@@ -211,6 +219,7 @@ export function buildProjectIntelligenceDrilldownModel(input: ProjectIntelligenc
   const payments = input.payments ?? [];
   const reports = input.dailyReports ?? [];
   const risks = input.risks ?? [];
+  const documents = input.documents ?? [];
   const documentChecklist = input.documentChecklist ?? [];
   const contractAmount = project.contractAmount ?? 0;
 
@@ -244,6 +253,7 @@ export function buildProjectIntelligenceDrilldownModel(input: ProjectIntelligenc
     payments,
     dailyReports: reports,
     risks,
+    documents,
     documentChecklist,
     importHistory: input.importHistory ?? []
   });
@@ -253,6 +263,18 @@ export function buildProjectIntelligenceDrilldownModel(input: ProjectIntelligenc
   const presentDocuments = documentChecklist.filter((item) => item.status === "present");
   const missingDocuments = documentChecklist.filter((item) => item.status !== "present");
   const documentScore = documentChecklist.length ? (presentDocuments.length / documentChecklist.length) * 100 : 0;
+  const documentCompliance = buildDocumentComplianceIntelligence({
+    project,
+    budgetItems,
+    scheduleItems,
+    materials,
+    procurementRequests,
+    payments,
+    risks,
+    documents,
+    documentChecklist,
+    importHistory: input.importHistory ?? []
+  });
   const budgetDeviation = budget.totalForecastCost - budget.totalPlannedCost;
   const activeRequests = procurementRequests.filter((request) => !["closed", "rejected"].includes(request.status));
   const financeTone: DrilldownTone = finance.cashGap < 0 || budgetDeviation > 0 ? "bad" : budget.forecastProfit < 0 ? "warn" : "good";
@@ -281,7 +303,7 @@ export function buildProjectIntelligenceDrilldownModel(input: ProjectIntelligenc
 
   return {
     nav: [
-      { id: "documents", label: "Документы", tone: documentChecklist.length ? toneFromPercent(documentScore) : "info", count: missingDocuments.length },
+      { id: "documents", label: "Документы", tone: documentCompliance.summary.readiness === "ready" ? "good" : documentCompliance.summary.readiness === "missing_critical" ? "bad" : documentCompliance.summary.totalRequired ? "warn" : "info", count: documentCompliance.summary.missing || missingDocuments.length },
       { id: "risks", label: "Риски", tone: riskTone, count: Math.max(allRisks.length, riskExecutive.summary.totalOpen) },
       { id: "schedule", label: "График", tone: scheduleTone, count: works.overdueItems.length },
       { id: "finance-vor", label: "ВОР / финансы", tone: financeTone },
@@ -290,13 +312,30 @@ export function buildProjectIntelligenceDrilldownModel(input: ProjectIntelligenc
       { id: "ai-recommendations", label: "AI", tone: "info", count: drilldownAiScenarios.length }
     ],
     documents: {
-      tone: documentChecklist.length ? toneFromPercent(documentScore) : "info",
+      tone: documentCompliance.summary.readiness === "ready" ? "good" : documentCompliance.summary.readiness === "missing_critical" ? "bad" : documentCompliance.summary.totalRequired ? "warn" : documentChecklist.length ? toneFromPercent(documentScore) : "info",
       score: clampPercent(documentScore),
       present: presentDocuments.length,
       total: documentChecklist.length,
       missing: missingDocuments.slice(0, 6),
       presentItems: presentDocuments.slice(0, 4),
-      empty: documentChecklist.length === 0,
+      complianceReadiness: documentCompliance.summary.readiness,
+      ksReadiness: documentCompliance.ksReadiness.readyForKs,
+      executivePackageReadiness: documentCompliance.executivePackage.readiness,
+      missingCritical: documentCompliance.summary.urgentHigh,
+      weeklyActions: documentCompliance.weeklyPlan.slice(0, 4).map((item) => ({
+        title: item.title,
+        detail: `${item.ownerRole} · ${item.supports}`,
+        tone: item.blocking ? "warn" : "info"
+      })),
+      blockingPackages: documentCompliance.workPackageMap
+        .filter((item) => item.readiness === "blocked")
+        .slice(0, 4)
+        .map((item) => ({
+          title: item.title,
+          detail: item.blockingDocs.slice(0, 2).join("; ") || "Документы пакета не готовы.",
+          tone: "bad"
+        })),
+      empty: documentChecklist.length === 0 && documentCompliance.summary.totalRequired === 0,
       ctaTab: "Документы"
     },
     risks: {

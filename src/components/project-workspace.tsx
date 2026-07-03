@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { AlertTriangle, BarChart3, Bot, ClipboardList, FileText, Landmark, LayoutList, Package, Pencil, Plus, Search, Send, Table2, TimerReset, Trash2, Truck, Users } from "lucide-react";
 import { ProjectCommandCenter } from "@/components/project-command-center";
+import { DocumentComplianceWorkspace } from "@/components/document-compliance-workspace";
 import { ProjectIntelligenceDrilldown } from "@/components/project-intelligence-drilldown";
 import { ProcurementIntelligenceWorkspace } from "@/components/procurement-intelligence-workspace";
 import { RiskExecutiveWorkspace } from "@/components/risk-executive-workspace";
@@ -825,6 +826,7 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
                 payments={payments}
                 dailyReports={reports}
                 risks={risks}
+                documents={documents}
                 readiness={readiness}
                 documentChecklist={documentChecklist}
                 importHistory={importHistory}
@@ -846,6 +848,7 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
                 payments={payments}
                 dailyReports={reports}
                 risks={risks}
+                documents={documents}
                 readiness={readiness}
                 documentChecklist={documentChecklist}
                 importHistory={importHistory}
@@ -1108,6 +1111,7 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
             payments={payments}
             dailyReports={reports}
             risks={risks}
+            documents={documents}
             readiness={readiness}
             documentChecklist={documentChecklist}
             intelligence={intelligence}
@@ -1155,6 +1159,7 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
             payments={payments}
             dailyReports={reports}
             risks={risks}
+            documents={documents}
             readiness={readiness}
             documentChecklist={documentChecklist}
             intelligence={intelligence}
@@ -1187,6 +1192,19 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
 
       {activeTab === "Документы" && (
         <Panel title="Документы проекта" icon={<FileText size={18} />}>
+          <DocumentComplianceWorkspace
+            project={initialBundle.project}
+            budgetItems={budgetItems}
+            scheduleItems={scheduleItems}
+            materials={materials}
+            procurementRequests={procurementRequests}
+            payments={payments}
+            risks={risks}
+            documents={documents}
+            documentChecklist={documentChecklist}
+            importHistory={importHistory}
+            onNavigate={setActiveTab}
+          />
           <DocumentChecklistPanel items={documentChecklist} />
           <div className="form-grid form-surface">
             <label>

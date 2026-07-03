@@ -1,5 +1,65 @@
 # PGS Project Log
 
+## 2026-07-04 - Documents & Executive Compliance v1 PR validation
+
+Status: feature train prepared for PR review; not merged and not shipped online yet.
+
+- Branch: `codex/documents-executive-compliance-v1`
+- Base: `main@07d88c12f0205467b62b7fc54aa4f01370b14d42`
+- Purpose: deterministic document compliance workspace for required documents, work package document map, КС/closeout readiness, executive document package, weekly collection plan, and document-driven risk/report signals.
+
+Implemented:
+
+- pure document compliance intelligence model;
+- required documents checklist inferred from project, ВОР, график, materials, procurement, uploads, checklist, and import history;
+- missing documents and unknown-row document signals;
+- work package document map with conservative classifications for structure, engineering, earthworks, finishing, roofing, material, and unknown packages;
+- КС / closeout readiness and executive document package readiness;
+- weekly document collection plan and compliance risk register;
+- Documents tab workspace integration;
+- Project Command Center document compliance status/action integration;
+- Project Intelligence drill-down document compliance, КС readiness, executive package, blocking package, and weekly action signals;
+- Risks & Executive Reports document compliance risk integration.
+
+Validation:
+
+- `pnpm test`: 184/184 passed;
+- targeted document/compliance, command-center, drill-down, and risk/executive tests passed;
+- `pnpm lint`: passed;
+- `pnpm prisma generate`: passed;
+- `pnpm prisma validate` with dummy `DATABASE_URL`: passed;
+- `pnpm exec tsc --noEmit`: passed after `next build` generated `.next/types`;
+- `pnpm build`: passed with the known local Prisma `DATABASE_URL` warning during static generation.
+
+Local smoke:
+
+- dev server: `http://127.0.0.1:3004`;
+- `/dashboard`: 200;
+- `/projects`: 200;
+- `/projects/project-demo`: 200 in local fallback demo mode;
+- project HTML markers: `Documents Intelligence`, `КС readiness`, `Executive package`, and `Project Intelligence` present;
+- `/api/projects/project-demo/ai/summary`: 200 deterministic response, no live provider call;
+- `/api/projects/project-demo/data-readiness` and `/api/projects/project-demo/intelligence`: 500 in local mode because `DATABASE_URL` is not set, recorded as local DB availability limitation;
+- `/api/auth/me`: 200 local fallback user with `authenticated:false`, recorded as local fallback behavior, not an online auth gate;
+- project DELETE guard smoke: not run because delete requests are prohibited in this train.
+
+Not run / not touched:
+
+- deploy/redeploy: not run;
+- online smoke: not run;
+- live AI: not run;
+- online mutation/import/delete smoke: not run;
+- uploads / real client files: none;
+- Render env/secrets: unchanged;
+- DB/schema/migrations: unchanged;
+- auth/session/health/provider config: unchanged;
+- dirty checkout `/Users/ag/Documents/PGS`: untouched;
+- secrets printed: `false`.
+
+Next gate:
+
+- Draft PR CI → review gate → ready-state → final merge gate → online/core smoke.
+
 ## 2026-07-03 - Risks & Executive Reports v1 online/core GO
 
 Status: shipped baseline for Risks & Executive Reports v1 at the online/core gate.

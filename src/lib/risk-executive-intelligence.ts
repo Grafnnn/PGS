@@ -1,7 +1,8 @@
 import { buildProcurementIntelligenceModel, type ProcurementImportHistoryItem } from "@/lib/procurement-intelligence";
+import { buildDocumentComplianceIntelligence, type DocumentPriority } from "@/lib/document-compliance-intelligence";
 import type { DocumentChecklistItem, PipelineAction, PipelineReadiness } from "@/lib/project-pipeline";
 import { buildScheduleCashflowIntelligenceModel } from "@/lib/schedule-cashflow-intelligence";
-import type { BudgetItem, DailyReport, Material, Payment, ProcurementRequest, Project, Risk, ScheduleItem } from "@/lib/types";
+import type { BudgetItem, DailyReport, Material, Payment, ProcurementRequest, Project, ProjectDocument, Risk, ScheduleItem } from "@/lib/types";
 
 export type RiskSeverity = "low" | "medium" | "high" | "critical";
 export type ExecutiveTone = "green" | "amber" | "red" | "unknown";
@@ -102,6 +103,7 @@ export type RiskExecutiveInput = {
   payments?: Payment[] | null;
   dailyReports?: DailyReport[] | null;
   risks?: Risk[] | null;
+  documents?: ProjectDocument[] | null;
   readiness?: PipelineReadiness | null;
   documentChecklist?: DocumentChecklistItem[] | null;
   intelligence?: {
@@ -159,6 +161,22 @@ function severityToDecisionPriority(severity: RiskSeverity): DecisionItem["prior
 
 function actionPriority(severity: RiskSeverity): ActionItem["priority"] {
   return severityToDecisionPriority(severity);
+}
+
+function severityFromDocumentPriority(priority: DocumentPriority): RiskSeverity {
+  if (priority === "urgent") return "critical";
+  if (priority === "high") return "high";
+  if (priority === "medium") return "medium";
+  return "low";
+}
+
+function ownerRoleFromDocumentRole(role: string): OwnerRole {
+  if (role === "procurement") return "procurement";
+  if (role === "finance") return "finance";
+  if (role === "executive") return "executive";
+  if (role === "document_controller") return "document_controller";
+  if (role === "project_manager" || role === "site_engineer" || role === "subcontractor") return "project_manager";
+  return "unknown";
 }
 
 function mapExistingRisk(existing: Risk): RiskItem {
@@ -537,6 +555,18 @@ export function buildRiskSignalsFromDocuments(input: RiskExecutiveInput): RiskIt
   const risks: RiskItem[] = [];
   const missing = checklist.filter((item) => item.status !== "present");
   const coreMissing = missing.filter((item) => /договор|смета|вор|график|финанс/i.test(item.title));
+  const compliance = buildDocumentComplianceIntelligence({
+    project: input.project,
+    budgetItems: input.budgetItems ?? [],
+    scheduleItems: input.scheduleItems ?? [],
+    materials: input.materials ?? [],
+    procurementRequests: input.procurementRequests ?? [],
+    payments: input.payments ?? [],
+    risks: input.risks ?? [],
+    documents: input.documents ?? [],
+    documentChecklist: checklist,
+    importHistory: input.importHistory ?? []
+  });
 
   if (!checklist.length) {
     return [
@@ -580,6 +610,30 @@ export function buildRiskSignalsFromDocuments(input: RiskExecutiveInput): RiskIt
     );
   }
 
+  for (const item of compliance.complianceRisks.slice(0, 8)) {
+    const severity = severityFromDocumentPriority(item.priority);
+    addRiskUnique(
+      risks,
+      risk({
+        id: `documents:compliance:${item.id}`,
+        title: item.title,
+        description: item.description,
+        severity,
+        category: "documents",
+        sourceArea: "Documents",
+        sourceRef: item.sourceArea,
+        status: severity === "critical" ? "blocked" : "needs_review",
+        suggestedAction: item.suggestedAction,
+        decisionRequired: severity === "critical" || severity === "high",
+        decisionText: severity === "critical" || severity === "high" ? "Подтвердить план закрытия документального блокера." : undefined,
+        ownerRole: ownerRoleFromDocumentRole(item.ownerRole),
+        confidence: "medium",
+        evidence: item.evidence,
+        createdFrom: "document-compliance-signals"
+      })
+    );
+  }
+
   return risks;
 }
 
@@ -597,7 +651,7 @@ export function buildProjectRiskRegister(input: RiskExecutiveInput): RiskItem[] 
 
 function sourcePresent(input: RiskExecutiveInput, source: SourceArea) {
   if (source === "ВОР") return Boolean((input.budgetItems ?? []).length || (input.importHistory ?? []).some((item) => item.preview));
-  if (source === "Documents") return Boolean((input.documentChecklist ?? []).length);
+  if (source === "Documents") return Boolean((input.documentChecklist ?? []).length || (input.documents ?? []).length);
   if (source === "Procurement") return Boolean((input.materials ?? []).length || (input.procurementRequests ?? []).length);
   if (source === "Schedule") return Boolean((input.scheduleItems ?? []).length || (input.budgetItems ?? []).length);
   if (source === "Cashflow" || source === "Finance") return Boolean((input.payments ?? []).length || (input.budgetItems ?? []).length);

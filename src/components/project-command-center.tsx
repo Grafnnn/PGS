@@ -5,7 +5,7 @@ import React, { type CSSProperties } from "react";
 import { buildProjectCommandCenterModel, type CommandCenterAiInsight, type CommandTone } from "@/lib/project-command-center";
 import type { DocumentChecklistItem, PipelineAction, PipelineReadiness } from "@/lib/project-pipeline";
 import type { RiskExecutiveImportHistoryItem } from "@/lib/risk-executive-intelligence";
-import type { BudgetItem, DailyReport, Material, Payment, ProcurementRequest, Project, Risk, ScheduleItem } from "@/lib/types";
+import type { BudgetItem, DailyReport, Material, Payment, ProcurementRequest, Project, ProjectDocument, Risk, ScheduleItem } from "@/lib/types";
 
 type ProjectCommandCenterProps = {
   project: Partial<Project>;
@@ -16,6 +16,7 @@ type ProjectCommandCenterProps = {
   payments: Payment[];
   dailyReports: DailyReport[];
   risks: Risk[];
+  documents?: ProjectDocument[];
   readiness: PipelineReadiness | null;
   documentChecklist: DocumentChecklistItem[];
   importHistory?: RiskExecutiveImportHistoryItem[];
@@ -85,6 +86,7 @@ export function ProjectCommandCenter({
   payments,
   dailyReports,
   risks,
+  documents = [],
   readiness,
   documentChecklist,
   importHistory = [],
@@ -104,6 +106,7 @@ export function ProjectCommandCenter({
     payments,
     dailyReports,
     risks,
+    documents,
     readiness,
     documentChecklist,
     importHistory,

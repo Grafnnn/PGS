@@ -42,6 +42,9 @@ describe("project intelligence drill-down model", () => {
 
     expect(model.nav.map((item) => item.id)).toEqual(["documents", "risks", "schedule", "finance-vor", "procurement", "reports", "ai-recommendations"]);
     expect(model.documents).toMatchObject({ present: 1, total: 2, ctaTab: "Документы" });
+    expect(model.documents.complianceReadiness).toBeTruthy();
+    expect(model.documents.ksReadiness).toBeTruthy();
+    expect(model.documents.executivePackageReadiness).toBeTruthy();
     expect(model.risks.total).toBeGreaterThan(0);
     expect(model.schedule.ctaTab).toBe("График");
     expect(model.schedule.packageCount).toBeGreaterThan(0);
@@ -61,7 +64,9 @@ describe("project intelligence drill-down model", () => {
   it("is null-safe for an empty project", () => {
     const model = buildProjectIntelligenceDrilldownModel({ project: { id: "empty" } });
 
-    expect(model.documents.empty).toBe(true);
+    expect(model.documents.empty).toBe(false);
+    expect(model.documents.complianceReadiness).toBe("no_data");
+    expect(model.documents.ksReadiness).toBe("unknown");
     expect(model.risks.empty).toBe(false);
     expect(model.risks.reportReadiness).toBe("no_data");
     expect(model.schedule.empty).toBe(true);

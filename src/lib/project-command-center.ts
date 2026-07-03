@@ -1,7 +1,8 @@
 import { budgetTotals, deriveAutoRisks, financeTotals, materialTotals, workTotals } from "@/lib/calculations";
+import { buildDocumentComplianceIntelligence } from "@/lib/document-compliance-intelligence";
 import type { DocumentChecklistItem, PipelineAction, PipelineReadiness } from "@/lib/project-pipeline";
 import { buildRiskExecutiveIntelligence, type RiskExecutiveImportHistoryItem } from "@/lib/risk-executive-intelligence";
-import type { BudgetItem, DailyReport, Material, Payment, ProcurementRequest, Project, Risk, ScheduleItem } from "@/lib/types";
+import type { BudgetItem, DailyReport, Material, Payment, ProcurementRequest, Project, ProjectDocument, Risk, ScheduleItem } from "@/lib/types";
 
 export type CommandTone = "good" | "warn" | "bad" | "info" | "neutral";
 
@@ -25,6 +26,7 @@ export type ProjectCommandCenterInput = {
   payments?: Payment[] | null;
   dailyReports?: DailyReport[] | null;
   risks?: Risk[] | null;
+  documents?: ProjectDocument[] | null;
   readiness?: PipelineReadiness | null;
   documentChecklist?: DocumentChecklistItem[] | null;
   importHistory?: RiskExecutiveImportHistoryItem[] | null;
@@ -151,6 +153,7 @@ export function buildProjectCommandCenterModel(input: ProjectCommandCenterInput)
   const payments = input.payments ?? [];
   const reports = input.dailyReports ?? [];
   const risks = input.risks ?? [];
+  const documents = input.documents ?? [];
   const contractAmount = project.contractAmount ?? 0;
 
   const budget = budgetTotals(contractAmount, budgetItems);
@@ -166,6 +169,18 @@ export function buildProjectCommandCenterModel(input: ProjectCommandCenterInput)
   const documentItems = input.documentChecklist ?? [];
   const presentDocuments = documentItems.filter((item) => item.status === "present").length;
   const documentScore = documentItems.length ? (presentDocuments / documentItems.length) * 100 : 0;
+  const documentCompliance = buildDocumentComplianceIntelligence({
+    project,
+    budgetItems,
+    scheduleItems,
+    materials,
+    procurementRequests,
+    payments,
+    risks,
+    documents,
+    documentChecklist: documentItems,
+    importHistory: input.importHistory ?? []
+  });
   const scheduleScore = works.completionPercent;
   const materialScore = materials.length ? ((materials.length - materialStats.deficitItems.length) / materials.length) * 100 : 0;
   const financeScore = finance.cashGap < 0 || finance.financingNeed > 0 ? 35 : 80;
@@ -179,6 +194,7 @@ export function buildProjectCommandCenterModel(input: ProjectCommandCenterInput)
     payments,
     dailyReports: reports,
     risks,
+    documents,
     readiness: input.readiness,
     documentChecklist: documentItems,
     intelligence: input.intelligence,
@@ -218,6 +234,9 @@ export function buildProjectCommandCenterModel(input: ProjectCommandCenterInput)
     activeRequests[0]
       ? defaultAction("Проверить заявку снабжения", activeRequests[0].title, "warn", "Заявки")
       : defaultAction("Подготовить заявку", "Создать заявку при появлении дефицита.", "info", "Заявки"),
+    documentCompliance.summary.blockingKsOrReport
+      ? defaultAction("Закрыть документы КС", `${documentCompliance.summary.blockingKsOrReport} блокеров для КС/report package.`, "warn", "Документы")
+      : defaultAction("Проверить исполнительный пакет", `Compliance: ${documentCompliance.summary.readiness}.`, "info", "Документы"),
     defaultAction("Проверить решения руководства", riskExecutive.decisions[0]?.title ?? "Decision register готов к проверке.", riskExecutive.decisions.length ? "warn" : "info", "Риски"),
     defaultAction("Сформировать AI-сводку", "Запустить existing AI scenario по клику.", "info", "AI-помощник")
   ];
@@ -264,14 +283,14 @@ export function buildProjectCommandCenterModel(input: ProjectCommandCenterInput)
     },
     progress: [
       { key: "readiness", label: "Pipeline readiness", value: clampPercent(readinessScore), tone: toneFromScore(readinessScore), detail: input.readiness?.summary ?? "Pipeline data loading or unavailable." },
-      { key: "documents", label: "Документы", value: clampPercent(documentScore), tone: documentScore >= 70 ? "good" : documentScore >= 35 ? "warn" : "bad", detail: documentItems.length ? `${presentDocuments}/${documentItems.length} закрыто` : "Checklist еще не загружен." },
+      { key: "documents", label: "Документы", value: clampPercent(documentScore), tone: documentCompliance.summary.readiness === "ready" ? "good" : documentCompliance.summary.readiness === "missing_critical" ? "bad" : documentCompliance.summary.totalRequired ? "warn" : "info", detail: documentCompliance.summary.totalRequired ? `${documentCompliance.summary.missing}/${documentCompliance.summary.totalRequired} missing · КС ${documentCompliance.ksReadiness.readyForKs}` : "Checklist еще не загружен." },
       { key: "schedule", label: "График", value: clampPercent(scheduleScore), tone: delayedWorks.length ? "bad" : "info", detail: delayedWorks.length ? `${delayedWorks.length} работ просрочено` : "План-факт без критичного сигнала." },
       { key: "materials", label: "Материалы", value: clampPercent(materialScore), tone: materialStats.deficitItems.length ? "bad" : "good", detail: materialStats.deficitItems.length ? `${materialStats.deficitItems.length} дефицитных позиций` : "Материалы в норме." },
       { key: "finance", label: "Финансы", value: clampPercent(financeScore), tone: financeScore < 50 ? "bad" : "good", detail: finance.cashGap < 0 ? `Разрыв ${compactMoney(finance.cashGap)}` : "Cashflow без отрицательного сигнала." }
     ],
     statusBoard: [
       { key: "data", label: "Данные проекта", value: input.readiness?.status ?? "loading", tone: toneFromScore(readinessScore), detail: input.readiness?.summary ?? "Нет подтвержденного pipeline snapshot.", tab: "Аналитика" },
-      { key: "documents", label: "Документы", value: documentItems.length ? `${presentDocuments}/${documentItems.length}` : "нет checklist", tone: documentScore >= 70 ? "good" : "warn", detail: documentItems.find((item) => item.status !== "present")?.suggestedNextStep ?? "Проверить версии документов.", tab: "Документы" },
+      { key: "documents", label: "Документы", value: documentCompliance.summary.readiness, tone: documentCompliance.summary.readiness === "ready" ? "good" : documentCompliance.summary.readiness === "missing_critical" ? "bad" : "warn", detail: documentCompliance.missingDocuments[0]?.suggestedAction ?? documentItems.find((item) => item.status !== "present")?.suggestedNextStep ?? "Проверить КС-ready и executive package.", tab: "Документы" },
       { key: "actions", label: "Следующие шаги", value: String(input.intelligence?.nextActions.length ?? 0), tone: input.intelligence?.nextActions.length ? "warn" : "info", detail: input.intelligence?.nextActions[0]?.title ?? "Действия появятся после загрузки pipeline.", tab: "Аналитика" },
       { key: "executive", label: "Executive report", value: riskExecutive.executiveReport.reportReadiness, tone: riskExecutive.executiveReport.status === "red" ? "bad" : riskExecutive.executiveReport.status === "amber" ? "warn" : riskExecutive.executiveReport.status === "green" ? "good" : "info", detail: riskExecutive.managementSummary.nextManagementAction, tab: "Рапорты" },
       { key: "ai", label: "AI Command Layer", value: aiInsight ? aiInsight.provider ?? "ready" : "по запросу", tone: aiInsight?.provider === "degraded" ? "warn" : "info", detail: aiInsight ? "Есть последний результат сценария." : "Live AI не вызывается автоматически.", tab: "AI-помощник" }
