@@ -59,7 +59,8 @@ describe("project command center model", () => {
     });
 
     expect(model.project.name).toContain("Демо объект");
-    expect(model.kpis).toHaveLength(6);
+    expect(model.kpis).toHaveLength(7);
+    expect(model.kpis.some((kpi) => kpi.key === "decisions")).toBe(true);
     expect(model.aiSummary.empty).toBe(false);
     expect(model.aiSummary.degraded).toBe(false);
     expect(model.aiSummary.bullets[0]).toContain("Работы идут");
@@ -77,6 +78,7 @@ describe("project command center model", () => {
     expect(model.aiSummary.degraded).toBe(true);
     expect(model.aiSummary.bullets.length).toBeGreaterThan(0);
     expect(model.statusBoard.find((item) => item.key === "ai")).toMatchObject({ value: "по запросу" });
+    expect(model.statusBoard.find((item) => item.key === "executive")).toMatchObject({ value: "no_data" });
   });
 
   it("keeps degraded AI insight readable without leaking raw provider state", () => {

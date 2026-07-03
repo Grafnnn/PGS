@@ -5,6 +5,7 @@ import { AlertTriangle, BarChart3, Bot, ClipboardList, FileText, Landmark, Layou
 import { ProjectCommandCenter } from "@/components/project-command-center";
 import { ProjectIntelligenceDrilldown } from "@/components/project-intelligence-drilldown";
 import { ProcurementIntelligenceWorkspace } from "@/components/procurement-intelligence-workspace";
+import { RiskExecutiveWorkspace } from "@/components/risk-executive-workspace";
 import { ScheduleCashflowWorkspace } from "@/components/schedule-cashflow-workspace";
 import { budgetTotals, deriveAutoRisks, financeTotals, materialTotals, money, percent, workTotals } from "@/lib/calculations";
 import type { ImportExplanation, ImportMode, ImportPreview, ImportSheetMapping } from "@/lib/excel/import-types";
@@ -826,6 +827,7 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
                 risks={risks}
                 readiness={readiness}
                 documentChecklist={documentChecklist}
+                importHistory={importHistory}
                 intelligence={intelligence}
                 aiInsight={aiResults.summary ?? aiResults["executive-report"] ?? null}
                 aiLoading={aiScenarioLoading === "summary" || aiScenarioLoading === "executive-report"}
@@ -846,6 +848,7 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
                 risks={risks}
                 readiness={readiness}
                 documentChecklist={documentChecklist}
+                importHistory={importHistory}
                 intelligence={intelligence}
                 aiResults={aiResults}
                 aiErrors={aiErrors}
@@ -1096,6 +1099,23 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
 
       {activeTab === "Рапорты" && (
         <Panel title="Ежедневные рапорты стройплощадки" icon={<ClipboardList size={18} />}>
+          <RiskExecutiveWorkspace
+            project={initialBundle.project}
+            budgetItems={budgetItems}
+            scheduleItems={scheduleItems}
+            materials={materials}
+            procurementRequests={procurementRequests}
+            payments={payments}
+            dailyReports={reports}
+            risks={risks}
+            readiness={readiness}
+            documentChecklist={documentChecklist}
+            intelligence={intelligence}
+            importHistory={importHistory}
+            aiLoading={aiScenarioLoading === "executive-report"}
+            onNavigate={setActiveTab}
+            onRunExecutiveAi={() => void runAiCommandScenario("executive-report")}
+          />
           <ReportCards items={reports} />
           <button
             className="button primary"
@@ -1126,6 +1146,23 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
 
       {activeTab === "Риски" && (
         <Panel title="Риски и отклонения" icon={<AlertTriangle size={18} />}>
+          <RiskExecutiveWorkspace
+            project={initialBundle.project}
+            budgetItems={budgetItems}
+            scheduleItems={scheduleItems}
+            materials={materials}
+            procurementRequests={procurementRequests}
+            payments={payments}
+            dailyReports={reports}
+            risks={risks}
+            readiness={readiness}
+            documentChecklist={documentChecklist}
+            intelligence={intelligence}
+            importHistory={importHistory}
+            aiLoading={aiScenarioLoading === "risk-review" || aiScenarioLoading === "executive-report"}
+            onNavigate={setActiveTab}
+            onRunExecutiveAi={() => void runAiCommandScenario("executive-report")}
+          />
           <RiskMatrix items={allRisks} />
           <button
             className="button primary"

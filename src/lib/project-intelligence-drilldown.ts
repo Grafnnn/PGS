@@ -1,6 +1,7 @@
 import { budgetTotals, deriveAutoRisks, financeTotals, materialTotals, workTotals } from "@/lib/calculations";
 import { buildProcurementIntelligenceModel } from "@/lib/procurement-intelligence";
 import type { DocumentChecklistItem, PipelineAction, PipelineReadiness } from "@/lib/project-pipeline";
+import { buildRiskExecutiveIntelligence, type RiskExecutiveImportHistoryItem } from "@/lib/risk-executive-intelligence";
 import { buildScheduleCashflowIntelligenceModel } from "@/lib/schedule-cashflow-intelligence";
 import type { BudgetItem, DailyReport, Material, Payment, ProcurementRequest, Project, Risk, ScheduleItem } from "@/lib/types";
 
@@ -58,6 +59,7 @@ export type ProjectIntelligenceInput = {
   risks?: Risk[] | null;
   readiness?: PipelineReadiness | null;
   documentChecklist?: DocumentChecklistItem[] | null;
+  importHistory?: RiskExecutiveImportHistoryItem[] | null;
   intelligence?: {
     completenessScore: number;
     summary: string;
@@ -85,6 +87,8 @@ export type ProjectIntelligenceDrilldownModel = {
     total: number;
     critical: number;
     high: number;
+    decisionRequired: number;
+    reportReadiness: string;
     top: Array<{ title: string; detail: string; priority: string; owner?: string; dueAt?: string; tone: DrilldownTone }>;
     empty: boolean;
     ctaTab: "Риски";
@@ -135,6 +139,10 @@ export type ProjectIntelligenceDrilldownModel = {
     tone: DrilldownTone;
     latestReport?: { title: string; detail: string; status: string };
     nextExecutiveAction: string;
+    executiveStatus: string;
+    reportReadiness: string;
+    decisionsRequired: number;
+    missingData: string[];
     empty: boolean;
     reportTab: "Рапорты";
     executiveScenario: "executive-report";
@@ -214,7 +222,8 @@ export function buildProjectIntelligenceDrilldownModel(input: ProjectIntelligenc
   const procurementIntelligence = buildProcurementIntelligenceModel({
     projectName: project.name ?? "Проект",
     materials,
-    procurementRequests
+    procurementRequests,
+    importHistory: input.importHistory ?? []
   });
   const scheduleCashflow = buildScheduleCashflowIntelligenceModel({
     project,
@@ -222,7 +231,21 @@ export function buildProjectIntelligenceDrilldownModel(input: ProjectIntelligenc
     scheduleItems,
     materials,
     procurementRequests,
-    payments
+    payments,
+    importHistory: input.importHistory ?? []
+  });
+  const riskExecutive = buildRiskExecutiveIntelligence({
+    ...input,
+    project,
+    budgetItems,
+    scheduleItems,
+    materials,
+    procurementRequests,
+    payments,
+    dailyReports: reports,
+    risks,
+    documentChecklist,
+    importHistory: input.importHistory ?? []
   });
   const allRisks = [...risks, ...autoRisks].filter((risk) => risk.status !== "closed");
   const criticalRisks = allRisks.filter((risk) => risk.priority === "critical");
@@ -235,8 +258,8 @@ export function buildProjectIntelligenceDrilldownModel(input: ProjectIntelligenc
   const financeTone: DrilldownTone = finance.cashGap < 0 || budgetDeviation > 0 ? "bad" : budget.forecastProfit < 0 ? "warn" : "good";
   const procurementTone: DrilldownTone = procurementIntelligence.tone === "neutral" ? "info" : procurementIntelligence.tone;
   const scheduleTone: DrilldownTone = works.overdueItems.length ? "bad" : scheduleItems.length ? "info" : "neutral";
-  const riskTone: DrilldownTone = criticalRisks.length ? "bad" : highRisks.length || allRisks.length ? "warn" : "good";
-  const reportsTone: DrilldownTone = reports.length ? "info" : "warn";
+  const riskTone: DrilldownTone = riskExecutive.summary.critical || criticalRisks.length ? "bad" : riskExecutive.summary.high || highRisks.length || riskExecutive.summary.totalOpen || allRisks.length ? "warn" : "good";
+  const reportsTone: DrilldownTone = riskExecutive.executiveReport.status === "red" ? "bad" : riskExecutive.executiveReport.status === "amber" ? "warn" : riskExecutive.executiveReport.status === "green" ? "good" : "info";
 
   const aiDataUsed = Array.from(
     new Set([
@@ -259,7 +282,7 @@ export function buildProjectIntelligenceDrilldownModel(input: ProjectIntelligenc
   return {
     nav: [
       { id: "documents", label: "Документы", tone: documentChecklist.length ? toneFromPercent(documentScore) : "info", count: missingDocuments.length },
-      { id: "risks", label: "Риски", tone: riskTone, count: allRisks.length },
+      { id: "risks", label: "Риски", tone: riskTone, count: Math.max(allRisks.length, riskExecutive.summary.totalOpen) },
       { id: "schedule", label: "График", tone: scheduleTone, count: works.overdueItems.length },
       { id: "finance-vor", label: "ВОР / финансы", tone: financeTone },
       { id: "procurement", label: "Снабжение", tone: procurementTone, count: procurementIntelligence.summary.candidates || materialStats.deficitItems.length },
@@ -278,10 +301,21 @@ export function buildProjectIntelligenceDrilldownModel(input: ProjectIntelligenc
     },
     risks: {
       tone: riskTone,
-      total: allRisks.length,
-      critical: criticalRisks.length,
-      high: highRisks.length,
-      top: allRisks
+      total: Math.max(allRisks.length, riskExecutive.summary.totalOpen),
+      critical: Math.max(criticalRisks.length, riskExecutive.summary.critical),
+      high: Math.max(highRisks.length, riskExecutive.summary.high),
+      decisionRequired: riskExecutive.summary.decisionRequired,
+      reportReadiness: riskExecutive.summary.reportReadiness,
+      top: (riskExecutive.risks.length
+        ? riskExecutive.risks.slice(0, 5).map((risk) => ({
+            title: risk.title,
+            detail: risk.description,
+            priority: risk.severity,
+            owner: risk.ownerRole,
+            dueAt: risk.decisionRequired ? "decision required" : undefined,
+            tone: toneFromRiskPriority(risk.severity)
+          }))
+        : allRisks
         .slice()
         .sort((left, right) => {
           const rank = { critical: 4, high: 3, medium: 2, low: 1 };
@@ -295,8 +329,8 @@ export function buildProjectIntelligenceDrilldownModel(input: ProjectIntelligenc
           owner: risk.owner,
           dueAt: readableDate(risk.dueAt),
           tone: toneFromRiskPriority(risk.priority)
-        })),
-      empty: allRisks.length === 0,
+        }))),
+      empty: allRisks.length === 0 && riskExecutive.risks.length === 0,
       ctaTab: "Риски"
     },
     schedule: {
@@ -359,8 +393,12 @@ export function buildProjectIntelligenceDrilldownModel(input: ProjectIntelligenc
             status: reports[0].status
           }
         : undefined,
-      nextExecutiveAction: allRisks[0]?.title ?? materialStats.deficitItems[0]?.name ?? works.overdueItems[0]?.name ?? "Подготовить управленческую сводку по текущему срезу.",
-      empty: reports.length === 0,
+      nextExecutiveAction: riskExecutive.managementSummary.nextManagementAction,
+      executiveStatus: riskExecutive.executiveReport.status,
+      reportReadiness: riskExecutive.executiveReport.reportReadiness,
+      decisionsRequired: riskExecutive.decisions.length,
+      missingData: riskExecutive.summary.missingSources,
+      empty: reports.length === 0 && riskExecutive.summary.reportReadiness === "no_data",
       reportTab: "Рапорты",
       executiveScenario: "executive-report"
     },

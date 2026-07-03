@@ -163,6 +163,7 @@ export function ProjectIntelligenceDrilldown({
           <div className="intelligence-metrics">
             <StatusInsightCard title="Открытые риски" value={String(model.risks.total)} detail={`Critical ${model.risks.critical} · High ${model.risks.high}`} tone={model.risks.tone} />
             <StatusInsightCard title="Автосигналы" value={model.risks.empty ? "нет" : "есть"} detail="График, материалы и cash gap" tone={model.risks.empty ? "good" : "warn"} />
+            <StatusInsightCard title="Решения" value={String(model.risks.decisionRequired)} detail={`Report ${model.risks.reportReadiness}`} tone={model.risks.decisionRequired ? "warn" : "good"} />
           </div>
           <SignalList
             emptyText="Открытых рисков нет. Продолжайте обновлять график, материалы и платежи."
@@ -259,6 +260,24 @@ export function ProjectIntelligenceDrilldown({
           <div className="executive-action-note">
             <Sparkles size={16} />
             <span>{model.reports.nextExecutiveAction}</span>
+          </div>
+          <div className="ai-recommendation-meta executive-readiness-meta">
+            <div>
+              <strong>Executive status</strong>
+              <span>{model.reports.executiveStatus}</span>
+            </div>
+            <div>
+              <strong>Readiness</strong>
+              <span>{model.reports.reportReadiness}</span>
+            </div>
+            <div>
+              <strong>Решения</strong>
+              <span>{model.reports.decisionsRequired}</span>
+            </div>
+            <div>
+              <strong>Missing data</strong>
+              <span>{model.reports.missingData.join(" · ") || "нет критичных пропусков"}</span>
+            </div>
           </div>
         </article>
       </div>

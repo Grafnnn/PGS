@@ -1,5 +1,56 @@
 # PGS Project Log
 
+## 2026-07-03 - Risks & Executive Reports v1 PR validation
+
+Status: feature train prepared for PR review; not merged and not shipped online yet.
+
+- Branch: `codex/risks-executive-reports-v1`
+- Base: `main@faeed86cf65de0fb2c64272da4be45f75befe7f6`
+- Purpose: deterministic risk register, decision register, recommended actions, and executive weekly report on top of existing project intelligence data.
+
+Implemented:
+
+- pure risk/executive intelligence model;
+- Risk Register workspace;
+- Decision Register panel;
+- Recommended Actions panel;
+- deterministic Russian executive weekly report with copyable text;
+- Project Intelligence and Command Center integration;
+- empty/degraded states for missing ВОР, procurement, schedule, cashflow, and document data.
+
+Validation:
+
+- `pnpm test`: 175/175 passed;
+- `pnpm lint`: passed;
+- `pnpm prisma generate`: passed;
+- `pnpm prisma validate` with dummy `DATABASE_URL`: passed;
+- `pnpm exec tsc --noEmit`: passed;
+- `pnpm build`: passed with the known local Prisma `DATABASE_URL` warning.
+
+Local smoke:
+
+- `/dashboard`: 200;
+- `/projects`: 200;
+- `/projects/project-demo`: 200 in local fallback demo mode;
+- `/projects/project-smoke`: 404 due local DB/seed availability, not a code failure;
+- Risks / Executive UI markers: present in local project HTML;
+- unauth guard smoke: limited by local fallback auth mode and missing local `DATABASE_URL`.
+
+Not run / not touched:
+
+- deploy/redeploy: not run;
+- online smoke: not run;
+- live AI: not run;
+- online mutation/import/delete smoke: not run;
+- uploads / real client files: none;
+- Render env/secrets: unchanged;
+- DB/schema/migrations: unchanged;
+- secrets printed: `false`.
+
+Next gate:
+
+- PR review → ready-state → final merge gate → online/core smoke → shipped project-log entry.
+
 ## 2026-07-03 - Schedule & Cashflow Intelligence v1 online/core GO
 
 Status: shipped baseline for Schedule & Cashflow Intelligence v1 at the online/core gate.
