@@ -4,6 +4,7 @@ import { AlertTriangle, Bot, CheckCircle2, ClipboardList, FileText, Landmark, Pa
 import React, { type CSSProperties } from "react";
 import { buildProjectCommandCenterModel, type CommandCenterAiInsight, type CommandTone } from "@/lib/project-command-center";
 import type { DocumentChecklistItem, PipelineAction, PipelineReadiness } from "@/lib/project-pipeline";
+import type { RiskExecutiveImportHistoryItem } from "@/lib/risk-executive-intelligence";
 import type { BudgetItem, DailyReport, Material, Payment, ProcurementRequest, Project, Risk, ScheduleItem } from "@/lib/types";
 
 type ProjectCommandCenterProps = {
@@ -17,6 +18,7 @@ type ProjectCommandCenterProps = {
   risks: Risk[];
   readiness: PipelineReadiness | null;
   documentChecklist: DocumentChecklistItem[];
+  importHistory?: RiskExecutiveImportHistoryItem[];
   intelligence: {
     completenessScore: number;
     summary: string;
@@ -85,6 +87,7 @@ export function ProjectCommandCenter({
   risks,
   readiness,
   documentChecklist,
+  importHistory = [],
   intelligence,
   aiInsight,
   aiLoading = false,
@@ -103,6 +106,7 @@ export function ProjectCommandCenter({
     risks,
     readiness,
     documentChecklist,
+    importHistory,
     intelligence,
     aiInsight
   });

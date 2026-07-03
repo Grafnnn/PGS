@@ -1,5 +1,6 @@
 import { budgetTotals, deriveAutoRisks, financeTotals, materialTotals, workTotals } from "@/lib/calculations";
 import type { DocumentChecklistItem, PipelineAction, PipelineReadiness } from "@/lib/project-pipeline";
+import { buildRiskExecutiveIntelligence, type RiskExecutiveImportHistoryItem } from "@/lib/risk-executive-intelligence";
 import type { BudgetItem, DailyReport, Material, Payment, ProcurementRequest, Project, Risk, ScheduleItem } from "@/lib/types";
 
 export type CommandTone = "good" | "warn" | "bad" | "info" | "neutral";
@@ -26,6 +27,7 @@ export type ProjectCommandCenterInput = {
   risks?: Risk[] | null;
   readiness?: PipelineReadiness | null;
   documentChecklist?: DocumentChecklistItem[] | null;
+  importHistory?: RiskExecutiveImportHistoryItem[] | null;
   intelligence?: {
     completenessScore: number;
     summary: string;
@@ -168,6 +170,20 @@ export function buildProjectCommandCenterModel(input: ProjectCommandCenterInput)
   const materialScore = materials.length ? ((materials.length - materialStats.deficitItems.length) / materials.length) * 100 : 0;
   const financeScore = finance.cashGap < 0 || finance.financingNeed > 0 ? 35 : 80;
   const riskScore = activeRisks.length ? Math.max(15, 100 - activeRisks.length * 12) : 92;
+  const riskExecutive = buildRiskExecutiveIntelligence({
+    project,
+    budgetItems,
+    scheduleItems,
+    materials,
+    procurementRequests,
+    payments,
+    dailyReports: reports,
+    risks,
+    readiness: input.readiness,
+    documentChecklist: documentItems,
+    intelligence: input.intelligence,
+    importHistory: input.importHistory ?? []
+  });
   const healthScore = clampPercent((scheduleScore + materialScore + financeScore + riskScore + readinessScore) / 5);
   const healthTone = toneFromScore(healthScore);
   const aiInsight = input.aiInsight ?? null;
@@ -202,6 +218,7 @@ export function buildProjectCommandCenterModel(input: ProjectCommandCenterInput)
     activeRequests[0]
       ? defaultAction("Проверить заявку снабжения", activeRequests[0].title, "warn", "Заявки")
       : defaultAction("Подготовить заявку", "Создать заявку при появлении дефицита.", "info", "Заявки"),
+    defaultAction("Проверить решения руководства", riskExecutive.decisions[0]?.title ?? "Decision register готов к проверке.", riskExecutive.decisions.length ? "warn" : "info", "Риски"),
     defaultAction("Сформировать AI-сводку", "Запустить existing AI scenario по клику.", "info", "AI-помощник")
   ];
 
@@ -231,6 +248,7 @@ export function buildProjectCommandCenterModel(input: ProjectCommandCenterInput)
       { key: "budget", label: "Бюджетный сигнал", value: compactMoney(budgetDeviation), tone: budgetDeviation > 0 ? "bad" : "good", hint: `Прогноз: ${compactMoney(budget.totalForecastCost)}` },
       { key: "schedule", label: "План / факт", value: percent(works.completionPercent), tone: delayedWorks.length ? "bad" : "info", hint: delayedWorks.length ? `${delayedWorks.length} просроч.` : "Без критичных просрочек" },
       { key: "risks", label: "Открытые риски", value: String(activeRisks.length), tone: activeRisks.length ? "warn" : "good", hint: activeRisks[0]?.title ?? "Нет открытых рисков" },
+      { key: "decisions", label: "Решения", value: String(riskExecutive.summary.decisionRequired), tone: riskExecutive.summary.decisionRequired ? "warn" : "good", hint: `Report ${riskExecutive.executiveReport.reportReadiness}` },
       { key: "materials", label: "Снабжение", value: String(materialStats.deficitItems.length), tone: materialStats.deficitItems.length ? "bad" : "good", hint: materialStats.deficitItems[0]?.name ?? "Дефицит не найден" },
       { key: "cash", label: "Cash gap", value: compactMoney(finance.cashGap), tone: finance.cashGap < 0 ? "bad" : "good", hint: `Потребность: ${compactMoney(finance.financingNeed)}` }
     ],
@@ -255,6 +273,7 @@ export function buildProjectCommandCenterModel(input: ProjectCommandCenterInput)
       { key: "data", label: "Данные проекта", value: input.readiness?.status ?? "loading", tone: toneFromScore(readinessScore), detail: input.readiness?.summary ?? "Нет подтвержденного pipeline snapshot.", tab: "Аналитика" },
       { key: "documents", label: "Документы", value: documentItems.length ? `${presentDocuments}/${documentItems.length}` : "нет checklist", tone: documentScore >= 70 ? "good" : "warn", detail: documentItems.find((item) => item.status !== "present")?.suggestedNextStep ?? "Проверить версии документов.", tab: "Документы" },
       { key: "actions", label: "Следующие шаги", value: String(input.intelligence?.nextActions.length ?? 0), tone: input.intelligence?.nextActions.length ? "warn" : "info", detail: input.intelligence?.nextActions[0]?.title ?? "Действия появятся после загрузки pipeline.", tab: "Аналитика" },
+      { key: "executive", label: "Executive report", value: riskExecutive.executiveReport.reportReadiness, tone: riskExecutive.executiveReport.status === "red" ? "bad" : riskExecutive.executiveReport.status === "amber" ? "warn" : riskExecutive.executiveReport.status === "green" ? "good" : "info", detail: riskExecutive.managementSummary.nextManagementAction, tab: "Рапорты" },
       { key: "ai", label: "AI Command Layer", value: aiInsight ? aiInsight.provider ?? "ready" : "по запросу", tone: aiInsight?.provider === "degraded" ? "warn" : "info", detail: aiInsight ? "Есть последний результат сценария." : "Live AI не вызывается автоматически.", tab: "AI-помощник" }
     ],
     nextActions

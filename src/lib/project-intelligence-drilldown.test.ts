@@ -62,7 +62,8 @@ describe("project intelligence drill-down model", () => {
     const model = buildProjectIntelligenceDrilldownModel({ project: { id: "empty" } });
 
     expect(model.documents.empty).toBe(true);
-    expect(model.risks.empty).toBe(true);
+    expect(model.risks.empty).toBe(false);
+    expect(model.risks.reportReadiness).toBe("no_data");
     expect(model.schedule.empty).toBe(true);
     expect(model.financeVor.empty).toBe(true);
     expect(model.procurement.empty).toBe(true);
