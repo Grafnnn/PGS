@@ -1,5 +1,73 @@
 # PGS Project Log
 
+## 2026-07-03 - Risks & Executive Reports v1 online/core GO
+
+Status: shipped baseline for Risks & Executive Reports v1 at the online/core gate.
+
+- Online URL: https://pgs-frankfurt.onrender.com
+- Online commit: `72ce5499397f1b78728e9e0c73cd5e35cd8abc9c`
+- Decision: ONLINE/CORE GO
+- Git SHA source: `RENDER_GIT_COMMIT`
+
+Health:
+
+- `/api/health`: HTTP 200 / `ok` after retry
+- DB: `ok`
+- migrations: `ok`, count `6`
+- auth required: `true`
+- AI configured: `true`
+
+Pages:
+
+- `/dashboard`: 200
+- `/projects`: 200
+- `/projects/project-demo`: 404 as expected
+- `/projects/project-smoke`: 200
+
+Markers:
+
+- `Риски`: present in public shell/navigation
+- `Рапорты`: present in public shell/navigation
+- `Project Intelligence`: present in public shell/navigation
+- `График`: present in public shell/navigation
+- `Финансы`: present in public shell/navigation
+- `Материалы` / Procurement: present in public shell/navigation
+- sidebar: present
+- Risk Executive deployed bundle markers present: Risk Register, Decision Register, Recommended Actions, Executive Weekly Report, Report readiness, AI executive polish
+- full tab interaction/browser DOM marker smoke: blocked by unavailable browser tooling, not treated as a core failure
+
+Unauth guards:
+
+- `/api/auth/me`: 401
+- AI summary: 403
+- data-readiness: 401
+- intelligence: 401
+- project DELETE: 401
+- schedule draft: 401
+- cashflow draft: 401
+- temp delete endpoint: 404
+
+Cleanup baseline:
+
+- `project-demo`: remains 404
+- `project-smoke`: target unaffected
+- temporary delete endpoint: absent
+
+Not run / not touched:
+
+- live AI: not run
+- online mutation/import/delete smoke: not run
+- uploads: none
+- manual deploy/redeploy: not triggered
+- Render env/secrets: unchanged
+- DB/schema/migrations: unchanged
+- browser smoke: blocked by tooling; HTTP/DOM/bundle smoke used
+- secrets printed: `false`
+
+Remaining optional follow-up:
+
+- authenticated/browser project-page smoke for full Risks/Reports tab interaction when safe auth/browser tooling is available.
+
 ## 2026-07-03 - Risks & Executive Reports v1 PR validation
 
 Status: feature train prepared for PR review; not merged and not shipped online yet.
