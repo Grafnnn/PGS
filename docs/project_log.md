@@ -1,5 +1,62 @@
 # PGS Project Log
 
+## 2026-07-03 - Schedule & Cashflow Intelligence v1 online/core GO
+
+Status: shipped baseline for Schedule & Cashflow Intelligence v1 at the online/core gate.
+
+- Online URL: https://pgs-frankfurt.onrender.com
+- Online commit: `eccee8462ad9d66e117a7c74ef4f313167568809`
+- Decision: ONLINE/CORE GO
+- Git SHA source: `RENDER_GIT_COMMIT`
+
+Health:
+
+- `/api/health`: HTTP 200 / `ok` on three retry attempts
+- DB: `ok`
+- migrations: `ok`, count `6`
+- auth required: `true`
+- AI configured: `true`
+
+Pages:
+
+- `/dashboard`: 200
+- `/projects`: 200
+- `/projects/project-demo`: 404 as expected
+- `/projects/project-smoke`: 404, public-read/project availability limitation, not a core failure
+
+Markers:
+
+- `График`: present in shell/navigation
+- `Финансы`: present in shell/navigation
+- `Материалы` / Procurement: partially present as operations/procurement navigation
+- sidebar: present
+- Project Intelligence / Executive Weekly Plan / weekly schedule-cashflow markers: blocked by lack of a valid public project page, not treated as a core failure
+
+Unauth guards:
+
+- `/api/auth/me`: 401
+- AI summary: 403
+- data-readiness: 401
+- intelligence: 401
+- project DELETE: 401
+- schedule draft endpoint: 401
+- cashflow draft endpoint: 401
+
+Not run / not touched:
+
+- live AI: not run
+- online mutation/import/delete smoke: not run
+- uploads: none
+- manual deploy/redeploy: not triggered
+- Render env/secrets: unchanged
+- DB/schema/migrations: unchanged
+- browser smoke: blocked by tooling; HTTP/DOM smoke used
+- secrets printed: `false`
+
+Remaining optional follow-up:
+
+- authenticated project-page/browser smoke for full Schedule/Cashflow workspace markers when safe auth/browser tooling is available
+
 ## 2026-07-01 - Demo project removal online fix
 
 Status: demo project removal fix merged; Render redeploy trigger recorded.
