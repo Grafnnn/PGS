@@ -1,5 +1,76 @@
 # PGS Project Log
 
+## 2026-07-04 - Documents & Executive Compliance v1 online/core GO
+
+Status: shipped baseline for Documents & Executive Compliance v1 at the online/core gate.
+
+- Online URL: https://pgs-frankfurt.onrender.com
+- Online commit: `9d3ad89cf1228fb634e9e894579dc802d41d18e9`
+- Decision: ONLINE/CORE GO
+- Git SHA source: `RENDER_GIT_COMMIT`
+
+Health:
+
+- `/api/health`: HTTP 200 / `ok` on 3 attempts
+- DB: `ok`
+- migrations: `ok`, count `6`
+- auth required: `true`
+- AI configured: `true`
+
+Pages:
+
+- `/dashboard`: 200
+- `/projects`: 200
+- `/projects/project-demo`: 404 as expected
+- `/projects/project-smoke`: 200
+
+Markers:
+
+- `Документы`: present
+- `Рапорты`: present
+- `Риски`: present
+- `Project Intelligence`: present
+- `График`: present
+- `Финансы`: present
+- `Материалы`: present
+- Procurement: present
+- project tabs / sidebar / app shell: present
+- deployed document compliance bundle markers present: `document-compliance`, Compliance risks, Risk Register, Executive Weekly, `План сбора документов`
+- some project-specific document labels were not visible in the current public DOM because the public smoke data/page state does not expose every compliance panel; not treated as a core failure
+- browser smoke: project page opens, no horizontal overflow
+
+Unauth guards:
+
+- `/api/auth/me`: 401
+- AI summary: 403
+- data-readiness: 401
+- intelligence: 401
+- schedule draft: 403
+- cashflow draft: 403
+- documents GET: 403
+- project DELETE: not executed because online delete/mutation calls were forbidden
+- temp delete endpoint: GET 404, absent
+
+Cleanup baseline:
+
+- `project-demo`: remains 404
+- `project-smoke`: remains available
+- temporary delete endpoint: absent
+
+Not run / not touched:
+
+- live AI: not run
+- online mutation/import/delete smoke: not run
+- uploads: none
+- manual deploy/redeploy: not triggered
+- Render env/secrets: unchanged
+- DB/schema/migrations: unchanged
+- secrets printed: `false`
+
+Remaining optional follow-up:
+
+- authenticated/browser project-page smoke for full Documents/Compliance panel coverage when safe auth/browser tooling is available.
+
 ## 2026-07-04 - Documents & Executive Compliance v1 PR validation
 
 Status: feature train prepared for PR review; not merged and not shipped online yet.
