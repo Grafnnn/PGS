@@ -143,14 +143,22 @@ export function ProjectIntelligenceDrilldown({
           <div className="intelligence-metrics">
             <StatusInsightCard title="Готовность пакета" value={`${model.documents.score}%`} detail={`${model.documents.present}/${model.documents.total || 0} закрыто`} tone={model.documents.tone} />
             <StatusInsightCard title="Пробелы" value={String(model.documents.missing.length)} detail="Документы к дозагрузке или проверке" tone={model.documents.missing.length ? "warn" : "good"} />
+            <StatusInsightCard title="Compliance" value={model.documents.complianceReadiness} detail={`${model.documents.missingCritical} urgent/high missing`} tone={model.documents.missingCritical ? "bad" : model.documents.tone} />
+            <StatusInsightCard title="КС readiness" value={model.documents.ksReadiness} detail={`Executive package: ${model.documents.executivePackageReadiness}`} tone={model.documents.ksReadiness === "yes" ? "good" : model.documents.ksReadiness === "partial" ? "warn" : model.documents.ksReadiness === "unknown" ? "info" : "bad"} />
           </div>
           {model.documents.empty ? (
             <EmptyIntelligenceState text="Document checklist пока не загружен. Откройте раздел документов или загрузите ВОР/пакет файлов." />
           ) : (
-            <SignalList
-              emptyText="Критичных пробелов по документам не найдено."
-              items={model.documents.missing.map((item) => ({ title: item.title, detail: item.suggestedNextStep, tone: item.status === "missing" ? "warn" : "info", meta: item.categoryHints.join(", ") }))}
-            />
+            <div className="document-drilldown-stack">
+              <SignalList
+                emptyText="Критичных пробелов по документам не найдено."
+                items={[
+                  ...model.documents.blockingPackages,
+                  ...model.documents.weeklyActions,
+                  ...model.documents.missing.map((item) => ({ title: item.title, detail: item.suggestedNextStep, tone: item.status === "missing" ? "warn" as const : "info" as const, meta: item.categoryHints.join(", ") }))
+                ].slice(0, 8)}
+              />
+            </div>
           )}
         </article>
 

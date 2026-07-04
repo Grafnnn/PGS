@@ -24,6 +24,8 @@ describe("ProjectIntelligenceDrilldown", () => {
 
     expect(html).toContain("Project Intelligence");
     expect(html).toContain("Documents Intelligence");
+    expect(html).toContain("КС readiness");
+    expect(html).toContain("Executive package");
     expect(html).toContain("Risk Intelligence");
     expect(html).toContain("Schedule / График Intelligence");
     expect(html).toContain("ВОР / Finance Intelligence");

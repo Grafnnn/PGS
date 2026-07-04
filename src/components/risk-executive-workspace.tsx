@@ -12,7 +12,7 @@ import {
   type RiskSeverity
 } from "@/lib/risk-executive-intelligence";
 import type { DocumentChecklistItem, PipelineAction, PipelineReadiness } from "@/lib/project-pipeline";
-import type { BudgetItem, DailyReport, Material, Payment, ProcurementRequest, Project, Risk, ScheduleItem } from "@/lib/types";
+import type { BudgetItem, DailyReport, Material, Payment, ProcurementRequest, Project, ProjectDocument, Risk, ScheduleItem } from "@/lib/types";
 
 type RiskExecutiveWorkspaceProps = {
   project: Partial<Project>;
@@ -23,6 +23,7 @@ type RiskExecutiveWorkspaceProps = {
   payments: Payment[];
   dailyReports: DailyReport[];
   risks: Risk[];
+  documents?: ProjectDocument[];
   readiness: PipelineReadiness | null;
   documentChecklist: DocumentChecklistItem[];
   intelligence: {
@@ -219,6 +220,7 @@ export function RiskExecutiveWorkspace({
   payments,
   dailyReports,
   risks,
+  documents = [],
   readiness,
   documentChecklist,
   intelligence,
@@ -236,6 +238,7 @@ export function RiskExecutiveWorkspace({
     payments,
     dailyReports,
     risks,
+    documents,
     readiness,
     documentChecklist,
     intelligence,
