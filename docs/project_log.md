@@ -1,5 +1,71 @@
 # PGS Project Log
 
+## 2026-07-06 - Contract & Tender Intelligence v1 online/core GO
+
+Status: shipped baseline for Contract & Tender Intelligence v1 at the online/core gate.
+
+- Online URL: https://pgs-frankfurt.onrender.com
+- Online commit: `a4235bb90c20c0e473b1c024a0f4b471f249e27f`
+- Decision: ONLINE/CORE GO
+- Git SHA source: `RENDER_GIT_COMMIT`
+
+Health:
+
+- `/api/health`: HTTP 200 / `ok`
+- deployed SHA matched expected commit
+- DB: `ok`
+- migrations: `ok`, count `6`
+- auth required: `true`
+- AI configured: `true`
+
+Pages:
+
+- `/dashboard`: 200
+- `/projects`: 200
+- `/projects/project-demo`: 404 as expected
+- `/projects/project-smoke`: 200
+
+Markers:
+
+- `Договор / Тендер`: present
+- Contract / Tender: present
+- Project Intelligence: present
+- Command Center: present
+- `AI-помощник`: present
+- `КС`: present
+- `Документы`: present
+- app shell / project tabs: present
+- deployed CSS contains `contract-tender-*` workspace classes
+
+Unauth guards:
+
+- `/api/auth/me`: 401
+- contract-review AI route: 403
+- analyze-contract alias: 403
+- data-readiness: 401
+- intelligence: 401
+
+Cleanup baseline:
+
+- `project-demo`: remains 404
+- `project-smoke`: remains available, 200
+- runtime smoke target remains `project-smoke`
+- `SEED_DEMO_PROJECT` gate remains intact
+
+Not run / not touched:
+
+- live AI: not run
+- online mutation/import/delete smoke: not run
+- uploads: none
+- manual deploy/redeploy: not triggered
+- Render env/secrets: unchanged
+- DB/schema/migrations: unchanged
+- secrets printed: `false`
+
+Remaining optional follow-up:
+
+- authenticated/browser project-page smoke for full Contract & Tender workspace interaction when safe auth/browser tooling is available.
+
 ## 2026-07-05 - КС / Acceptance & Billing Workflow v1 online/core GO
 
 Status: shipped baseline for КС / Acceptance & Billing Workflow v1 at the online/core gate.
