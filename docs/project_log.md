@@ -1,5 +1,78 @@
 # PGS Project Log
 
+## 2026-07-05 - КС / Acceptance & Billing Workflow v1 online/core GO
+
+Status: shipped baseline for КС / Acceptance & Billing Workflow v1 at the online/core gate.
+
+- Online URL: https://pgs-frankfurt.onrender.com
+- Online commit: `071046f154a7c0012f798e9224ff9d9e91baffa4`
+- Decision: ONLINE/CORE GO
+- Git SHA source: `RENDER_GIT_COMMIT`
+
+Health:
+
+- First `/api/health` attempt timed out after 40s with HTTP `000` / 0 bytes.
+- Retry returned `/api/health`: HTTP 200 / `ok`.
+- Third attempt returned `/api/health`: HTTP 200 / `ok`.
+- Deployed SHA matched expected commit.
+- DB: `ok`
+- migrations: `ok`, count `6`
+- auth required: `true`
+- AI configured: `true`
+
+Pages:
+
+- `/dashboard`: 200
+- `/projects`: 200
+- `/projects/project-demo`: 404 as expected
+- `/projects/project-smoke`: 200
+
+Markers:
+
+- `КС`: present
+- Acceptance/Billing: present
+- Ready to bill: present
+- Blocked billing: present
+- `КС package draft`: present
+- Required package: present
+- Billing cashflow impact: present
+- Project Intelligence: present
+- Command Center / shell markers: present
+- Documents / Risks / Reports / sidebar / project tabs: present
+
+Unauth guards:
+
+- `/api/auth/me`: 401
+- AI summary: 403
+- data-readiness: 401
+- intelligence: 401
+- documents: 403
+- schedule draft: 401
+- cashflow draft: 401
+- acceptance/billing endpoint: not applicable, no separate endpoint added
+- project DELETE: not run because online mutation/delete calls were forbidden
+
+Cleanup baseline:
+
+- `project-demo`: remains 404
+- `project-smoke`: remains available, 200
+- temporary delete endpoint: GET 404, absent
+
+Not run / not touched:
+
+- browser smoke: not run; HTTP/DOM/bundle smoke used
+- live AI: not run
+- online mutation/import/delete smoke: not run
+- uploads: none
+- manual deploy/redeploy: not triggered
+- Render env/secrets: unchanged
+- DB/schema/migrations: unchanged
+- secrets printed: `false`
+
+Remaining optional follow-up:
+
+- authenticated/browser project-page smoke for full КС / Acceptance & Billing workflow interaction when safe auth/browser tooling is available.
+
 ## 2026-07-04 - Documents & Executive Compliance v1 online/core GO
 
 Status: shipped baseline for Documents & Executive Compliance v1 at the online/core gate.
