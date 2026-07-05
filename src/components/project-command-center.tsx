@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, Bot, CheckCircle2, ClipboardList, FileText, Landmark, Package, Sparkles, TimerReset } from "lucide-react";
+import { AlertTriangle, Bot, CheckCircle2, ClipboardList, FileText, Landmark, Package, ReceiptText, Sparkles, TimerReset } from "lucide-react";
 import React, { type CSSProperties } from "react";
 import { buildProjectCommandCenterModel, type CommandCenterAiInsight, type CommandTone } from "@/lib/project-command-center";
 import type { DocumentChecklistItem, PipelineAction, PipelineReadiness } from "@/lib/project-pipeline";
@@ -39,6 +39,7 @@ const icons = {
   budget: <Landmark size={18} />,
   schedule: <TimerReset size={18} />,
   risks: <AlertTriangle size={18} />,
+  acceptance: <ReceiptText size={18} />,
   materials: <Package size={18} />,
   cash: <Landmark size={18} />
 };
@@ -61,6 +62,7 @@ function drilldownForTab(tab: string) {
   if (tab === "Документы") return "documents";
   if (tab === "Риски") return "risks";
   if (tab === "График") return "schedule";
+  if (tab === "КС") return "acceptance-billing";
   if (tab === "Бюджет / ВОР" || tab === "Финансы") return "finance-vor";
   if (tab === "Материалы" || tab === "Заявки") return "procurement";
   if (tab === "Рапорты") return "reports";
@@ -71,6 +73,7 @@ function drilldownForTab(tab: string) {
 function drilldownForKpi(key: string) {
   if (key === "budget" || key === "cash") return "finance-vor";
   if (key === "schedule") return "schedule";
+  if (key === "acceptance") return "acceptance-billing";
   if (key === "risks") return "risks";
   if (key === "materials") return "procurement";
   if (key === "readiness") return "documents";
@@ -121,7 +124,7 @@ export function ProjectCommandCenter({
   const openKpi = (key: string) => {
     const section = drilldownForKpi(key);
     if (section && onDrilldown) onDrilldown(section);
-    else onNavigate(key === "cash" ? "Финансы" : key === "schedule" ? "График" : key === "materials" ? "Материалы" : key === "risks" ? "Риски" : key === "readiness" ? "Аналитика" : "Бюджет / ВОР");
+    else onNavigate(key === "cash" ? "Финансы" : key === "schedule" ? "График" : key === "acceptance" ? "КС" : key === "materials" ? "Материалы" : key === "risks" ? "Риски" : key === "readiness" ? "Аналитика" : "Бюджет / ВОР");
   };
 
   return (

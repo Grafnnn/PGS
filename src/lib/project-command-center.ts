@@ -1,4 +1,5 @@
 import { budgetTotals, deriveAutoRisks, financeTotals, materialTotals, workTotals } from "@/lib/calculations";
+import { buildAcceptanceBillingIntelligence } from "@/lib/acceptance-billing-intelligence";
 import { buildDocumentComplianceIntelligence } from "@/lib/document-compliance-intelligence";
 import type { DocumentChecklistItem, PipelineAction, PipelineReadiness } from "@/lib/project-pipeline";
 import { buildRiskExecutiveIntelligence, type RiskExecutiveImportHistoryItem } from "@/lib/risk-executive-intelligence";
@@ -181,6 +182,18 @@ export function buildProjectCommandCenterModel(input: ProjectCommandCenterInput)
     documentChecklist: documentItems,
     importHistory: input.importHistory ?? []
   });
+  const acceptanceBilling = buildAcceptanceBillingIntelligence({
+    project,
+    budgetItems,
+    scheduleItems,
+    materials,
+    procurementRequests,
+    payments,
+    risks,
+    documents,
+    documentChecklist: documentItems,
+    importHistory: input.importHistory ?? []
+  });
   const scheduleScore = works.completionPercent;
   const materialScore = materials.length ? ((materials.length - materialStats.deficitItems.length) / materials.length) * 100 : 0;
   const financeScore = finance.cashGap < 0 || finance.financingNeed > 0 ? 35 : 80;
@@ -211,7 +224,8 @@ export function buildProjectCommandCenterModel(input: ProjectCommandCenterInput)
     delayedWorks[0] ? `Просрочка: ${delayedWorks[0].name}` : "График без критичных просрочек в текущем срезе.",
     materialStats.deficitItems[0] ? `Дефицит материала: ${materialStats.deficitItems[0].name}.` : "Критичный дефицит материалов не выявлен.",
     activeRisks[0] ? `Риск: ${activeRisks[0].title}.` : "Риски требуют регулярного обновления после планерки.",
-    budgetDeviation > 0 ? `Прогнозный перерасход: ${compactMoney(budgetDeviation)}.` : "Бюджетный прогноз в допустимом коридоре."
+    budgetDeviation > 0 ? `Прогнозный перерасход: ${compactMoney(budgetDeviation)}.` : "Бюджетный прогноз в допустимом коридоре.",
+    acceptanceBilling.summary.readyAmount > 0 ? `КС к проверке: ${compactMoney(acceptanceBilling.summary.readyAmount)}.` : "КС требует подтвержденного факта и документов."
   ];
   const recommendedActions = (aiInsight?.recommendedActions ?? []).map((item) => item.title).slice(0, 5);
   const fallbackActions = [
@@ -237,6 +251,9 @@ export function buildProjectCommandCenterModel(input: ProjectCommandCenterInput)
     documentCompliance.summary.blockingKsOrReport
       ? defaultAction("Закрыть документы КС", `${documentCompliance.summary.blockingKsOrReport} блокеров для КС/report package.`, "warn", "Документы")
       : defaultAction("Проверить исполнительный пакет", `Compliance: ${documentCompliance.summary.readiness}.`, "info", "Документы"),
+    acceptanceBilling.summary.readyItems
+      ? defaultAction("Проверить пакет КС", `${acceptanceBilling.summary.readyItems} поз. на ${compactMoney(acceptanceBilling.summary.readyAmount)}.`, acceptanceBilling.summary.blockedItems ? "warn" : "good", "КС")
+      : defaultAction("Подготовить данные для КС", acceptanceBilling.summary.nextStep, acceptanceBilling.summary.tone === "bad" ? "bad" : "info", "КС"),
     defaultAction("Проверить решения руководства", riskExecutive.decisions[0]?.title ?? "Decision register готов к проверке.", riskExecutive.decisions.length ? "warn" : "info", "Риски"),
     defaultAction("Сформировать AI-сводку", "Запустить existing AI scenario по клику.", "info", "AI-помощник")
   ];
@@ -268,6 +285,7 @@ export function buildProjectCommandCenterModel(input: ProjectCommandCenterInput)
       { key: "schedule", label: "План / факт", value: percent(works.completionPercent), tone: delayedWorks.length ? "bad" : "info", hint: delayedWorks.length ? `${delayedWorks.length} просроч.` : "Без критичных просрочек" },
       { key: "risks", label: "Открытые риски", value: String(activeRisks.length), tone: activeRisks.length ? "warn" : "good", hint: activeRisks[0]?.title ?? "Нет открытых рисков" },
       { key: "decisions", label: "Решения", value: String(riskExecutive.summary.decisionRequired), tone: riskExecutive.summary.decisionRequired ? "warn" : "good", hint: `Report ${riskExecutive.executiveReport.reportReadiness}` },
+      { key: "acceptance", label: "КС / закрытие", value: compactMoney(acceptanceBilling.summary.readyAmount), tone: acceptanceBilling.summary.tone, hint: `${acceptanceBilling.summary.readyItems} ready · ${acceptanceBilling.summary.blockedItems} blocked` },
       { key: "materials", label: "Снабжение", value: String(materialStats.deficitItems.length), tone: materialStats.deficitItems.length ? "bad" : "good", hint: materialStats.deficitItems[0]?.name ?? "Дефицит не найден" },
       { key: "cash", label: "Cash gap", value: compactMoney(finance.cashGap), tone: finance.cashGap < 0 ? "bad" : "good", hint: `Потребность: ${compactMoney(finance.financingNeed)}` }
     ],
@@ -276,7 +294,7 @@ export function buildProjectCommandCenterModel(input: ProjectCommandCenterInput)
       subject: aiInsight?.subject ?? "Что требует внимания по объекту",
       bullets: aiBullets.length ? aiBullets : fallbackBullets,
       recommendedActions: recommendedActions.length ? recommendedActions : fallbackActions,
-      recommendedApps: ["ВОР", "График", "Снабжение", "Финансы", "Риски"].filter((item) => item !== "Снабжение" || materials.length),
+      recommendedApps: ["ВОР", "График", "Снабжение", "Финансы", "КС", "Риски"].filter((item) => item !== "Снабжение" || materials.length),
       provider: aiInsight?.provider ?? "deterministic-preview",
       degraded: aiInsight?.provider === "degraded" || !aiInsight,
       empty: !aiInsight
@@ -284,6 +302,7 @@ export function buildProjectCommandCenterModel(input: ProjectCommandCenterInput)
     progress: [
       { key: "readiness", label: "Pipeline readiness", value: clampPercent(readinessScore), tone: toneFromScore(readinessScore), detail: input.readiness?.summary ?? "Pipeline data loading or unavailable." },
       { key: "documents", label: "Документы", value: clampPercent(documentScore), tone: documentCompliance.summary.readiness === "ready" ? "good" : documentCompliance.summary.readiness === "missing_critical" ? "bad" : documentCompliance.summary.totalRequired ? "warn" : "info", detail: documentCompliance.summary.totalRequired ? `${documentCompliance.summary.missing}/${documentCompliance.summary.totalRequired} missing · КС ${documentCompliance.ksReadiness.readyForKs}` : "Checklist еще не загружен." },
+      { key: "acceptance", label: "КС / закрытие", value: acceptanceBilling.summary.contractScopeAmount ? clampPercent((acceptanceBilling.summary.readyAmount / acceptanceBilling.summary.contractScopeAmount) * 100) : 0, tone: acceptanceBilling.summary.tone, detail: `${compactMoney(acceptanceBilling.summary.readyAmount)} к проверке · ${acceptanceBilling.summary.readinessLabel}` },
       { key: "schedule", label: "График", value: clampPercent(scheduleScore), tone: delayedWorks.length ? "bad" : "info", detail: delayedWorks.length ? `${delayedWorks.length} работ просрочено` : "План-факт без критичного сигнала." },
       { key: "materials", label: "Материалы", value: clampPercent(materialScore), tone: materialStats.deficitItems.length ? "bad" : "good", detail: materialStats.deficitItems.length ? `${materialStats.deficitItems.length} дефицитных позиций` : "Материалы в норме." },
       { key: "finance", label: "Финансы", value: clampPercent(financeScore), tone: financeScore < 50 ? "bad" : "good", detail: finance.cashGap < 0 ? `Разрыв ${compactMoney(finance.cashGap)}` : "Cashflow без отрицательного сигнала." }
@@ -291,6 +310,7 @@ export function buildProjectCommandCenterModel(input: ProjectCommandCenterInput)
     statusBoard: [
       { key: "data", label: "Данные проекта", value: input.readiness?.status ?? "loading", tone: toneFromScore(readinessScore), detail: input.readiness?.summary ?? "Нет подтвержденного pipeline snapshot.", tab: "Аналитика" },
       { key: "documents", label: "Документы", value: documentCompliance.summary.readiness, tone: documentCompliance.summary.readiness === "ready" ? "good" : documentCompliance.summary.readiness === "missing_critical" ? "bad" : "warn", detail: documentCompliance.missingDocuments[0]?.suggestedAction ?? documentItems.find((item) => item.status !== "present")?.suggestedNextStep ?? "Проверить КС-ready и executive package.", tab: "Документы" },
+      { key: "acceptance", label: "КС / закрытие", value: acceptanceBilling.summary.status, tone: acceptanceBilling.summary.tone, detail: acceptanceBilling.summary.nextStep, tab: "КС" },
       { key: "actions", label: "Следующие шаги", value: String(input.intelligence?.nextActions.length ?? 0), tone: input.intelligence?.nextActions.length ? "warn" : "info", detail: input.intelligence?.nextActions[0]?.title ?? "Действия появятся после загрузки pipeline.", tab: "Аналитика" },
       { key: "executive", label: "Executive report", value: riskExecutive.executiveReport.reportReadiness, tone: riskExecutive.executiveReport.status === "red" ? "bad" : riskExecutive.executiveReport.status === "amber" ? "warn" : riskExecutive.executiveReport.status === "green" ? "good" : "info", detail: riskExecutive.managementSummary.nextManagementAction, tab: "Рапорты" },
       { key: "ai", label: "AI Command Layer", value: aiInsight ? aiInsight.provider ?? "ready" : "по запросу", tone: aiInsight?.provider === "degraded" ? "warn" : "info", detail: aiInsight ? "Есть последний результат сценария." : "Live AI не вызывается автоматически.", tab: "AI-помощник" }

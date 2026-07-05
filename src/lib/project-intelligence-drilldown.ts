@@ -1,4 +1,5 @@
 import { budgetTotals, deriveAutoRisks, financeTotals, materialTotals, workTotals } from "@/lib/calculations";
+import { buildAcceptanceBillingIntelligence } from "@/lib/acceptance-billing-intelligence";
 import { buildDocumentComplianceIntelligence } from "@/lib/document-compliance-intelligence";
 import { buildProcurementIntelligenceModel } from "@/lib/procurement-intelligence";
 import type { DocumentChecklistItem, PipelineAction, PipelineReadiness } from "@/lib/project-pipeline";
@@ -143,6 +144,22 @@ export type ProjectIntelligenceDrilldownModel = {
     ctaTab: "Материалы";
     requestTab: "Заявки";
   };
+  acceptanceBilling: {
+    tone: DrilldownTone;
+    status: string;
+    readyAmount: string;
+    blockedAmount: string;
+    readyItems: number;
+    blockedItems: number;
+    missingFactItems: number;
+    documentBlockers: number;
+    nextStep: string;
+    packageItems: Array<{ title: string; detail: string; tone: DrilldownTone }>;
+    risks: Array<{ title: string; detail: string; tone: DrilldownTone }>;
+    empty: boolean;
+    ctaTab: "КС";
+    documentsTab: "Документы";
+  };
   reports: {
     tone: DrilldownTone;
     latestReport?: { title: string; detail: string; status: string };
@@ -243,6 +260,18 @@ export function buildProjectIntelligenceDrilldownModel(input: ProjectIntelligenc
     payments,
     importHistory: input.importHistory ?? []
   });
+  const acceptanceBilling = buildAcceptanceBillingIntelligence({
+    project,
+    budgetItems,
+    scheduleItems,
+    materials,
+    procurementRequests,
+    payments,
+    risks,
+    documents,
+    documentChecklist,
+    importHistory: input.importHistory ?? []
+  });
   const riskExecutive = buildRiskExecutiveIntelligence({
     ...input,
     project,
@@ -307,6 +336,7 @@ export function buildProjectIntelligenceDrilldownModel(input: ProjectIntelligenc
       { id: "risks", label: "Риски", tone: riskTone, count: Math.max(allRisks.length, riskExecutive.summary.totalOpen) },
       { id: "schedule", label: "График", tone: scheduleTone, count: works.overdueItems.length },
       { id: "finance-vor", label: "ВОР / финансы", tone: financeTone },
+      { id: "acceptance-billing", label: "КС", tone: acceptanceBilling.summary.tone, count: acceptanceBilling.summary.readyItems || acceptanceBilling.summary.blockedItems },
       { id: "procurement", label: "Снабжение", tone: procurementTone, count: procurementIntelligence.summary.candidates || materialStats.deficitItems.length },
       { id: "reports", label: "Executive", tone: reportsTone },
       { id: "ai-recommendations", label: "AI", tone: "info", count: drilldownAiScenarios.length }
@@ -422,6 +452,30 @@ export function buildProjectIntelligenceDrilldownModel(input: ProjectIntelligenc
       empty: materials.length === 0 && procurementRequests.length === 0,
       ctaTab: "Материалы",
       requestTab: "Заявки"
+    },
+    acceptanceBilling: {
+      tone: acceptanceBilling.summary.tone,
+      status: acceptanceBilling.summary.status,
+      readyAmount: compactMoney(acceptanceBilling.summary.readyAmount),
+      blockedAmount: compactMoney(acceptanceBilling.summary.blockedAmount),
+      readyItems: acceptanceBilling.summary.readyItems,
+      blockedItems: acceptanceBilling.summary.blockedItems,
+      missingFactItems: acceptanceBilling.summary.missingFactItems,
+      documentBlockers: acceptanceBilling.summary.documentBlockers,
+      nextStep: acceptanceBilling.summary.nextStep,
+      packageItems: [...acceptanceBilling.packageDraft.readyItems, ...acceptanceBilling.packageDraft.blockedItems].slice(0, 5).map((item) => ({
+        title: item.title,
+        detail: `${compactMoney(item.billableAmount)} · ${item.status} · ${item.suggestedAction}`,
+        tone: item.status === "ready" ? "good" : item.status === "needs_fact" ? "info" : item.status === "needs_documents" ? "warn" : "bad"
+      })),
+      risks: acceptanceBilling.risks.slice(0, 4).map((risk) => ({
+        title: risk.title,
+        detail: risk.description,
+        tone: risk.severity === "critical" || risk.severity === "high" ? "bad" : risk.severity === "medium" ? "warn" : "info"
+      })),
+      empty: acceptanceBilling.summary.status === "no_data",
+      ctaTab: "КС",
+      documentsTab: "Документы"
     },
     reports: {
       tone: reportsTone,

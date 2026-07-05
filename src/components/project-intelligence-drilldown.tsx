@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, Bot, ClipboardList, FileText, Landmark, PackageCheck, Sparkles, TimerReset } from "lucide-react";
+import { AlertTriangle, Bot, ClipboardList, FileText, Landmark, PackageCheck, ReceiptText, Sparkles, TimerReset } from "lucide-react";
 import React from "react";
 import {
   buildProjectIntelligenceDrilldownModel,
@@ -245,6 +245,38 @@ export function ProjectIntelligenceDrilldown({
               ].slice(0, 6)}
             />
           )}
+        </article>
+
+        <article className="panel intelligence-panel">
+          <SectionHeader id="acceptance-billing" icon={<ReceiptText size={18} />} title="Acceptance & Billing / КС Intelligence" tone={model.acceptanceBilling.tone}>
+            <button className="button secondary compact-button" type="button" onClick={() => onNavigate(model.acceptanceBilling.ctaTab)}>
+              Открыть КС
+            </button>
+            <button className="button secondary compact-button" type="button" onClick={() => onNavigate(model.acceptanceBilling.documentsTab)}>
+              Документы
+            </button>
+          </SectionHeader>
+          <div className="intelligence-metrics">
+            <StatusInsightCard title="Ready to bill" value={model.acceptanceBilling.readyAmount} detail={`${model.acceptanceBilling.readyItems} позиций`} tone={model.acceptanceBilling.readyItems ? "good" : "info"} />
+            <StatusInsightCard title="Blocked billing" value={model.acceptanceBilling.blockedAmount} detail={`${model.acceptanceBilling.blockedItems} позиций`} tone={model.acceptanceBilling.blockedItems ? "warn" : "good"} />
+            <StatusInsightCard title="Факт" value={String(model.acceptanceBilling.missingFactItems)} detail="позиций без подтверждения" tone={model.acceptanceBilling.missingFactItems ? "warn" : "good"} />
+            <StatusInsightCard title="Документы КС" value={String(model.acceptanceBilling.documentBlockers)} detail={model.acceptanceBilling.status} tone={model.acceptanceBilling.documentBlockers ? "bad" : model.acceptanceBilling.tone} />
+          </div>
+          {model.acceptanceBilling.empty ? (
+            <EmptyIntelligenceState text="Для КС нужны ВОР, график и подтвержденные фактические объемы." />
+          ) : (
+            <SignalList
+              emptyText="Готовых или заблокированных строк КС пока нет."
+              items={[
+                ...model.acceptanceBilling.packageItems,
+                ...model.acceptanceBilling.risks
+              ].slice(0, 8)}
+            />
+          )}
+          <div className="executive-action-note">
+            <Sparkles size={16} />
+            <span>{model.acceptanceBilling.nextStep}</span>
+          </div>
         </article>
 
         <article className="panel intelligence-panel">

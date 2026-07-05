@@ -29,6 +29,7 @@ describe("ProjectIntelligenceDrilldown", () => {
     expect(html).toContain("Risk Intelligence");
     expect(html).toContain("Schedule / График Intelligence");
     expect(html).toContain("ВОР / Finance Intelligence");
+    expect(html).toContain("Acceptance &amp; Billing / КС Intelligence");
     expect(html).toContain("Procurement / Снабжение Intelligence");
     expect(html).toContain("Reports / Executive Output");
     expect(html).toContain("AI Recommendations Drill-down");

@@ -40,7 +40,7 @@ describe("project intelligence drill-down model", () => {
       }
     });
 
-    expect(model.nav.map((item) => item.id)).toEqual(["documents", "risks", "schedule", "finance-vor", "procurement", "reports", "ai-recommendations"]);
+    expect(model.nav.map((item) => item.id)).toEqual(["documents", "risks", "schedule", "finance-vor", "acceptance-billing", "procurement", "reports", "ai-recommendations"]);
     expect(model.documents).toMatchObject({ present: 1, total: 2, ctaTab: "Документы" });
     expect(model.documents.complianceReadiness).toBeTruthy();
     expect(model.documents.ksReadiness).toBeTruthy();
@@ -56,6 +56,8 @@ describe("project intelligence drill-down model", () => {
     expect(model.procurement.candidateCount).toBeGreaterThanOrEqual(0);
     expect(model.procurement.readinessLabel).toBeTruthy();
     expect(model.procurement.estimatedDraftTotal).toContain("₽");
+    expect(model.acceptanceBilling.ctaTab).toBe("КС");
+    expect(model.acceptanceBilling.readyAmount).toContain("₽");
     expect(model.reports.executiveScenario).toBe("executive-report");
     expect(model.ai.scenarios).toHaveLength(drilldownAiScenarios.length);
     expect(model.ai.limitations).toContain("Нет КС");
@@ -72,6 +74,7 @@ describe("project intelligence drill-down model", () => {
     expect(model.schedule.empty).toBe(true);
     expect(model.financeVor.empty).toBe(true);
     expect(model.procurement.empty).toBe(true);
+    expect(model.acceptanceBilling.empty).toBe(true);
     expect(model.reports.empty).toBe(true);
     expect(model.ai.scenarios.some((scenario) => scenario.scenario === "executive-report")).toBe(true);
   });

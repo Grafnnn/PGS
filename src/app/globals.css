@@ -4017,6 +4017,193 @@ input[type="checkbox"] {
   min-width: 0;
 }
 
+.acceptance-billing-workspace {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.acceptance-billing-header {
+  align-items: start;
+  background: var(--panel-muted);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  display: grid;
+  gap: 14px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  min-width: 0;
+  padding: 16px;
+}
+
+.acceptance-billing-header h3 {
+  margin: 2px 0 6px;
+}
+
+.acceptance-billing-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+.acceptance-billing-summary-grid,
+.acceptance-package-summary,
+.acceptance-cashflow-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  min-width: 0;
+}
+
+.acceptance-billing-metric,
+.acceptance-billing-card,
+.acceptance-readiness,
+.acceptance-executive-note {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  min-width: 0;
+}
+
+.acceptance-billing-metric {
+  display: grid;
+  gap: 5px;
+  padding: 12px;
+}
+
+.acceptance-billing-metric small,
+.acceptance-billing-metric span,
+.acceptance-package-summary small,
+.acceptance-risk small,
+.acceptance-risk em,
+.acceptance-action span,
+.acceptance-note span,
+.acceptance-executive-note small,
+.acceptance-executive-note span {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.acceptance-billing-metric strong,
+.acceptance-package-summary strong {
+  font-size: 20px;
+  line-height: 1.1;
+}
+
+.acceptance-billing-metric.tone-good,
+.acceptance-readiness.tone-good {
+  border-color: rgba(34, 197, 94, 0.28);
+}
+
+.acceptance-billing-metric.tone-warn,
+.acceptance-readiness.tone-warn {
+  border-color: rgba(245, 158, 11, 0.34);
+}
+
+.acceptance-billing-metric.tone-bad,
+.acceptance-readiness.tone-bad {
+  border-color: rgba(239, 68, 68, 0.32);
+}
+
+.acceptance-billing-metric.tone-info,
+.acceptance-readiness.tone-info {
+  border-color: rgba(37, 99, 235, 0.24);
+}
+
+.acceptance-readiness {
+  align-items: flex-start;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: auto minmax(0, 1fr);
+  padding: 12px;
+}
+
+.acceptance-readiness svg {
+  margin-top: 2px;
+}
+
+.acceptance-billing-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  min-width: 0;
+}
+
+.acceptance-billing-card {
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+}
+
+.acceptance-billing-card.wide {
+  grid-column: 1 / -1;
+}
+
+.acceptance-package-summary > div,
+.acceptance-note,
+.acceptance-empty-state {
+  background: var(--panel-muted);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  padding: 10px;
+}
+
+.acceptance-empty-state {
+  border-style: dashed;
+  color: var(--muted);
+}
+
+.acceptance-billing-table-wrap table {
+  min-width: 980px;
+}
+
+.acceptance-blocker-list {
+  color: var(--muted);
+  margin: 0;
+  padding-left: 18px;
+}
+
+.acceptance-risk-list,
+.acceptance-action-list {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.acceptance-risk,
+.acceptance-action {
+  background: var(--panel-muted);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding: 10px;
+  text-align: left;
+}
+
+.acceptance-action {
+  color: inherit;
+  cursor: pointer;
+}
+
+.acceptance-action:hover {
+  border-color: var(--line-strong);
+}
+
+.acceptance-executive-note {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+}
+
 .doc-compliance-header {
   align-items: start;
   background: var(--panel-muted);
@@ -4226,7 +4413,9 @@ input[type="checkbox"] {
   .doc-compliance-header,
   .doc-compliance-summary-grid,
   .doc-compliance-layout,
-  .doc-compliance-action-grid {
+  .doc-compliance-action-grid,
+  .acceptance-billing-header,
+  .acceptance-billing-grid {
     grid-template-columns: 1fr;
   }
 
@@ -4259,7 +4448,8 @@ input[type="checkbox"] {
   }
 
   .risk-exec-actions,
-  .doc-compliance-actions {
+  .doc-compliance-actions,
+  .acceptance-billing-actions {
     justify-content: flex-start;
   }
 
