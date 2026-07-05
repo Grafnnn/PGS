@@ -14,6 +14,7 @@ const scenarioTitles: Record<AiScenario, string> = {
   "schedule-review": "Анализ графика",
   "procurement-review": "Материалы и снабжение",
   "finance-review": "Финансовый анализ",
+  "contract-review": "Проверка договора / тендера",
   "risk-review": "Риск-анализ",
   "document-review": "Анализ документов",
   "daily-report-summary": "Сводка по рапортам",
@@ -27,6 +28,7 @@ const scenarioDataUsed: Record<AiScenario, string[]> = {
   "schedule-review": ["project", "schedule", "risks", "dailyReports"],
   "procurement-review": ["project", "materials", "procurement", "schedule"],
   "finance-review": ["project", "budget", "finance", "risks"],
+  "contract-review": ["project", "documents", "budget", "finance", "risks"],
   "risk-review": ["project", "budget", "schedule", "materials", "procurement", "finance", "risks", "documents"],
   "document-review": ["project", "documents"],
   "daily-report-summary": ["project", "dailyReports", "schedule", "risks"],
@@ -40,13 +42,14 @@ export const aiScenarioAliases: Record<string, AiScenario> = {
   "schedule-review": "schedule-review",
   "procurement-review": "procurement-review",
   "finance-review": "finance-review",
+  "contract-review": "contract-review",
   "risk-review": "risk-review",
   "document-review": "document-review",
   "daily-report-summary": "daily-report-summary",
   "executive-report": "executive-report",
   "draft-text": "draft-text",
   "analyze-budget": "budget-review",
-  "analyze-contract": "document-review",
+  "analyze-contract": "contract-review",
   "procurement-suggestion": "procurement-review"
 };
 
@@ -81,6 +84,7 @@ function scenarioLimitations(input: AiRunInput, context: AiProjectContext, provi
   if (input.scenario === "finance-review" && context.finance.paymentCount === 0) limitations.push("Финансовый анализ ограничен: платежи по проекту не найдены.");
   if (input.scenario === "daily-report-summary" && context.dailyReports.length === 0) limitations.push("Рапорты по проекту не найдены: сводка ограничена графиком и рисками.");
   if (input.scenario === "document-review" && context.documents.length === 0) limitations.push("Документы по проекту не найдены.");
+  if (input.scenario === "contract-review") limitations.push("Проверка договора ограничена метаданными документов и проектными данными: OCR/полный текст договора не передается автоматически.");
   if (input.scenario === "budget-review" && context.budget.itemCount === 0) limitations.push("ВОР/бюджет по проекту пустой.");
   return Array.from(new Set([...limitations, ...extra]));
 }
@@ -172,6 +176,22 @@ function collectDocumentFindings(context: AiProjectContext) {
   return findings;
 }
 
+function collectContractFindings(context: AiProjectContext) {
+  const findings: AiFinding[] = [];
+  const documentSource = context.documents.map((documentItem) => `${documentItem.title} ${documentItem.category}`.toLowerCase()).join(" ");
+  const hasContract = /договор|contract/.test(documentSource);
+  const hasEstimate = /вор|смет|estimate|budget/.test(documentSource) || context.budget.itemCount > 0;
+  const hasPayment = /оплат|аванс|payment/.test(documentSource) || context.finance.paymentCount > 0;
+  const hasAcceptance = /кс|акт|прием|приём|acceptance/.test(documentSource);
+  if (!hasContract) findings.push(finding("critical", "Договор не найден в метаданных", "В проектном контексте нет документа категории/названия договора.", "documents", "Загрузить договор или проект договора перед управленческим решением."));
+  if (!hasEstimate) findings.push(finding("high", "Нет ВОР/сметы в договорном пакете", "Цена договора не связана с подтвержденными объемами и бюджетной базой.", "budget", "Приложить ВОР/смету и сверить маржу."));
+  if (!hasPayment) findings.push(finding("high", "Не найден платежный контур", "В метаданных документов и платежах нет явных условий оплаты/аванса.", "finance", "Запросить график оплат, аванс и порядок оплаты КС."));
+  if (!hasAcceptance) findings.push(finding("medium", "Не найден приемочный контур", "Не видно порядка приемки, КС или актов в метаданных.", "documents", "Проверить раздел приемки, мотивированный отказ и пакет закрытия."));
+  if (context.budget.forecastProfit < 0) findings.push(finding("critical", "Отрицательная маржа до подписания", `Прогноз прибыли ${money(context.budget.forecastProfit)}.`, "finance", "Пересчитать цену КП или исключить убыточные условия."));
+  if (context.finance.cashGap < 0) findings.push(finding("high", "Cash gap влияет на условия договора", `Cash gap ${money(context.finance.cashGap)} может требовать аванс или этапную оплату.`, "finance", "Согласовать авансирование и календарь оплат."));
+  return findings;
+}
+
 function collectDailyReportFindings(context: AiProjectContext) {
   const findings: AiFinding[] = [];
   const reportsWithIssues = context.dailyReports.filter((report) => report.issues);
@@ -188,6 +208,7 @@ function collectFindings(input: AiRunInput, context: AiProjectContext) {
   if (input.scenario === "schedule-review") return collectScheduleFindings(context);
   if (input.scenario === "procurement-review") return collectProcurementFindings(context);
   if (input.scenario === "finance-review") return collectFinanceFindings(context);
+  if (input.scenario === "contract-review") return collectContractFindings(context);
   if (input.scenario === "risk-review") return [...collectRiskFindings(context), ...collectScheduleFindings(context).slice(0, 3), ...collectProcurementFindings(context).slice(0, 3), ...collectFinanceFindings(context).slice(0, 3)];
   if (input.scenario === "document-review") return collectDocumentFindings(context);
   if (input.scenario === "daily-report-summary") return collectDailyReportFindings(context);
@@ -200,6 +221,7 @@ function buildActions(input: AiRunInput, context: AiProjectContext, findings: Ai
   if (context.materials.deficit.length && ["summary", "procurement-review", "risk-review", "executive-report"].includes(input.scenario)) actions.push(action("high", "Сформировать заявку снабжения", "Вынести дефицитные материалы в draft заявки и запросить КП."));
   if (context.schedule.delayed.length && ["summary", "schedule-review", "risk-review", "executive-report"].includes(input.scenario)) actions.push(action("high", "Обновить план восстановления графика", "Проверить зависимые работы, фронт, людей и материалы на ближайшие 7 дней."));
   if (context.finance.cashGap < 0 && ["summary", "finance-review", "risk-review", "executive-report"].includes(input.scenario)) actions.push(action("high", "Согласовать платежный календарь", "Подготовить варианты закрытия cash gap: переносы, аванс, приоритет поставок."));
+  if (input.scenario === "contract-review") actions.push(action("high", "Проверить договорные условия до GO", "Сверить оплату, аванс, приемку, штрафы, изменение объемов и состав приложений."));
   if (input.scenario === "document-review") actions.push(action("medium", "Запустить OCR/text extraction как отдельный шаг", "Без извлеченного текста AI не должен делать вид, что прочитал документы."));
   if (input.scenario === "daily-report-summary") actions.push(action("medium", "Сверить рапорты с графиком", "Проверить, какие фактические работы не отражены в графике/объемах."));
   actions.push(action("medium", "Подготовить управленческую сводку", "Собрать короткий отчет: сроки, деньги, снабжение, риски, решения."));
@@ -221,6 +243,9 @@ function buildSummary(input: AiRunInput, context: AiProjectContext, findings: Ai
   }
   if (input.scenario === "document-review") {
     return `Проверены только метаданные документов: ${context.documents.length} документов. Глубокий анализ текста пока недоступен.`;
+  }
+  if (input.scenario === "contract-review") {
+    return `Проверен договорный контур по метаданным и данным проекта: документов ${context.documents.length}, позиций ВОР ${context.budget.itemCount}, прогноз прибыли ${money(context.budget.forecastProfit)}.`;
   }
   if (input.scenario === "daily-report-summary") {
     return `Проверены последние рапорты: ${context.dailyReports.length}. Проблемных записей: ${context.dailyReports.filter((report) => report.issues).length}.`;
@@ -270,6 +295,7 @@ function buildProcurementDraft(context: AiProjectContext) {
 function buildScenarioOptions(input: AiRunInput, context: AiProjectContext, findings: AiFinding[]) {
   if (input.scenario === "draft-text" || input.scenario === "executive-report") return buildDraftText(input, context, findings);
   if (input.scenario === "procurement-review") return buildProcurementDraft(context);
+  if (input.scenario === "contract-review") return { recommendedAttachments: ["Договор / проект договора", "ТЗ", "ВОР/смета", "График оплат", "Календарный график", "КС/акты"] };
   if (input.scenario === "document-review") return { recommendedAttachments: ["Договор", "ВОР/смета", "КС", "Исполнительная документация"] };
   return {};
 }

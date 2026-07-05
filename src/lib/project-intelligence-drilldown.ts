@@ -1,5 +1,6 @@
 import { budgetTotals, deriveAutoRisks, financeTotals, materialTotals, workTotals } from "@/lib/calculations";
 import { buildAcceptanceBillingIntelligence } from "@/lib/acceptance-billing-intelligence";
+import { buildContractTenderIntelligence } from "@/lib/contract-tender-intelligence";
 import { buildDocumentComplianceIntelligence } from "@/lib/document-compliance-intelligence";
 import { buildProcurementIntelligenceModel } from "@/lib/procurement-intelligence";
 import type { DocumentChecklistItem, PipelineAction, PipelineReadiness } from "@/lib/project-pipeline";
@@ -15,6 +16,7 @@ export type AiScenario =
   | "schedule-review"
   | "procurement-review"
   | "finance-review"
+  | "contract-review"
   | "risk-review"
   | "document-review"
   | "daily-report-summary"
@@ -43,6 +45,7 @@ export const drilldownAiScenarios: Array<{ scenario: AiScenario; title: string; 
   { scenario: "schedule-review", title: "Проверить график", description: "Просрочки, владельцы, ближайшие контрольные точки.", data: ["График", "Зависимости", "Факт"], target: "График" },
   { scenario: "procurement-review", title: "Проверить снабжение", description: "Дефицит, поставщики, сроки потребности и draft заявки.", data: ["Материалы", "Заявки", "Поставщики"], target: "Материалы" },
   { scenario: "finance-review", title: "Финансовый анализ", description: "Cash gap, оплаты, просрочки, маржа и проблемные статьи.", data: ["Платежи", "Бюджет", "Договор"], target: "Финансы" },
+  { scenario: "contract-review", title: "Проверить договор", description: "Оплата, аванс, приемка, штрафы, изменение объемов и приложения.", data: ["Договор", "ТЗ", "ВОР", "Финансы", "Документы"], target: "Договор / Тендер" },
   { scenario: "risk-review", title: "Собрать риски", description: "Top рисков, владельцы, меры и источники.", data: ["Риски", "График", "Финансы", "Материалы"], target: "Риски" },
   { scenario: "document-review", title: "Документы", description: "Метаданные документов и ограничения без OCR.", data: ["Документы", "Категории", "Версии"], target: "Документы" },
   { scenario: "daily-report-summary", title: "Рапорты", description: "Проблемы площадки, люди, техника и текст отчета.", data: ["Рапорты", "График"], target: "Рапорты" },
@@ -143,6 +146,23 @@ export type ProjectIntelligenceDrilldownModel = {
     empty: boolean;
     ctaTab: "Материалы";
     requestTab: "Заявки";
+  };
+  contractTender: {
+    tone: DrilldownTone;
+    score: number;
+    readiness: string;
+    decision: string;
+    contractValue: string;
+    forecastProfit: string;
+    highRisks: number;
+    criticalRisks: number;
+    missingCriticalDocs: number;
+    terms: Array<{ title: string; detail: string; tone: DrilldownTone }>;
+    risks: Array<{ title: string; detail: string; tone: DrilldownTone }>;
+    actions: Array<{ title: string; detail: string; tone: DrilldownTone }>;
+    empty: boolean;
+    ctaTab: "Договор / Тендер";
+    documentsTab: "Документы";
   };
   acceptanceBilling: {
     tone: DrilldownTone;
@@ -272,6 +292,17 @@ export function buildProjectIntelligenceDrilldownModel(input: ProjectIntelligenc
     documentChecklist,
     importHistory: input.importHistory ?? []
   });
+  const contractTender = buildContractTenderIntelligence({
+    project,
+    budgetItems,
+    scheduleItems,
+    materials,
+    procurementRequests,
+    payments,
+    risks,
+    documents,
+    documentChecklist
+  });
   const riskExecutive = buildRiskExecutiveIntelligence({
     ...input,
     project,
@@ -336,6 +367,7 @@ export function buildProjectIntelligenceDrilldownModel(input: ProjectIntelligenc
       { id: "risks", label: "Риски", tone: riskTone, count: Math.max(allRisks.length, riskExecutive.summary.totalOpen) },
       { id: "schedule", label: "График", tone: scheduleTone, count: works.overdueItems.length },
       { id: "finance-vor", label: "ВОР / финансы", tone: financeTone },
+      { id: "contract-tender", label: "Договор", tone: contractTender.summary.tone === "neutral" ? "info" : contractTender.summary.tone, count: contractTender.summary.highRisks + contractTender.summary.criticalRisks },
       { id: "acceptance-billing", label: "КС", tone: acceptanceBilling.summary.tone, count: acceptanceBilling.summary.readyItems || acceptanceBilling.summary.blockedItems },
       { id: "procurement", label: "Снабжение", tone: procurementTone, count: procurementIntelligence.summary.candidates || materialStats.deficitItems.length },
       { id: "reports", label: "Executive", tone: reportsTone },
@@ -452,6 +484,35 @@ export function buildProjectIntelligenceDrilldownModel(input: ProjectIntelligenc
       empty: materials.length === 0 && procurementRequests.length === 0,
       ctaTab: "Материалы",
       requestTab: "Заявки"
+    },
+    contractTender: {
+      tone: contractTender.summary.tone === "neutral" ? "info" : contractTender.summary.tone,
+      score: contractTender.summary.score,
+      readiness: contractTender.summary.readiness,
+      decision: contractTender.summary.headline,
+      contractValue: contractTender.summary.contractValueLabel,
+      forecastProfit: compactMoney(contractTender.summary.forecastProfit),
+      highRisks: contractTender.summary.highRisks,
+      criticalRisks: contractTender.summary.criticalRisks,
+      missingCriticalDocs: contractTender.summary.missingCriticalDocs,
+      terms: contractTender.terms.slice(0, 6).map((term) => ({
+        title: term.label,
+        detail: `${term.value} · ${term.evidence[0]}`,
+        tone: term.tone === "neutral" ? "info" : term.tone
+      })),
+      risks: contractTender.risks.slice(0, 5).map((risk) => ({
+        title: risk.title,
+        detail: risk.description,
+        tone: risk.severity === "critical" || risk.severity === "high" ? "bad" : risk.severity === "medium" ? "warn" : "info"
+      })),
+      actions: contractTender.actions.slice(0, 4).map((action) => ({
+        title: action.title,
+        detail: action.detail,
+        tone: action.priority === "urgent" || action.priority === "high" ? "warn" : "info"
+      })),
+      empty: contractTender.summary.readiness === "no_data",
+      ctaTab: "Договор / Тендер",
+      documentsTab: "Документы"
     },
     acceptanceBilling: {
       tone: acceptanceBilling.summary.tone,

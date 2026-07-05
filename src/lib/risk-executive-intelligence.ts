@@ -1,4 +1,5 @@
 import { buildAcceptanceBillingIntelligence } from "@/lib/acceptance-billing-intelligence";
+import { buildContractTenderIntelligence } from "@/lib/contract-tender-intelligence";
 import { buildProcurementIntelligenceModel, type ProcurementImportHistoryItem } from "@/lib/procurement-intelligence";
 import { buildDocumentComplianceIntelligence, type DocumentPriority } from "@/lib/document-compliance-intelligence";
 import type { DocumentChecklistItem, PipelineAction, PipelineReadiness } from "@/lib/project-pipeline";
@@ -9,7 +10,7 @@ export type RiskSeverity = "low" | "medium" | "high" | "critical";
 export type ExecutiveTone = "green" | "amber" | "red" | "unknown";
 export type ReportReadiness = "ready" | "partial" | "blocked" | "no_data";
 export type RiskCategory = "import" | "documents" | "procurement" | "schedule" | "cashflow" | "finance" | "quality" | "reporting" | "data_quality" | "access" | "unknown";
-export type SourceArea = "ВОР" | "Documents" | "Procurement" | "Schedule" | "Cashflow" | "Finance" | "Acceptance" | "Reports" | "Project Intelligence";
+export type SourceArea = "ВОР" | "Documents" | "Procurement" | "Schedule" | "Cashflow" | "Finance" | "Contract" | "Acceptance" | "Reports" | "Project Intelligence";
 export type OwnerRole = "project_manager" | "procurement" | "finance" | "executive" | "document_controller" | "estimator" | "unknown";
 export type RiskStatus = "open" | "needs_review" | "blocked" | "mitigated" | "informational";
 export type Confidence = "low" | "medium" | "high";
@@ -724,6 +725,46 @@ export function buildRiskSignalsFromAcceptance(input: RiskExecutiveInput): RiskI
   return risks;
 }
 
+export function buildRiskSignalsFromContractTender(input: RiskExecutiveInput): RiskItem[] {
+  const model = buildContractTenderIntelligence({
+    project: input.project,
+    budgetItems: input.budgetItems ?? [],
+    scheduleItems: input.scheduleItems ?? [],
+    materials: input.materials ?? [],
+    procurementRequests: input.procurementRequests ?? [],
+    payments: input.payments ?? [],
+    risks: input.risks ?? [],
+    documents: input.documents ?? [],
+    documentChecklist: input.documentChecklist ?? []
+  });
+
+  if (model.summary.readiness === "no_data") return [];
+
+  return model.risks.slice(0, 8).map((item) => risk({
+    id: `contract:${item.id}`,
+    title: item.title,
+    description: item.description,
+    severity: item.severity,
+    category:
+      item.category === "documents" ? "documents"
+        : item.category === "cashflow" ? "cashflow"
+          : item.category === "payment" || item.category === "price" ? "finance"
+            : item.category === "schedule" ? "schedule"
+              : item.category === "data_quality" ? "data_quality"
+                : "unknown",
+    sourceArea: "Contract",
+    sourceRef: item.id,
+    status: item.severity === "critical" ? "blocked" : "needs_review",
+    suggestedAction: item.suggestedAction,
+    decisionRequired: item.decisionRequired,
+    decisionText: item.decisionRequired ? `Решить договорный риск: ${item.title}` : undefined,
+    ownerRole: item.category === "payment" || item.category === "cashflow" || item.category === "price" ? "finance" : item.category === "documents" || item.category === "acceptance" ? "document_controller" : "executive",
+    evidence: item.evidence,
+    createdFrom: "contract-tender-intelligence",
+    confidence: model.summary.dataLimitations.length ? "medium" : "high"
+  }));
+}
+
 export function buildProjectRiskRegister(input: RiskExecutiveInput): RiskItem[] {
   const manualRisks = (input.risks ?? []).map(mapExistingRisk);
   return [
@@ -733,6 +774,7 @@ export function buildProjectRiskRegister(input: RiskExecutiveInput): RiskItem[] 
     ...buildRiskSignalsFromSchedule(input),
     ...buildRiskSignalsFromCashflow(input),
     ...buildRiskSignalsFromDocuments(input),
+    ...buildRiskSignalsFromContractTender(input),
     ...buildRiskSignalsFromAcceptance(input)
   ].sort((left, right) => severityRank[right.severity] - severityRank[left.severity] || left.title.localeCompare(right.title, "ru"));
 }
@@ -743,6 +785,7 @@ function sourcePresent(input: RiskExecutiveInput, source: SourceArea) {
   if (source === "Procurement") return Boolean((input.materials ?? []).length || (input.procurementRequests ?? []).length);
   if (source === "Schedule") return Boolean((input.scheduleItems ?? []).length || (input.budgetItems ?? []).length);
   if (source === "Cashflow" || source === "Finance") return Boolean((input.payments ?? []).length || (input.budgetItems ?? []).length);
+  if (source === "Contract") return Boolean((input.documents ?? []).some((document) => normalize(`${document.title} ${document.category} ${document.fileName ?? ""}`).includes("договор")) || (input.documentChecklist ?? []).some((item) => normalize(`${item.key} ${item.title}`).includes("договор")));
   if (source === "Acceptance") return Boolean((input.scheduleItems ?? []).length || (input.budgetItems ?? []).length);
   if (source === "Reports") return Boolean((input.dailyReports ?? []).length);
   return Boolean(input.readiness || input.intelligence);
@@ -750,7 +793,7 @@ function sourcePresent(input: RiskExecutiveInput, source: SourceArea) {
 
 export function buildRiskSummary(risks: RiskItem[], input: RiskExecutiveInput): RiskSummary {
   const openRisks = risks.filter((riskItem) => riskItem.status !== "mitigated" && riskItem.status !== "informational");
-  const missingSources = (["ВОР", "Documents", "Procurement", "Schedule", "Cashflow"] as SourceArea[]).filter((source) => !sourcePresent(input, source));
+  const missingSources = (["ВОР", "Documents", "Procurement", "Schedule", "Cashflow", "Contract"] as SourceArea[]).filter((source) => !sourcePresent(input, source));
   const categoryCounts = new Map<RiskCategory, number>();
   const sourceCounts = new Map<SourceArea, number>();
   for (const item of openRisks) {
