@@ -104,7 +104,7 @@ describe("AI scenario endpoint", () => {
     expect(canProject).toHaveBeenCalledWith(expect.objectContaining({ id: "user-demo" }), "project-demo", "view");
   });
 
-  it.each(["budget-review", "schedule-review", "procurement-review", "finance-review", "risk-review", "executive-report"] as const)("supports scenario route %s", async (scenario) => {
+  it.each(["budget-review", "schedule-review", "procurement-review", "finance-review", "contract-review", "risk-review", "executive-report"] as const)("supports scenario route %s", async (scenario) => {
     const { POST } = await import("./route");
 
     const response = await POST(request(), { params: { projectId: "project-demo", scenario } });

@@ -3298,6 +3298,21 @@ input[type="checkbox"] {
     grid-template-columns: 1fr;
   }
 
+  .contract-tender-header,
+  .contract-tender-actions {
+    align-items: stretch;
+    display: grid;
+    width: 100%;
+  }
+
+  .contract-tender-actions .button {
+    width: 100%;
+  }
+
+  .contract-tender-grid {
+    grid-template-columns: 1fr;
+  }
+
   .login-page {
     min-height: auto;
     padding: 20px 14px 30px;
@@ -4201,6 +4216,189 @@ input[type="checkbox"] {
 .acceptance-executive-note {
   display: grid;
   gap: 6px;
+  padding: 12px;
+}
+
+.contract-tender-workspace {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.contract-tender-header {
+  align-items: start;
+  background: var(--panel-muted);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  display: grid;
+  gap: 14px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  min-width: 0;
+  padding: 16px;
+}
+
+.contract-tender-header h3 {
+  margin: 2px 0 6px;
+}
+
+.contract-tender-header p,
+.contract-limitations span,
+.contract-term small,
+.contract-doc-item small,
+.contract-tender-risk span,
+.contract-tender-risk small,
+.contract-action span,
+.contract-memo p,
+.contract-empty-state span {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.contract-tender-badges,
+.contract-tender-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+
+.contract-tender-actions {
+  justify-content: flex-end;
+}
+
+.contract-tender-summary-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  min-width: 0;
+}
+
+.contract-tender-metric,
+.contract-tender-card,
+.contract-limitations {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  min-width: 0;
+}
+
+.contract-tender-metric {
+  display: grid;
+  gap: 5px;
+  padding: 12px;
+}
+
+.contract-tender-metric small,
+.contract-tender-metric span {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.contract-tender-metric strong {
+  font-size: 20px;
+  line-height: 1.1;
+}
+
+.contract-tender-metric.tone-good,
+.contract-term.tone-good {
+  border-color: rgba(34, 197, 94, 0.28);
+}
+
+.contract-tender-metric.tone-warn,
+.contract-term.tone-warn {
+  border-color: rgba(245, 158, 11, 0.34);
+}
+
+.contract-tender-metric.tone-bad,
+.contract-term.tone-bad {
+  border-color: rgba(239, 68, 68, 0.32);
+}
+
+.contract-tender-metric.tone-info,
+.contract-term.tone-info {
+  border-color: rgba(37, 99, 235, 0.24);
+}
+
+.contract-tender-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  min-width: 0;
+}
+
+.contract-tender-card {
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+}
+
+.contract-term-list,
+.contract-doc-list,
+.contract-risk-list,
+.contract-action-list,
+.contract-memo {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.contract-term,
+.contract-doc-item,
+.contract-tender-risk,
+.contract-action,
+.contract-empty-state {
+  background: var(--panel-muted);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  min-width: 0;
+  padding: 10px;
+}
+
+.contract-term,
+.contract-tender-risk,
+.contract-action {
+  display: grid;
+  gap: 7px;
+}
+
+.contract-doc-item {
+  align-items: start;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.contract-tender-risk {
+  border-left: 3px solid var(--line-strong);
+}
+
+.contract-tender-risk.tone-bad {
+  border-left-color: #ef4444;
+}
+
+.contract-tender-risk.tone-warn {
+  border-left-color: #f59e0b;
+}
+
+.contract-tender-risk.tone-info {
+  border-left-color: #2563eb;
+}
+
+.contract-action {
+  grid-template-columns: auto minmax(0, 1fr);
+}
+
+.contract-action svg {
+  margin-top: 2px;
+}
+
+.contract-limitations {
+  display: grid;
+  gap: 5px;
   padding: 12px;
 }
 

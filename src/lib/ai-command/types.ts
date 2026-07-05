@@ -4,6 +4,7 @@ export type AiScenario =
   | "schedule-review"
   | "procurement-review"
   | "finance-review"
+  | "contract-review"
   | "risk-review"
   | "document-review"
   | "daily-report-summary"

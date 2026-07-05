@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { AlertTriangle, BarChart3, Bot, ClipboardList, FileText, Landmark, LayoutList, Package, Pencil, Plus, ReceiptText, Search, Send, Table2, TimerReset, Trash2, Truck, Users } from "lucide-react";
 import { AcceptanceBillingWorkspace } from "@/components/acceptance-billing-workspace";
+import { ContractTenderWorkspace } from "@/components/contract-tender-workspace";
 import { ProjectCommandCenter } from "@/components/project-command-center";
 import { DocumentComplianceWorkspace } from "@/components/document-compliance-workspace";
 import { ProjectIntelligenceDrilldown } from "@/components/project-intelligence-drilldown";
@@ -58,6 +59,7 @@ const tabs = [
   "Материалы",
   "Заявки",
   "Финансы",
+  "Договор / Тендер",
   "КС",
   "Рапорты",
   "Риски",
@@ -76,6 +78,7 @@ const tabMeta: Record<string, { icon: React.ReactNode; hint: string }> = {
   Материалы: { icon: <Package size={16} />, hint: "Снабжение" },
   Заявки: { icon: <Truck size={16} />, hint: "Закупки" },
   Финансы: { icon: <Landmark size={16} />, hint: "Платежи" },
+  "Договор / Тендер": { icon: <Search size={16} />, hint: "Контракт" },
   КС: { icon: <ReceiptText size={16} />, hint: "Закрытие" },
   Рапорты: { icon: <ClipboardList size={16} />, hint: "Площадка" },
   Риски: { icon: <AlertTriangle size={16} />, hint: "Контроль" },
@@ -258,7 +261,7 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
   }, [initialBundle.project.id]);
 
   useEffect(() => {
-    if (!["Бюджет / ВОР", "График", "Материалы", "Заявки", "Финансы", "КС", "Аналитика"].includes(activeTab)) return;
+    if (!["Бюджет / ВОР", "График", "Материалы", "Заявки", "Финансы", "Договор / Тендер", "КС", "Аналитика"].includes(activeTab)) return;
     void loadImportHistory();
   }, [activeTab, loadImportHistory]);
 
@@ -277,7 +280,7 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
   }, [initialBundle.project.id]);
 
   useEffect(() => {
-    if (activeTab !== "Документы") return;
+    if (!["Документы", "Договор / Тендер", "КС", "Риски", "Рапорты", "Аналитика"].includes(activeTab)) return;
     void loadDocuments();
   }, [activeTab, loadDocuments]);
 
@@ -320,7 +323,7 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
   }, [initialBundle.project.id]);
 
   useEffect(() => {
-    if (!["Обзор", "Бюджет / ВОР", "Материалы", "Заявки", "График", "Финансы", "КС", "Документы", "Аналитика", "AI-помощник"].includes(activeTab)) return;
+    if (!["Обзор", "Бюджет / ВОР", "Материалы", "Заявки", "График", "Финансы", "Договор / Тендер", "КС", "Документы", "Аналитика", "AI-помощник"].includes(activeTab)) return;
     void loadPipeline();
   }, [activeTab, loadPipeline]);
 
@@ -1100,6 +1103,23 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
             }}
           />
           <PaymentTable items={payments} />
+        </Panel>
+      )}
+
+      {activeTab === "Договор / Тендер" && (
+        <Panel title="Договор, тендер и КП" icon={<Search size={18} />}>
+          <ContractTenderWorkspace
+            project={initialBundle.project}
+            budgetItems={budgetItems}
+            scheduleItems={scheduleItems}
+            materials={materials}
+            procurementRequests={procurementRequests}
+            payments={payments}
+            risks={risks}
+            documents={documents}
+            documentChecklist={documentChecklist}
+            onNavigate={setActiveTab}
+          />
         </Panel>
       )}
 

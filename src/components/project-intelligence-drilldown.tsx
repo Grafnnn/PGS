@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, Bot, ClipboardList, FileText, Landmark, PackageCheck, ReceiptText, Sparkles, TimerReset } from "lucide-react";
+import { AlertTriangle, Bot, ClipboardList, FileText, Landmark, PackageCheck, ReceiptText, Scale, Sparkles, TimerReset } from "lucide-react";
 import React from "react";
 import {
   buildProjectIntelligenceDrilldownModel,
@@ -243,6 +243,35 @@ export function ProjectIntelligenceDrilldown({
                 ...model.procurement.deficitItems.map((item) => ({ title: item.name, detail: item.detail, tone: item.tone })),
                 ...model.procurement.requests.map((item) => ({ title: item.title, detail: item.detail, tone: item.tone }))
               ].slice(0, 6)}
+            />
+          )}
+        </article>
+
+        <article className="panel intelligence-panel">
+          <SectionHeader id="contract-tender" icon={<Scale size={18} />} title="Contract / Tender Intelligence" tone={model.contractTender.tone}>
+            <button className="button secondary compact-button" type="button" onClick={() => onNavigate(model.contractTender.ctaTab)}>
+              Договор
+            </button>
+            <button className="button secondary compact-button" type="button" onClick={() => onNavigate(model.contractTender.documentsTab)}>
+              Документы
+            </button>
+          </SectionHeader>
+          <div className="intelligence-metrics">
+            <StatusInsightCard title="Readiness" value={`${model.contractTender.score}%`} detail={model.contractTender.readiness} tone={model.contractTender.tone} />
+            <StatusInsightCard title="Решение" value={model.contractTender.decision} detail={model.contractTender.contractValue} tone={model.contractTender.tone} />
+            <StatusInsightCard title="Маржа" value={model.contractTender.forecastProfit} detail="по ВОР / договорной сумме" tone={model.contractTender.forecastProfit.startsWith("-") ? "bad" : "info"} />
+            <StatusInsightCard title="Блокеры" value={`${model.contractTender.criticalRisks}/${model.contractTender.highRisks}`} detail={`${model.contractTender.missingCriticalDocs} critical docs`} tone={model.contractTender.criticalRisks || model.contractTender.missingCriticalDocs ? "bad" : model.contractTender.highRisks ? "warn" : "good"} />
+          </div>
+          {model.contractTender.empty ? (
+            <EmptyIntelligenceState text="Нет договора, ТЗ, КП или документального пакета для проверки. Загрузите документы и повторите анализ." />
+          ) : (
+            <SignalList
+              emptyText="Контрактных рисков по доступным данным не найдено."
+              items={[
+                ...model.contractTender.risks,
+                ...model.contractTender.actions,
+                ...model.contractTender.terms
+              ].slice(0, 8)}
             />
           )}
         </article>

@@ -59,8 +59,9 @@ describe("project command center model", () => {
     });
 
     expect(model.project.name).toContain("Демо объект");
-    expect(model.kpis).toHaveLength(8);
+    expect(model.kpis).toHaveLength(9);
     expect(model.kpis.some((kpi) => kpi.key === "decisions")).toBe(true);
+    expect(model.kpis.some((kpi) => kpi.key === "contract")).toBe(true);
     expect(model.kpis.some((kpi) => kpi.key === "acceptance")).toBe(true);
     expect(model.aiSummary.empty).toBe(false);
     expect(model.aiSummary.degraded).toBe(false);

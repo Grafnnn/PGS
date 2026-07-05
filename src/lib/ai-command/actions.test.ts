@@ -61,6 +61,7 @@ describe("AI command layer", () => {
     "schedule-review",
     "procurement-review",
     "finance-review",
+    "contract-review",
     "risk-review",
     "executive-report",
     "document-review",
