@@ -5,6 +5,7 @@ import {
   buildExecutiveWeeklyReport,
   buildProjectRiskRegister,
   buildRiskExecutiveIntelligence,
+  buildRiskSignalsFromAcceptance,
   buildRiskSignalsFromCashflow,
   buildRiskSignalsFromDocuments,
   buildRiskSignalsFromImport,
@@ -214,6 +215,13 @@ describe("risk executive intelligence", () => {
 
     expect(risks[0].severity).toBe("high");
     expect(risks[0].decisionRequired).toBe(true);
+  });
+
+  it("adds acceptance and billing blockers to risk register", () => {
+    const risks = buildRiskSignalsFromAcceptance({ project, budgetItems, scheduleItems, materials, procurementRequests: [], payments, importHistory });
+
+    expect(risks.map((risk) => risk.id)).toEqual(expect.arrayContaining(["acceptance:missing-fact", "acceptance:document-blockers"]));
+    expect(risks.some((risk) => risk.sourceArea === "Acceptance")).toBe(true);
   });
 
   it("creates decision and action registers with generic roles and no invented people", () => {

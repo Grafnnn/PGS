@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { AlertTriangle, BarChart3, Bot, ClipboardList, FileText, Landmark, LayoutList, Package, Pencil, Plus, Search, Send, Table2, TimerReset, Trash2, Truck, Users } from "lucide-react";
+import { AlertTriangle, BarChart3, Bot, ClipboardList, FileText, Landmark, LayoutList, Package, Pencil, Plus, ReceiptText, Search, Send, Table2, TimerReset, Trash2, Truck, Users } from "lucide-react";
+import { AcceptanceBillingWorkspace } from "@/components/acceptance-billing-workspace";
 import { ProjectCommandCenter } from "@/components/project-command-center";
 import { DocumentComplianceWorkspace } from "@/components/document-compliance-workspace";
 import { ProjectIntelligenceDrilldown } from "@/components/project-intelligence-drilldown";
@@ -57,6 +58,7 @@ const tabs = [
   "Материалы",
   "Заявки",
   "Финансы",
+  "КС",
   "Рапорты",
   "Риски",
   "Документы",
@@ -74,6 +76,7 @@ const tabMeta: Record<string, { icon: React.ReactNode; hint: string }> = {
   Материалы: { icon: <Package size={16} />, hint: "Снабжение" },
   Заявки: { icon: <Truck size={16} />, hint: "Закупки" },
   Финансы: { icon: <Landmark size={16} />, hint: "Платежи" },
+  КС: { icon: <ReceiptText size={16} />, hint: "Закрытие" },
   Рапорты: { icon: <ClipboardList size={16} />, hint: "Площадка" },
   Риски: { icon: <AlertTriangle size={16} />, hint: "Контроль" },
   Документы: { icon: <FileText size={16} />, hint: "Файлы" },
@@ -255,7 +258,7 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
   }, [initialBundle.project.id]);
 
   useEffect(() => {
-    if (!["Бюджет / ВОР", "График", "Материалы", "Заявки", "Финансы", "Аналитика"].includes(activeTab)) return;
+    if (!["Бюджет / ВОР", "График", "Материалы", "Заявки", "Финансы", "КС", "Аналитика"].includes(activeTab)) return;
     void loadImportHistory();
   }, [activeTab, loadImportHistory]);
 
@@ -317,7 +320,7 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
   }, [initialBundle.project.id]);
 
   useEffect(() => {
-    if (!["Обзор", "Бюджет / ВОР", "Материалы", "Заявки", "График", "Финансы", "Документы", "Аналитика", "AI-помощник"].includes(activeTab)) return;
+    if (!["Обзор", "Бюджет / ВОР", "Материалы", "Заявки", "График", "Финансы", "КС", "Документы", "Аналитика", "AI-помощник"].includes(activeTab)) return;
     void loadPipeline();
   }, [activeTab, loadPipeline]);
 
@@ -1100,6 +1103,24 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
         </Panel>
       )}
 
+      {activeTab === "КС" && (
+        <Panel title="КС, закрытие и предъявление заказчику" icon={<ReceiptText size={18} />}>
+          <AcceptanceBillingWorkspace
+            project={initialBundle.project}
+            budgetItems={budgetItems}
+            scheduleItems={scheduleItems}
+            materials={materials}
+            procurementRequests={procurementRequests}
+            payments={payments}
+            risks={risks}
+            documents={documents}
+            documentChecklist={documentChecklist}
+            importHistory={importHistory}
+            onNavigate={setActiveTab}
+          />
+        </Panel>
+      )}
+
       {activeTab === "Рапорты" && (
         <Panel title="Ежедневные рапорты стройплощадки" icon={<ClipboardList size={18} />}>
           <RiskExecutiveWorkspace
@@ -1422,6 +1443,9 @@ function tabForAction(action: PipelineAction) {
     procurement: "Заявки",
     schedule: "График",
     finance: "Финансы",
+    acceptance: "КС",
+    billing: "КС",
+    ks: "КС",
     documents: "Документы",
     risks: "Риски",
     import: "Бюджет / ВОР",

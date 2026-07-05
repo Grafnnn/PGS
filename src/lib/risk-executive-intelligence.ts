@@ -1,3 +1,4 @@
+import { buildAcceptanceBillingIntelligence } from "@/lib/acceptance-billing-intelligence";
 import { buildProcurementIntelligenceModel, type ProcurementImportHistoryItem } from "@/lib/procurement-intelligence";
 import { buildDocumentComplianceIntelligence, type DocumentPriority } from "@/lib/document-compliance-intelligence";
 import type { DocumentChecklistItem, PipelineAction, PipelineReadiness } from "@/lib/project-pipeline";
@@ -8,7 +9,7 @@ export type RiskSeverity = "low" | "medium" | "high" | "critical";
 export type ExecutiveTone = "green" | "amber" | "red" | "unknown";
 export type ReportReadiness = "ready" | "partial" | "blocked" | "no_data";
 export type RiskCategory = "import" | "documents" | "procurement" | "schedule" | "cashflow" | "finance" | "quality" | "reporting" | "data_quality" | "access" | "unknown";
-export type SourceArea = "ВОР" | "Documents" | "Procurement" | "Schedule" | "Cashflow" | "Finance" | "Reports" | "Project Intelligence";
+export type SourceArea = "ВОР" | "Documents" | "Procurement" | "Schedule" | "Cashflow" | "Finance" | "Acceptance" | "Reports" | "Project Intelligence";
 export type OwnerRole = "project_manager" | "procurement" | "finance" | "executive" | "document_controller" | "estimator" | "unknown";
 export type RiskStatus = "open" | "needs_review" | "blocked" | "mitigated" | "informational";
 export type Confidence = "low" | "medium" | "high";
@@ -637,6 +638,92 @@ export function buildRiskSignalsFromDocuments(input: RiskExecutiveInput): RiskIt
   return risks;
 }
 
+export function buildRiskSignalsFromAcceptance(input: RiskExecutiveInput): RiskItem[] {
+  const model = buildAcceptanceBillingIntelligence({
+    project: input.project,
+    budgetItems: input.budgetItems ?? [],
+    scheduleItems: input.scheduleItems ?? [],
+    materials: input.materials ?? [],
+    procurementRequests: input.procurementRequests ?? [],
+    payments: input.payments ?? [],
+    risks: input.risks ?? [],
+    documents: input.documents ?? [],
+    documentChecklist: input.documentChecklist ?? [],
+    importHistory: input.importHistory ?? []
+  });
+  const risks: RiskItem[] = [];
+
+  if (model.summary.status === "no_data") return risks;
+
+  if (model.summary.missingFactItems > 0) {
+    addRiskUnique(
+      risks,
+      risk({
+        id: "acceptance:missing-fact",
+        title: "КС не готова: нет подтвержденного факта",
+        description: `${model.summary.missingFactItems} позиций нельзя предъявлять без фактического объема.`,
+        severity: model.summary.readyItems ? "medium" : "high",
+        category: "reporting",
+        sourceArea: "Acceptance",
+        sourceRef: "acceptance.fact",
+        status: "needs_review",
+        suggestedAction: "ПТО и площадке нужно подтвердить объемы перед включением в КС.",
+        decisionRequired: !model.summary.readyItems,
+        decisionText: !model.summary.readyItems ? "Решить, переносить ли предъявление до подтверждения факта." : undefined,
+        ownerRole: "project_manager",
+        evidence: model.items.filter((item) => item.status === "needs_fact").slice(0, 4).map((item) => item.title),
+        createdFrom: "acceptance-billing-signals"
+      })
+    );
+  }
+
+  if (model.summary.documentBlockers > 0) {
+    addRiskUnique(
+      risks,
+      risk({
+        id: "acceptance:document-blockers",
+        title: "Документы блокируют КС",
+        description: `${model.summary.documentBlockers} документальных блокеров мешают закрытию выполненных объемов.`,
+        severity: "high",
+        category: "documents",
+        sourceArea: "Acceptance",
+        sourceRef: "acceptance.documents",
+        status: "blocked",
+        suggestedAction: "Закрыть исполнительную документацию, акты скрытых работ, сертификаты и фотофиксацию.",
+        decisionRequired: true,
+        decisionText: "Подтвердить, можно ли предъявлять частичный пакет без всех документов.",
+        ownerRole: "document_controller",
+        evidence: model.packageDraft.requiredDocuments.slice(0, 5),
+        createdFrom: "acceptance-billing-signals"
+      })
+    );
+  }
+
+  if (model.summary.readyAmount > 0 && model.summary.blockedAmount > 0) {
+    addRiskUnique(
+      risks,
+      risk({
+        id: "acceptance:partial-billing",
+        title: "КС готова частично",
+        description: `К проверке готово ${compactMoney(model.summary.readyAmount)}, но ${compactMoney(model.summary.blockedAmount)} остаются заблокированы.`,
+        severity: "medium",
+        category: "finance",
+        sourceArea: "Acceptance",
+        sourceRef: "acceptance.package",
+        status: "needs_review",
+        suggestedAction: "Отделить готовые строки КС от блокеров и согласовать частичное предъявление.",
+        decisionRequired: model.summary.blockedAmount >= model.summary.readyAmount,
+        decisionText: model.summary.blockedAmount >= model.summary.readyAmount ? "Решить, выпускать ли частичную КС." : undefined,
+        ownerRole: "finance",
+        evidence: [`ready: ${compactMoney(model.summary.readyAmount)}`, `blocked: ${compactMoney(model.summary.blockedAmount)}`],
+        createdFrom: "acceptance-billing-signals"
+      })
+    );
+  }
+
+  return risks;
+}
+
 export function buildProjectRiskRegister(input: RiskExecutiveInput): RiskItem[] {
   const manualRisks = (input.risks ?? []).map(mapExistingRisk);
   return [
@@ -645,7 +732,8 @@ export function buildProjectRiskRegister(input: RiskExecutiveInput): RiskItem[] 
     ...buildRiskSignalsFromProcurement(input),
     ...buildRiskSignalsFromSchedule(input),
     ...buildRiskSignalsFromCashflow(input),
-    ...buildRiskSignalsFromDocuments(input)
+    ...buildRiskSignalsFromDocuments(input),
+    ...buildRiskSignalsFromAcceptance(input)
   ].sort((left, right) => severityRank[right.severity] - severityRank[left.severity] || left.title.localeCompare(right.title, "ru"));
 }
 
@@ -655,6 +743,7 @@ function sourcePresent(input: RiskExecutiveInput, source: SourceArea) {
   if (source === "Procurement") return Boolean((input.materials ?? []).length || (input.procurementRequests ?? []).length);
   if (source === "Schedule") return Boolean((input.scheduleItems ?? []).length || (input.budgetItems ?? []).length);
   if (source === "Cashflow" || source === "Finance") return Boolean((input.payments ?? []).length || (input.budgetItems ?? []).length);
+  if (source === "Acceptance") return Boolean((input.scheduleItems ?? []).length || (input.budgetItems ?? []).length);
   if (source === "Reports") return Boolean((input.dailyReports ?? []).length);
   return Boolean(input.readiness || input.intelligence);
 }
@@ -704,12 +793,14 @@ export function buildDecisionRegister(risks: RiskItem[]): DecisionItem[] {
         ? ["Уточнить данные и отложить отчет", "Принять ВОР как предварительную базу с ограничением"]
         : item.sourceArea === "Procurement"
           ? ["Сформировать заявку сейчас", "Сначала проверить КП/количество"]
-          : ["Назначить владельца решения", "Зафиксировать ограничение в executive report"],
+          : item.sourceArea === "Acceptance"
+            ? ["Выпустить частичную КС", "Сначала закрыть блокеры факта и документов"]
+            : ["Назначить владельца решения", "Зафиксировать ограничение в executive report"],
       impact: uniq([
         item.sourceArea === "Schedule" ? "schedule" : null,
         item.sourceArea === "Procurement" ? "procurement" : null,
-        item.sourceArea === "Cashflow" || item.sourceArea === "Finance" ? "cashflow" : null,
-        item.sourceArea === "Documents" ? "documents" : null,
+        item.sourceArea === "Cashflow" || item.sourceArea === "Finance" || item.sourceArea === "Acceptance" ? "cashflow" : null,
+        item.sourceArea === "Documents" || item.sourceArea === "Acceptance" ? "documents" : null,
         "reporting"
       ].filter(Boolean) as DecisionItem["impact"]),
       recommendedNextStep: item.suggestedAction
@@ -730,7 +821,7 @@ export function buildActionRegister(risks: RiskItem[], decisions: DecisionItem[]
         ? "before_procurement"
         : item.sourceArea === "Schedule"
           ? "before_execution"
-          : item.sourceArea === "Documents"
+          : item.sourceArea === "Documents" || item.sourceArea === "Acceptance"
             ? "before_executive_report"
             : item.severity === "critical"
               ? "today_next"
