@@ -1,5 +1,93 @@
 # PGS Project Log
 
+## 2026-07-06 - PGS Studio redesign v2 full browser visual GO
+
+Status: PGS Studio redesign v2 reached FULL VISUAL GO after real browser desktop/mobile viewport smoke.
+
+- Online URL: https://pgs-frankfurt.onrender.com
+- Online commit checked by `/api/health`: `0530b0ac2406667766ba6895e6aa82c621c28cec`
+- Feature commit recorded earlier: `e2808a5e7d3291acb0cb3150e5f38bd531796394`
+- Decision: FULL VISUAL GO
+- Git SHA source: `RENDER_GIT_COMMIT`
+
+Health:
+
+- `/api/health`: HTTP 200 / `ok`
+- DB: `ok`
+- migrations: `ok`, count `6`
+- auth required: `true`
+- AI configured: `true`
+
+Browser tooling:
+
+- Playwright Chromium was run read-only against the online service.
+- Desktop viewport: 1440 x 900
+- Mobile viewport: 390 x 844
+- No login, upload, project creation, delete, live AI, or mutation smoke was run.
+
+Pages:
+
+- `/login`: 200 on desktop and mobile
+- `/dashboard`: 200 on desktop and mobile
+- `/projects`: 200 on desktop and mobile
+- `/projects/project-smoke`: 200 on desktop and mobile
+
+Desktop viewport:
+
+- app shell: visible
+- sidebar: visible
+- topbar: visible
+- project tabs on `project-smoke`: visible
+- create project form on `/projects`: visible
+- horizontal overflow: none, `scrollWidth` matched `innerWidth`
+- page errors: none
+
+Mobile viewport:
+
+- app shell: visible
+- topbar: visible
+- mobile menu button: visible
+- mobile drawer: opens, `aria-hidden=false`
+- drawer width: 304px inside 390px viewport
+- project tabs on `project-smoke`: visible and contained
+- create project form on `/projects`: visible and contained
+- horizontal overflow: none before and after drawer open, `scrollWidth` matched `innerWidth`
+- page errors: none
+
+UI markers:
+
+- PGS Studio branding: present
+- Command Center: present where expected
+- Project Intelligence: present on project workspace
+- Contract / Tender: present
+- `КС`: present
+- Documents: present
+- Risks / Reports: present
+- Schedule / Cashflow: present
+- Procurement / Materials: present
+- AI assistant: present
+
+Console observations:
+
+- No hydration/page errors were captured.
+- Some expected unauthenticated resource responses appeared as browser console resource errors on protected API calls: 401/403.
+- These match the protected unauth guard behavior and were not treated as visual failures.
+
+Not run / not touched:
+
+- live AI: not run
+- online mutation/import/delete/upload smoke: not run
+- online project creation: not run
+- manual deploy/redeploy: not triggered
+- Render env/secrets: unchanged
+- DB/schema/migrations: unchanged
+- application code: unchanged
+- secrets printed: `false`
+
+Remaining optional follow-up:
+
+- authenticated visual smoke can be run later if a safe browser auth session is explicitly provided, but the public read-only full browser visual gate is closed.
+
 ## 2026-07-06 - PGS Studio redesign v2 online/core UI GO
 
 Status: shipped baseline for PGS Studio redesign v2 at the online/core UI gate.
