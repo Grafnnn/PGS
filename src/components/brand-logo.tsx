@@ -9,11 +9,11 @@ export function BrandLogo({ href = "/dashboard", compact = false }: BrandLogoPro
   const content = (
     <>
       <span className="brand-mark" aria-hidden="true">
-        P
+        PG
       </span>
       <span className="brand-copy">
-        <span className="brand-name">PGS</span>
-        {!compact && <span className="brand-subtitle">Construction OS</span>}
+        <span className="brand-name">PGS Studio</span>
+        {!compact && <span className="brand-subtitle">Construction command system</span>}
       </span>
     </>
   );

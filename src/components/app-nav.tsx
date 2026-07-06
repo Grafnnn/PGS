@@ -27,6 +27,7 @@ import { BrandLogo } from "@/components/brand-logo";
 import { readSidebarPreference, type SidebarPreference, writeSidebarPreference } from "@/components/app-nav-state";
 
 type NavItem = {
+  code: string;
   href: string;
   icon: ReactNode;
   label: string;
@@ -35,14 +36,14 @@ type NavItem = {
 };
 
 const navItems: NavItem[] = [
-  { href: "/dashboard", icon: <Gauge size={17} />, label: "Дашборд", section: "Портфель", match: ["/dashboard"] },
-  { href: "/projects", icon: <BriefcaseBusiness size={17} />, label: "Проекты", section: "Объекты", match: ["/projects"] },
-  { href: "/projects", icon: <PackageCheck size={17} />, label: "Снабжение", section: "Операции" },
-  { href: "/projects", icon: <Landmark size={17} />, label: "Финансы", section: "Деньги" },
-  { href: "/projects", icon: <FileText size={17} />, label: "Документы", section: "Контроль" },
-  { href: "/projects", icon: <ShieldAlert size={17} />, label: "Риски", section: "Контроль" },
-  { href: "/projects", icon: <Bot size={17} />, label: "AI", section: "Анализ" },
-  { href: "/admin/users", icon: <Users size={17} />, label: "Администрирование", section: "Настройки", match: ["/admin"] }
+  { code: "00", href: "/dashboard", icon: <Gauge size={17} />, label: "Dashboard", section: "Портфель", match: ["/dashboard"] },
+  { code: "01", href: "/projects", icon: <BriefcaseBusiness size={17} />, label: "Projects", section: "Объекты", match: ["/projects"] },
+  { code: "02", href: "/projects", icon: <PackageCheck size={17} />, label: "Procurement", section: "Снабжение" },
+  { code: "03", href: "/projects", icon: <Landmark size={17} />, label: "Finance", section: "Деньги" },
+  { code: "04", href: "/projects", icon: <FileText size={17} />, label: "Docs", section: "Документы" },
+  { code: "05", href: "/projects", icon: <ShieldAlert size={17} />, label: "Risks", section: "Контроль" },
+  { code: "AI", href: "/projects", icon: <Bot size={17} />, label: "AI Layer", section: "Анализ" },
+  { code: "99", href: "/admin/users", icon: <Users size={17} />, label: "Admin", section: "Настройки", match: ["/admin"] }
 ];
 
 function isItemActive(pathname: string, item: NavItem) {
@@ -69,6 +70,9 @@ function NavigationLinks({ onNavigate }: { onNavigate?: () => void }) {
             <span className="nav-icon" aria-hidden="true">
               {item.icon}
             </span>
+            <span className="nav-code" aria-hidden="true">
+              {item.code}
+            </span>
             <span className="nav-copy">
               <strong>{item.label}</strong>
               <small>{item.section}</small>
@@ -85,8 +89,8 @@ function SidebarSystemCard() {
     <div className="sidebar-system-card">
       <SlidersHorizontal size={17} />
       <div>
-        <strong>Контур v0.9</strong>
-        <span>Бюджет · Сроки · Снабжение</span>
+        <strong>PGS v2</strong>
+        <span>ВОР · КС · Договор · Риски</span>
       </div>
     </div>
   );
@@ -228,17 +232,17 @@ export function AppNav({ children }: { children: ReactNode }) {
           </button>
           <label className="global-search" aria-label="Поиск по PGS">
             <Search size={17} />
-            <input placeholder="Поиск: объект, ВОР, документ, риск" />
+            <input placeholder="Поиск по объектам, ВОР, КС, документам" />
           </label>
           <div className="topbar-actions">
-            <span className="topbar-context">ООО Демо Строй · Алексей Орлов</span>
+            <span className="topbar-context">Демо Строй · Command Center</span>
             <button className="icon-button" type="button" aria-label="Уведомления">
               <Bell size={17} />
             </button>
-            <button className="button primary" type="button">
+            <Link className="button primary" href="/projects#create-project" title="Перейти к созданию проекта">
               <Plus size={17} />
               Создать
-            </button>
+            </Link>
           </div>
         </header>
         {children}

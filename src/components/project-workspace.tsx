@@ -71,23 +71,23 @@ const tabs = [
   "AI-помощник"
 ];
 
-const tabMeta: Record<string, { icon: React.ReactNode; hint: string }> = {
-  Обзор: { icon: <LayoutList size={16} />, hint: "Сводка" },
-  "Бюджет / ВОР": { icon: <Table2 size={16} />, hint: "Деньги" },
-  График: { icon: <TimerReset size={16} />, hint: "Сроки" },
-  Материалы: { icon: <Package size={16} />, hint: "Снабжение" },
-  Заявки: { icon: <Truck size={16} />, hint: "Закупки" },
-  Финансы: { icon: <Landmark size={16} />, hint: "Платежи" },
-  "Договор / Тендер": { icon: <Search size={16} />, hint: "Контракт" },
-  КС: { icon: <ReceiptText size={16} />, hint: "Закрытие" },
-  Рапорты: { icon: <ClipboardList size={16} />, hint: "Площадка" },
-  Риски: { icon: <AlertTriangle size={16} />, hint: "Контроль" },
-  Документы: { icon: <FileText size={16} />, hint: "Файлы" },
-  Аналитика: { icon: <BarChart3 size={16} />, hint: "Готовность" },
-  Участники: { icon: <Users size={16} />, hint: "Доступ" },
-  История: { icon: <ClipboardList size={16} />, hint: "Аудит" },
-  Настройки: { icon: <Trash2 size={16} />, hint: "Админ" },
-  "AI-помощник": { icon: <Bot size={16} />, hint: "Анализ" }
+const tabMeta: Record<string, { code: string; icon: React.ReactNode; hint: string }> = {
+  Обзор: { code: "00", icon: <LayoutList size={16} />, hint: "Сводка" },
+  "Бюджет / ВОР": { code: "01", icon: <Table2 size={16} />, hint: "Деньги" },
+  График: { code: "02", icon: <TimerReset size={16} />, hint: "Сроки" },
+  Материалы: { code: "03", icon: <Package size={16} />, hint: "Снабжение" },
+  Заявки: { code: "04", icon: <Truck size={16} />, hint: "Закупки" },
+  Финансы: { code: "05", icon: <Landmark size={16} />, hint: "Платежи" },
+  "Договор / Тендер": { code: "06", icon: <Search size={16} />, hint: "Контракт" },
+  КС: { code: "07", icon: <ReceiptText size={16} />, hint: "Закрытие" },
+  Рапорты: { code: "08", icon: <ClipboardList size={16} />, hint: "Площадка" },
+  Риски: { code: "09", icon: <AlertTriangle size={16} />, hint: "Контроль" },
+  Документы: { code: "10", icon: <FileText size={16} />, hint: "Файлы" },
+  Аналитика: { code: "11", icon: <BarChart3 size={16} />, hint: "Готовность" },
+  Участники: { code: "12", icon: <Users size={16} />, hint: "Доступ" },
+  История: { code: "13", icon: <ClipboardList size={16} />, hint: "Аудит" },
+  Настройки: { code: "14", icon: <Trash2 size={16} />, hint: "Админ" },
+  "AI-помощник": { code: "AI", icon: <Bot size={16} />, hint: "Анализ" }
 };
 
 type CurrentUser = {
@@ -807,7 +807,8 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
           <div className="tabs project-tabs" aria-label="Разделы проекта">
             {tabs.map((tab) => (
               <button className={`tab ${activeTab === tab ? "active" : ""}`} key={tab} onClick={() => setActiveTab(tab)}>
-                {tabMeta[tab]?.icon}
+                <span className="tab-code">{tabMeta[tab]?.code}</span>
+                <span className="tab-icon">{tabMeta[tab]?.icon}</span>
                 <span>
                   <strong>{tab}</strong>
                   <small>{tabMeta[tab]?.hint}</small>

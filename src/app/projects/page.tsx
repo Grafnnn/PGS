@@ -28,10 +28,10 @@ export default async function ProjectsPage() {
             <span className="badge gray">Сумма договоров: {compactMoney(projects.reduce((total, project) => total + project.contractAmount, 0))}</span>
           </div>
         </div>
-        <button className="button primary" type="button">
+        <a className="button primary" href="#create-project">
           <Plus size={18} />
           Создать проект
-        </button>
+        </a>
       </div>
 
       <ProjectsIndex projects={projects} />
