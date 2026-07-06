@@ -149,7 +149,11 @@ export async function GET(request: NextRequest, { params }: { params: { path?: s
 
 export async function POST(request: NextRequest, { params }: { params: { path?: string[] } }) {
   const path = pathOf(params);
-  const body = await request.json().catch(() => ({}));
+  let parsedBody: unknown;
+  const readBody = async () => {
+    if (parsedBody === undefined) parsedBody = await request.json().catch(() => ({}));
+    return parsedBody;
+  };
 
   try {
     if (path.join("/") === "auth/register") {
@@ -167,6 +171,7 @@ export async function POST(request: NextRequest, { params }: { params: { path?: 
     if (path[0] === "projects" && path.length === 1) {
       const user = await getCurrentUser();
       if (!canEditProject(user)) return json({ error: "Forbidden" }, 403);
+      const body = await readBody();
       const data = projectSchema.parse(body);
       const { organizationId } = await getDemoContext();
       const project = await prisma.project.create({
@@ -188,7 +193,8 @@ export async function POST(request: NextRequest, { params }: { params: { path?: 
         if (!user) return json({ error: "Forbidden" }, 403);
         if (!(await projectExists(projectId))) return json({ error: "Project not found" }, 404);
         if (!(await canProject(user, projectId, "view"))) return json({ error: "Forbidden" }, 403);
-        const prompt = body.prompt ?? body.question ?? promptByAiEndpoint(path[3]);
+        const body = await readBody() as Record<string, unknown>;
+        const prompt = String(body.prompt ?? body.question ?? promptByAiEndpoint(path[3]));
         const result = path[3] === "chat" ? await askProjectAssistant(projectId, prompt) : { ok: true, status: 200, response: localAiFallback(prompt, projectId) };
         return json({ response: result.response, ok: result.ok, error: "error" in result ? result.error : undefined }, result.status);
       }
@@ -205,7 +211,7 @@ export async function POST(request: NextRequest, { params }: { params: { path?: 
         });
       }
 
-      return await createProjectResource(projectId, resource, body);
+      return await createProjectResource(projectId, resource, await readBody());
     }
 
     return json({ error: "Endpoint not found", path }, 404);

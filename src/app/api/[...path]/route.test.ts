@@ -7,7 +7,11 @@ const askProjectAssistantMock = vi.fn();
 const buildProjectContextMock = vi.fn();
 const localAiFallbackMock = vi.fn();
 const projectFindUniqueMock = vi.fn();
+const projectCreateMock = vi.fn();
 const deleteProjectWithConfirmationMock = vi.fn();
+const getDemoContextMock = vi.fn();
+const listProjectsFromDbMock = vi.fn();
+const getProjectBundleFromDbMock = vi.fn();
 
 class MockProjectDeleteError extends Error {
   constructor(
@@ -35,9 +39,16 @@ vi.mock("@/lib/ai", () => ({
 vi.mock("@/lib/prisma", () => ({
   prisma: {
     project: {
-      findUnique: projectFindUniqueMock
+      findUnique: projectFindUniqueMock,
+      create: projectCreateMock
     }
   }
+}));
+
+vi.mock("@/lib/project-data", () => ({
+  getDemoContext: getDemoContextMock,
+  listProjectsFromDb: listProjectsFromDbMock,
+  getProjectBundleFromDb: getProjectBundleFromDbMock
 }));
 
 vi.mock("@/lib/project-delete", () => ({
@@ -77,7 +88,91 @@ describe("catch-all AI routes", () => {
     buildProjectContextMock.mockReset();
     localAiFallbackMock.mockReset();
     projectFindUniqueMock.mockReset();
+    projectCreateMock.mockReset();
     deleteProjectWithConfirmationMock.mockReset();
+    getDemoContextMock.mockReset();
+    listProjectsFromDbMock.mockReset();
+    getProjectBundleFromDbMock.mockReset();
+  });
+
+  it("keeps unauthenticated project creation forbidden before body parsing", async () => {
+    const jsonMock = vi.fn().mockResolvedValue({ name: "Нельзя читать" });
+    getCurrentUserMock.mockResolvedValue(null);
+    const { POST } = await import("./route");
+
+    const response = await POST({ json: jsonMock } as never, { params: { path: ["projects"] } });
+
+    expect(response.status).toBe(403);
+    await expect(responseJson(response)).resolves.toEqual({ error: "Forbidden" });
+    expect(jsonMock).not.toHaveBeenCalled();
+    expect(projectCreateMock).not.toHaveBeenCalled();
+  });
+
+  it("returns safe validation errors for invalid project creation payload", async () => {
+    getCurrentUserMock.mockResolvedValue(authorizedUser);
+    const { POST } = await import("./route");
+
+    const response = await POST(postRequest({ name: "" }) as never, { params: { path: ["projects"] } });
+    const body = await responseJson(response);
+
+    expect(response.status).toBe(400);
+    expect(body.error).toBe("Validation error");
+    expect(JSON.stringify(body)).not.toContain("PrismaClient");
+    expect(projectCreateMock).not.toHaveBeenCalled();
+  });
+
+  it("creates a project through supported schema fields only", async () => {
+    getCurrentUserMock.mockResolvedValue(authorizedUser);
+    getDemoContextMock.mockResolvedValue({ organizationId: "org-demo", userId: "user-demo" });
+    projectCreateMock.mockResolvedValue({
+      id: "project-new",
+      organizationId: "org-demo",
+      name: "Новый объект",
+      customer: "Заказчик",
+      object: "Административное здание",
+      address: "Москва",
+      contractAmount: 1000000,
+      vatMode: "vat",
+      startsAt: new Date("2026-07-01"),
+      endsAt: new Date("2026-09-01"),
+      manager: "РП",
+      status: "planning",
+      isSmokeProject: false
+    });
+    const { POST } = await import("./route");
+
+    const response = await POST(
+      postRequest({
+        name: "Новый объект",
+        customer: "Заказчик",
+        object: "Административное здание",
+        address: "Москва",
+        contractAmount: 1000000,
+        vatMode: "vat",
+        startsAt: "2026-07-01",
+        endsAt: "2026-09-01",
+        manager: "РП",
+        status: "planning",
+        unsupportedOnboardingNote: "ignored by schema"
+      }) as never,
+      { params: { path: ["projects"] } }
+    );
+    const body = await responseJson(response);
+
+    expect(response.status).toBe(201);
+    expect(body.project).toMatchObject({ id: "project-new", name: "Новый объект" });
+    expect(projectCreateMock).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        organizationId: "org-demo",
+        name: "Новый объект",
+        customer: "Заказчик",
+        object: "Административное здание",
+        address: "Москва",
+        manager: "РП",
+        status: "planning"
+      })
+    });
+    expect(JSON.stringify(projectCreateMock.mock.calls[0][0].data)).not.toContain("unsupportedOnboardingNote");
   });
 
   it("keeps unauthenticated AI requests forbidden before project lookup", async () => {
