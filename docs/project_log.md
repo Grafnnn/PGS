@@ -1,5 +1,98 @@
 # PGS Project Log
 
+## 2026-07-06 - PGS Studio redesign v2 online/core UI GO
+
+Status: shipped baseline for PGS Studio redesign v2 at the online/core UI gate.
+
+- Online URL: https://pgs-frankfurt.onrender.com
+- Online commit: `e2808a5e7d3291acb0cb3150e5f38bd531796394`
+- Decision: ONLINE/CORE UI GO
+- Git SHA source: `RENDER_GIT_COMMIT`
+
+Health:
+
+- First `/api/health` attempt timed out.
+- Retry returned `/api/health`: HTTP 200 / `ok`.
+- Deployed SHA matched expected commit.
+- DB: `ok`
+- migrations: `ok`, count `6`
+- auth required: `true`
+- AI configured: `true`
+
+Pages:
+
+- `/login`: 200
+- `/dashboard`: 200
+- `/projects`: 200
+- `/projects/project-demo`: 404 as expected
+- `/projects/project-smoke`: 200
+
+UI markers:
+
+- PGS Studio branding: present
+- dark sidebar / app shell: present
+- topbar: present
+- dashboard KPI / cards: present
+- projects page: present
+- create project form: present
+- project tabs: present
+- Command Center: present
+- Project Intelligence: present
+- Contract / Tender: present
+- `КС`: present
+- Documents: present
+- Risks / Reports: present
+- Schedule / Cashflow: present
+- Procurement / Materials: present
+- AI assistant: present
+
+Create project form:
+
+- form is present on `/projects`
+- topbar anchor points to `/projects#create-project`
+- online POST / create was not run
+
+Unauth guards:
+
+- `/api/auth/me`: 401
+- `POST /api/projects`: 403
+- AI summary: 403
+- data-readiness: 401
+- intelligence: 401
+- documents: 403
+- contract-review: 403
+- analyze-contract: 403
+
+Cleanup baseline:
+
+- `project-demo`: remains 404
+- `project-smoke`: target unaffected, 200
+- temp delete endpoint: absent, 404
+
+Browser / viewport limitation:
+
+- desktop browser viewport smoke: blocked by tooling
+- mobile browser viewport smoke: blocked by tooling
+- horizontal overflow: not claimed
+- hydration errors: not checked in a real browser
+- static CSS asset loaded: 200
+- responsive / mobile rules: present
+- FULL VISUAL GO is not claimed; this gate is ONLINE/CORE UI GO only.
+
+Not run / not touched:
+
+- live AI: not run
+- online mutation/import/delete/upload smoke: not run
+- online project creation: not run
+- manual deploy/redeploy: not triggered
+- Render env/secrets: unchanged
+- DB/schema/migrations: unchanged
+- secrets printed: `false`
+
+Remaining optional follow-up:
+
+- full browser visual/viewport smoke for desktop and mobile when safe browser tooling is available.
+
 ## 2026-07-06 - Contract & Tender Intelligence v1 online/core GO
 
 Status: shipped baseline for Contract & Tender Intelligence v1 at the online/core gate.
