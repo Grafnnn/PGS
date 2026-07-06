@@ -1,10 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, Grid2X2, List, Plus, Search } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ChevronLeft, ChevronRight, ClipboardList, FileText, Grid2X2, Landmark, List, PackageCheck, Plus, RotateCcw, Search, Sparkles, TimerReset } from "lucide-react";
 import { money, percent } from "@/lib/calculations";
+import {
+  buildProjectCreationSummary,
+  buildProjectOnboardingPlan,
+  defaultOnboardingModules,
+  projectCreationPayloadFromDraft,
+  type OnboardingModuleId,
+  type ProjectCreationDraft,
+  type ProjectObjectType,
+  type ProjectTenderSource,
+  type ProjectVatMode,
+  type ProjectVolumeChangeMode
+} from "@/lib/project-onboarding-intelligence";
 import type { Project } from "@/lib/types";
 
 function compactMoney(value: number) {
@@ -29,27 +41,82 @@ const statusLabels: Record<Project["status"], string> = {
   planning: "Планирование"
 };
 
+const objectTypeOptions: Array<{ value: ProjectObjectType; label: string }> = [
+  { value: "residential", label: "Жилое строительство" },
+  { value: "commercial", label: "Коммерческий объект" },
+  { value: "social", label: "Социальный объект" },
+  { value: "engineering", label: "Инженерные сети" },
+  { value: "reconstruction", label: "Реконструкция / капремонт" },
+  { value: "roofing_facade", label: "Кровля / фасад" },
+  { value: "interior", label: "Внутренние работы" },
+  { value: "other", label: "Другое" }
+];
+
+const tenderSourceOptions: Array<{ value: ProjectTenderSource; label: string }> = [
+  { value: "contract", label: "Договор" },
+  { value: "tender", label: "Тендер" },
+  { value: "commercial_offer", label: "КП" },
+  { value: "draft", label: "Устная / черновая" },
+  { value: "unknown", label: "Неизвестно" }
+];
+
+const vatModeOptions: Array<{ value: ProjectVatMode; label: string }> = [
+  { value: "including_vat", label: "С НДС в сумме" },
+  { value: "excluding_vat", label: "Без НДС в сумме" },
+  { value: "no_vat", label: "Без НДС" },
+  { value: "unknown", label: "Неизвестно" }
+];
+
+const volumeModeOptions: Array<{ value: ProjectVolumeChangeMode; label: string }> = [
+  { value: "fixed_scope", label: "Фиксированный объем" },
+  { value: "fact_based", label: "По фактическим объемам" },
+  { value: "can_change", label: "Может меняться вверх/вниз" },
+  { value: "unknown", label: "Неизвестно" }
+];
+
+const moduleOptions: Array<{ id: OnboardingModuleId; label: string; detail: string; icon: React.ReactNode }> = [
+  { id: "vor", label: "ВОР / import", detail: "Бюджет, материалы, КС и план-факт", icon: <Landmark size={17} /> },
+  { id: "documents", label: "Документы", detail: "Compliance, договор, исполнительный пакет", icon: <FileText size={17} /> },
+  { id: "schedule", label: "График", detail: "Работы, сроки, зависимости", icon: <TimerReset size={17} /> },
+  { id: "materials", label: "Материалы", detail: "Потребность, закупки, поставки", icon: <PackageCheck size={17} /> },
+  { id: "acceptance", label: "КС", detail: "Закрытие объемов и пакет заказчику", icon: <ClipboardList size={17} /> },
+  { id: "risks", label: "Риски", detail: "Сроки, деньги, документы, снабжение", icon: <AlertTriangle size={17} /> },
+  { id: "contract", label: "Договор / Тендер", detail: "Условия, платежи, scope, risk review", icon: <Search size={17} /> },
+  { id: "reports", label: "Рапорты / executive", detail: "Ритм отчетности и weekly report", icon: <Sparkles size={17} /> }
+];
+
+const wizardSteps = ["Проект", "Договор", "Контур", "Чеклист", "Создание"];
+
+function makeInitialDraft(): ProjectCreationDraft {
+  const today = new Date().toISOString().slice(0, 10);
+  const finish = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  return {
+    name: "",
+    code: "",
+    customer: "",
+    object: "",
+    objectType: "commercial",
+    address: "",
+    description: "",
+    contractAmount: "",
+    vatMode: "including_vat",
+    vatPercent: "22",
+    startsAt: today,
+    endsAt: finish,
+    manager: "",
+    status: "planning",
+    tenderSource: "unknown",
+    paymentNotes: "",
+    volumeChangeMode: "unknown",
+    selectedModules: defaultOnboardingModules
+  };
+}
+
 export function ProjectsIndex({ projects }: { projects: Project[] }) {
-  const router = useRouter();
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<"all" | Project["status"]>("all");
   const [sort, setSort] = useState<"amount" | "finish" | "name">("amount");
   const [view, setView] = useState<"cards" | "table">("cards");
-  const [creating, setCreating] = useState(false);
-  const [createError, setCreateError] = useState("");
-  const today = new Date().toISOString().slice(0, 10);
-  const finish = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-  const [draft, setDraft] = useState({
-    name: "Новый объект PGS",
-    customer: "Новый заказчик",
-    object: "Строительный объект",
-    address: "Адрес объекта",
-    contractAmount: "10000000",
-    startsAt: today,
-    endsAt: finish,
-    manager: "Руководитель проекта",
-    status: "planning" as Project["status"]
-  });
   const managers = Array.from(new Set(projects.map((project) => project.manager)));
 
   const filteredProjects = projects
@@ -65,93 +132,7 @@ export function ProjectsIndex({ projects }: { projects: Project[] }) {
 
   return (
     <div className="stack">
-      <section className="panel stack create-project-panel" id="create-project">
-        <div className="toolbar">
-          <div>
-            <div className="eyebrow">Новый объект</div>
-            <h2>Создать проект</h2>
-            <p className="muted">Минимальная карточка создается в базе и сразу открывается как рабочий объект.</p>
-          </div>
-        </div>
-        <form
-          className="project-create-grid"
-          onSubmit={async (event) => {
-            event.preventDefault();
-            setCreating(true);
-            setCreateError("");
-            try {
-              const response = await fetch("/api/projects", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  ...draft,
-                  contractAmount: Number(draft.contractAmount),
-                  vatMode: "vat"
-                })
-              });
-              const data = (await response.json()) as { project?: Project; error?: string | { message?: string } };
-              if (!response.ok || !data.project) {
-                const message = typeof data.error === "string" ? data.error : data.error?.message;
-                throw new Error(message ?? "Не удалось создать проект.");
-              }
-              router.push(`/projects/${data.project.id}`);
-              router.refresh();
-            } catch (error) {
-              setCreateError(error instanceof Error ? error.message : "Ошибка создания проекта.");
-            } finally {
-              setCreating(false);
-            }
-          }}
-        >
-          <label>
-            Название
-            <input value={draft.name} onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))} />
-          </label>
-          <label>
-            Заказчик
-            <input value={draft.customer} onChange={(event) => setDraft((current) => ({ ...current, customer: event.target.value }))} />
-          </label>
-          <label>
-            Объект
-            <input value={draft.object} onChange={(event) => setDraft((current) => ({ ...current, object: event.target.value }))} />
-          </label>
-          <label>
-            Адрес
-            <input value={draft.address} onChange={(event) => setDraft((current) => ({ ...current, address: event.target.value }))} />
-          </label>
-          <label>
-            Договорная сумма
-            <input inputMode="numeric" value={draft.contractAmount} onChange={(event) => setDraft((current) => ({ ...current, contractAmount: event.target.value }))} />
-          </label>
-          <label>
-            Начало
-            <input type="date" value={draft.startsAt} onChange={(event) => setDraft((current) => ({ ...current, startsAt: event.target.value }))} />
-          </label>
-          <label>
-            Завершение
-            <input type="date" value={draft.endsAt} onChange={(event) => setDraft((current) => ({ ...current, endsAt: event.target.value }))} />
-          </label>
-          <label>
-            Руководитель
-            <input value={draft.manager} onChange={(event) => setDraft((current) => ({ ...current, manager: event.target.value }))} />
-          </label>
-          <label>
-            Статус
-            <select value={draft.status} onChange={(event) => setDraft((current) => ({ ...current, status: event.target.value as Project["status"] }))}>
-              <option value="planning">Планирование</option>
-              <option value="active">В работе</option>
-              <option value="draft">Черновик</option>
-            </select>
-          </label>
-          <div className="project-create-actions">
-            <button className="button primary" disabled={creating} type="submit">
-              <Plus size={17} />
-              {creating ? "Создаем..." : "Создать и открыть"}
-            </button>
-            {createError && <span className="error-text">{createError}</span>}
-          </div>
-        </form>
-      </section>
+      <ProjectCreationWizard />
 
       <section className="panel stack">
         <div className="toolbar project-filterbar">
@@ -246,6 +227,292 @@ export function ProjectsIndex({ projects }: { projects: Project[] }) {
         )}
       </section>
     </div>
+  );
+}
+
+export function ProjectCreationWizard() {
+  const router = useRouter();
+  const [step, setStep] = useState(0);
+  const [draft, setDraft] = useState<ProjectCreationDraft>(() => makeInitialDraft());
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState("");
+  const plan = buildProjectOnboardingPlan(draft);
+  const summary = buildProjectCreationSummary(draft);
+  const currentStepIssues = plan.issues.filter((issue) => {
+    if (step === 0) return ["name", "customer", "object", "address", "manager"].includes(String(issue.field));
+    if (step === 1) return ["contractAmount", "startsAt", "endsAt", "vatPercent"].includes(String(issue.field));
+    if (step === 2) return issue.field === "selectedModules";
+    return true;
+  });
+  const canMoveNext = step < 4 && currentStepIssues.length === 0;
+
+  const updateDraft = <K extends keyof ProjectCreationDraft>(key: K, value: ProjectCreationDraft[K]) => {
+    setDraft((current) => ({ ...current, [key]: value }));
+  };
+  const toggleModule = (moduleId: OnboardingModuleId) => {
+    setDraft((current) => {
+      const selected = new Set(current.selectedModules ?? defaultOnboardingModules);
+      if (selected.has(moduleId)) selected.delete(moduleId);
+      else selected.add(moduleId);
+      return { ...current, selectedModules: Array.from(selected) };
+    });
+  };
+  const reset = () => {
+    setDraft(makeInitialDraft());
+    setStep(0);
+    setCreateError("");
+  };
+  const submit = async () => {
+    const issues = buildProjectOnboardingPlan(draft).issues;
+    if (issues.length) {
+      setCreateError(issues[0]?.message ?? "Проверьте обязательные поля.");
+      setStep(0);
+      return;
+    }
+    if (creating) return;
+    setCreating(true);
+    setCreateError("");
+    try {
+      const response = await fetch("/api/projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(projectCreationPayloadFromDraft(draft))
+      });
+      const data = (await response.json()) as { project?: Project; error?: string | { message?: string }; issues?: Array<{ message?: string }> };
+      if (!response.ok || !data.project) {
+        const message = typeof data.error === "string" ? data.error : data.error?.message ?? data.issues?.[0]?.message;
+        throw new Error(message ?? "Не удалось создать проект.");
+      }
+      router.push(`/projects/${data.project.id}?created=1`);
+      router.refresh();
+    } catch (error) {
+      setCreateError(error instanceof Error ? error.message : "Ошибка создания проекта.");
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  return (
+    <section className="panel stack create-project-panel project-onboarding-wizard" id="create-project">
+      <div className="toolbar">
+        <div>
+          <div className="eyebrow">Project Creation & Onboarding</div>
+          <h2>Создать проект и запустить baseline</h2>
+          <p className="muted">Wizard создает объект через защищенный `/api/projects`, а до сохранения показывает готовность, недостающие данные и стартовые действия.</p>
+        </div>
+        <div className={`onboarding-score tone-${plan.status === "ready_to_create" ? "good" : "warn"}`}>
+          <strong>{plan.score}%</strong>
+          <span>{plan.status === "ready_to_create" ? "готов к созданию" : "нужно заполнить"}</span>
+        </div>
+      </div>
+
+      <div className="wizard-steps onboarding-steps" aria-label="Шаги создания проекта">
+        {wizardSteps.map((label, index) => (
+          <button className={`wizard-step ${index <= step ? "done" : ""}`} key={label} type="button" onClick={() => setStep(index)}>
+            <strong>{index + 1}</strong>
+            {label}
+          </button>
+        ))}
+      </div>
+
+      <div className="onboarding-wizard-layout">
+        <form className="project-create-grid onboarding-form" onSubmit={(event) => event.preventDefault()}>
+          {step === 0 && (
+            <>
+              <label>
+                Название проекта *
+                <input value={draft.name ?? ""} onChange={(event) => updateDraft("name", event.target.value)} placeholder="Например: Административное здание" />
+              </label>
+              <label>
+                Код / slug
+                <input value={draft.code ?? ""} onChange={(event) => updateDraft("code", event.target.value)} placeholder="PGS-2026-01" />
+              </label>
+              <label>
+                Заказчик *
+                <input value={draft.customer ?? ""} onChange={(event) => updateDraft("customer", event.target.value)} placeholder="Название заказчика" />
+              </label>
+              <label>
+                Тип объекта
+                <select value={draft.objectType} onChange={(event) => updateDraft("objectType", event.target.value as ProjectObjectType)}>
+                  {objectTypeOptions.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Объект *
+                <input value={draft.object ?? ""} onChange={(event) => updateDraft("object", event.target.value)} placeholder="Корпус, площадка, этап" />
+              </label>
+              <label>
+                Адрес *
+                <input value={draft.address ?? ""} onChange={(event) => updateDraft("address", event.target.value)} placeholder="Адрес или локация" />
+              </label>
+              <label>
+                Руководитель проекта *
+                <input value={draft.manager ?? ""} onChange={(event) => updateDraft("manager", event.target.value)} placeholder="ФИО / роль" />
+              </label>
+              <label>
+                Статус
+                <select value={draft.status} onChange={(event) => updateDraft("status", event.target.value as Project["status"])}>
+                  <option value="planning">Планирование</option>
+                  <option value="draft">Черновик</option>
+                  <option value="active">В работе</option>
+                </select>
+              </label>
+              <label className="wide-field">
+                Описание / scope summary
+                <textarea value={draft.description ?? ""} onChange={(event) => updateDraft("description", event.target.value)} placeholder="Кратко: что строим, границы работ, особенности запуска" rows={3} />
+              </label>
+            </>
+          )}
+
+          {step === 1 && (
+            <>
+              <label>
+                Договорная сумма *
+                <input inputMode="decimal" value={draft.contractAmount ?? ""} onChange={(event) => updateDraft("contractAmount", event.target.value)} placeholder="10000000" />
+              </label>
+              <label>
+                Режим НДС
+                <select value={draft.vatMode} onChange={(event) => updateDraft("vatMode", event.target.value as ProjectVatMode)}>
+                  {vatModeOptions.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                НДС, %
+                <input inputMode="decimal" value={draft.vatPercent ?? ""} onChange={(event) => updateDraft("vatPercent", event.target.value)} />
+              </label>
+              <label>
+                Источник
+                <select value={draft.tenderSource} onChange={(event) => updateDraft("tenderSource", event.target.value as ProjectTenderSource)}>
+                  {tenderSourceOptions.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Начало *
+                <input type="date" value={draft.startsAt ?? ""} onChange={(event) => updateDraft("startsAt", event.target.value)} />
+              </label>
+              <label>
+                Плановое завершение *
+                <input type="date" value={draft.endsAt ?? ""} onChange={(event) => updateDraft("endsAt", event.target.value)} />
+              </label>
+              <label>
+                Изменение объемов
+                <select value={draft.volumeChangeMode} onChange={(event) => updateDraft("volumeChangeMode", event.target.value as ProjectVolumeChangeMode)}>
+                  {volumeModeOptions.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="wide-field">
+                Примечания по оплате
+                <textarea value={draft.paymentNotes ?? ""} onChange={(event) => updateDraft("paymentNotes", event.target.value)} placeholder="Аванс, этапы оплаты, удержания. Только как onboarding-note, без юридической генерации." rows={3} />
+              </label>
+            </>
+          )}
+
+          {step === 2 && (
+            <div className="module-setup-grid">
+              {moduleOptions.map((option) => {
+                const active = (draft.selectedModules ?? defaultOnboardingModules).includes(option.id);
+                return (
+                  <button className={`module-setup-card ${active ? "active" : ""}`} key={option.id} type="button" onClick={() => toggleModule(option.id)}>
+                    <span>{option.icon}</span>
+                    <strong>{option.label}</strong>
+                    <small>{option.detail}</small>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {step === 3 && (
+            <div className="onboarding-checklist">
+              {plan.nextActions.map((action, index) => (
+                <div className="onboarding-checklist-item" key={action}>
+                  <span>{index + 1}</span>
+                  <p>{action}</p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {step === 4 && (
+            <div className="project-create-review">
+              <div>
+                <small>Проект</small>
+                <strong>{summary.name}</strong>
+                <span>{summary.customer} · {summary.object}</span>
+              </div>
+              <div>
+                <small>Адрес и сроки</small>
+                <strong>{summary.address}</strong>
+                <span>{summary.datesLabel}</span>
+              </div>
+              <div>
+                <small>Договор</small>
+                <strong>{summary.amountLabel}</strong>
+                <span>{summary.vatLabel} · источник: {summary.tenderSourceLabel}</span>
+              </div>
+              <div>
+                <small>Первый workflow</small>
+                <strong>{plan.recommendedFirstWorkflow}</strong>
+                <span>{summary.moduleLabels.join(", ")}</span>
+              </div>
+            </div>
+          )}
+
+          <div className="project-create-actions">
+            <button className="button secondary" disabled={step === 0 || creating} type="button" onClick={() => setStep((current) => Math.max(0, current - 1))}>
+              <ChevronLeft size={17} />
+              Назад
+            </button>
+            {step < 4 ? (
+              <button className="button primary" disabled={!canMoveNext || creating} type="button" onClick={() => setStep((current) => Math.min(4, current + 1))}>
+                Далее
+                <ChevronRight size={17} />
+              </button>
+            ) : (
+              <button className="button primary" disabled={creating || plan.issues.length > 0} type="button" onClick={submit}>
+                <Plus size={17} />
+                {creating ? "Создаем..." : "Создать и открыть"}
+              </button>
+            )}
+            <button className="button secondary" disabled={creating} type="button" onClick={reset}>
+              <RotateCcw size={16} />
+              Сбросить
+            </button>
+            {createError && <span className="error-text">{createError}</span>}
+          </div>
+        </form>
+
+        <aside className="onboarding-summary-card">
+          <div className="section-title">
+            <CheckCircle2 size={18} />
+            <h3>Onboarding baseline</h3>
+          </div>
+          <p>{plan.summary}</p>
+          {plan.issues.length ? (
+            <div className="onboarding-issues">
+              {plan.issues.slice(0, 4).map((issue) => (
+                <span key={`${issue.field}-${issue.message}`}>{issue.message}</span>
+              ))}
+            </div>
+          ) : (
+            <span className="badge green">обязательные поля закрыты</span>
+          )}
+          <div className="onboarding-mini-list">
+            {plan.projectIntelligenceBaseline.map((item) => (
+              <span key={item}>{item}</span>
+            ))}
+          </div>
+        </aside>
+      </div>
+    </section>
   );
 }
 

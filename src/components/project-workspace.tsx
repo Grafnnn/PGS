@@ -13,6 +13,7 @@ import { ScheduleCashflowWorkspace } from "@/components/schedule-cashflow-worksp
 import { budgetTotals, deriveAutoRisks, financeTotals, materialTotals, money, percent, workTotals } from "@/lib/calculations";
 import type { ImportExplanation, ImportMode, ImportPreview, ImportSheetMapping } from "@/lib/excel/import-types";
 import { drilldownAiScenarios, type AiInsightResponse, type AiScenario } from "@/lib/project-intelligence-drilldown";
+import { buildInitialProjectReadiness } from "@/lib/project-onboarding-intelligence";
 import type { DocumentChecklistItem, PipelineAction, PipelineReadiness } from "@/lib/project-pipeline";
 import type { AuditEvent, BudgetItem, DailyReport, Material, Payment, ProcurementRequest, ProjectDocument, ProjectDocumentVersion, ProjectMember, Risk, ScheduleItem } from "@/lib/types";
 
@@ -146,7 +147,7 @@ function textFromCell(cell: React.ReactNode): string {
   return "";
 }
 
-export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
+export function ProjectWorkspace({ initialBundle, createdFromOnboarding = false }: { initialBundle: Bundle; createdFromOnboarding?: boolean }) {
   const [activeTab, setActiveTab] = useState(tabs[0]);
   const [budgetItems, setBudgetItems] = useState(initialBundle.budgetItems);
   const [scheduleItems, setScheduleItems] = useState(initialBundle.scheduleItems);
@@ -221,6 +222,16 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
   const aiAnswerTone = aiLoading ? "loading" : aiAnswer ? (/OPENAI_API_KEY|not configured|failed|ошибка|error|Project not found/i.test(aiAnswer) ? "error" : "ready") : "empty";
   const aiDisplay = aiAnswerTone === "error" ? "AI-помощник сейчас недоступен. Проверьте подключение AI и повторите анализ позже." : aiAnswer;
   const canDeleteCurrentProject = currentUser?.role === "OWNER" || currentUser?.role === "ADMIN";
+  const emptyOperationalBaseline =
+    !budgetItems.length &&
+    !scheduleItems.length &&
+    !materials.length &&
+    !procurementRequests.length &&
+    !payments.length &&
+    !documents.length &&
+    !risks.length;
+  const onboardingPlan = useMemo(() => buildInitialProjectReadiness(initialBundle.project), [initialBundle.project]);
+  const showOnboardingPanel = createdFromOnboarding || emptyOperationalBaseline;
 
   useEffect(() => {
     let active = true;
@@ -824,6 +835,7 @@ export function ProjectWorkspace({ initialBundle }: { initialBundle: Bundle }) {
 
           {activeTab === "Обзор" && (
             <section className="stack">
+              {showOnboardingPanel && <ProjectWorkspaceOnboardingPanel created={createdFromOnboarding} onNavigate={setActiveTab} plan={onboardingPlan} />}
               <ProjectCommandCenter
                 project={initialBundle.project}
                 budgetItems={budgetItems}
@@ -3372,6 +3384,49 @@ function DocumentCards({ items, projectId }: { items: ProjectDocument[]; project
         </a>
       ))}
     </div>
+  );
+}
+
+function ProjectWorkspaceOnboardingPanel({
+  created,
+  plan,
+  onNavigate
+}: {
+  created: boolean;
+  plan: ReturnType<typeof buildInitialProjectReadiness>;
+  onNavigate: (tab: string) => void;
+}) {
+  const moduleLinks = plan.modules.filter((module) => module.status !== "not_selected").slice(0, 7);
+
+  return (
+    <article className="panel project-onboarding-panel">
+      <div className="project-onboarding-panel-head">
+        <div>
+          <div className="eyebrow">{created ? "Project created" : "Setup baseline"}</div>
+          <h3>Запустите рабочий контур проекта</h3>
+          <p>{plan.summary}</p>
+        </div>
+        <span className="badge yellow">{plan.score}% onboarding</span>
+      </div>
+      <div className="project-onboarding-grid">
+        <div className="onboarding-checklist compact">
+          {plan.nextActions.slice(0, 6).map((action, index) => (
+            <div className="onboarding-checklist-item" key={action}>
+              <span>{index + 1}</span>
+              <p>{action}</p>
+            </div>
+          ))}
+        </div>
+        <div className="module-link-grid">
+          {moduleLinks.map((module) => (
+            <button className="module-link-card" key={module.id} type="button" onClick={() => onNavigate(module.tab)}>
+              <strong>{module.label}</strong>
+              <small>{module.nextAction}</small>
+            </button>
+          ))}
+        </div>
+      </div>
+    </article>
   );
 }
 

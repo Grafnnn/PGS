@@ -1,0 +1,30 @@
+import React from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { describe, expect, it, vi } from "vitest";
+import { ProjectCreationWizard } from "@/components/projects-index";
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({
+    push: vi.fn(),
+    refresh: vi.fn()
+  })
+}));
+
+describe("ProjectCreationWizard", () => {
+  it("renders onboarding wizard without calling create API or AI on render", () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch" as never);
+    const html = renderToStaticMarkup(React.createElement(ProjectCreationWizard));
+
+    expect(html).toContain("Project Creation &amp; Onboarding");
+    expect(html).toContain("Создать проект и запустить baseline");
+    expect(html).toContain("Проект");
+    expect(html).toContain("Договор");
+    expect(html).toContain("Контур");
+    expect(html).toContain("Onboarding baseline");
+    expect(html).toContain("Бюджет / ВОР");
+    expect(html).toContain("Название проекта");
+    expect(html).toContain("нужно заполнить");
+    expect(fetchMock).not.toHaveBeenCalled();
+    fetchMock.mockRestore();
+  });
+});
