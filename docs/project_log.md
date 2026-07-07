@@ -1,5 +1,67 @@
 # PGS Project Log
 
+## 2026-07-07 - Project Creation & Onboarding v1 online/core GO
+
+Status: Project Creation & Onboarding v1 reached ONLINE/CORE GO on Render. Full online create mutation is not claimed.
+
+- Online URL: https://pgs-frankfurt.onrender.com
+- Online commit: `72454a128472b957ae2769a4549b547acf11dc3d`
+- Decision: ONLINE/CORE GO
+- Git SHA source: `RENDER_GIT_COMMIT`
+
+Health:
+
+- `/api/health`: HTTP 200 / `ok`
+- deployed SHA matched expected commit
+- DB: `ok`
+- migrations: `ok`, count `6`
+- auth required: `true`
+- AI configured: `true`
+
+Pages:
+
+- `/dashboard`: 200
+- `/projects`: 200
+- `/projects/project-demo`: 404 as expected
+- `/projects/project-smoke`: 200
+
+Markers:
+
+- Project Creation & Onboarding: present
+- `Создать проект и запустить baseline`: present
+- Onboarding baseline: present
+- create project fields: present
+- project workspace tabs/context: present
+- sidebar/mobile drawer markup: present
+
+Guards:
+
+- `/api/auth/me`: 401
+- unauthenticated AI summary: 403
+- unauthenticated `POST /api/projects`: not rechecked online because the permission reviewer blocked `curl` before execution
+- pre-merge tests and local smoke covered unauthenticated `POST /api/projects` as 403
+
+Cleanup baseline:
+
+- `project-demo` remains 404
+- `project-smoke` remains available, 200
+- runtime smoke target remains `project-smoke`
+
+Not run / not touched:
+
+- online project create mutation: not run
+- disposable create/open/delete flow: not run
+- live AI: not run
+- uploads/import/delete: not run
+- manual deploy/redeploy: not triggered
+- Render env/secrets: unchanged
+- DB/schema/migrations: unchanged
+- secrets printed: `false`
+
+Remaining follow-up:
+
+- authenticated mutation smoke for a disposable project: create disposable project, open it, verify onboarding baseline, delete it, then verify `project-demo` remains 404 and `project-smoke` is unaffected.
+
 ## 2026-07-06 - PGS Studio redesign v2 full browser visual GO
 
 Status: PGS Studio redesign v2 reached FULL VISUAL GO after real browser desktop/mobile viewport smoke.
