@@ -1,5 +1,78 @@
 # PGS Project Log
 
+## 2026-07-08 - PGS Studio v4 sidebar design online GO
+
+Status: PGS Studio v4 design update reached ONLINE/CORE UI GO on Render, including the left-menu duplicate fix.
+
+- Online URL: https://pgs-frankfurt.onrender.com
+- Online commit: `08a9bcbee79d9c198c28109176fbebf4261b6fc5`
+- PR: #68
+- Decision: ONLINE/CORE UI GO
+- Git SHA source: `RENDER_GIT_COMMIT`
+
+Health:
+
+- `/api/health`: HTTP 200 / `ok`
+- deployed SHA matched expected commit
+- DB: `ok`
+- migrations: `ok`, count `6`
+- auth required: `true`
+- AI configured: `true`
+
+Pages:
+
+- `/dashboard`: 200
+- `/projects`: 200
+- `/projects/project-smoke`: 200
+- `/api/auth/me` without cookies: 401 as expected
+
+Design update:
+
+- PGS Studio v4 blueprint-board background applied.
+- Sidebar changed to a single desktop `.app-sidebar` with in-place peek expansion.
+- Legacy `.sidebar-overlay` and `.sidebar-overlay-scrim` removed.
+- Mobile drawer remains separate from the desktop sidebar.
+- Topbar wrapping/search/actions adjusted for responsive layouts.
+
+Browser smoke:
+
+- Local production build smoke: passed.
+- Online Render smoke: passed.
+- Desktop viewport: 1440 x 900.
+- Mobile viewport: 390 x 844.
+- Desktop `.app-sidebar` count: 1.
+- Visible desktop sidebar count on desktop: 1.
+- Legacy `.sidebar-overlay` count: 0.
+- Legacy `.sidebar-overlay-scrim` count: 0.
+- Collapsed desktop sidebar opens to peek width and reveals labels.
+- Desktop sidebar closes after pointer leaves the sidebar.
+- Mobile `.mobile-drawer` count: 1.
+- Desktop sidebar remains hidden on mobile.
+- Mobile drawer opens and closes correctly.
+- Horizontal overflow: none observed on desktop or mobile.
+- Browser console/page errors after filtering expected unauthenticated 401/403 guard responses: none.
+
+Validation:
+
+- `pnpm test`: 209/209 passed.
+- `pnpm lint`: passed.
+- `pnpm prisma validate`: passed with dummy `DATABASE_URL`.
+- `pnpm prisma generate`: passed.
+- `pnpm exec tsc --noEmit`: passed.
+- `pnpm build`: passed with the expected local Prisma `DATABASE_URL` warning during static generation.
+- GitHub Actions PR CI #140: success.
+- GitHub Actions main CI #141: success.
+
+Not run / not touched:
+
+- live AI: not run.
+- online mutation/import/delete/upload smoke: not run.
+- project creation: not run.
+- manual DB changes: none.
+- Render env/secrets: unchanged.
+- DB schema/migrations: unchanged.
+- secrets printed: `false`.
+
 ## 2026-07-07 - Project Creation & Onboarding v1 online/core GO
 
 Status: Project Creation & Onboarding v1 reached ONLINE/CORE GO on Render. Full online create mutation is not claimed.
