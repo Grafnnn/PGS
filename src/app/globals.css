@@ -1,3 +1,5 @@
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600;700&display=swap");
+
 :root {
   --bg: #f5f1e9;
   --bg-soft: #efe8d8;
@@ -43,7 +45,17 @@ html {
 
 body {
   margin: 0;
-  background: linear-gradient(180deg, rgba(255, 253, 248, 0.78) 0, var(--bg) 340px);
+  background-color: #f5f1e9;
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='920' height='560' viewBox='0 0 920 560' fill='none' stroke='%231c1f26' stroke-width='1.5'%3E%3Cg opacity='0.055'%3E%3Crect x='60' y='210' width='250' height='310'/%3E%3Cpath d='M60 248h250M60 286h250M60 324h250M60 362h250M60 400h250M60 438h250M60 476h250M122 210v310M185 210v310M248 210v310'/%3E%3Cpath d='M560 520V110M580 520V110M552 520h36M560 140l20 24M580 140l-20 24M560 188l20 24M580 188l-20 24M560 236l20 24M580 236l-20 24M560 284l20 24M580 284l-20 24M560 332l20 24M580 332l-20 24M560 380l20 24M580 380l-20 24M560 428l20 24M580 428l-20 24M560 476l20 24M580 476l-20 24'/%3E%3Cpath d='M560 110l10-40 10 40M570 110h310M570 130h290M590 110l20 20M610 130l20-20M630 110l20 20M650 130l20-20M670 110l20 20M690 130l20-20M710 110l20 20M730 130l20-20M750 110l20 20M770 130l20-20M790 110l20 20M810 130l20-20M830 110l20 20M850 130l20-20M570 70L720 110M570 70L500 110M570 110h-80M570 130h-70M490 110v20M478 130h28v24h-28z'/%3E%3Cpath d='M800 130v110M800 240c0 12-16 12-16 0'/%3E%3Cpath d='M60 545h250M60 538v14M310 538v14'/%3E%3Ccircle cx='185' cy='324' r='34' stroke-dasharray='4 6'/%3E%3Cpath d='M219 324h64' stroke-dasharray='4 6'/%3E%3C/g%3E%3C/svg%3E"),
+    radial-gradient(1100px 520px at 85% -120px, rgba(193, 81, 47, 0.05), transparent 65%),
+    radial-gradient(900px 640px at -160px 105%, rgba(47, 93, 138, 0.04), transparent 60%),
+    linear-gradient(rgba(28, 31, 38, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(28, 31, 38, 0.03) 1px, transparent 1px);
+  background-attachment: fixed;
+  background-position: calc(100% + 70px) calc(100% + 50px), 0 0, 0 0, 0 0, 0 0;
+  background-repeat: no-repeat, no-repeat, no-repeat, repeat, repeat;
+  background-size: 920px 560px, auto, auto, 26px 26px, 26px 26px;
   color: var(--text);
   font-family: var(--font-sans);
   font-size: 14px;
@@ -104,7 +116,8 @@ textarea {
 }
 
 .sidebar {
-  background: var(--ink);
+  background: rgba(21, 24, 29, 0.88);
+  backdrop-filter: blur(9px);
   border-right: 1px solid rgba(255, 253, 248, 0.08);
   color: #f6efe2;
   display: flex;
@@ -124,10 +137,11 @@ textarea {
 
 .topbar {
   align-items: center;
-  background: rgba(250, 247, 239, 0.9);
-  backdrop-filter: blur(18px);
+  background: rgba(255, 253, 248, 0.76);
+  backdrop-filter: blur(16px);
   border-bottom: 1px solid var(--line);
   display: flex;
+  flex-wrap: wrap;
   gap: 18px;
   justify-content: space-between;
   min-height: 64px;
@@ -151,59 +165,35 @@ textarea {
 .app-sidebar.is-collapsed {
   gap: 12px;
   padding: 0 8px 12px;
+  transition:
+    box-shadow 180ms ease,
+    padding 180ms ease,
+    width 180ms ease;
+  width: 76px;
 }
 
-.app-sidebar.is-collapsed .sidebar-header {
+.app-sidebar.is-collapsed.is-peek-open {
+  box-shadow: 0 18px 44px rgba(10, 12, 16, 0.42);
+  padding: 0 14px 14px;
+  width: 252px;
+  z-index: 60;
+}
+
+.app-sidebar.is-collapsed:not(.is-peek-open) .sidebar-header {
   justify-content: center;
   margin: 0 -8px;
   padding: 0 8px;
 }
 
-.app-sidebar.is-collapsed .brand {
+.app-sidebar.is-collapsed:not(.is-peek-open) .brand {
   justify-content: center;
   min-width: 0;
 }
 
-.app-sidebar.is-collapsed .brand-copy,
-.app-sidebar.is-collapsed .sidebar-pin-button,
-.app-sidebar.is-collapsed .sidebar-system-card {
+.app-sidebar.is-collapsed:not(.is-peek-open) .brand-copy,
+.app-sidebar.is-collapsed:not(.is-peek-open) .sidebar-pin-button,
+.app-sidebar.is-collapsed:not(.is-peek-open) .sidebar-system-card {
   display: none;
-}
-
-.sidebar-overlay {
-  box-shadow: var(--shadow-md);
-  display: flex;
-  height: 100vh;
-  left: 72px;
-  opacity: 0;
-  pointer-events: none;
-  position: fixed;
-  top: 0;
-  transform: translateX(-8px);
-  transition:
-    opacity 160ms ease,
-    transform 160ms ease;
-  width: 264px;
-  z-index: 50;
-}
-
-.sidebar-overlay.open {
-  opacity: 1;
-  pointer-events: auto;
-  transform: translateX(0);
-}
-
-.sidebar-overlay-scrim {
-  background: transparent;
-  inset: 0;
-  left: 72px;
-  pointer-events: none;
-  position: fixed;
-  z-index: 45;
-}
-
-.sidebar-overlay-scrim.open {
-  pointer-events: auto;
 }
 
 .drawer-backdrop {
@@ -370,22 +360,22 @@ textarea {
   color: rgba(255, 255, 255, 0.72);
 }
 
-.app-sidebar.is-collapsed .sidebar-nav {
+.app-sidebar.is-collapsed:not(.is-peek-open) .sidebar-nav {
   gap: 6px;
 }
 
-.app-sidebar.is-collapsed .sidebar-nav a {
+.app-sidebar.is-collapsed:not(.is-peek-open) .sidebar-nav a {
   display: flex;
   justify-content: center;
   min-height: 40px;
   padding: 8px;
 }
 
-.app-sidebar.is-collapsed .nav-code {
+.app-sidebar.is-collapsed:not(.is-peek-open) .nav-code {
   display: none;
 }
 
-.app-sidebar.is-collapsed .nav-copy {
+.app-sidebar.is-collapsed:not(.is-peek-open) .nav-copy {
   height: 1px;
   opacity: 0;
   overflow: hidden;
@@ -393,8 +383,8 @@ textarea {
   width: 1px;
 }
 
-.app-sidebar.is-collapsed .sidebar-nav a:hover::after,
-.app-sidebar.is-collapsed .sidebar-nav a:focus-visible::after {
+.app-sidebar.is-collapsed:not(.is-peek-open) .sidebar-nav a:hover::after,
+.app-sidebar.is-collapsed:not(.is-peek-open) .sidebar-nav a:focus-visible::after {
   background: #111827;
   border-radius: 6px;
   color: #fff;
@@ -439,7 +429,9 @@ textarea {
 }
 
 .global-search {
+  flex: 1 1 240px;
   max-width: 520px;
+  min-width: 190px;
   position: relative;
   width: 100%;
 }
@@ -459,13 +451,20 @@ textarea {
 .topbar-actions {
   align-items: center;
   display: flex;
+  flex: 0 1 auto;
+  flex-wrap: wrap;
   gap: 10px;
+  justify-content: flex-end;
+  min-width: 0;
 }
 
 .topbar-context {
   color: var(--muted);
   font-size: 12px;
   font-weight: 650;
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
@@ -3443,8 +3442,6 @@ input[type="checkbox"] {
   }
 
   .app-sidebar,
-  .sidebar-overlay,
-  .sidebar-overlay-scrim,
   .desktop-menu-button {
     display: none;
   }

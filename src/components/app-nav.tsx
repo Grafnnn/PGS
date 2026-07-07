@@ -7,7 +7,6 @@ import {
   Bell,
   Bot,
   BriefcaseBusiness,
-  ChevronRight,
   FileText,
   Gauge,
   Landmark,
@@ -99,12 +98,10 @@ function SidebarSystemCard() {
 function SidebarContent({
   collapsed,
   onNavigate,
-  onPinExpanded,
   onTogglePinned
 }: {
   collapsed?: boolean;
   onNavigate?: () => void;
-  onPinExpanded?: () => void;
   onTogglePinned?: () => void;
 }) {
   return (
@@ -123,11 +120,6 @@ function SidebarContent({
             {collapsed ? <PanelLeftOpen size={17} /> : <PanelLeftClose size={17} />}
           </button>
         )}
-        {onPinExpanded && (
-          <button aria-label="Закрепить широкое меню" className="icon-button sidebar-pin-button" onClick={onPinExpanded} title="Закрепить широкое меню" type="button">
-            <ChevronRight size={17} />
-          </button>
-        )}
       </div>
       <NavigationLinks onNavigate={onNavigate} />
       <SidebarSystemCard />
@@ -140,7 +132,7 @@ export function AppNav({ children }: { children: ReactNode }) {
   const drawerId = useId();
   const [preference, setPreference] = useState<SidebarPreference>("expanded");
   const [hydrated, setHydrated] = useState(false);
-  const [overlayOpen, setOverlayOpen] = useState(false);
+  const [peekOpen, setPeekOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   useEffect(() => {
@@ -154,7 +146,7 @@ export function AppNav({ children }: { children: ReactNode }) {
   }, []);
 
   const closeTransientNavigation = useCallback(() => {
-    setOverlayOpen(false);
+    setPeekOpen(false);
     setDrawerOpen(false);
   }, []);
 
@@ -169,7 +161,7 @@ export function AppNav({ children }: { children: ReactNode }) {
   const setPinnedPreference = useCallback((next: SidebarPreference) => {
     setPreference(next);
     writeSidebarPreference(window.localStorage, next);
-    setOverlayOpen(false);
+    setPeekOpen(false);
   }, []);
 
   const togglePreference = useCallback(() => {
@@ -178,31 +170,20 @@ export function AppNav({ children }: { children: ReactNode }) {
 
   const shellState = hydrated ? preference : "expanded";
   const isCollapsed = shellState === "collapsed";
+  const sidebarExpandedForInteraction = isCollapsed && peekOpen;
 
   return (
     <div className="app-shell" data-sidebar={shellState}>
       <aside
-        className={`sidebar app-sidebar ${isCollapsed ? "is-collapsed" : "is-expanded"}`}
+        className={`sidebar app-sidebar ${isCollapsed ? "is-collapsed" : "is-expanded"} ${sidebarExpandedForInteraction ? "is-peek-open" : ""}`}
         id={sidebarId}
         onMouseEnter={() => {
-          if (isCollapsed) setOverlayOpen(true);
+          if (isCollapsed) setPeekOpen(true);
         }}
-        onMouseLeave={() => setOverlayOpen(false)}
+        onMouseLeave={() => setPeekOpen(false)}
       >
-        <SidebarContent collapsed={isCollapsed} onTogglePinned={togglePreference} />
+        <SidebarContent collapsed={isCollapsed && !sidebarExpandedForInteraction} onTogglePinned={togglePreference} />
       </aside>
-
-      {isCollapsed && <div className={`sidebar-overlay-scrim ${overlayOpen ? "open" : ""}`} onClick={() => setOverlayOpen(false)} />}
-      {isCollapsed && (
-        <aside
-          aria-hidden={!overlayOpen}
-          className={`sidebar sidebar-overlay ${overlayOpen ? "open" : ""}`}
-          onMouseEnter={() => setOverlayOpen(true)}
-          onMouseLeave={() => setOverlayOpen(false)}
-        >
-          <SidebarContent onPinExpanded={() => setPinnedPreference("expanded")} />
-        </aside>
-      )}
 
       <div className="app-main">
         <header className="topbar">
@@ -218,11 +199,11 @@ export function AppNav({ children }: { children: ReactNode }) {
           </button>
           <button
             aria-controls={sidebarId}
-            aria-expanded={!isCollapsed}
+            aria-expanded={!isCollapsed || sidebarExpandedForInteraction}
             aria-label={isCollapsed ? "Открыть меню поверх рабочей области" : "Свернуть меню"}
             className="icon-button desktop-menu-button"
             onClick={() => {
-              if (isCollapsed) setOverlayOpen((value) => !value);
+              if (isCollapsed) setPeekOpen((value) => !value);
               else togglePreference();
             }}
             title={isCollapsed ? "Открыть меню" : "Свернуть меню"}
