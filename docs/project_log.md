@@ -1,5 +1,60 @@
 # PGS Project Log
 
+## 2026-07-09 - Project Creation disposable create/upload/delete smoke GO
+
+Status: the remaining authenticated Project Creation follow-up reached FULL DISPOSABLE SMOKE GO through the guarded staging runtime smoke endpoint.
+
+- Online URL: https://pgs-frankfurt.onrender.com
+- Online commit: `e8de55e532c8e1bc632564cc3951757bc17d5fff`
+- PR: #73
+- Decision: FULL DISPOSABLE SMOKE GO
+- Git SHA source: `RENDER_GIT_COMMIT`
+
+Health:
+
+- `/api/health`: HTTP 200 / `ok`
+- DB: `ok`
+- migrations: `ok`, count `6`
+- auth required: `true`
+- AI configured: `true`
+
+Runtime smoke:
+
+- endpoint: `/api/internal/staging-smoke`
+- mode: `includeProjectCreationDocumentsSmoke`
+- core login/auth/project-smoke checks: pass
+- unauth AI guard: 403
+- authenticated missing-project AI guard: 404
+- live AI: skipped
+- smoke user report: safe, `secretsPrinted=false`
+
+Disposable project flow:
+
+- temporary smoke user admin role: granted only for the smoke operation
+- project create through `/api/projects`: pass
+- project open: pass
+- synthetic starting PDF upload through `/documents/upload`: pass
+- Documents API verification: pass
+- project DELETE with exact project name confirmation: pass
+- deleted-project verification: pass
+- synthetic storage object cleanup: pass
+- smoke user role restore: `temporary-admin-restored`
+- cleanup: pass
+
+Safety:
+
+- only generated `SMOKE-...` project/document names were used.
+- no real client files were used.
+- no manual deploy/redeploy was triggered.
+- no Render env/secrets were changed.
+- no DB schema or migration changes were made.
+- no live AI call was run.
+- no secrets, cookies, tokens, provider keys, smoke secrets, session IDs, or env values were printed.
+
+Conclusion:
+
+- Project Creation & Onboarding now has authenticated disposable create -> upload starting docs -> verify Documents tab -> delete project smoke coverage.
+
 ## 2026-07-08 - Project Creation starting documents upload online/core GO
 
 Status: PR #71 fixed Project Creation & Onboarding so starting documents can be attached during project creation. The fix reached ONLINE/CORE GO on Render. Full authenticated create/upload/delete GO is not claimed.
