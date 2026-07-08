@@ -22,6 +22,7 @@ The endpoint:
 - optionally checks email safe mode without real delivery;
 - optionally returns connector readiness statuses without token/secret values;
 - optionally runs Project Data Pipeline smoke after a synthetic import on `project-smoke`;
+- optionally creates a disposable `SMOKE-...` project, uploads one synthetic starting document, verifies the Documents list, deletes the project, and restores the smoke user's role;
 - returns only statuses and safe metadata.
 
 ## Required Render env
@@ -133,9 +134,32 @@ Expected:
 - `liveAi.status: skip`;
 - no passwords, cookies, session tokens, `DATABASE_URL`, `OPENAI_API_KEY`, or smoke secret.
 
+## Optional project creation + starting documents smoke
+
+Run only after core smoke is green and a disposable create/upload/delete check is explicitly approved. This creates one synthetic `SMOKE-...` project through `/api/projects`, uploads one synthetic PDF through `/documents/upload`, verifies it is visible through the project's Documents API, deletes the disposable project through the standard project DELETE route with exact name confirmation, removes the synthetic storage object, and restores the smoke user back to its previous role.
+
+```bash
+curl -sS -X POST "$APP_URL/api/internal/staging-smoke" \
+  -H "content-type: application/json" \
+  -H "authorization: Bearer $STAGING_SMOKE_SECRET" \
+  --data '{"includeProjectCreationDocumentsSmoke":true}'
+```
+
+Expected:
+
+- HTTP `200`;
+- `ok: true`;
+- `projectCreationDocumentsSmoke.status: pass`;
+- operations include temporary admin role, project create, project open, document upload, documents read, project delete, deleted verification, storage cleanup, and role restore;
+- `projectCreationDocumentsSmoke.cleanup: pass`;
+- `projectCreationDocumentsSmoke.permissionScope: temporary-admin-restored`;
+- the project name starts with `SMOKE-`;
+- no real client files, live AI calls, arbitrary project mutations, passwords, cookies, session tokens, `DATABASE_URL`, `OPENAI_API_KEY`, or smoke secret.
+
 ## Safety notes
 
 - The endpoint must not be used for arbitrary mutation smoke; only built-in synthetic `project-smoke` checks with cleanup are allowed.
+- The disposable project creation smoke is allowed only for generated `SMOKE-...` project names and must restore the synthetic smoke user role before returning.
 - The synthetic user password is generated in memory and is never returned.
 - Existing smoke-user sessions are revoked during rotation.
 - The endpoint uses the deployed app's runtime `DATABASE_URL`; operators never need to expose that URL to Codex.

@@ -62,6 +62,7 @@ export async function POST(request: NextRequest) {
     includeConnectorReadiness?: unknown;
     includeImportSmoke?: unknown;
     includePipelineSmoke?: unknown;
+    includeProjectCreationDocumentsSmoke?: unknown;
   };
 
   try {
@@ -73,6 +74,7 @@ export async function POST(request: NextRequest) {
       includeConnectorReadiness: body.includeConnectorReadiness === true,
       includeImportSmoke: body.includeImportSmoke === true,
       includePipelineSmoke: body.includePipelineSmoke === true,
+      includeProjectCreationDocumentsSmoke: body.includeProjectCreationDocumentsSmoke === true,
       requestId
     });
 

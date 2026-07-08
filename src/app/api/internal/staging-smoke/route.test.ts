@@ -97,6 +97,7 @@ describe("staging smoke runtime endpoint", () => {
       includeConnectorReadiness: false,
       includeImportSmoke: false,
       includePipelineSmoke: false,
+      includeProjectCreationDocumentsSmoke: false,
       requestId: "test-request-id"
     });
   });
@@ -119,6 +120,7 @@ describe("staging smoke runtime endpoint", () => {
       includeConnectorReadiness: false,
       includeImportSmoke: false,
       includePipelineSmoke: false,
+      includeProjectCreationDocumentsSmoke: false,
       requestId: "test-request-id"
     });
   });
@@ -138,7 +140,8 @@ describe("staging smoke runtime endpoint", () => {
           includeEmailSmoke: true,
           includeConnectorReadiness: true,
           includeImportSmoke: true,
-          includePipelineSmoke: true
+          includePipelineSmoke: true,
+          includeProjectCreationDocumentsSmoke: true
         }
       })
     );
@@ -152,6 +155,7 @@ describe("staging smoke runtime endpoint", () => {
       includeConnectorReadiness: true,
       includeImportSmoke: true,
       includePipelineSmoke: true,
+      includeProjectCreationDocumentsSmoke: true,
       requestId: "test-request-id"
     });
   });
