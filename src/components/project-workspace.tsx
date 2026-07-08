@@ -3397,6 +3397,12 @@ function ProjectWorkspaceOnboardingPanel({
   onNavigate: (tab: string) => void;
 }) {
   const moduleLinks = plan.modules.filter((module) => module.status !== "not_selected").slice(0, 7);
+  const baselineLists = [
+    { title: "Документы", items: plan.baseline.documentBaseline },
+    { title: "Снабжение", items: plan.baseline.procurementBaseline },
+    { title: "График", items: plan.baseline.scheduleBaseline },
+    { title: "КС", items: plan.baseline.acceptanceBaseline }
+  ];
 
   return (
     <article className="panel project-onboarding-panel">
@@ -3406,7 +3412,20 @@ function ProjectWorkspaceOnboardingPanel({
           <h3>Запустите рабочий контур проекта</h3>
           <p>{plan.summary}</p>
         </div>
-        <span className="badge yellow">{plan.score}% onboarding</span>
+        <div className="onboarding-status-stack">
+          <span className="badge yellow">{plan.score}% onboarding</span>
+          <span className="badge blue">{plan.baseline.readiness}</span>
+        </div>
+      </div>
+      <div className="project-baseline-banner">
+        <div>
+          <small>Template baseline</small>
+          <strong>{plan.template.title}</strong>
+          <span>{plan.template.description}</span>
+        </div>
+        <button className="button secondary compact-button" type="button" onClick={() => onNavigate("Аналитика")}>
+          Project Intelligence
+        </button>
       </div>
       <div className="project-onboarding-grid">
         <div className="onboarding-checklist compact">
@@ -3425,6 +3444,19 @@ function ProjectWorkspaceOnboardingPanel({
             </button>
           ))}
         </div>
+      </div>
+      <div className="project-baseline-mini-grid">
+        {baselineLists.map((list) => (
+          <div className="baseline-preview-list compact" key={list.title}>
+            <strong>{list.title}</strong>
+            {list.items.length ? list.items.slice(0, 4).map((item) => <span key={item}>{item}</span>) : <span className="muted">настраивается вручную</span>}
+          </div>
+        ))}
+      </div>
+      <div className="onboarding-mini-list">
+        {plan.baseline.limitations.slice(0, 2).map((item) => (
+          <span key={item}>{item}</span>
+        ))}
       </div>
     </article>
   );

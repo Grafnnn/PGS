@@ -134,6 +134,28 @@ export function ProjectIntelligenceDrilldown({
       </div>
 
       <div className="intelligence-grid">
+        <article className="panel intelligence-panel baseline-intelligence-panel">
+          <SectionHeader id="baseline" icon={<ClipboardList size={18} />} title="Baseline / Onboarding Intelligence" tone={model.baseline.tone}>
+            <button className="button secondary compact-button" type="button" onClick={() => onNavigate(model.baseline.ctaTab)}>
+              Открыть обзор
+            </button>
+          </SectionHeader>
+          <div className="intelligence-metrics">
+            <StatusInsightCard title="Шаблон" value={model.baseline.templateTitle} detail={model.baseline.templateDescription} tone={model.baseline.tone} />
+            <StatusInsightCard title="Onboarding" value={`${model.baseline.score}%`} detail={model.baseline.readiness} tone={model.baseline.tone} />
+            <StatusInsightCard title="Модули" value={String(model.baseline.modules.length)} detail={model.baseline.modules.join(" · ") || "ручная настройка"} tone={model.baseline.modules.length ? "info" : "neutral"} />
+            <StatusInsightCard title="Недостающие данные" value={String(model.baseline.missingData.length)} detail="для управляемого запуска" tone={model.baseline.missingData.length ? "warn" : "good"} />
+          </div>
+          <SignalList
+            emptyText="Baseline не требует дополнительных действий по текущим данным."
+            items={[
+              ...model.baseline.firstActions.map((item) => ({ title: item, detail: "Рекомендованное первое действие по шаблону.", tone: "info" as const })),
+              ...model.baseline.missingData.map((item) => ({ title: item, detail: "Нужно заполнить, чтобы baseline стал управляемым.", tone: "warn" as const })),
+              ...model.baseline.limitations.map((item) => ({ title: "Ограничение baseline", detail: item, tone: "neutral" as const }))
+            ].slice(0, 9)}
+          />
+        </article>
+
         <article className="panel intelligence-panel">
           <SectionHeader id="documents" icon={<FileText size={18} />} title="Documents Intelligence" tone={model.documents.tone}>
             <button className="button secondary compact-button" type="button" onClick={() => onNavigate(model.documents.ctaTab)}>

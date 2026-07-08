@@ -57,6 +57,8 @@ describe("project onboarding intelligence", () => {
     const plan = buildProjectOnboardingPlan(readyDraft);
 
     expect(plan.status).toBe("ready_to_create");
+    expect(plan.template.title).toBe("Общестрой");
+    expect(plan.baseline.documentBaseline).toContain("Договор/проект договора");
     expect(plan.recommendedFirstWorkflow).toBe("Бюджет / ВОР");
     expect(plan.modules.filter((module) => module.status === "selected_pending")).toHaveLength(defaultOnboardingModules.length);
     expect(plan.nextActions.some((action) => action.includes("Импортировать ВОР"))).toBe(true);
@@ -78,6 +80,8 @@ describe("project onboarding intelligence", () => {
     });
 
     expect(plan.status).toBe("created_needs_setup");
+    expect(plan.template.title).toBe("Общестрой");
+    expect(plan.baseline.limitations.join(" ")).toContain("не выдумывает");
     expect(plan.missingData).toContain("загруженный ВОР");
     expect(plan.projectIntelligenceBaseline.join(" ")).toContain("Риски не считаются закрытыми");
   });
@@ -88,6 +92,7 @@ describe("project onboarding intelligence", () => {
     expect(summary.vatLabel).toBe("НДС не определен");
     expect(summary.tenderSourceLabel).toBe("unknown");
     expect(summary.amountLabel).toContain("12 500 000");
+    expect(summary.templateLabel).toBe("Общестрой");
   });
 
   it("returns only supported Project API payload fields", () => {
@@ -113,6 +118,15 @@ describe("project onboarding intelligence", () => {
     const modules = buildOnboardingModuleSetup({});
 
     expect(modules.find((module) => module.id === "vor")).toMatchObject({ tab: "Бюджет / ВОР", status: "selected_pending" });
-    expect(modules.find((module) => module.id === "reports")).toMatchObject({ status: "not_selected" });
+    expect(modules.find((module) => module.id === "reports")).toMatchObject({ status: "selected_pending" });
+  });
+
+  it("allows an empty/manual template without selected modules", () => {
+    const plan = buildProjectOnboardingPlan({ ...readyDraft, templateId: "empty", selectedModules: [] });
+
+    expect(plan.status).toBe("ready_to_create");
+    expect(plan.template.title).toBe("Пустой проект");
+    expect(plan.baseline.readiness).toBe("no_data");
+    expect(plan.modules.every((module) => module.status === "not_selected")).toBe(true);
   });
 });

@@ -17,6 +17,7 @@ import {
   type ProjectVatMode,
   type ProjectVolumeChangeMode
 } from "@/lib/project-onboarding-intelligence";
+import { buildProjectBaselineFromTemplate, getProjectTemplateById, getProjectTemplates, type ProjectTemplateId } from "@/lib/project-templates";
 import type { Project } from "@/lib/types";
 
 function compactMoney(value: number) {
@@ -86,6 +87,7 @@ const moduleOptions: Array<{ id: OnboardingModuleId; label: string; detail: stri
 ];
 
 const wizardSteps = ["Проект", "Договор", "Контур", "Чеклист", "Создание"];
+const projectTemplates = getProjectTemplates();
 
 function makeInitialDraft(): ProjectCreationDraft {
   const today = new Date().toISOString().slice(0, 10);
@@ -96,6 +98,7 @@ function makeInitialDraft(): ProjectCreationDraft {
     customer: "",
     object: "",
     objectType: "commercial",
+    templateId: "general_construction",
     address: "",
     description: "",
     contractAmount: "",
@@ -238,6 +241,8 @@ export function ProjectCreationWizard() {
   const [createError, setCreateError] = useState("");
   const plan = buildProjectOnboardingPlan(draft);
   const summary = buildProjectCreationSummary(draft);
+  const selectedTemplate = getProjectTemplateById(draft.templateId);
+  const templateBaseline = buildProjectBaselineFromTemplate(draft.templateId);
   const currentStepIssues = plan.issues.filter((issue) => {
     if (step === 0) return ["name", "customer", "object", "address", "manager"].includes(String(issue.field));
     if (step === 1) return ["contractAmount", "startsAt", "endsAt", "vatPercent"].includes(String(issue.field));
@@ -256,6 +261,27 @@ export function ProjectCreationWizard() {
       else selected.add(moduleId);
       return { ...current, selectedModules: Array.from(selected) };
     });
+  };
+  const selectTemplate = (templateId: ProjectTemplateId) => {
+    const template = getProjectTemplateById(templateId);
+    const nextObjectType: ProjectObjectType =
+      templateId === "engineering_networks"
+        ? "engineering"
+        : templateId === "fit_out"
+          ? "interior"
+          : templateId === "roofing" || templateId === "facade"
+            ? "roofing_facade"
+            : templateId === "tender"
+              ? "commercial"
+              : templateId === "empty"
+                ? "other"
+                : "commercial";
+    setDraft((current) => ({
+      ...current,
+      templateId,
+      objectType: current.objectType === "other" || !current.objectType ? nextObjectType : nextObjectType,
+      selectedModules: [...template.modules]
+    }));
   };
   const reset = () => {
     setDraft(makeInitialDraft());
@@ -319,6 +345,26 @@ export function ProjectCreationWizard() {
         <form className="project-create-grid onboarding-form" onSubmit={(event) => event.preventDefault()}>
           {step === 0 && (
             <>
+              <div className="wide-field">
+                <div className="field-heading">
+                  <strong>Шаблон проекта</strong>
+                  <span>Определяет baseline, но не создает фактические документы/работы без данных.</span>
+                </div>
+                <div className="template-selector-grid" aria-label="Project templates">
+                  {projectTemplates.map((template) => (
+                    <button
+                      className={`template-card ${draft.templateId === template.id ? "active" : ""}`}
+                      key={template.id}
+                      type="button"
+                      onClick={() => selectTemplate(template.id)}
+                    >
+                      <strong>{template.shortTitle}</strong>
+                      <span>{template.description}</span>
+                      <small>{template.modules.length ? `${template.modules.length} модулей baseline` : "ручная настройка"}</small>
+                    </button>
+                  ))}
+                </div>
+              </div>
               <label>
                 Название проекта *
                 <input value={draft.name ?? ""} onChange={(event) => updateDraft("name", event.target.value)} placeholder="Например: Административное здание" />
@@ -431,13 +477,31 @@ export function ProjectCreationWizard() {
           )}
 
           {step === 3 && (
-            <div className="onboarding-checklist">
-              {plan.nextActions.map((action, index) => (
-                <div className="onboarding-checklist-item" key={action}>
-                  <span>{index + 1}</span>
-                  <p>{action}</p>
+            <div className="template-baseline-preview">
+              <div className="baseline-preview-head">
+                <div>
+                  <div className="eyebrow">Template baseline</div>
+                  <h3>{templateBaseline.templateTitle}</h3>
+                  <p>{selectedTemplate.description}</p>
                 </div>
-              ))}
+                <span className="badge blue">{templateBaseline.readiness}</span>
+              </div>
+              <div className="baseline-preview-grid">
+                <BaselinePreviewList title="Документы" items={templateBaseline.documentBaseline} empty="Документы задаются вручную." />
+                <BaselinePreviewList title="Снабжение" items={templateBaseline.procurementBaseline} empty="Категории снабжения не выбраны." />
+                <BaselinePreviewList title="График" items={templateBaseline.scheduleBaseline} empty="Этапы графика не заданы." />
+                <BaselinePreviewList title="Риски" items={templateBaseline.riskBaseline} empty="Риски появятся после данных проекта." />
+                <BaselinePreviewList title="КС" items={templateBaseline.acceptanceBaseline} empty="КС-настройка ручная." />
+                <BaselinePreviewList title="Договор / тендер" items={templateBaseline.contractTenderBaseline} empty="Проверки договора не выбраны." />
+              </div>
+              <div className="onboarding-checklist">
+                {plan.nextActions.map((action, index) => (
+                  <div className="onboarding-checklist-item" key={action}>
+                    <span>{index + 1}</span>
+                    <p>{action}</p>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 
@@ -457,6 +521,11 @@ export function ProjectCreationWizard() {
                 <small>Договор</small>
                 <strong>{summary.amountLabel}</strong>
                 <span>{summary.vatLabel} · источник: {summary.tenderSourceLabel}</span>
+              </div>
+              <div>
+                <small>Шаблон baseline</small>
+                <strong>{summary.templateLabel}</strong>
+                <span>{summary.templateDescription}</span>
               </div>
               <div>
                 <small>Первый workflow</small>
@@ -496,6 +565,11 @@ export function ProjectCreationWizard() {
             <h3>Onboarding baseline</h3>
           </div>
           <p>{plan.summary}</p>
+          <div className="template-summary-card">
+            <small>Выбранный шаблон</small>
+            <strong>{plan.template.title}</strong>
+            <span>{plan.template.description}</span>
+          </div>
           {plan.issues.length ? (
             <div className="onboarding-issues">
               {plan.issues.slice(0, 4).map((issue) => (
@@ -510,9 +584,27 @@ export function ProjectCreationWizard() {
               <span key={item}>{item}</span>
             ))}
           </div>
+          <div className="onboarding-mini-list">
+            {templateBaseline.firstActions.slice(0, 5).map((item) => (
+              <span key={item}>{item}</span>
+            ))}
+          </div>
         </aside>
       </div>
     </section>
+  );
+}
+
+function BaselinePreviewList({ title, items, empty }: { title: string; items: string[]; empty: string }) {
+  return (
+    <div className="baseline-preview-list">
+      <strong>{title}</strong>
+      {items.length ? (
+        items.slice(0, 5).map((item) => <span key={item}>{item}</span>)
+      ) : (
+        <span className="muted">{empty}</span>
+      )}
+    </div>
   );
 }
 

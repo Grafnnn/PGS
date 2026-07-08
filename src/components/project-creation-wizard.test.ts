@@ -17,10 +17,14 @@ describe("ProjectCreationWizard", () => {
 
     expect(html).toContain("Project Creation &amp; Onboarding");
     expect(html).toContain("Создать проект и запустить baseline");
+    expect(html).toContain("Шаблон проекта");
+    expect(html).toContain("Общестрой");
+    expect(html).toContain("Инженерные сети");
     expect(html).toContain("Проект");
     expect(html).toContain("Договор");
     expect(html).toContain("Контур");
     expect(html).toContain("Onboarding baseline");
+    expect(html).toContain("Выбранный шаблон");
     expect(html).toContain("Бюджет / ВОР");
     expect(html).toContain("Название проекта");
     expect(html).toContain("нужно заполнить");
