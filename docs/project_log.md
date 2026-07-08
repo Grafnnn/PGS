@@ -1,5 +1,72 @@
 # PGS Project Log
 
+## 2026-07-08 - Project Creation starting documents upload online/core GO
+
+Status: PR #71 fixed Project Creation & Onboarding so starting documents can be attached during project creation. The fix reached ONLINE/CORE GO on Render. Full authenticated create/upload/delete GO is not claimed.
+
+- Online URL: https://pgs-frankfurt.onrender.com
+- Online commit: `918f376b07ab477a66a2a5c5a2fbbf92abe9fe46`
+- PR: #71
+- Decision: ONLINE/CORE GO
+- Git SHA source: `RENDER_GIT_COMMIT`
+
+Health:
+
+- `/api/health`: HTTP 200 / `ok`
+- DB: `ok`
+- migrations: `ok`, count `6`
+- auth required: `true`
+- AI configured: `true`
+
+Pages:
+
+- `/projects`: 200
+- `/dashboard`: 200
+- `/projects/project-demo`: 404
+- `/projects/project-smoke`: 200
+
+Flow recorded:
+
+- Step 4 `Чеклист` remains baseline preview.
+- Step 5 `Создание` now includes `Стартовые документы`.
+- Multiple files can be selected in the UI.
+- Each selected file can have a category.
+- After project creation, selected files are intended to upload to the new project's `Документы` tab via `/documents/upload`.
+
+Markers confirmed in deployed page/bundle:
+
+- Project Creation & Onboarding
+- `Чеклист`
+- `Создание`
+- `Стартовые документы`
+- `Выбрать документы`
+- document category options
+- `/documents/upload`
+- baseline preview
+- template selector
+- onboarding summary
+
+Guards:
+
+- `/api/auth/me`: 401
+- unauthenticated `POST /api/projects`: 403
+- unauthenticated document upload route without file/auth: 403
+- unauthenticated AI summary: 403
+
+Not run / not touched:
+
+- real project create: not run.
+- real upload: not run.
+- live AI: not run.
+- manual deploy/redeploy: not triggered.
+- Render env/secrets: unchanged.
+- DB/schema/migrations: unchanged.
+- secrets printed: `false`.
+
+Remaining follow-up:
+
+- Authenticated disposable create -> upload starting docs -> open project -> verify `Документы` tab -> delete disposable project smoke when a safe auth/admin session is available.
+
 ## 2026-07-08 - PGS Studio v4 sidebar design online GO
 
 Status: PGS Studio v4 design update reached ONLINE/CORE UI GO on Render, including the left-menu duplicate fix.
