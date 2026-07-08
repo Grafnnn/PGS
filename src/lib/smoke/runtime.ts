@@ -42,6 +42,25 @@ export interface RuntimePipelineSmokeResult extends RuntimeSmokeCheck {
   };
 }
 
+export interface RuntimeProjectCreationDocumentSmokeResult extends RuntimeSmokeCheck {
+  operations: string[];
+  project?: {
+    id: string;
+    name: string;
+    created: boolean;
+    opened: boolean;
+    deleted: boolean;
+  };
+  document?: {
+    uploaded: boolean;
+    visibleInDocumentsTab: boolean;
+    category?: string;
+    fileName?: string;
+  };
+  permissionScope?: "temporary-admin-restored" | "restore-failed";
+  cleanup: "pass" | "fail" | "skip";
+}
+
 export interface RuntimeSmokeResult {
   ok: boolean;
   smokeUser: StagingSmokeUserReport;
@@ -99,6 +118,7 @@ export interface RuntimeSmokeResult {
     cleanup: "pass" | "fail" | "skip";
     pipeline?: RuntimePipelineSmokeResult;
   };
+  projectCreationDocumentsSmoke?: RuntimeProjectCreationDocumentSmokeResult;
   secretsPrinted: false;
 }
 
@@ -110,6 +130,7 @@ export interface RuntimeSmokeInput {
   includeConnectorReadiness?: boolean;
   includeImportSmoke?: boolean;
   includePipelineSmoke?: boolean;
+  includeProjectCreationDocumentsSmoke?: boolean;
   requestId: string;
 }
 
@@ -277,6 +298,18 @@ async function get(baseUrl: string, path: string, cookie: string, requestId: str
 async function postJson(baseUrl: string, path: string, body: unknown, cookie: string, requestId: string) {
   return await fetch(`${baseUrl}${path}`, {
     method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-request-id": requestId,
+      ...(cookie ? { cookie } : {})
+    },
+    body: JSON.stringify(body)
+  });
+}
+
+async function deleteJson(baseUrl: string, path: string, body: unknown, cookie: string, requestId: string) {
+  return await fetch(`${baseUrl}${path}`, {
+    method: "DELETE",
     headers: {
       "content-type": "application/json",
       "x-request-id": requestId,
@@ -512,6 +545,193 @@ async function cleanupImportRole(input: Awaited<ReturnType<typeof grantTemporary
   await restoreTemporaryImportRole(input);
   operations.push("restore-import-role");
   return "temporary-project-manager-restored" as const;
+}
+
+async function grantTemporaryProjectAdminRole() {
+  const user = await prisma.user.findUnique({ where: { email: STAGING_SMOKE_EMAIL }, select: { id: true, appRole: true } });
+  if (!user) throw new Error("Smoke project creation user is missing.");
+  if (user.appRole !== "ADMIN") {
+    await prisma.user.update({ where: { id: user.id }, data: { appRole: "ADMIN" } });
+  }
+  return { userId: user.id, previousRole: user.appRole };
+}
+
+async function restoreTemporaryProjectAdminRole(input: { userId: string; previousRole: string }) {
+  await prisma.user.update({ where: { id: input.userId }, data: { appRole: input.previousRole } });
+}
+
+async function cleanupProjectAdminRole(input: Awaited<ReturnType<typeof grantTemporaryProjectAdminRole>> | undefined, operations: string[]) {
+  if (!input) return "temporary-admin-restored" as const;
+  await restoreTemporaryProjectAdminRole(input);
+  operations.push("restore-admin-role");
+  return "temporary-admin-restored" as const;
+}
+
+function disposableProjectName(runKey: string) {
+  return `SMOKE-${runKey} disposable docs project`;
+}
+
+async function fallbackDeleteDisposableProject(projectId: string | undefined, projectName: string | undefined, operations: string[]) {
+  if (!projectId || !projectName?.startsWith("SMOKE-")) return "skip" as const;
+  const project = await prisma.project.findUnique({ where: { id: projectId }, select: { id: true, name: true } });
+  if (!project) return "pass" as const;
+  if (project.name !== projectName || !project.name.startsWith("SMOKE-")) return "fail" as const;
+  await prisma.project.delete({ where: { id: projectId } });
+  operations.push("fallback-project-cleanup");
+  return "pass" as const;
+}
+
+async function runProjectCreationDocumentsSmoke(
+  baseUrl: string,
+  cookie: string,
+  requestId: string
+): Promise<RuntimeProjectCreationDocumentSmokeResult> {
+  const operations: string[] = [];
+  let permissionScope: RuntimeProjectCreationDocumentSmokeResult["permissionScope"];
+  let cleanup: RuntimeProjectCreationDocumentSmokeResult["cleanup"] = "skip";
+  let temporaryRole: Awaited<ReturnType<typeof grantTemporaryProjectAdminRole>> | undefined;
+  let projectId: string | undefined;
+  let projectName: string | undefined;
+  let storageKey: string | null | undefined;
+
+  try {
+    if ((process.env.APP_ENV ?? process.env.NODE_ENV) === "production") throw new Error("Project creation document smoke is blocked in production.");
+
+    temporaryRole = await grantTemporaryProjectAdminRole();
+    operations.push("temporary-admin-role");
+
+    const runKey = requestId.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 18) || Date.now().toString();
+    projectName = disposableProjectName(runKey);
+    const projectResponse = await postJson(
+      baseUrl,
+      "/api/projects",
+      {
+        name: projectName,
+        customer: "SMOKE staging customer",
+        object: "SMOKE project creation document upload",
+        address: "SMOKE staging address",
+        contractAmount: 123456,
+        vatMode: "vat",
+        startsAt: "2026-07-01",
+        endsAt: "2026-08-01",
+        manager: "Smoke Runtime",
+        status: "planning"
+      },
+      cookie,
+      requestId
+    );
+    operations.push("project-create");
+    const projectBody = await safeJson<{ project?: { id?: string; name?: string } }>(projectResponse);
+    projectId = projectBody?.project?.id;
+    if (projectResponse.status !== 201 || !projectId || projectBody?.project?.name !== projectName) {
+      permissionScope = await cleanupProjectAdminRole(temporaryRole, operations);
+      temporaryRole = undefined;
+      return {
+        name: "project creation documents smoke",
+        status: "fail",
+        httpStatus: projectResponse.status,
+        detail: "Disposable project was not created through /api/projects.",
+        operations,
+        permissionScope,
+        cleanup
+      };
+    }
+
+    const openResponse = await get(baseUrl, `/api/projects/${projectId}`, cookie, requestId);
+    operations.push("project-open");
+
+    const fileName = `SMOKE-${runKey}-starting-document.pdf`;
+    const documentBytes = Buffer.from(`PGS disposable project starting document smoke ${runKey}`);
+    const form = new FormData();
+    form.append("category", "исполнительная");
+    form.append("file", new Blob([Uint8Array.from(documentBytes)], { type: "application/pdf" }), fileName);
+    const uploadResponse = await postForm(baseUrl, `/api/projects/${projectId}/documents/upload`, form, cookie, requestId);
+    operations.push("document-upload");
+    const uploadBody = await safeJson<{ item?: { id?: string; fileName?: string; category?: string; storageKey?: string | null } }>(uploadResponse);
+    storageKey = uploadBody?.item?.storageKey;
+
+    const documentsResponse = await get(baseUrl, `/api/projects/${projectId}/documents`, cookie, requestId);
+    operations.push("documents-read");
+    const documentsBody = await safeJson<{ items?: Array<{ fileName?: string; category?: string }> }>(documentsResponse);
+    const documentVisible = Boolean(documentsBody?.items?.some((item) => item.fileName === fileName && item.category === "исполнительная"));
+
+    const deleteResponse = await deleteJson(baseUrl, `/api/projects/${projectId}`, { confirm: true, projectName }, cookie, requestId);
+    operations.push("project-delete");
+    const deleted = deleteResponse.status === 200;
+
+    const verifyDeletedResponse = await get(baseUrl, `/api/projects/${projectId}`, cookie, requestId);
+    operations.push("verify-deleted");
+    const deletedVerified = verifyDeletedResponse.status === 404;
+
+    if (storageKey) {
+      await getStorageProvider().delete(storageKey);
+      operations.push("storage-cleanup");
+    }
+
+    cleanup = deleted && deletedVerified ? "pass" : "fail";
+    permissionScope = await cleanupProjectAdminRole(temporaryRole, operations);
+    temporaryRole = undefined;
+
+    const status =
+      openResponse.status === 200 &&
+      uploadResponse.status === 201 &&
+      documentsResponse.status === 200 &&
+      documentVisible &&
+      cleanup === "pass" &&
+      permissionScope === "temporary-admin-restored"
+        ? "pass"
+        : "fail";
+
+    return {
+      name: "project creation documents smoke",
+      status,
+      httpStatus: status === "pass" ? undefined : uploadResponse.status,
+      detail: status === "pass" ? undefined : "Disposable project create/upload/read/delete smoke did not complete all expected checks.",
+      operations,
+      project: {
+        id: projectId,
+        name: projectName,
+        created: projectResponse.status === 201,
+        opened: openResponse.status === 200,
+        deleted: cleanup === "pass"
+      },
+      document: {
+        uploaded: uploadResponse.status === 201,
+        visibleInDocumentsTab: documentVisible,
+        category: uploadBody?.item?.category,
+        fileName: uploadBody?.item?.fileName
+      },
+      permissionScope,
+      cleanup
+    };
+  } catch (error) {
+    if (storageKey) {
+      await getStorageProvider()
+        .delete(storageKey)
+        .then(() => operations.push("storage-cleanup"))
+        .catch(() => undefined);
+    }
+    cleanup = await fallbackDeleteDisposableProject(projectId, projectName, operations).catch(() => "fail" as const);
+    if (temporaryRole) {
+      await restoreTemporaryProjectAdminRole(temporaryRole)
+        .then(() => {
+          permissionScope = "temporary-admin-restored";
+          operations.push("restore-admin-role");
+        })
+        .catch(() => {
+          permissionScope = "restore-failed";
+        });
+    }
+    return {
+      name: "project creation documents smoke",
+      status: "fail",
+      detail: failureDetail(error),
+      operations,
+      ...(projectId && projectName ? { project: { id: projectId, name: projectName, created: true, opened: false, deleted: cleanup === "pass" } } : {}),
+      permissionScope,
+      cleanup
+    };
+  }
 }
 
 async function runImportSmoke(baseUrl: string, cookie: string, requestId: string, includePipelineSmoke = false): Promise<NonNullable<RuntimeSmokeResult["importSmoke"]>> {
@@ -806,6 +1026,7 @@ export async function runStagingSmokeBootstrap(input: RuntimeSmokeInput): Promis
   let email: RuntimeSmokeResult["email"];
   let connectors: RuntimeSmokeResult["connectors"];
   let importSmoke: RuntimeSmokeResult["importSmoke"];
+  let projectCreationDocumentsSmoke: RuntimeSmokeResult["projectCreationDocumentsSmoke"];
 
   if (input.includeStorageSmoke) {
     storage = await runStorageSmoke(input.requestId);
@@ -827,6 +1048,11 @@ export async function runStagingSmokeBootstrap(input: RuntimeSmokeInput): Promis
     optionalChecks.push(importSmoke);
   }
 
+  if (input.includeProjectCreationDocumentsSmoke) {
+    projectCreationDocumentsSmoke = await runProjectCreationDocumentsSmoke(input.baseUrl, sessionCookie, input.requestId);
+    optionalChecks.push(projectCreationDocumentsSmoke);
+  }
+
   return {
     ok:
       checks.every((item) => item.status === "pass") &&
@@ -839,6 +1065,7 @@ export async function runStagingSmokeBootstrap(input: RuntimeSmokeInput): Promis
     ...(email ? { email } : {}),
     ...(connectors ? { connectors } : {}),
     ...(importSmoke ? { importSmoke } : {}),
+    ...(projectCreationDocumentsSmoke ? { projectCreationDocumentsSmoke } : {}),
     secretsPrinted: false
   };
 }
