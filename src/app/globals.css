@@ -2504,6 +2504,58 @@ tr:last-child td {
   overflow-wrap: anywhere;
 }
 
+.pending-documents-panel {
+  grid-column: 1 / -1;
+}
+
+.document-upload-inline {
+  align-items: center;
+  background: var(--surface);
+  border: 1px dashed var(--accent);
+  border-radius: var(--radius-sm);
+  color: var(--accent);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 13px;
+  font-weight: 750;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 4px;
+  min-height: 42px;
+  overflow: hidden;
+  padding: 9px 12px;
+  position: relative;
+  width: fit-content;
+}
+
+.document-upload-inline input {
+  inset: 0;
+  opacity: 0;
+  position: absolute;
+}
+
+.pending-document-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.pending-document-row {
+  align-items: center;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) minmax(130px, 180px) 36px;
+}
+
+.pending-document-row > span {
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .onboarding-summary-card {
   align-self: start;
   position: sticky;
@@ -5208,6 +5260,7 @@ input[type="checkbox"] {
 
   .module-setup-grid,
   .project-create-review,
+  .pending-document-row,
   .module-link-grid,
   .template-selector-grid,
   .baseline-preview-grid,

@@ -20,6 +20,12 @@ import {
 import { buildProjectBaselineFromTemplate, getProjectTemplateById, getProjectTemplates, type ProjectTemplateId } from "@/lib/project-templates";
 import type { Project } from "@/lib/types";
 
+type PendingOnboardingDocument = {
+  id: string;
+  file: File;
+  category: string;
+};
+
 function compactMoney(value: number) {
   const absolute = Math.abs(value);
   if (absolute >= 1_000_000_000) return `${(value / 1_000_000_000).toLocaleString("ru-RU", { maximumFractionDigits: 1 })} млрд ₽`;
@@ -88,6 +94,15 @@ const moduleOptions: Array<{ id: OnboardingModuleId; label: string; detail: stri
 
 const wizardSteps = ["Проект", "Договор", "Контур", "Чеклист", "Создание"];
 const projectTemplates = getProjectTemplates();
+const documentCategoryOptions = [
+  { value: "договор", label: "Договор" },
+  { value: "тз", label: "ТЗ" },
+  { value: "вор", label: "ВОР / смета" },
+  { value: "график", label: "График" },
+  { value: "исполнительная", label: "Исполнительная" },
+  { value: "кс", label: "КС" },
+  { value: "прочее", label: "Прочее" }
+];
 
 function makeInitialDraft(): ProjectCreationDraft {
   const today = new Date().toISOString().slice(0, 10);
@@ -239,6 +254,8 @@ export function ProjectCreationWizard() {
   const [draft, setDraft] = useState<ProjectCreationDraft>(() => makeInitialDraft());
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState("");
+  const [createdProjectPath, setCreatedProjectPath] = useState("");
+  const [pendingDocuments, setPendingDocuments] = useState<PendingOnboardingDocument[]>([]);
   const plan = buildProjectOnboardingPlan(draft);
   const summary = buildProjectCreationSummary(draft);
   const selectedTemplate = getProjectTemplateById(draft.templateId);
@@ -287,6 +304,38 @@ export function ProjectCreationWizard() {
     setDraft(makeInitialDraft());
     setStep(0);
     setCreateError("");
+    setCreatedProjectPath("");
+    setPendingDocuments([]);
+  };
+  const addPendingDocuments = (files: FileList | null) => {
+    if (!files?.length) return;
+    setPendingDocuments((current) => [
+      ...current,
+      ...Array.from(files).map((file) => ({
+        id: `${file.name}-${file.size}-${file.lastModified}-${crypto.randomUUID()}`,
+        file,
+        category: "прочее"
+      }))
+    ]);
+  };
+  const updatePendingDocumentCategory = (id: string, category: string) => {
+    setPendingDocuments((current) => current.map((item) => (item.id === id ? { ...item, category } : item)));
+  };
+  const removePendingDocument = (id: string) => {
+    setPendingDocuments((current) => current.filter((item) => item.id !== id));
+  };
+  const uploadPendingDocuments = async (projectId: string) => {
+    for (const document of pendingDocuments) {
+      const formData = new FormData();
+      formData.append("file", document.file);
+      formData.append("category", document.category);
+      const response = await fetch(`/api/projects/${projectId}/documents/upload`, {
+        method: "POST",
+        body: formData
+      });
+      const data = (await response.json().catch(() => ({}))) as { error?: string };
+      if (!response.ok) throw new Error(data.error ?? `Не удалось загрузить документ "${document.file.name}".`);
+    }
   };
   const submit = async () => {
     const issues = buildProjectOnboardingPlan(draft).issues;
@@ -298,6 +347,7 @@ export function ProjectCreationWizard() {
     if (creating) return;
     setCreating(true);
     setCreateError("");
+    setCreatedProjectPath("");
     try {
       const response = await fetch("/api/projects", {
         method: "POST",
@@ -308,6 +358,21 @@ export function ProjectCreationWizard() {
       if (!response.ok || !data.project) {
         const message = typeof data.error === "string" ? data.error : data.error?.message ?? data.issues?.[0]?.message;
         throw new Error(message ?? "Не удалось создать проект.");
+      }
+      if (pendingDocuments.length) {
+        try {
+          await uploadPendingDocuments(data.project.id);
+        } catch (uploadError) {
+          setPendingDocuments([]);
+          setCreatedProjectPath(`/projects/${data.project.id}?created=1`);
+          setCreateError(
+            uploadError instanceof Error
+              ? `Проект создан, но стартовые документы не загрузились: ${uploadError.message}`
+              : "Проект создан, но стартовые документы не загрузились."
+          );
+          router.refresh();
+          return;
+        }
       }
       router.push(`/projects/${data.project.id}?created=1`);
       router.refresh();
@@ -324,7 +389,7 @@ export function ProjectCreationWizard() {
         <div>
           <div className="eyebrow">Project Creation & Onboarding</div>
           <h2>Создать проект и запустить baseline</h2>
-          <p className="muted">Wizard создает объект через защищенный `/api/projects`, а до сохранения показывает готовность, недостающие данные и стартовые действия.</p>
+          <p className="muted">Wizard создает объект через защищенный `/api/projects`, а на финальном шаге позволяет приложить стартовые документы к новому объекту.</p>
         </div>
         <div className={`onboarding-score tone-${plan.status === "ready_to_create" ? "good" : "warn"}`}>
           <strong>{plan.score}%</strong>
@@ -482,7 +547,7 @@ export function ProjectCreationWizard() {
                 <div>
                   <div className="eyebrow">Template baseline</div>
                   <h3>{templateBaseline.templateTitle}</h3>
-                  <p>{selectedTemplate.description}</p>
+                  <p>{selectedTemplate.description} Файлы можно приложить на финальном шаге перед созданием проекта.</p>
                 </div>
                 <span className="badge blue">{templateBaseline.readiness}</span>
               </div>
@@ -532,6 +597,38 @@ export function ProjectCreationWizard() {
                 <strong>{plan.recommendedFirstWorkflow}</strong>
                 <span>{summary.moduleLabels.join(", ")}</span>
               </div>
+              <div className="pending-documents-panel">
+                <small>Стартовые документы</small>
+                <strong>{pendingDocuments.length ? `${pendingDocuments.length} файл(ов) к загрузке` : "Можно приложить сейчас"}</strong>
+                <span>После создания проекта файлы автоматически попадут во вкладку “Документы”.</span>
+                <label className="document-upload-inline">
+                  <FileText size={17} />
+                  <span>Выбрать документы</span>
+                  <input
+                    accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.webp,.zip"
+                    multiple
+                    type="file"
+                    onChange={(event) => addPendingDocuments(event.target.files)}
+                  />
+                </label>
+                {pendingDocuments.length > 0 && (
+                  <div className="pending-document-list" aria-label="Документы к загрузке после создания проекта">
+                    {pendingDocuments.map((document) => (
+                      <div className="pending-document-row" key={document.id}>
+                        <span>{document.file.name}</span>
+                        <select value={document.category} onChange={(event) => updatePendingDocumentCategory(document.id, event.target.value)}>
+                          {documentCategoryOptions.map((option) => (
+                            <option key={option.value} value={option.value}>{option.label}</option>
+                          ))}
+                        </select>
+                        <button className="icon-button" type="button" onClick={() => removePendingDocument(document.id)} aria-label={`Убрать ${document.file.name}`}>
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
@@ -556,6 +653,11 @@ export function ProjectCreationWizard() {
               Сбросить
             </button>
             {createError && <span className="error-text">{createError}</span>}
+            {createdProjectPath && (
+              <a className="button secondary" href={createdProjectPath}>
+                Открыть созданный проект
+              </a>
+            )}
           </div>
         </form>
 
