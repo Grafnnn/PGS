@@ -35,6 +35,7 @@ type ProjectCommandCenterProps = {
 };
 
 const icons = {
+  baseline: <ClipboardList size={18} />,
   readiness: <CheckCircle2 size={18} />,
   budget: <Landmark size={18} />,
   schedule: <TimerReset size={18} />,
@@ -74,6 +75,7 @@ function drilldownForTab(tab: string) {
 }
 
 function drilldownForKpi(key: string) {
+  if (key === "baseline") return "baseline";
   if (key === "budget" || key === "cash") return "finance-vor";
   if (key === "schedule") return "schedule";
   if (key === "acceptance") return "acceptance-billing";
@@ -128,7 +130,7 @@ export function ProjectCommandCenter({
   const openKpi = (key: string) => {
     const section = drilldownForKpi(key);
     if (section && onDrilldown) onDrilldown(section);
-    else onNavigate(key === "cash" ? "Финансы" : key === "schedule" ? "График" : key === "acceptance" ? "КС" : key === "contract" ? "Договор / Тендер" : key === "materials" ? "Материалы" : key === "risks" ? "Риски" : key === "readiness" ? "Аналитика" : "Бюджет / ВОР");
+    else onNavigate(key === "cash" ? "Финансы" : key === "schedule" ? "График" : key === "acceptance" ? "КС" : key === "contract" ? "Договор / Тендер" : key === "materials" ? "Материалы" : key === "risks" ? "Риски" : key === "baseline" ? "Обзор" : key === "readiness" ? "Аналитика" : "Бюджет / ВОР");
   };
 
   return (

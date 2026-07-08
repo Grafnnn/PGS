@@ -1,4 +1,12 @@
 import type { Project, ProjectStatus } from "@/lib/types";
+import {
+  buildProjectBaselineFromTemplate,
+  getProjectTemplateById,
+  inferProjectTemplateId,
+  validateProjectTemplateSelection,
+  type ProjectBaseline,
+  type ProjectTemplateId
+} from "@/lib/project-templates";
 
 export type ProjectObjectType =
   | "residential"
@@ -24,6 +32,7 @@ export type ProjectCreationDraft = {
   customer?: string;
   object?: string;
   objectType?: ProjectObjectType;
+  templateId?: ProjectTemplateId;
   address?: string;
   description?: string;
   contractAmount?: string | number;
@@ -55,6 +64,12 @@ export type OnboardingModuleSetup = {
 export type ProjectOnboardingPlan = {
   status: ProjectOnboardingStatus;
   score: number;
+  template: {
+    id: ProjectTemplateId;
+    title: string;
+    description: string;
+  };
+  baseline: ProjectBaseline;
   issues: ProjectOnboardingIssue[];
   missingData: string[];
   modules: OnboardingModuleSetup[];
@@ -113,7 +128,8 @@ function validDate(value: unknown) {
 }
 
 function selectedModules(draft: ProjectCreationDraft) {
-  const modules = draft.selectedModules?.length ? draft.selectedModules : defaultOnboardingModules;
+  const template = getProjectTemplateById(draft.templateId);
+  const modules = draft.selectedModules ? draft.selectedModules : template.id === "empty" ? [] : template.modules.length ? template.modules : defaultOnboardingModules;
   return Array.from(new Set(modules.filter((item): item is OnboardingModuleId => item in moduleDefinitions)));
 }
 
@@ -134,7 +150,7 @@ export function validateProjectCreationDraft(draft: ProjectCreationDraft): Proje
   if ((draft.vatMode === "including_vat" || draft.vatMode === "excluding_vat") && !Number.isFinite(numberValue(draft.vatPercent))) {
     issues.push({ field: "vatPercent", message: "Укажите процент НДС или выберите другой режим." });
   }
-  if (!selectedModules(draft).length) issues.push({ field: "selectedModules", message: "Выберите хотя бы один стартовый модуль." });
+  if (draft.templateId !== "empty" && !selectedModules(draft).length) issues.push({ field: "selectedModules", message: "Выберите хотя бы один стартовый модуль." });
   return issues;
 }
 
@@ -148,7 +164,9 @@ export function buildOnboardingModuleSetup(draft: ProjectCreationDraft, created 
 
 export function buildOnboardingNextActions(draft: ProjectCreationDraft, created = false): string[] {
   const modules = selectedModules(draft);
+  const baseline = buildProjectBaselineFromTemplate(draft.templateId);
   const actions: string[] = [];
+  actions.push(...baseline.firstActions);
   if (modules.includes("vor")) actions.push("Импортировать ВОР или добавить стартовые позиции бюджета.");
   if (modules.includes("contract")) actions.push("Заполнить условия договора/тендера и проверить риски до исполнения.");
   if (modules.includes("documents")) actions.push("Подготовить чеклист документов для договора, ВОР, графика и КС.");
@@ -158,21 +176,23 @@ export function buildOnboardingNextActions(draft: ProjectCreationDraft, created 
   if (modules.includes("risks")) actions.push("Зафиксировать стартовые риски: сроки, цена, документы, снабжение.");
   if (modules.includes("reports")) actions.push("Настроить регулярные рапорты и executive weekly report.");
   if (!created) actions.push("Проверить сводку и создать проект.");
-  return actions.slice(0, 8);
+  return Array.from(new Set(actions)).slice(0, 8);
 }
 
 export function buildInitialProjectReadiness(project?: Partial<Project> | null): ProjectOnboardingPlan {
+  const templateId = inferProjectTemplateId(project) ?? "general_construction";
   const draft: ProjectCreationDraft = {
     name: project?.name,
     customer: project?.customer,
     object: project?.object,
+    templateId,
     address: project?.address,
     contractAmount: project?.contractAmount,
     startsAt: project?.startsAt,
     endsAt: project?.endsAt,
     manager: project?.manager,
     status: project?.status ?? "planning",
-    selectedModules: defaultOnboardingModules
+    selectedModules: getProjectTemplateById(templateId).modules
   };
   const plan = buildProjectOnboardingPlan(draft, Boolean(project?.id));
   return {
@@ -187,6 +207,7 @@ export function buildInitialProjectReadiness(project?: Partial<Project> | null):
 export function buildProjectCreationSummary(draft: ProjectCreationDraft) {
   const amount = numberValue(draft.contractAmount);
   const modules = buildOnboardingModuleSetup(draft).filter((item) => item.status !== "not_selected");
+  const template = getProjectTemplateById(draft.templateId);
   return {
     name: clean(draft.name) || "Проект без названия",
     customer: clean(draft.customer) || "Заказчик не указан",
@@ -203,26 +224,33 @@ export function buildProjectCreationSummary(draft: ProjectCreationDraft) {
             : "НДС не определен",
     datesLabel: `${draft.startsAt || "начало не указано"} - ${draft.endsAt || "завершение не указано"}`,
     tenderSourceLabel: tenderSourceLabels[draft.tenderSource ?? "unknown"],
+    templateLabel: template.title,
+    templateDescription: template.description,
     moduleLabels: modules.map((item) => item.label)
   };
 }
 
 export function buildProjectOnboardingPlan(draft: ProjectCreationDraft, created = false): ProjectOnboardingPlan {
+  const templateId = validateProjectTemplateSelection(draft.templateId);
+  const template = getProjectTemplateById(templateId);
+  const baseline = buildProjectBaselineFromTemplate(templateId);
   const issues = validateProjectCreationDraft(draft);
   const modules = buildOnboardingModuleSetup(draft, created);
   const selectedCount = modules.filter((item) => item.status !== "not_selected").length;
-  const missingData = [
+  const missingData = Array.from(new Set([
     !clean(draft.description) ? "краткое описание/границы работ" : "",
     draft.tenderSource === "unknown" || !draft.tenderSource ? "источник договора/тендера" : "",
     draft.vatMode === "unknown" || !draft.vatMode ? "режим НДС" : "",
     draft.volumeChangeMode === "unknown" || !draft.volumeChangeMode ? "правило изменения объемов" : "",
+    baseline.expectedMissingData[0] ? baseline.expectedMissingData[0] : "",
+    baseline.expectedMissingData[1] ? baseline.expectedMissingData[1] : "",
     !selectedCount ? "стартовые модули" : "",
     created ? "загруженный ВОР" : "",
     created ? "чеклист документов" : "",
     created ? "график работ" : "",
     created ? "материалы и заявки" : "",
     created ? "подход к КС" : ""
-  ].filter(Boolean);
+  ].filter(Boolean)));
   const score = Math.max(0, Math.min(100, Math.round(100 - issues.length * 16 - missingData.length * (created ? 5 : 3) + selectedCount * 2)));
   const status: ProjectOnboardingStatus = issues.length ? "needs_required_fields" : created ? "created_needs_setup" : "ready_to_create";
   const firstWorkflow = selectedModules(draft).includes("vor")
@@ -236,6 +264,12 @@ export function buildProjectOnboardingPlan(draft: ProjectCreationDraft, created 
   return {
     status,
     score,
+    template: {
+      id: template.id,
+      title: template.title,
+      description: template.description
+    },
+    baseline,
     issues,
     missingData,
     modules,
@@ -247,6 +281,8 @@ export function buildProjectOnboardingPlan(draft: ProjectCreationDraft, created 
         ? "Проект создан, но требует стартовой настройки рабочих разделов."
         : "Черновик готов к созданию. После сохранения система откроет рабочий объект с onboarding baseline.",
     commandCenterSignals: [
+      `Шаблон baseline: ${template.title}.`,
+      `Baseline readiness: ${baseline.readiness}.`,
       "ВОР/import ожидает исходные данные.",
       "Документы и compliance пока не подтверждены.",
       "График, материалы и КС требуют стартовой настройки.",
@@ -254,6 +290,8 @@ export function buildProjectOnboardingPlan(draft: ProjectCreationDraft, created 
     ],
     projectIntelligenceBaseline: [
       `Готовность onboarding: ${score}%.`,
+      `Шаблон: ${template.title}.`,
+      `Baseline: ${baseline.readiness}.`,
       `Первый workflow: ${firstWorkflow}.`,
       missingData.length ? `Недостающие данные: ${missingData.slice(0, 4).join(", ")}.` : "Обязательные поля заполнены.",
       "Риски не считаются закрытыми без ВОР, графика, документов и снабжения."

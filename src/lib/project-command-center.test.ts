@@ -59,7 +59,8 @@ describe("project command center model", () => {
     });
 
     expect(model.project.name).toContain("Демо объект");
-    expect(model.kpis).toHaveLength(9);
+    expect(model.kpis).toHaveLength(10);
+    expect(model.kpis.find((kpi) => kpi.key === "baseline")).toMatchObject({ label: "Baseline" });
     expect(model.kpis.some((kpi) => kpi.key === "decisions")).toBe(true);
     expect(model.kpis.some((kpi) => kpi.key === "contract")).toBe(true);
     expect(model.kpis.some((kpi) => kpi.key === "acceptance")).toBe(true);
@@ -67,6 +68,8 @@ describe("project command center model", () => {
     expect(model.aiSummary.degraded).toBe(false);
     expect(model.aiSummary.bullets[0]).toContain("Работы идут");
     expect(model.progress.find((item) => item.key === "documents")).toMatchObject({ value: 67 });
+    expect(model.progress.find((item) => item.key === "baseline")?.detail).toContain("Общестрой");
+    expect(model.statusBoard.find((item) => item.key === "baseline")?.detail).toBeTruthy();
     expect(model.nextActions.some((action) => action.tab === "AI-помощник")).toBe(true);
   });
 
@@ -80,6 +83,7 @@ describe("project command center model", () => {
     expect(model.aiSummary.degraded).toBe(true);
     expect(model.aiSummary.bullets.length).toBeGreaterThan(0);
     expect(model.statusBoard.find((item) => item.key === "ai")).toMatchObject({ value: "по запросу" });
+    expect(model.statusBoard.find((item) => item.key === "baseline")).toBeTruthy();
     expect(model.statusBoard.find((item) => item.key === "executive")).toMatchObject({ value: "no_data" });
   });
 

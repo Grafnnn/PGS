@@ -23,6 +23,7 @@ describe("ProjectIntelligenceDrilldown", () => {
     );
 
     expect(html).toContain("Project Intelligence");
+    expect(html).toContain("Baseline / Onboarding Intelligence");
     expect(html).toContain("Documents Intelligence");
     expect(html).toContain("КС readiness");
     expect(html).toContain("Executive package");

@@ -3,6 +3,7 @@ import { buildAcceptanceBillingIntelligence } from "@/lib/acceptance-billing-int
 import { buildContractTenderIntelligence } from "@/lib/contract-tender-intelligence";
 import { buildDocumentComplianceIntelligence } from "@/lib/document-compliance-intelligence";
 import { buildProcurementIntelligenceModel } from "@/lib/procurement-intelligence";
+import { buildInitialProjectReadiness } from "@/lib/project-onboarding-intelligence";
 import type { DocumentChecklistItem, PipelineAction, PipelineReadiness } from "@/lib/project-pipeline";
 import { buildRiskExecutiveIntelligence, type RiskExecutiveImportHistoryItem } from "@/lib/risk-executive-intelligence";
 import { buildScheduleCashflowIntelligenceModel } from "@/lib/schedule-cashflow-intelligence";
@@ -78,6 +79,19 @@ export type ProjectIntelligenceInput = {
 
 export type ProjectIntelligenceDrilldownModel = {
   nav: Array<{ id: string; label: string; tone: DrilldownTone; count?: number }>;
+  baseline: {
+    tone: DrilldownTone;
+    templateTitle: string;
+    templateDescription: string;
+    readiness: string;
+    score: number;
+    modules: string[];
+    firstActions: string[];
+    missingData: string[];
+    limitations: string[];
+    empty: boolean;
+    ctaTab: "Обзор";
+  };
   documents: {
     tone: DrilldownTone;
     score: number;
@@ -259,6 +273,7 @@ export function buildProjectIntelligenceDrilldownModel(input: ProjectIntelligenc
   const documents = input.documents ?? [];
   const documentChecklist = input.documentChecklist ?? [];
   const contractAmount = project.contractAmount ?? 0;
+  const onboardingBaseline = buildInitialProjectReadiness(project);
 
   const budget = budgetTotals(contractAmount, budgetItems);
   const works = workTotals(scheduleItems);
@@ -363,6 +378,7 @@ export function buildProjectIntelligenceDrilldownModel(input: ProjectIntelligenc
 
   return {
     nav: [
+      { id: "baseline", label: "Baseline", tone: toneFromPercent(onboardingBaseline.score), count: onboardingBaseline.baseline.expectedMissingData.length },
       { id: "documents", label: "Документы", tone: documentCompliance.summary.readiness === "ready" ? "good" : documentCompliance.summary.readiness === "missing_critical" ? "bad" : documentCompliance.summary.totalRequired ? "warn" : "info", count: documentCompliance.summary.missing || missingDocuments.length },
       { id: "risks", label: "Риски", tone: riskTone, count: Math.max(allRisks.length, riskExecutive.summary.totalOpen) },
       { id: "schedule", label: "График", tone: scheduleTone, count: works.overdueItems.length },
@@ -373,6 +389,19 @@ export function buildProjectIntelligenceDrilldownModel(input: ProjectIntelligenc
       { id: "reports", label: "Executive", tone: reportsTone },
       { id: "ai-recommendations", label: "AI", tone: "info", count: drilldownAiScenarios.length }
     ],
+    baseline: {
+      tone: toneFromPercent(onboardingBaseline.score),
+      templateTitle: onboardingBaseline.template.title,
+      templateDescription: onboardingBaseline.template.description,
+      readiness: onboardingBaseline.baseline.readiness,
+      score: onboardingBaseline.score,
+      modules: onboardingBaseline.baseline.modulesEnabled,
+      firstActions: onboardingBaseline.baseline.firstActions.slice(0, 6),
+      missingData: onboardingBaseline.missingData.slice(0, 8),
+      limitations: onboardingBaseline.baseline.limitations.slice(0, 3),
+      empty: onboardingBaseline.baseline.templateId === "empty",
+      ctaTab: "Обзор"
+    },
     documents: {
       tone: documentCompliance.summary.readiness === "ready" ? "good" : documentCompliance.summary.readiness === "missing_critical" ? "bad" : documentCompliance.summary.totalRequired ? "warn" : documentChecklist.length ? toneFromPercent(documentScore) : "info",
       score: clampPercent(documentScore),

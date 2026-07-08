@@ -40,7 +40,9 @@ describe("project intelligence drill-down model", () => {
       }
     });
 
-    expect(model.nav.map((item) => item.id)).toEqual(["documents", "risks", "schedule", "finance-vor", "contract-tender", "acceptance-billing", "procurement", "reports", "ai-recommendations"]);
+    expect(model.nav.map((item) => item.id)).toEqual(["baseline", "documents", "risks", "schedule", "finance-vor", "contract-tender", "acceptance-billing", "procurement", "reports", "ai-recommendations"]);
+    expect(model.baseline.templateTitle).toBe("Общестрой");
+    expect(model.baseline.firstActions).toContain("Импортировать ВОР");
     expect(model.documents).toMatchObject({ present: 1, total: 2, ctaTab: "Документы" });
     expect(model.documents.complianceReadiness).toBeTruthy();
     expect(model.documents.ksReadiness).toBeTruthy();
@@ -69,6 +71,8 @@ describe("project intelligence drill-down model", () => {
     const model = buildProjectIntelligenceDrilldownModel({ project: { id: "empty" } });
 
     expect(model.documents.empty).toBe(false);
+    expect(model.baseline.templateTitle).toBe("Общестрой");
+    expect(model.baseline.limitations.join(" ")).toContain("не выдумывает");
     expect(model.documents.complianceReadiness).toBe("no_data");
     expect(model.documents.ksReadiness).toBe("unknown");
     expect(model.risks.empty).toBe(false);

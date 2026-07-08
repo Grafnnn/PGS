@@ -2,6 +2,7 @@ import { budgetTotals, deriveAutoRisks, financeTotals, materialTotals, workTotal
 import { buildAcceptanceBillingIntelligence } from "@/lib/acceptance-billing-intelligence";
 import { buildContractTenderIntelligence } from "@/lib/contract-tender-intelligence";
 import { buildDocumentComplianceIntelligence } from "@/lib/document-compliance-intelligence";
+import { buildInitialProjectReadiness } from "@/lib/project-onboarding-intelligence";
 import type { DocumentChecklistItem, PipelineAction, PipelineReadiness } from "@/lib/project-pipeline";
 import { buildRiskExecutiveIntelligence, type RiskExecutiveImportHistoryItem } from "@/lib/risk-executive-intelligence";
 import type { BudgetItem, DailyReport, Material, Payment, ProcurementRequest, Project, ProjectDocument, Risk, ScheduleItem } from "@/lib/types";
@@ -157,6 +158,7 @@ export function buildProjectCommandCenterModel(input: ProjectCommandCenterInput)
   const risks = input.risks ?? [];
   const documents = input.documents ?? [];
   const contractAmount = project.contractAmount ?? 0;
+  const onboardingBaseline = buildInitialProjectReadiness(project);
 
   const budget = budgetTotals(contractAmount, budgetItems);
   const works = workTotals(scheduleItems);
@@ -225,7 +227,8 @@ export function buildProjectCommandCenterModel(input: ProjectCommandCenterInput)
     intelligence: input.intelligence,
     importHistory: input.importHistory ?? []
   });
-  const healthScore = clampPercent((scheduleScore + materialScore + financeScore + riskScore + readinessScore) / 5);
+  const baselineScore = onboardingBaseline.score;
+  const healthScore = clampPercent((scheduleScore + materialScore + financeScore + riskScore + readinessScore + baselineScore) / 6);
   const healthTone = toneFromScore(healthScore);
   const aiInsight = input.aiInsight ?? null;
   const aiBullets = [
@@ -297,6 +300,7 @@ export function buildProjectCommandCenterModel(input: ProjectCommandCenterInput)
         `Командный срез собран по бюджету, срокам, снабжению, финансам и рискам. Готовность данных: ${readinessScore}%.`
     },
     kpis: [
+      { key: "baseline", label: "Baseline", value: `${baselineScore}%`, tone: toneFromScore(baselineScore), hint: onboardingBaseline.template.title },
       { key: "readiness", label: "Готовность данных", value: `${readinessScore}%`, tone: toneFromScore(readinessScore), hint: input.readiness?.status ?? "pipeline" },
       { key: "budget", label: "Бюджетный сигнал", value: compactMoney(budgetDeviation), tone: budgetDeviation > 0 ? "bad" : "good", hint: `Прогноз: ${compactMoney(budget.totalForecastCost)}` },
       { key: "schedule", label: "План / факт", value: percent(works.completionPercent), tone: delayedWorks.length ? "bad" : "info", hint: delayedWorks.length ? `${delayedWorks.length} просроч.` : "Без критичных просрочек" },
@@ -318,6 +322,7 @@ export function buildProjectCommandCenterModel(input: ProjectCommandCenterInput)
       empty: !aiInsight
     },
     progress: [
+      { key: "baseline", label: "Project baseline", value: clampPercent(baselineScore), tone: toneFromScore(baselineScore), detail: `${onboardingBaseline.template.title} · ${onboardingBaseline.baseline.readiness}` },
       { key: "readiness", label: "Pipeline readiness", value: clampPercent(readinessScore), tone: toneFromScore(readinessScore), detail: input.readiness?.summary ?? "Pipeline data loading or unavailable." },
       { key: "documents", label: "Документы", value: clampPercent(documentScore), tone: documentCompliance.summary.readiness === "ready" ? "good" : documentCompliance.summary.readiness === "missing_critical" ? "bad" : documentCompliance.summary.totalRequired ? "warn" : "info", detail: documentCompliance.summary.totalRequired ? `${documentCompliance.summary.missing}/${documentCompliance.summary.totalRequired} missing · КС ${documentCompliance.ksReadiness.readyForKs}` : "Checklist еще не загружен." },
       { key: "acceptance", label: "КС / закрытие", value: acceptanceBilling.summary.contractScopeAmount ? clampPercent((acceptanceBilling.summary.readyAmount / acceptanceBilling.summary.contractScopeAmount) * 100) : 0, tone: acceptanceBilling.summary.tone, detail: `${compactMoney(acceptanceBilling.summary.readyAmount)} к проверке · ${acceptanceBilling.summary.readinessLabel}` },
@@ -326,6 +331,7 @@ export function buildProjectCommandCenterModel(input: ProjectCommandCenterInput)
       { key: "finance", label: "Финансы", value: clampPercent(financeScore), tone: financeScore < 50 ? "bad" : "good", detail: finance.cashGap < 0 ? `Разрыв ${compactMoney(finance.cashGap)}` : "Cashflow без отрицательного сигнала." }
     ],
     statusBoard: [
+      { key: "baseline", label: "Template baseline", value: onboardingBaseline.baseline.readiness, tone: toneFromScore(baselineScore), detail: onboardingBaseline.baseline.firstActions[0] ?? "Выберите шаблон и закройте стартовые данные.", tab: "Обзор" },
       { key: "data", label: "Данные проекта", value: input.readiness?.status ?? "loading", tone: toneFromScore(readinessScore), detail: input.readiness?.summary ?? "Нет подтвержденного pipeline snapshot.", tab: "Аналитика" },
       { key: "documents", label: "Документы", value: documentCompliance.summary.readiness, tone: documentCompliance.summary.readiness === "ready" ? "good" : documentCompliance.summary.readiness === "missing_critical" ? "bad" : "warn", detail: documentCompliance.missingDocuments[0]?.suggestedAction ?? documentItems.find((item) => item.status !== "present")?.suggestedNextStep ?? "Проверить КС-ready и executive package.", tab: "Документы" },
       { key: "contract", label: "Договор / тендер", value: contractTender.summary.readiness, tone: contractTender.summary.tone === "neutral" ? "info" : contractTender.summary.tone, detail: contractTender.summary.recommendation, tab: "Договор / Тендер" },
@@ -334,6 +340,11 @@ export function buildProjectCommandCenterModel(input: ProjectCommandCenterInput)
       { key: "executive", label: "Executive report", value: riskExecutive.executiveReport.reportReadiness, tone: riskExecutive.executiveReport.status === "red" ? "bad" : riskExecutive.executiveReport.status === "amber" ? "warn" : riskExecutive.executiveReport.status === "green" ? "good" : "info", detail: riskExecutive.managementSummary.nextManagementAction, tab: "Рапорты" },
       { key: "ai", label: "AI Command Layer", value: aiInsight ? aiInsight.provider ?? "ready" : "по запросу", tone: aiInsight?.provider === "degraded" ? "warn" : "info", detail: aiInsight ? "Есть последний результат сценария." : "Live AI не вызывается автоматически.", tab: "AI-помощник" }
     ],
-    nextActions
+    nextActions: [
+      onboardingBaseline.baseline.expectedMissingData[0]
+        ? defaultAction("Закрыть baseline", onboardingBaseline.baseline.expectedMissingData[0], "warn", "Обзор")
+        : defaultAction("Проверить baseline", onboardingBaseline.template.title, "info", "Обзор"),
+      ...nextActions
+    ]
   };
 }
