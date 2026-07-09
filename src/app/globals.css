@@ -2508,6 +2508,67 @@ tr:last-child td {
   grid-column: 1 / -1;
 }
 
+.contract-prefill-card {
+  background: var(--panel-muted);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding: 12px;
+}
+
+.contract-prefill-card.compact {
+  grid-column: 1 / -1;
+}
+
+.contract-prefill-toolbar,
+.contract-prefill-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  min-width: 0;
+}
+
+.contract-suggestion-list {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.contract-suggestion-row {
+  align-items: start;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  min-width: 0;
+  padding: 10px;
+}
+
+.contract-suggestion-row div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.contract-suggestion-row small,
+.contract-suggestion-row span,
+.contract-suggestion-row em {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.contract-suggestion-row strong {
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
 .document-upload-inline {
   align-items: center;
   background: var(--surface);
@@ -5261,6 +5322,7 @@ input[type="checkbox"] {
   .module-setup-grid,
   .project-create-review,
   .pending-document-row,
+  .contract-suggestion-row,
   .module-link-grid,
   .template-selector-grid,
   .baseline-preview-grid,

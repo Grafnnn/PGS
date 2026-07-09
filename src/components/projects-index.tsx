@@ -6,6 +6,11 @@ import { useRouter } from "next/navigation";
 import { AlertTriangle, CheckCircle2, ChevronLeft, ChevronRight, ClipboardList, FileText, Grid2X2, Landmark, List, PackageCheck, Plus, RotateCcw, Search, Sparkles, TimerReset } from "lucide-react";
 import { money, percent } from "@/lib/calculations";
 import {
+  mergePrefillIntoProjectDraft,
+  type ContractPrefillField,
+  type ContractProjectPrefill
+} from "@/lib/contract-project-prefill";
+import {
   buildProjectCreationSummary,
   buildProjectOnboardingPlan,
   defaultOnboardingModules,
@@ -24,7 +29,15 @@ type PendingOnboardingDocument = {
   id: string;
   file: File;
   category: string;
+  source?: "contract-prefill" | "manual";
 };
+
+type ContractPrefillState =
+  | { status: "idle" }
+  | { status: "extracting"; fileName: string }
+  | { status: "ready"; fileName: string; result: ContractProjectPrefill }
+  | { status: "warning"; fileName: string; message: string }
+  | { status: "failed"; fileName: string; message: string };
 
 function compactMoney(value: number) {
   const absolute = Math.abs(value);
@@ -102,6 +115,32 @@ const documentCategoryOptions = [
   { value: "исполнительная", label: "Исполнительная" },
   { value: "кс", label: "КС" },
   { value: "прочее", label: "Прочее" }
+];
+
+const contractSuggestionFields: Array<{
+  field: ContractPrefillField;
+  label: string;
+  draftKey?: keyof ProjectCreationDraft;
+  value: (result: ContractProjectPrefill) => string | number | undefined;
+}> = [
+  { field: "projectName", label: "Название / объект", draftKey: "name", value: (result) => result.projectName },
+  { field: "customerName", label: "Заказчик", draftKey: "customer", value: (result) => result.customerName },
+  { field: "contractorName", label: "Подрядчик", value: (result) => result.contractorName },
+  { field: "objectAddress", label: "Адрес объекта", draftKey: "address", value: (result) => result.objectAddress },
+  { field: "objectType", label: "Тип объекта", draftKey: "objectType", value: (result) => result.objectType },
+  { field: "scopeSummary", label: "Scope summary", draftKey: "description", value: (result) => result.scopeSummary },
+  { field: "contractAmount", label: "Сумма договора", draftKey: "contractAmount", value: (result) => result.contractAmount },
+  { field: "vatMode", label: "Режим НДС", draftKey: "vatMode", value: (result) => result.vatMode },
+  { field: "vatPercent", label: "НДС, %", draftKey: "vatPercent", value: (result) => result.vatPercent },
+  { field: "startDate", label: "Начало", draftKey: "startsAt", value: (result) => result.startDate },
+  { field: "finishDate", label: "Завершение", draftKey: "endsAt", value: (result) => result.finishDate },
+  { field: "paymentTerms", label: "Условия оплаты", draftKey: "paymentNotes", value: (result) => result.paymentTerms },
+  { field: "advanceTerms", label: "Аванс", draftKey: "paymentNotes", value: (result) => result.advanceTerms },
+  { field: "acceptanceTerms", label: "КС / приемка", draftKey: "paymentNotes", value: (result) => result.acceptanceTerms },
+  { field: "contractSource", label: "Источник", draftKey: "tenderSource", value: (result) => result.contractSource },
+  { field: "volumeChangeMode", label: "Изменение объемов", draftKey: "volumeChangeMode", value: (result) => result.volumeChangeMode },
+  { field: "penalties", label: "Штрафы / пени", value: (result) => result.penalties },
+  { field: "retention", label: "Удержания", value: (result) => result.retention }
 ];
 
 function makeInitialDraft(): ProjectCreationDraft {
@@ -256,6 +295,8 @@ export function ProjectCreationWizard() {
   const [createError, setCreateError] = useState("");
   const [createdProjectPath, setCreatedProjectPath] = useState("");
   const [pendingDocuments, setPendingDocuments] = useState<PendingOnboardingDocument[]>([]);
+  const [contractPrefill, setContractPrefill] = useState<ContractPrefillState>({ status: "idle" });
+  const [manualFields, setManualFields] = useState<Set<keyof ProjectCreationDraft>>(() => new Set());
   const plan = buildProjectOnboardingPlan(draft);
   const summary = buildProjectCreationSummary(draft);
   const selectedTemplate = getProjectTemplateById(draft.templateId);
@@ -269,7 +310,11 @@ export function ProjectCreationWizard() {
   const canMoveNext = step < 4 && currentStepIssues.length === 0;
 
   const updateDraft = <K extends keyof ProjectCreationDraft>(key: K, value: ProjectCreationDraft[K]) => {
+    setManualFields((current) => new Set(current).add(key));
     setDraft((current) => ({ ...current, [key]: value }));
+  };
+  const applyDraftPatch = (patch: ProjectCreationDraft) => {
+    setDraft(patch);
   };
   const toggleModule = (moduleId: OnboardingModuleId) => {
     setDraft((current) => {
@@ -306,6 +351,8 @@ export function ProjectCreationWizard() {
     setCreateError("");
     setCreatedProjectPath("");
     setPendingDocuments([]);
+    setContractPrefill({ status: "idle" });
+    setManualFields(new Set());
   };
   const addPendingDocuments = (files: FileList | null) => {
     if (!files?.length) return;
@@ -314,8 +361,20 @@ export function ProjectCreationWizard() {
       ...Array.from(files).map((file) => ({
         id: `${file.name}-${file.size}-${file.lastModified}-${crypto.randomUUID()}`,
         file,
-        category: "прочее"
+        category: "прочее",
+        source: "manual" as const
       }))
+    ]);
+  };
+  const setContractAsPendingDocument = (file: File) => {
+    setPendingDocuments((current) => [
+      ...current.filter((item) => item.source !== "contract-prefill"),
+      {
+        id: `contract-${file.name}-${file.size}-${file.lastModified}`,
+        file,
+        category: "договор",
+        source: "contract-prefill"
+      }
     ]);
   };
   const updatePendingDocumentCategory = (id: string, category: string) => {
@@ -336,6 +395,45 @@ export function ProjectCreationWizard() {
       const data = (await response.json().catch(() => ({}))) as { error?: string };
       if (!response.ok) throw new Error(data.error ?? `Не удалось загрузить документ "${document.file.name}".`);
     }
+  };
+  const handleContractPrefillFile = async (file: File | undefined) => {
+    if (!file) return;
+    setContractAsPendingDocument(file);
+    setContractPrefill({ status: "extracting", fileName: file.name });
+    const formData = new FormData();
+    formData.append("file", file);
+    try {
+      const response = await fetch("/api/projects/onboarding/contract-prefill", {
+        method: "POST",
+        body: formData
+      });
+      const data = (await response.json().catch(() => ({}))) as { result?: ContractProjectPrefill; error?: string };
+      if (!response.ok || !data.result) {
+        setContractPrefill({
+          status: "warning",
+          fileName: file.name,
+          message: data.error ?? "Не удалось извлечь данные, заполните вручную. Файл останется стартовым документом."
+        });
+        return;
+      }
+      setContractPrefill({ status: "ready", fileName: file.name, result: data.result });
+    } catch (error) {
+      setContractPrefill({
+        status: "failed",
+        fileName: file.name,
+        message: error instanceof Error ? error.message : "Не удалось извлечь данные, заполните вручную."
+      });
+    }
+  };
+  const applyContractSuggestion = (result: ContractProjectPrefill, field: ContractPrefillField) => {
+    const next = mergePrefillIntoProjectDraft(draft, result, { overwrite: true, fields: [field] });
+    applyDraftPatch(next);
+  };
+  const applySafeContractSuggestions = (result: ContractProjectPrefill) => {
+    const safeFields = contractSuggestionFields
+      .filter((item) => item.draftKey && !manualFields.has(item.draftKey))
+      .map((item) => item.field);
+    applyDraftPatch(mergePrefillIntoProjectDraft(draft, result, { fields: safeFields }));
   };
   const submit = async () => {
     const issues = buildProjectOnboardingPlan(draft).issues;
@@ -430,6 +528,17 @@ export function ProjectCreationWizard() {
                   ))}
                 </div>
               </div>
+              <ContractPrefillCard
+                state={contractPrefill}
+                draft={draft}
+                onFile={handleContractPrefillFile}
+                onApplyAll={applySafeContractSuggestions}
+                onApplyField={applyContractSuggestion}
+                onClear={() => {
+                  setContractPrefill({ status: "idle" });
+                  setPendingDocuments((current) => current.filter((item) => item.source !== "contract-prefill"));
+                }}
+              />
               <label>
                 Название проекта *
                 <input value={draft.name ?? ""} onChange={(event) => updateDraft("name", event.target.value)} placeholder="Например: Административное здание" />
@@ -479,6 +588,13 @@ export function ProjectCreationWizard() {
 
           {step === 1 && (
             <>
+              {contractPrefill.status === "ready" && (
+                <ContractPrefillSummary
+                  result={contractPrefill.result}
+                  onApplyAll={applySafeContractSuggestions}
+                  onApplyField={applyContractSuggestion}
+                />
+              )}
               <label>
                 Договорная сумма *
                 <input inputMode="decimal" value={draft.contractAmount ?? ""} onChange={(event) => updateDraft("contractAmount", event.target.value)} placeholder="10000000" />
@@ -694,6 +810,153 @@ export function ProjectCreationWizard() {
         </aside>
       </div>
     </section>
+  );
+}
+
+function suggestionValue(value: string | number | undefined) {
+  if (value === undefined || value === "") return "";
+  return typeof value === "number" ? value.toLocaleString("ru-RU") : String(value);
+}
+
+function ContractPrefillCard({
+  state,
+  draft,
+  onFile,
+  onApplyAll,
+  onApplyField,
+  onClear
+}: {
+  state: ContractPrefillState;
+  draft: ProjectCreationDraft;
+  onFile: (file: File | undefined) => void;
+  onApplyAll: (result: ContractProjectPrefill) => void;
+  onApplyField: (result: ContractProjectPrefill, field: ContractPrefillField) => void;
+  onClear: () => void;
+}) {
+  const result = state.status === "ready" ? state.result : undefined;
+  const appliedCount = contractSuggestionFields.filter((item) => result && suggestionValue(item.value(result))).length;
+
+  return (
+    <div className="contract-prefill-card wide-field">
+      <div className="field-heading">
+        <div>
+          <strong>Загрузить договор для автозаполнения</strong>
+          <span>TXT/Markdown preview без AI: PGS предложит значения, а вы решите, что применить.</span>
+        </div>
+        {result && <span className="badge blue">{appliedCount} предложений</span>}
+      </div>
+      <div className="contract-prefill-toolbar">
+        <label className="document-upload-inline">
+          <FileText size={17} />
+          <span>{state.status === "extracting" ? "Извлекаем..." : "Выбрать договор"}</span>
+          <input
+            accept=".txt,.md,.markdown,.text,.pdf,.doc,.docx"
+            type="file"
+            onChange={(event) => onFile(event.target.files?.[0])}
+          />
+        </label>
+        <span className="muted">PDF/DOCX можно приложить как стартовый документ; автозаполнение v1 поддерживает текстовые файлы.</span>
+      </div>
+      {state.status === "extracting" && <div className="inline-status">Анализируем {state.fileName}...</div>}
+      {(state.status === "warning" || state.status === "failed") && (
+        <div className="onboarding-issues">
+          <span>{state.message}</span>
+          <span>Файл останется в стартовых документах с категорией “Договор”, проект можно заполнить вручную.</span>
+        </div>
+      )}
+      {result && (
+        <>
+          <div className="contract-prefill-actions">
+            <button className="button secondary" type="button" onClick={() => onApplyAll(result)}>
+              Применить безопасные предложения
+            </button>
+            <button className="button secondary" type="button" onClick={onClear}>
+              Убрать договор
+            </button>
+            <span className="muted">Заполненные вручную поля не меняются при безопасном применении.</span>
+          </div>
+          <ContractSuggestionList draft={draft} result={result} onApplyField={onApplyField} />
+        </>
+      )}
+    </div>
+  );
+}
+
+function ContractPrefillSummary({
+  result,
+  onApplyAll,
+  onApplyField
+}: {
+  result: ContractProjectPrefill;
+  onApplyAll: (result: ContractProjectPrefill) => void;
+  onApplyField: (result: ContractProjectPrefill, field: ContractPrefillField) => void;
+}) {
+  return (
+    <div className="contract-prefill-card wide-field compact">
+      <div className="field-heading">
+        <div>
+          <strong>Договорная база из файла</strong>
+          <span>Проверьте сумму, НДС, сроки, оплату, КС и режим изменения объемов перед созданием проекта.</span>
+        </div>
+        <button className="button secondary" type="button" onClick={() => onApplyAll(result)}>
+          Применить безопасные предложения
+        </button>
+      </div>
+      <ContractSuggestionList result={result} onApplyField={onApplyField} focus="contract" />
+    </div>
+  );
+}
+
+function ContractSuggestionList({
+  result,
+  draft,
+  focus,
+  onApplyField
+}: {
+  result: ContractProjectPrefill;
+  draft?: ProjectCreationDraft;
+  focus?: "contract";
+  onApplyField: (result: ContractProjectPrefill, field: ContractPrefillField) => void;
+}) {
+  const fields = contractSuggestionFields.filter((item) => {
+    const value = suggestionValue(item.value(result));
+    if (!value) return false;
+    if (focus === "contract") return ["contractAmount", "vatMode", "vatPercent", "startDate", "finishDate", "paymentTerms", "advanceTerms", "acceptanceTerms", "contractSource", "volumeChangeMode", "penalties", "retention"].includes(item.field);
+    return true;
+  });
+
+  return (
+    <div className="contract-suggestion-list">
+      {fields.map((item) => {
+        const value = suggestionValue(item.value(result));
+        const currentValue = item.draftKey ? suggestionValue(draft?.[item.draftKey] as string | number | undefined) : "";
+        const confidence = result.confidenceByField[item.field] ?? "low";
+        return (
+          <div className="contract-suggestion-row" key={item.field}>
+            <div>
+              <small>{item.label}</small>
+              <strong>{value}</strong>
+              {result.evidenceByField[item.field] && <span>{result.evidenceByField[item.field]}</span>}
+              {currentValue && <em>Текущее значение: {currentValue}</em>}
+            </div>
+            <span className={`badge ${confidence === "high" ? "green" : confidence === "medium" ? "blue" : "yellow"}`}>{confidence}</span>
+            {item.draftKey ? (
+              <button className="button secondary" type="button" onClick={() => onApplyField(result, item.field)}>
+                Применить
+              </button>
+            ) : (
+              <span className="muted">для проверки</span>
+            )}
+          </div>
+        );
+      })}
+      {result.warnings.length > 0 && (
+        <div className="onboarding-issues">
+          {result.warnings.slice(0, 5).map((warning) => <span key={warning}>{warning}</span>)}
+        </div>
+      )}
+      {result.missingFields.length > 0 && <p className="muted">Не найдено: {result.missingFields.slice(0, 6).join(", ")}.</p>}
+    </div>
   );
 }
 
