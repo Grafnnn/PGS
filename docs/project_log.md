@@ -1,5 +1,58 @@
 # PGS Project Log
 
+## 2026-07-09 - Commercial Proposal browser tab/copy smoke GO
+
+Status: the remaining browser interaction follow-up for Commercial Proposal & Tender Submission Builder v1 reached BROWSER TAB/COPY GO on Render. This was a public/read-only browser smoke on `project-smoke`; authenticated session was not used and is not claimed.
+
+- Online URL: https://pgs-frankfurt.onrender.com
+- Runtime app commit: `3915aa609b4692f6ca51eaad733151e784c4fc26`
+- Docs baseline before this record: `59c37a8a14a2124d8ae00ad51b3a079586ed36d3`
+- Decision: BROWSER TAB/COPY GO
+- Git SHA source: `RENDER_GIT_COMMIT`
+
+Health:
+
+- `/api/health`: HTTP 200 / `ok`
+- DB: `ok`
+- migrations: `ok`, count `6`
+- auth required: `true`
+- AI configured: `true`
+
+Browser smoke:
+
+- `/projects/project-smoke`: 200 on desktop and mobile
+- desktop viewport: 1440 x 1000
+- mobile viewport: 390 x 844
+- `КП / Подача` tab: visible and clickable on desktop and mobile
+- `Commercial Proposal & Tender Submission`: visible after tab click
+- `Customer-facing proposal draft`: visible
+- `Internal approval memo`: visible
+- `Tender submission checklist`: visible
+- `Price structure`: visible
+- `Work/material split`: visible
+- copyable proposal blocks: 2 `<pre>` blocks visible
+- text selection/copy affordance: selection present on both desktop and mobile smoke
+- horizontal overflow: none on desktop or mobile
+- page errors: none observed
+
+Expected guard noise:
+
+- unauthenticated background API requests returned 401/403 in the browser console; this matches the protected API surface and was not treated as a UI failure.
+
+Not run / not touched:
+
+- authenticated login/session was not used.
+- no live AI call was run.
+- no online mutation/import/delete/upload smoke was run.
+- no manual deploy/redeploy was triggered.
+- no Render env/secrets were changed.
+- no DB schema or migration changes were made.
+- no secrets, cookies, tokens, provider keys, smoke secrets, session IDs, or env values were printed.
+
+Remaining optional follow-up:
+
+- authenticated browser smoke for the same `КП / Подача` flow if a safe browser auth session is explicitly required later.
+
 ## 2026-07-09 - Commercial Proposal & Tender Submission Builder v1 online/core GO
 
 Status: Commercial Proposal & Tender Submission Builder v1 reached ONLINE/CORE GO on Render after PR #77. Full authenticated browser click/copy smoke was not run for this train.
