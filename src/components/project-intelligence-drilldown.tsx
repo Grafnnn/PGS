@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, Bot, ClipboardList, FileText, Landmark, PackageCheck, ReceiptText, Scale, Sparkles, TimerReset } from "lucide-react";
+import { AlertTriangle, Bot, ClipboardList, FileText, Landmark, PackageCheck, ReceiptText, Scale, Send, Sparkles, TimerReset } from "lucide-react";
 import React from "react";
 import {
   buildProjectIntelligenceDrilldownModel,
@@ -296,6 +296,32 @@ export function ProjectIntelligenceDrilldown({
               ].slice(0, 8)}
             />
           )}
+        </article>
+
+        <article className="panel intelligence-panel">
+          <SectionHeader id="proposal-submission" icon={<Send size={18} />} title="Commercial Proposal / КП Submission" tone={model.proposal.tone}>
+            <button className="button secondary compact-button" type="button" onClick={() => onNavigate(model.proposal.ctaTab)}>
+              Открыть КП
+            </button>
+          </SectionHeader>
+          <div className="intelligence-metrics">
+            <StatusInsightCard title="Proposal readiness" value={model.proposal.readiness} detail={`${model.proposal.blockers} blockers`} tone={model.proposal.tone} />
+            <StatusInsightCard title="Цена КП" value={model.proposal.price} detail="по ВОР / карточке проекта" tone={model.proposal.price === "не рассчитано" ? "bad" : "info"} />
+            <StatusInsightCard title="Данные" value={String(model.proposal.missingData)} detail="missing inputs" tone={model.proposal.missingData ? "warn" : "good"} />
+            <StatusInsightCard title="Решения" value={String(model.proposal.decisionRequired)} detail="до отправки заказчику" tone={model.proposal.decisionRequired ? "warn" : "good"} />
+          </div>
+          {model.proposal.empty ? (
+            <EmptyIntelligenceState text="Для КП нужны ВОР, цена, сроки и документы. Загрузите исходные данные или откройте договорный пакет." />
+          ) : (
+            <SignalList
+              emptyText="КП не требует дополнительных действий по текущему срезу."
+              items={model.proposal.topActions}
+            />
+          )}
+          <div className="executive-action-note">
+            <FileText size={16} />
+            <span>{model.proposal.draftTitle}</span>
+          </div>
         </article>
 
         <article className="panel intelligence-panel">

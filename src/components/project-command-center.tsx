@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, Bot, CheckCircle2, ClipboardList, FileText, Landmark, Package, ReceiptText, Scale, Sparkles, TimerReset } from "lucide-react";
+import { AlertTriangle, Bot, CheckCircle2, ClipboardList, FileText, Landmark, Package, ReceiptText, Scale, Send, Sparkles, TimerReset } from "lucide-react";
 import React, { type CSSProperties } from "react";
 import { buildProjectCommandCenterModel, type CommandCenterAiInsight, type CommandTone } from "@/lib/project-command-center";
 import type { DocumentChecklistItem, PipelineAction, PipelineReadiness } from "@/lib/project-pipeline";
@@ -41,6 +41,7 @@ const icons = {
   schedule: <TimerReset size={18} />,
   risks: <AlertTriangle size={18} />,
   contract: <Scale size={18} />,
+  proposal: <Send size={18} />,
   acceptance: <ReceiptText size={18} />,
   materials: <Package size={18} />,
   cash: <Landmark size={18} />
@@ -67,6 +68,7 @@ function drilldownForTab(tab: string) {
   if (tab === "График") return "schedule";
   if (tab === "КС") return "acceptance-billing";
   if (tab === "Договор / Тендер") return "contract-tender";
+  if (tab === "КП / Подача") return "proposal-submission";
   if (tab === "Бюджет / ВОР" || tab === "Финансы") return "finance-vor";
   if (tab === "Материалы" || tab === "Заявки") return "procurement";
   if (tab === "Рапорты") return "reports";
@@ -80,6 +82,7 @@ function drilldownForKpi(key: string) {
   if (key === "schedule") return "schedule";
   if (key === "acceptance") return "acceptance-billing";
   if (key === "contract") return "contract-tender";
+  if (key === "proposal") return "proposal-submission";
   if (key === "risks") return "risks";
   if (key === "materials") return "procurement";
   if (key === "readiness") return "documents";
@@ -130,7 +133,7 @@ export function ProjectCommandCenter({
   const openKpi = (key: string) => {
     const section = drilldownForKpi(key);
     if (section && onDrilldown) onDrilldown(section);
-    else onNavigate(key === "cash" ? "Финансы" : key === "schedule" ? "График" : key === "acceptance" ? "КС" : key === "contract" ? "Договор / Тендер" : key === "materials" ? "Материалы" : key === "risks" ? "Риски" : key === "baseline" ? "Обзор" : key === "readiness" ? "Аналитика" : "Бюджет / ВОР");
+    else onNavigate(key === "cash" ? "Финансы" : key === "schedule" ? "График" : key === "acceptance" ? "КС" : key === "contract" ? "Договор / Тендер" : key === "proposal" ? "КП / Подача" : key === "materials" ? "Материалы" : key === "risks" ? "Риски" : key === "baseline" ? "Обзор" : key === "readiness" ? "Аналитика" : "Бюджет / ВОР");
   };
 
   return (

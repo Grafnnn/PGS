@@ -40,7 +40,7 @@ describe("project intelligence drill-down model", () => {
       }
     });
 
-    expect(model.nav.map((item) => item.id)).toEqual(["baseline", "documents", "risks", "schedule", "finance-vor", "contract-tender", "acceptance-billing", "procurement", "reports", "ai-recommendations"]);
+    expect(model.nav.map((item) => item.id)).toEqual(["baseline", "documents", "risks", "schedule", "finance-vor", "contract-tender", "proposal-submission", "acceptance-billing", "procurement", "reports", "ai-recommendations"]);
     expect(model.baseline.templateTitle).toBe("Общестрой");
     expect(model.baseline.firstActions).toContain("Импортировать ВОР");
     expect(model.documents).toMatchObject({ present: 1, total: 2, ctaTab: "Документы" });
@@ -60,6 +60,8 @@ describe("project intelligence drill-down model", () => {
     expect(model.procurement.estimatedDraftTotal).toContain("₽");
     expect(model.contractTender.ctaTab).toBe("Договор / Тендер");
     expect(model.contractTender.decision).toBeTruthy();
+    expect(model.proposal.ctaTab).toBe("КП / Подача");
+    expect(model.proposal.readiness).toBeTruthy();
     expect(model.acceptanceBilling.ctaTab).toBe("КС");
     expect(model.acceptanceBilling.readyAmount).toContain("₽");
     expect(model.reports.executiveScenario).toBe("executive-report");
@@ -81,6 +83,7 @@ describe("project intelligence drill-down model", () => {
     expect(model.financeVor.empty).toBe(true);
     expect(model.procurement.empty).toBe(true);
     expect(model.contractTender.empty).toBe(true);
+    expect(model.proposal.empty).toBe(true);
     expect(model.acceptanceBilling.empty).toBe(true);
     expect(model.reports.empty).toBe(true);
     expect(model.ai.scenarios.some((scenario) => scenario.scenario === "executive-report")).toBe(true);
