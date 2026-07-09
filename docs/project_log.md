@@ -1,5 +1,58 @@
 # PGS Project Log
 
+## 2026-07-09 - Commercial Proposal & Tender Submission Builder v1 online/core GO
+
+Status: Commercial Proposal & Tender Submission Builder v1 reached ONLINE/CORE GO on Render after PR #77. Full authenticated browser click/copy smoke was not run for this train.
+
+- Online URL: https://pgs-frankfurt.onrender.com
+- Online commit: `3915aa609b4692f6ca51eaad733151e784c4fc26`
+- PR: #77
+- Decision: ONLINE/CORE GO
+- Git SHA source: `RENDER_GIT_COMMIT`
+
+Health:
+
+- `/api/health`: HTTP 200 / `ok`
+- DB: `ok`
+- migrations: `ok`, count `6`
+- auth required: `true`
+- AI configured: `true`
+- storage: local writable
+
+Pages and markers:
+
+- `/dashboard`: 200
+- `/projects`: 200
+- `/projects/project-demo`: 404 as expected
+- `/projects/project-smoke`: 200
+- `КП / Подача`: present in the deployed project workspace HTML
+- `Commercial Proposal`: present in the deployed project workspace HTML
+- `Project command center`: present
+- `Project Intelligence`: present
+- deployed bundle markers present: `Commercial Proposal & Tender Submission`, `Customer-facing proposal draft`, `Internal approval memo`, `Tender submission checklist`, `Price structure`, `Work/material split`
+
+Guards:
+
+- unauth `/api/auth/me`: 401
+- unauth AI summary: 403
+- unauth data-readiness: 401
+- unauth intelligence: 401
+- schedule/cashflow draft GET returned 405 and was treated as a read-only method mismatch, not a core failure.
+
+Safety:
+
+- no live AI call was run.
+- no online mutation/import/delete/upload smoke was run.
+- no manual deploy/redeploy was triggered.
+- no Render env/secrets were changed.
+- no DB schema or migration changes were made.
+- browser click smoke was not run because browser tooling was unavailable; HTTP/DOM/bundle smoke was used.
+- no secrets, cookies, tokens, provider keys, smoke secrets, session IDs, or env values were printed.
+
+Remaining optional follow-up:
+
+- authenticated browser smoke for the `КП / Подача` tab, including tab click, generated text visibility, and copy/export behavior when safe browser tooling and an authenticated session are available.
+
 ## 2026-07-09 - Contract-assisted Project Creation v1 online/core GO
 
 Status: Contract-assisted Project Creation v1 reached ONLINE/CORE GO on Render after PR #75. Full authenticated create/upload/delete smoke was not run for this train.
