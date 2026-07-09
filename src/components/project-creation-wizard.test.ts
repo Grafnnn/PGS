@@ -19,6 +19,10 @@ describe("ProjectCreationWizard", () => {
     expect(html).toContain("Создать проект и запустить baseline");
     expect(html).toContain("позволяет приложить стартовые документы");
     expect(html).toContain("Шаблон проекта");
+    expect(html).toContain("Загрузить договор для автозаполнения");
+    expect(html).toContain("Выбрать договор");
+    expect(html).toContain("TXT/Markdown preview без AI");
+    expect(html).toContain("PDF/DOCX можно приложить как стартовый документ");
     expect(html).toContain("Общестрой");
     expect(html).toContain("Инженерные сети");
     expect(html).toContain("Проект");
