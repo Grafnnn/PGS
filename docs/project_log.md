@@ -1,5 +1,59 @@
 # PGS Project Log
 
+## 2026-07-09 - Subcontractor & Execution Control v1 online/core GO
+
+Status: Subcontractor & Execution Control v1 reached ONLINE/CORE GO on Render after PR #80. Full authenticated browser tab smoke was not run for this train.
+
+- Online URL: https://pgs-frankfurt.onrender.com
+- Online commit: `fc6f03c278b21a03b043594cf4ba0c33ae3bf93f`
+- PR: #80
+- Decision: ONLINE/CORE GO
+- Git SHA source: `RENDER_GIT_COMMIT`
+
+Health:
+
+- `/api/health`: HTTP 200 / `ok`
+- DB: `ok`
+- migrations: `ok`, count `6`
+- auth required: `true`
+- AI configured: `true`
+
+Pages and markers:
+
+- `/dashboard`: 200
+- `/projects`: 200
+- `/projects/project-demo`: 404 as expected
+- `/projects/project-smoke`: 200
+- `Исполнение`: present
+- `Подрядчики / Исполнение`: present
+- `Subcontractor & Execution Control`: present
+- `Contractors & owners`: present
+- `Execution fronts`: present
+- `Action register`: present
+- `Execution handoff`: present
+- `Subcontractor / Execution Control`: present
+- `execution-control`: present in deployed bundle/CSS
+
+Unauthenticated guards:
+
+- `/api/auth/me`: 401
+- AI summary: 403
+- data-readiness: 401
+- intelligence: 401
+
+Not run / not touched:
+
+- no live AI call was run.
+- no online mutation/import/delete/upload smoke was run.
+- no manual deploy/redeploy was triggered.
+- no Render env/secrets were changed.
+- no DB schema or migration changes were made.
+- no secrets, cookies, tokens, provider keys, smoke secrets, session IDs, or env values were printed.
+
+Remaining optional follow-up:
+
+- authenticated browser tab smoke for the `Исполнение` workspace when safe auth/browser tooling is available.
+
 ## 2026-07-09 - Commercial Proposal browser tab/copy smoke GO
 
 Status: the remaining browser interaction follow-up for Commercial Proposal & Tender Submission Builder v1 reached BROWSER TAB/COPY GO on Render. This was a public/read-only browser smoke on `project-smoke`; authenticated session was not used and is not claimed.
