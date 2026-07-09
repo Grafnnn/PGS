@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { AlertTriangle, BarChart3, Bot, ClipboardList, FileText, Landmark, LayoutList, Package, Pencil, Plus, ReceiptText, Search, Send, Table2, TimerReset, Trash2, Truck, Users } from "lucide-react";
 import { AcceptanceBillingWorkspace } from "@/components/acceptance-billing-workspace";
+import { CommercialProposalWorkspace } from "@/components/commercial-proposal-workspace";
 import { ContractTenderWorkspace } from "@/components/contract-tender-workspace";
 import { ProjectCommandCenter } from "@/components/project-command-center";
 import { DocumentComplianceWorkspace } from "@/components/document-compliance-workspace";
@@ -61,6 +62,7 @@ const tabs = [
   "Заявки",
   "Финансы",
   "Договор / Тендер",
+  "КП / Подача",
   "КС",
   "Рапорты",
   "Риски",
@@ -80,14 +82,15 @@ const tabMeta: Record<string, { code: string; icon: React.ReactNode; hint: strin
   Заявки: { code: "04", icon: <Truck size={16} />, hint: "Закупки" },
   Финансы: { code: "05", icon: <Landmark size={16} />, hint: "Платежи" },
   "Договор / Тендер": { code: "06", icon: <Search size={16} />, hint: "Контракт" },
-  КС: { code: "07", icon: <ReceiptText size={16} />, hint: "Закрытие" },
-  Рапорты: { code: "08", icon: <ClipboardList size={16} />, hint: "Площадка" },
-  Риски: { code: "09", icon: <AlertTriangle size={16} />, hint: "Контроль" },
-  Документы: { code: "10", icon: <FileText size={16} />, hint: "Файлы" },
-  Аналитика: { code: "11", icon: <BarChart3 size={16} />, hint: "Готовность" },
-  Участники: { code: "12", icon: <Users size={16} />, hint: "Доступ" },
-  История: { code: "13", icon: <ClipboardList size={16} />, hint: "Аудит" },
-  Настройки: { code: "14", icon: <Trash2 size={16} />, hint: "Админ" },
+  "КП / Подача": { code: "07", icon: <Send size={16} />, hint: "КП" },
+  КС: { code: "08", icon: <ReceiptText size={16} />, hint: "Закрытие" },
+  Рапорты: { code: "09", icon: <ClipboardList size={16} />, hint: "Площадка" },
+  Риски: { code: "10", icon: <AlertTriangle size={16} />, hint: "Контроль" },
+  Документы: { code: "11", icon: <FileText size={16} />, hint: "Файлы" },
+  Аналитика: { code: "12", icon: <BarChart3 size={16} />, hint: "Готовность" },
+  Участники: { code: "13", icon: <Users size={16} />, hint: "Доступ" },
+  История: { code: "14", icon: <ClipboardList size={16} />, hint: "Аудит" },
+  Настройки: { code: "15", icon: <Trash2 size={16} />, hint: "Админ" },
   "AI-помощник": { code: "AI", icon: <Bot size={16} />, hint: "Анализ" }
 };
 
@@ -272,7 +275,7 @@ export function ProjectWorkspace({ initialBundle, createdFromOnboarding = false 
   }, [initialBundle.project.id]);
 
   useEffect(() => {
-    if (!["Бюджет / ВОР", "График", "Материалы", "Заявки", "Финансы", "Договор / Тендер", "КС", "Аналитика"].includes(activeTab)) return;
+    if (!["Бюджет / ВОР", "График", "Материалы", "Заявки", "Финансы", "Договор / Тендер", "КП / Подача", "КС", "Аналитика"].includes(activeTab)) return;
     void loadImportHistory();
   }, [activeTab, loadImportHistory]);
 
@@ -291,7 +294,7 @@ export function ProjectWorkspace({ initialBundle, createdFromOnboarding = false 
   }, [initialBundle.project.id]);
 
   useEffect(() => {
-    if (!["Документы", "Договор / Тендер", "КС", "Риски", "Рапорты", "Аналитика"].includes(activeTab)) return;
+    if (!["Документы", "Договор / Тендер", "КП / Подача", "КС", "Риски", "Рапорты", "Аналитика"].includes(activeTab)) return;
     void loadDocuments();
   }, [activeTab, loadDocuments]);
 
@@ -334,7 +337,7 @@ export function ProjectWorkspace({ initialBundle, createdFromOnboarding = false 
   }, [initialBundle.project.id]);
 
   useEffect(() => {
-    if (!["Обзор", "Бюджет / ВОР", "Материалы", "Заявки", "График", "Финансы", "Договор / Тендер", "КС", "Документы", "Аналитика", "AI-помощник"].includes(activeTab)) return;
+    if (!["Обзор", "Бюджет / ВОР", "Материалы", "Заявки", "График", "Финансы", "Договор / Тендер", "КП / Подача", "КС", "Документы", "Аналитика", "AI-помощник"].includes(activeTab)) return;
     void loadPipeline();
   }, [activeTab, loadPipeline]);
 
@@ -1131,6 +1134,26 @@ export function ProjectWorkspace({ initialBundle, createdFromOnboarding = false 
             risks={risks}
             documents={documents}
             documentChecklist={documentChecklist}
+            onNavigate={setActiveTab}
+          />
+        </Panel>
+      )}
+
+      {activeTab === "КП / Подача" && (
+        <Panel title="КП, коммерческое предложение и тендерная подача" icon={<Send size={18} />}>
+          <CommercialProposalWorkspace
+            project={initialBundle.project}
+            budgetItems={budgetItems}
+            scheduleItems={scheduleItems}
+            materials={materials}
+            procurementRequests={procurementRequests}
+            payments={payments}
+            dailyReports={reports}
+            risks={risks}
+            documents={documents}
+            readiness={readiness}
+            documentChecklist={documentChecklist}
+            importHistory={importHistory}
             onNavigate={setActiveTab}
           />
         </Panel>

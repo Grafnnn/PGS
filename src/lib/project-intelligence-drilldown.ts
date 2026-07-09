@@ -1,5 +1,6 @@
 import { budgetTotals, deriveAutoRisks, financeTotals, materialTotals, workTotals } from "@/lib/calculations";
 import { buildAcceptanceBillingIntelligence } from "@/lib/acceptance-billing-intelligence";
+import { buildCommercialProposalIntelligence } from "@/lib/commercial-proposal-intelligence";
 import { buildContractTenderIntelligence } from "@/lib/contract-tender-intelligence";
 import { buildDocumentComplianceIntelligence } from "@/lib/document-compliance-intelligence";
 import { buildProcurementIntelligenceModel } from "@/lib/procurement-intelligence";
@@ -178,6 +179,18 @@ export type ProjectIntelligenceDrilldownModel = {
     ctaTab: "Договор / Тендер";
     documentsTab: "Документы";
   };
+  proposal: {
+    tone: DrilldownTone;
+    readiness: string;
+    blockers: number;
+    missingData: number;
+    decisionRequired: number;
+    price: string;
+    draftTitle: string;
+    topActions: Array<{ title: string; detail: string; tone: DrilldownTone }>;
+    empty: boolean;
+    ctaTab: "КП / Подача";
+  };
   acceptanceBilling: {
     tone: DrilldownTone;
     status: string;
@@ -318,6 +331,20 @@ export function buildProjectIntelligenceDrilldownModel(input: ProjectIntelligenc
     documents,
     documentChecklist
   });
+  const commercialProposal = buildCommercialProposalIntelligence({
+    project,
+    budgetItems,
+    scheduleItems,
+    materials,
+    procurementRequests,
+    payments,
+    dailyReports: reports,
+    risks,
+    documents,
+    readiness: input.readiness,
+    documentChecklist,
+    importHistory: input.importHistory ?? []
+  });
   const riskExecutive = buildRiskExecutiveIntelligence({
     ...input,
     project,
@@ -384,6 +411,7 @@ export function buildProjectIntelligenceDrilldownModel(input: ProjectIntelligenc
       { id: "schedule", label: "График", tone: scheduleTone, count: works.overdueItems.length },
       { id: "finance-vor", label: "ВОР / финансы", tone: financeTone },
       { id: "contract-tender", label: "Договор", tone: contractTender.summary.tone === "neutral" ? "info" : contractTender.summary.tone, count: contractTender.summary.highRisks + contractTender.summary.criticalRisks },
+      { id: "proposal-submission", label: "КП", tone: commercialProposal.readiness.tone, count: commercialProposal.readiness.blockers.length },
       { id: "acceptance-billing", label: "КС", tone: acceptanceBilling.summary.tone, count: acceptanceBilling.summary.readyItems || acceptanceBilling.summary.blockedItems },
       { id: "procurement", label: "Снабжение", tone: procurementTone, count: procurementIntelligence.summary.candidates || materialStats.deficitItems.length },
       { id: "reports", label: "Executive", tone: reportsTone },
@@ -542,6 +570,22 @@ export function buildProjectIntelligenceDrilldownModel(input: ProjectIntelligenc
       empty: contractTender.summary.readiness === "no_data",
       ctaTab: "Договор / Тендер",
       documentsTab: "Документы"
+    },
+    proposal: {
+      tone: commercialProposal.readiness.tone,
+      readiness: commercialProposal.readiness.label,
+      blockers: commercialProposal.readiness.blockers.length,
+      missingData: commercialProposal.readiness.missingData.length,
+      decisionRequired: commercialProposal.readiness.decisionRequired.length,
+      price: commercialProposal.priceSummary.totalAmount ? compactMoney(commercialProposal.priceSummary.totalAmount) : "не рассчитано",
+      draftTitle: commercialProposal.customerProposalDraft.title,
+      topActions: commercialProposal.actions.slice(0, 5).map((action) => ({
+        title: action.title,
+        detail: action.detail,
+        tone: action.priority === "high" ? "bad" : action.priority === "medium" ? "warn" : "info"
+      })),
+      empty: commercialProposal.readiness.status === "no_data",
+      ctaTab: "КП / Подача"
     },
     acceptanceBilling: {
       tone: acceptanceBilling.summary.tone,

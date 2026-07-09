@@ -59,10 +59,11 @@ describe("project command center model", () => {
     });
 
     expect(model.project.name).toContain("Демо объект");
-    expect(model.kpis).toHaveLength(10);
+    expect(model.kpis).toHaveLength(11);
     expect(model.kpis.find((kpi) => kpi.key === "baseline")).toMatchObject({ label: "Baseline" });
     expect(model.kpis.some((kpi) => kpi.key === "decisions")).toBe(true);
     expect(model.kpis.some((kpi) => kpi.key === "contract")).toBe(true);
+    expect(model.kpis.some((kpi) => kpi.key === "proposal")).toBe(true);
     expect(model.kpis.some((kpi) => kpi.key === "acceptance")).toBe(true);
     expect(model.aiSummary.empty).toBe(false);
     expect(model.aiSummary.degraded).toBe(false);
@@ -85,6 +86,7 @@ describe("project command center model", () => {
     expect(model.statusBoard.find((item) => item.key === "ai")).toMatchObject({ value: "по запросу" });
     expect(model.statusBoard.find((item) => item.key === "baseline")).toBeTruthy();
     expect(model.statusBoard.find((item) => item.key === "executive")).toMatchObject({ value: "no_data" });
+    expect(model.statusBoard.find((item) => item.key === "proposal")).toBeTruthy();
   });
 
   it("keeps degraded AI insight readable without leaking raw provider state", () => {
