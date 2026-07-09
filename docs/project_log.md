@@ -1,5 +1,59 @@
 # PGS Project Log
 
+## 2026-07-09 - Contract-assisted Project Creation v1 online/core GO
+
+Status: Contract-assisted Project Creation v1 reached ONLINE/CORE GO on Render after PR #75. Full authenticated create/upload/delete smoke was not run for this train.
+
+- Online URL: https://pgs-frankfurt.onrender.com
+- Online commit: `891ea4bf88dbbfc3697cb21e6f2fbe09a9bf8c66`
+- PR: #75
+- Decision: ONLINE/CORE GO
+- Git SHA source: `RENDER_GIT_COMMIT`
+
+Health:
+
+- `/api/health`: HTTP 200 / `ok`
+- DB: `ok`
+- migrations: `ok`, count `6`
+- auth required: `true`
+- AI configured: `true`
+
+Pages and markers:
+
+- `/projects`: 200
+- `/dashboard`: 200
+- `/projects/project-demo`: 404 as expected
+- `/projects/project-smoke`: 200
+- contract upload marker: present
+- `TXT/Markdown preview без AI`: present
+- PDF/DOCX document-only limitation: present
+- contract document category `Договор`: present
+- template selector and baseline create marker: present
+
+Guards:
+
+- unauth `/api/auth/me`: 401
+- unauth `POST /api/projects`: 403
+- unauth contract-prefill preview: 403
+- unauth AI summary: 403
+
+Safety:
+
+- deterministic TXT/Markdown prefill only.
+- preview does not create a project or persist documents.
+- suggestions require explicit user apply; no silent overwrite is claimed.
+- uploaded contract is staged as a starting document with category `договор`.
+- no live AI call was run.
+- no online create/upload/delete mutation smoke was run.
+- no real client files were used.
+- no Render env/secrets were changed.
+- no DB schema or migration changes were made.
+- no secrets, cookies, tokens, provider keys, smoke secrets, session IDs, or env values were printed.
+
+Remaining optional follow-up:
+
+- authenticated browser smoke for selecting a contract file, applying suggestions, creating a disposable project with the starting contract document, verifying the Documents tab, and deleting the disposable project.
+
 ## 2026-07-09 - Project Creation disposable create/upload/delete smoke GO
 
 Status: the remaining authenticated Project Creation follow-up reached FULL DISPOSABLE SMOKE GO through the guarded staging runtime smoke endpoint.
