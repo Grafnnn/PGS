@@ -11,6 +11,7 @@ import { ProjectIntelligenceDrilldown } from "@/components/project-intelligence-
 import { ProcurementIntelligenceWorkspace } from "@/components/procurement-intelligence-workspace";
 import { RiskExecutiveWorkspace } from "@/components/risk-executive-workspace";
 import { ScheduleCashflowWorkspace } from "@/components/schedule-cashflow-workspace";
+import { SubcontractorExecutionWorkspace } from "@/components/subcontractor-execution-workspace";
 import { budgetTotals, deriveAutoRisks, financeTotals, materialTotals, money, percent, workTotals } from "@/lib/calculations";
 import type { ImportExplanation, ImportMode, ImportPreview, ImportSheetMapping } from "@/lib/excel/import-types";
 import { drilldownAiScenarios, type AiInsightResponse, type AiScenario } from "@/lib/project-intelligence-drilldown";
@@ -64,6 +65,7 @@ const tabs = [
   "Договор / Тендер",
   "КП / Подача",
   "КС",
+  "Исполнение",
   "Рапорты",
   "Риски",
   "Документы",
@@ -84,13 +86,14 @@ const tabMeta: Record<string, { code: string; icon: React.ReactNode; hint: strin
   "Договор / Тендер": { code: "06", icon: <Search size={16} />, hint: "Контракт" },
   "КП / Подача": { code: "07", icon: <Send size={16} />, hint: "КП" },
   КС: { code: "08", icon: <ReceiptText size={16} />, hint: "Закрытие" },
-  Рапорты: { code: "09", icon: <ClipboardList size={16} />, hint: "Площадка" },
-  Риски: { code: "10", icon: <AlertTriangle size={16} />, hint: "Контроль" },
-  Документы: { code: "11", icon: <FileText size={16} />, hint: "Файлы" },
-  Аналитика: { code: "12", icon: <BarChart3 size={16} />, hint: "Готовность" },
-  Участники: { code: "13", icon: <Users size={16} />, hint: "Доступ" },
-  История: { code: "14", icon: <ClipboardList size={16} />, hint: "Аудит" },
-  Настройки: { code: "15", icon: <Trash2 size={16} />, hint: "Админ" },
+  Исполнение: { code: "09", icon: <Users size={16} />, hint: "Подряд" },
+  Рапорты: { code: "10", icon: <ClipboardList size={16} />, hint: "Площадка" },
+  Риски: { code: "11", icon: <AlertTriangle size={16} />, hint: "Контроль" },
+  Документы: { code: "12", icon: <FileText size={16} />, hint: "Файлы" },
+  Аналитика: { code: "13", icon: <BarChart3 size={16} />, hint: "Готовность" },
+  Участники: { code: "14", icon: <Users size={16} />, hint: "Доступ" },
+  История: { code: "15", icon: <ClipboardList size={16} />, hint: "Аудит" },
+  Настройки: { code: "16", icon: <Trash2 size={16} />, hint: "Админ" },
   "AI-помощник": { code: "AI", icon: <Bot size={16} />, hint: "Анализ" }
 };
 
@@ -275,7 +278,7 @@ export function ProjectWorkspace({ initialBundle, createdFromOnboarding = false 
   }, [initialBundle.project.id]);
 
   useEffect(() => {
-    if (!["Бюджет / ВОР", "График", "Материалы", "Заявки", "Финансы", "Договор / Тендер", "КП / Подача", "КС", "Аналитика"].includes(activeTab)) return;
+    if (!["Бюджет / ВОР", "График", "Материалы", "Заявки", "Финансы", "Договор / Тендер", "КП / Подача", "КС", "Исполнение", "Аналитика"].includes(activeTab)) return;
     void loadImportHistory();
   }, [activeTab, loadImportHistory]);
 
@@ -294,7 +297,7 @@ export function ProjectWorkspace({ initialBundle, createdFromOnboarding = false 
   }, [initialBundle.project.id]);
 
   useEffect(() => {
-    if (!["Документы", "Договор / Тендер", "КП / Подача", "КС", "Риски", "Рапорты", "Аналитика"].includes(activeTab)) return;
+    if (!["Документы", "Договор / Тендер", "КП / Подача", "КС", "Исполнение", "Риски", "Рапорты", "Аналитика"].includes(activeTab)) return;
     void loadDocuments();
   }, [activeTab, loadDocuments]);
 
@@ -337,7 +340,7 @@ export function ProjectWorkspace({ initialBundle, createdFromOnboarding = false 
   }, [initialBundle.project.id]);
 
   useEffect(() => {
-    if (!["Обзор", "Бюджет / ВОР", "Материалы", "Заявки", "График", "Финансы", "Договор / Тендер", "КП / Подача", "КС", "Документы", "Аналитика", "AI-помощник"].includes(activeTab)) return;
+    if (!["Обзор", "Бюджет / ВОР", "Материалы", "Заявки", "График", "Финансы", "Договор / Тендер", "КП / Подача", "КС", "Исполнение", "Документы", "Аналитика", "AI-помощник"].includes(activeTab)) return;
     void loadPipeline();
   }, [activeTab, loadPipeline]);
 
@@ -1172,6 +1175,23 @@ export function ProjectWorkspace({ initialBundle, createdFromOnboarding = false 
             documents={documents}
             documentChecklist={documentChecklist}
             importHistory={importHistory}
+            onNavigate={setActiveTab}
+          />
+        </Panel>
+      )}
+
+      {activeTab === "Исполнение" && (
+        <Panel title="Подрядчики, фронты и контроль исполнения" icon={<Users size={18} />}>
+          <SubcontractorExecutionWorkspace
+            project={initialBundle.project}
+            budgetItems={budgetItems}
+            scheduleItems={scheduleItems}
+            payments={payments}
+            procurementRequests={procurementRequests}
+            dailyReports={reports}
+            risks={risks}
+            documents={documents}
+            documentChecklist={documentChecklist}
             onNavigate={setActiveTab}
           />
         </Panel>

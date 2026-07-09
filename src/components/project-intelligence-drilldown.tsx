@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, Bot, ClipboardList, FileText, Landmark, PackageCheck, ReceiptText, Scale, Send, Sparkles, TimerReset } from "lucide-react";
+import { AlertTriangle, Bot, ClipboardList, FileText, Landmark, PackageCheck, ReceiptText, Scale, Send, Sparkles, TimerReset, Users } from "lucide-react";
 import React from "react";
 import {
   buildProjectIntelligenceDrilldownModel,
@@ -353,6 +353,38 @@ export function ProjectIntelligenceDrilldown({
           <div className="executive-action-note">
             <Sparkles size={16} />
             <span>{model.acceptanceBilling.nextStep}</span>
+          </div>
+        </article>
+
+        <article className="panel intelligence-panel">
+          <SectionHeader id="execution-control" icon={<Users size={18} />} title="Subcontractor / Execution Control" tone={model.executionControl.tone}>
+            <button className="button secondary compact-button" type="button" onClick={() => onNavigate(model.executionControl.ctaTab)}>
+              Исполнение
+            </button>
+            <button className="button secondary compact-button" type="button" onClick={() => onNavigate(model.executionControl.scheduleTab)}>
+              График
+            </button>
+          </SectionHeader>
+          <div className="intelligence-metrics">
+            <StatusInsightCard title="Execution status" value={model.executionControl.status} detail={model.executionControl.headline} tone={model.executionControl.tone} />
+            <StatusInsightCard title="Исполнители" value={String(model.executionControl.contractorCount)} detail={`${model.executionControl.activeFronts} активных фронтов`} tone={model.executionControl.contractorCount ? "info" : "warn"} />
+            <StatusInsightCard title="Проблемные фронты" value={String(model.executionControl.delayedFronts)} detail={`${model.executionControl.unassignedItems} без владельца`} tone={model.executionControl.delayedFronts || model.executionControl.unassignedItems ? "bad" : "good"} />
+            <StatusInsightCard title="Подряд / оплаты" value={model.executionControl.subcontractBudget} detail={`overdue ${model.executionControl.overduePayments}`} tone={model.executionControl.overduePayments !== "0 ₽" ? "warn" : "info"} />
+          </div>
+          {model.executionControl.empty ? (
+            <EmptyIntelligenceState text="Для контроля исполнения нужны график, владельцы фронтов, подрядные платежи или рапорты." />
+          ) : (
+            <SignalList
+              emptyText="Нет подрядных или execution-сигналов по текущему срезу."
+              items={[
+                ...model.executionControl.topContractors,
+                ...model.executionControl.fronts
+              ].slice(0, 8)}
+            />
+          )}
+          <div className="executive-action-note">
+            <Sparkles size={16} />
+            <span>{model.executionControl.headline}</span>
           </div>
         </article>
 

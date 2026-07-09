@@ -5585,3 +5585,198 @@ input[type="checkbox"] {
     grid-template-columns: 1fr;
   }
 }
+
+.execution-control-workspace {
+  display: grid;
+  gap: 18px;
+  min-width: 0;
+}
+
+.execution-control-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 18px;
+  align-items: start;
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.execution-control-header h3 {
+  margin: 4px 0 8px;
+}
+
+.execution-control-header p {
+  max-width: 840px;
+  margin: 0;
+  color: var(--muted);
+}
+
+.execution-control-badges,
+.execution-control-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.execution-control-badges {
+  margin-top: 14px;
+}
+
+.execution-control-actions {
+  justify-content: flex-end;
+}
+
+.execution-control-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  min-width: 0;
+}
+
+.execution-control-grid.metrics {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.execution-control-card {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.execution-control-card.wide {
+  grid-column: span 2;
+}
+
+.execution-control-card.metric small,
+.execution-contractor-card dt {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.execution-control-card.metric strong {
+  font-size: clamp(1.05rem, 1rem + 0.3vw, 1.4rem);
+}
+
+.execution-control-card.metric span,
+.execution-contractor-card span,
+.execution-contractor-card small,
+.execution-contractor-card p,
+.execution-front span,
+.execution-front small,
+.execution-limitations {
+  color: var(--muted);
+}
+
+.execution-contractor-grid,
+.execution-front-list,
+.execution-action-list {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.execution-contractor-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.execution-contractor-card,
+.execution-front,
+.execution-action {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-muted);
+  text-align: left;
+}
+
+.execution-contractor-card.tone-bad,
+.execution-front.tone-bad,
+.execution-action.priority-high {
+  border-color: rgba(220, 38, 38, 0.35);
+}
+
+.execution-contractor-card.tone-warn,
+.execution-front.tone-warn,
+.execution-action.priority-medium {
+  border-color: rgba(217, 119, 6, 0.35);
+}
+
+.execution-contractor-card.tone-good,
+.execution-front.tone-good {
+  border-color: rgba(56, 161, 105, 0.35);
+}
+
+.execution-contractor-card dl {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.execution-contractor-card dt,
+.execution-contractor-card dd {
+  margin: 0;
+}
+
+.execution-action {
+  cursor: pointer;
+}
+
+.execution-action:hover {
+  border-color: var(--accent);
+}
+
+.execution-handoff-copy {
+  max-height: 360px;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  margin: 0;
+  padding: 12px;
+  border-radius: 8px;
+  background: var(--surface-muted);
+  color: var(--text);
+  font: 0.86rem/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.execution-limitations {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding-left: 18px;
+}
+
+@media (max-width: 1080px) {
+  .execution-control-grid.metrics,
+  .execution-contractor-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 780px) {
+  .execution-control-header,
+  .execution-control-grid,
+  .execution-control-grid.metrics,
+  .execution-contractor-grid,
+  .execution-contractor-card dl {
+    grid-template-columns: 1fr;
+  }
+
+  .execution-control-card.wide {
+    grid-column: auto;
+  }
+
+  .execution-control-actions {
+    justify-content: flex-start;
+  }
+}

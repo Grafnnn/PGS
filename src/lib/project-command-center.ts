@@ -6,6 +6,7 @@ import { buildDocumentComplianceIntelligence } from "@/lib/document-compliance-i
 import { buildInitialProjectReadiness } from "@/lib/project-onboarding-intelligence";
 import type { DocumentChecklistItem, PipelineAction, PipelineReadiness } from "@/lib/project-pipeline";
 import { buildRiskExecutiveIntelligence, type RiskExecutiveImportHistoryItem } from "@/lib/risk-executive-intelligence";
+import { buildSubcontractorExecutionIntelligence } from "@/lib/subcontractor-execution-intelligence";
 import type { BudgetItem, DailyReport, Material, Payment, ProcurementRequest, Project, ProjectDocument, Risk, ScheduleItem } from "@/lib/types";
 
 export type CommandTone = "good" | "warn" | "bad" | "info" | "neutral";
@@ -223,6 +224,17 @@ export function buildProjectCommandCenterModel(input: ProjectCommandCenterInput)
     documentChecklist: documentItems,
     importHistory: input.importHistory ?? []
   });
+  const executionControl = buildSubcontractorExecutionIntelligence({
+    project,
+    budgetItems,
+    scheduleItems,
+    payments,
+    procurementRequests,
+    dailyReports: reports,
+    risks,
+    documents,
+    documentChecklist: documentItems
+  });
   const scheduleScore = works.completionPercent;
   const materialScore = materials.length ? ((materials.length - materialStats.deficitItems.length) / materials.length) * 100 : 0;
   const financeScore = finance.cashGap < 0 || finance.financingNeed > 0 ? 35 : 80;
@@ -265,6 +277,7 @@ export function buildProjectCommandCenterModel(input: ProjectCommandCenterInput)
     materialStats.deficitItems[0] ? "Сформировать заявку снабжения" : "Сверить потребность материалов",
     contractTender.summary.decision === "ready_for_management_review" ? "Передать договорный пакет на review" : "Проверить условия договора",
     commercialProposal.readiness.canSendToCustomer ? "Проверить финальный КП" : "Закрыть блокеры КП",
+    executionControl.summary.status === "controlled" ? "Подтвердить недельный план исполнителей" : "Закрыть блокеры исполнения",
     activeRisks[0] ? "Назначить владельца риска" : "Обновить реестр рисков"
   ];
 
@@ -293,6 +306,7 @@ export function buildProjectCommandCenterModel(input: ProjectCommandCenterInput)
     acceptanceBilling.summary.readyItems
       ? defaultAction("Проверить пакет КС", `${acceptanceBilling.summary.readyItems} поз. на ${compactMoney(acceptanceBilling.summary.readyAmount)}.`, acceptanceBilling.summary.blockedItems ? "warn" : "good", "КС")
       : defaultAction("Подготовить данные для КС", acceptanceBilling.summary.nextStep, acceptanceBilling.summary.tone === "bad" ? "bad" : "info", "КС"),
+    defaultAction("Проверить исполнение", executionControl.summary.nextStep, executionControl.summary.tone === "neutral" ? "info" : executionControl.summary.tone, "Исполнение"),
     defaultAction("Проверить решения руководства", riskExecutive.decisions[0]?.title ?? "Decision register готов к проверке.", riskExecutive.decisions.length ? "warn" : "info", "Риски"),
     defaultAction("Сформировать AI-сводку", "Запустить existing AI scenario по клику.", "info", "AI-помощник")
   ];
@@ -329,6 +343,7 @@ export function buildProjectCommandCenterModel(input: ProjectCommandCenterInput)
       { key: "proposal", label: "КП / подача", value: commercialProposal.readiness.label, tone: commercialProposal.readiness.tone, hint: `${commercialProposal.submissionChecklist.missingCount} missing · ${commercialProposal.internalApprovalMemo.decision}` },
       { key: "acceptance", label: "КС / закрытие", value: compactMoney(acceptanceBilling.summary.readyAmount), tone: acceptanceBilling.summary.tone, hint: `${acceptanceBilling.summary.readyItems} ready · ${acceptanceBilling.summary.blockedItems} blocked` },
       { key: "materials", label: "Снабжение", value: String(materialStats.deficitItems.length), tone: materialStats.deficitItems.length ? "bad" : "good", hint: materialStats.deficitItems[0]?.name ?? "Дефицит не найден" },
+      { key: "execution", label: "Исполнение", value: String(executionControl.summary.delayedFronts), tone: executionControl.summary.tone === "neutral" ? "info" : executionControl.summary.tone, hint: executionControl.summary.headline },
       { key: "cash", label: "Cash gap", value: compactMoney(finance.cashGap), tone: finance.cashGap < 0 ? "bad" : "good", hint: `Потребность: ${compactMoney(finance.financingNeed)}` }
     ],
     aiSummary: {
@@ -336,7 +351,7 @@ export function buildProjectCommandCenterModel(input: ProjectCommandCenterInput)
       subject: aiInsight?.subject ?? "Что требует внимания по объекту",
       bullets: aiBullets.length ? aiBullets : fallbackBullets,
       recommendedActions: recommendedActions.length ? recommendedActions : fallbackActions,
-      recommendedApps: ["ВОР", "График", "Снабжение", "Финансы", "Договор", "КС", "Риски"].filter((item) => item !== "Снабжение" || materials.length),
+      recommendedApps: ["ВОР", "График", "Снабжение", "Финансы", "Договор", "КП / Подача", "КС", "Исполнение", "Риски"].filter((item) => item !== "Снабжение" || materials.length),
       provider: aiInsight?.provider ?? "deterministic-preview",
       degraded: aiInsight?.provider === "degraded" || !aiInsight,
       empty: !aiInsight
@@ -357,6 +372,7 @@ export function buildProjectCommandCenterModel(input: ProjectCommandCenterInput)
       { key: "contract", label: "Договор / тендер", value: contractTender.summary.readiness, tone: contractTender.summary.tone === "neutral" ? "info" : contractTender.summary.tone, detail: contractTender.summary.recommendation, tab: "Договор / Тендер" },
       { key: "proposal", label: "КП / подача", value: commercialProposal.readiness.status, tone: commercialProposal.readiness.tone, detail: commercialProposal.actions[0]?.title ?? commercialProposal.readiness.label, tab: "КП / Подача" },
       { key: "acceptance", label: "КС / закрытие", value: acceptanceBilling.summary.status, tone: acceptanceBilling.summary.tone, detail: acceptanceBilling.summary.nextStep, tab: "КС" },
+      { key: "execution", label: "Подрядчики / исполнение", value: executionControl.summary.status, tone: executionControl.summary.tone === "neutral" ? "info" : executionControl.summary.tone, detail: executionControl.summary.nextStep, tab: "Исполнение" },
       { key: "actions", label: "Следующие шаги", value: String(input.intelligence?.nextActions.length ?? 0), tone: input.intelligence?.nextActions.length ? "warn" : "info", detail: input.intelligence?.nextActions[0]?.title ?? "Действия появятся после загрузки pipeline.", tab: "Аналитика" },
       { key: "executive", label: "Executive report", value: riskExecutive.executiveReport.reportReadiness, tone: riskExecutive.executiveReport.status === "red" ? "bad" : riskExecutive.executiveReport.status === "amber" ? "warn" : riskExecutive.executiveReport.status === "green" ? "good" : "info", detail: riskExecutive.managementSummary.nextManagementAction, tab: "Рапорты" },
       { key: "ai", label: "AI Command Layer", value: aiInsight ? aiInsight.provider ?? "ready" : "по запросу", tone: aiInsight?.provider === "degraded" ? "warn" : "info", detail: aiInsight ? "Есть последний результат сценария." : "Live AI не вызывается автоматически.", tab: "AI-помощник" }

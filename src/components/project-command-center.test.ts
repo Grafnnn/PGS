@@ -31,6 +31,7 @@ describe("ProjectCommandCenter", () => {
     expect(html).toContain("Что требует внимания по объекту");
     expect(html).toContain("Action center");
     expect(html).toContain("КП / подача");
+    expect(html).toContain("Подрядчики / исполнение");
     expect(html).toContain("Сформировать AI-сводку");
     expect(runAiSummary).not.toHaveBeenCalled();
   });

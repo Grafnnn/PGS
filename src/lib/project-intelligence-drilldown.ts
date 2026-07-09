@@ -8,6 +8,7 @@ import { buildInitialProjectReadiness } from "@/lib/project-onboarding-intellige
 import type { DocumentChecklistItem, PipelineAction, PipelineReadiness } from "@/lib/project-pipeline";
 import { buildRiskExecutiveIntelligence, type RiskExecutiveImportHistoryItem } from "@/lib/risk-executive-intelligence";
 import { buildScheduleCashflowIntelligenceModel } from "@/lib/schedule-cashflow-intelligence";
+import { buildSubcontractorExecutionIntelligence } from "@/lib/subcontractor-execution-intelligence";
 import type { BudgetItem, DailyReport, Material, Payment, ProcurementRequest, Project, ProjectDocument, Risk, ScheduleItem } from "@/lib/types";
 
 export type DrilldownTone = "good" | "warn" | "bad" | "info" | "neutral";
@@ -207,6 +208,23 @@ export type ProjectIntelligenceDrilldownModel = {
     ctaTab: "КС";
     documentsTab: "Документы";
   };
+  executionControl: {
+    tone: DrilldownTone;
+    status: string;
+    headline: string;
+    contractorCount: number;
+    activeFronts: number;
+    delayedFronts: number;
+    unassignedItems: number;
+    subcontractBudget: string;
+    overduePayments: string;
+    documentBlockers: number;
+    topContractors: Array<{ title: string; detail: string; tone: DrilldownTone }>;
+    fronts: Array<{ title: string; detail: string; tone: DrilldownTone }>;
+    empty: boolean;
+    ctaTab: "Исполнение";
+    scheduleTab: "График";
+  };
   reports: {
     tone: DrilldownTone;
     latestReport?: { title: string; detail: string; status: string };
@@ -345,6 +363,17 @@ export function buildProjectIntelligenceDrilldownModel(input: ProjectIntelligenc
     documentChecklist,
     importHistory: input.importHistory ?? []
   });
+  const executionControl = buildSubcontractorExecutionIntelligence({
+    project,
+    budgetItems,
+    scheduleItems,
+    payments,
+    procurementRequests,
+    dailyReports: reports,
+    risks,
+    documents,
+    documentChecklist
+  });
   const riskExecutive = buildRiskExecutiveIntelligence({
     ...input,
     project,
@@ -413,6 +442,7 @@ export function buildProjectIntelligenceDrilldownModel(input: ProjectIntelligenc
       { id: "contract-tender", label: "Договор", tone: contractTender.summary.tone === "neutral" ? "info" : contractTender.summary.tone, count: contractTender.summary.highRisks + contractTender.summary.criticalRisks },
       { id: "proposal-submission", label: "КП", tone: commercialProposal.readiness.tone, count: commercialProposal.readiness.blockers.length },
       { id: "acceptance-billing", label: "КС", tone: acceptanceBilling.summary.tone, count: acceptanceBilling.summary.readyItems || acceptanceBilling.summary.blockedItems },
+      { id: "execution-control", label: "Исполнение", tone: executionControl.summary.tone === "neutral" ? "info" : executionControl.summary.tone, count: executionControl.summary.delayedFronts || executionControl.summary.unassignedItems },
       { id: "procurement", label: "Снабжение", tone: procurementTone, count: procurementIntelligence.summary.candidates || materialStats.deficitItems.length },
       { id: "reports", label: "Executive", tone: reportsTone },
       { id: "ai-recommendations", label: "AI", tone: "info", count: drilldownAiScenarios.length }
@@ -610,6 +640,31 @@ export function buildProjectIntelligenceDrilldownModel(input: ProjectIntelligenc
       empty: acceptanceBilling.summary.status === "no_data",
       ctaTab: "КС",
       documentsTab: "Документы"
+    },
+    executionControl: {
+      tone: executionControl.summary.tone === "neutral" ? "info" : executionControl.summary.tone,
+      status: executionControl.summary.status,
+      headline: executionControl.summary.headline,
+      contractorCount: executionControl.summary.contractorCount,
+      activeFronts: executionControl.summary.activeFronts,
+      delayedFronts: executionControl.summary.delayedFronts,
+      unassignedItems: executionControl.summary.unassignedItems,
+      subcontractBudget: compactMoney(executionControl.summary.subcontractBudget),
+      overduePayments: compactMoney(executionControl.summary.overduePayments),
+      documentBlockers: executionControl.summary.documentBlockers,
+      topContractors: executionControl.contractors.slice(0, 5).map((contractor) => ({
+        title: contractor.name,
+        detail: `${contractor.readiness} · ${contractor.activeItems}/${contractor.plannedItems} фронтов · ${contractor.nextAction}`,
+        tone: contractor.tone === "neutral" ? "info" : contractor.tone
+      })),
+      fronts: executionControl.fronts.slice(0, 5).map((front) => ({
+        title: front.title,
+        detail: `${front.owner} · ${front.progress}% · ${front.nextAction}`,
+        tone: front.tone === "neutral" ? "info" : front.tone
+      })),
+      empty: executionControl.summary.status === "no_data",
+      ctaTab: "Исполнение",
+      scheduleTab: "График"
     },
     reports: {
       tone: reportsTone,
