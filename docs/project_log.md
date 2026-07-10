@@ -1,5 +1,59 @@
 # PGS Project Log
 
+## 2026-07-10 - Field Operations & Daily Reports v1 online/core GO
+
+Status: Field Operations & Daily Reports v1 reached ONLINE/CORE GO on Render after PR #82. Full authenticated browser tab smoke was not run for this train.
+
+- Online URL: https://pgs-frankfurt.onrender.com
+- Online commit: `a0ed0f75f9dd7e49bf1745eb3c1978877abb2156`
+- PR: #82
+- Decision: ONLINE/CORE GO
+- Git SHA source: `RENDER_GIT_COMMIT`
+
+Health:
+
+- `/api/health`: HTTP 200 / `ok`
+- DB: `ok`
+- migrations: `ok`, count `6`
+- auth required: `true`
+- AI configured: `true`
+
+Pages and markers:
+
+- `/dashboard`: 200
+- `/projects`: 200
+- `/projects/project-demo`: 404 as expected
+- `/projects/project-smoke`: 200
+- `Field Operations & Daily Reports`: present
+- `Площадка / Рапорты`: present
+- `Daily report snapshots`: present
+- `Field signals`: present
+- `Weekly field handoff`: present
+- `field-operations`: present
+- `field-ops-workspace`: present in deployed CSS/bundle
+- `Площадка / рапорты`: present in Command Center markers
+
+Unauthenticated guards:
+
+- `/api/auth/me`: 401
+- AI summary: 403
+- data-readiness: 401
+- intelligence: 401
+
+Not run / not touched:
+
+- no live AI call was run.
+- no online mutation/import/delete/upload smoke was run.
+- no manual deploy/redeploy was triggered.
+- no Render env/secrets were changed.
+- no DB schema or migration changes were made.
+- no real photo/upload/OCR flow was run.
+- no secrets, cookies, tokens, provider keys, smoke secrets, session IDs, or env values were printed.
+
+Remaining optional follow-up:
+
+- authenticated browser tab smoke for the `Рапорты` / field operations workspace when safe auth/browser tooling is available.
+
 ## 2026-07-09 - Subcontractor & Execution Control v1 online/core GO
 
 Status: Subcontractor & Execution Control v1 reached ONLINE/CORE GO on Render after PR #80. Full authenticated browser tab smoke was not run for this train.
