@@ -4,6 +4,7 @@ import { buildCommercialProposalIntelligence } from "@/lib/commercial-proposal-i
 import { buildContractTenderIntelligence } from "@/lib/contract-tender-intelligence";
 import { buildDocumentComplianceIntelligence } from "@/lib/document-compliance-intelligence";
 import { buildFieldOperationsIntelligence } from "@/lib/field-operations-intelligence";
+import { buildPhotoEvidenceIntelligence } from "@/lib/photo-evidence-intelligence";
 import { buildProcurementIntelligenceModel } from "@/lib/procurement-intelligence";
 import { buildInitialProjectReadiness } from "@/lib/project-onboarding-intelligence";
 import type { DocumentChecklistItem, PipelineAction, PipelineReadiness } from "@/lib/project-pipeline";
@@ -244,6 +245,23 @@ export type ProjectIntelligenceDrilldownModel = {
     ctaTab: "Рапорты";
     scheduleTab: "График";
   };
+  photoEvidence: {
+    tone: DrilldownTone;
+    status: string;
+    headline: string;
+    evidenceDocuments: number;
+    photoDocuments: number;
+    reportEvidence: number;
+    linkedScheduleItems: number;
+    ksBlockers: number;
+    missingEvidenceItems: number;
+    items: Array<{ title: string; detail: string; tone: DrilldownTone }>;
+    actions: Array<{ title: string; detail: string; tone: DrilldownTone }>;
+    empty: boolean;
+    ctaTab: "Документы";
+    reportsTab: "Рапорты";
+    acceptanceTab: "КС";
+  };
   reports: {
     tone: DrilldownTone;
     latestReport?: { title: string; detail: string; status: string };
@@ -405,6 +423,18 @@ export function buildProjectIntelligenceDrilldownModel(input: ProjectIntelligenc
     documents,
     documentChecklist
   });
+  const photoEvidence = buildPhotoEvidenceIntelligence({
+    project,
+    budgetItems,
+    scheduleItems,
+    materials,
+    procurementRequests,
+    payments,
+    dailyReports: reports,
+    risks,
+    documents,
+    documentChecklist
+  });
   const riskExecutive = buildRiskExecutiveIntelligence({
     ...input,
     project,
@@ -475,6 +505,7 @@ export function buildProjectIntelligenceDrilldownModel(input: ProjectIntelligenc
       { id: "acceptance-billing", label: "КС", tone: acceptanceBilling.summary.tone, count: acceptanceBilling.summary.readyItems || acceptanceBilling.summary.blockedItems },
       { id: "execution-control", label: "Исполнение", tone: executionControl.summary.tone === "neutral" ? "info" : executionControl.summary.tone, count: executionControl.summary.delayedFronts || executionControl.summary.unassignedItems },
       { id: "field-operations", label: "Площадка", tone: fieldOperations.summary.tone === "neutral" ? "info" : fieldOperations.summary.tone, count: fieldOperations.summary.downtimeReports || fieldOperations.summary.issueReports || fieldOperations.summary.reportCount },
+      { id: "photo-evidence", label: "Evidence", tone: photoEvidence.summary.tone === "neutral" ? "info" : photoEvidence.summary.tone, count: photoEvidence.summary.ksBlockers || photoEvidence.summary.missingEvidenceItems || photoEvidence.summary.evidenceDocuments },
       { id: "procurement", label: "Снабжение", tone: procurementTone, count: procurementIntelligence.summary.candidates || materialStats.deficitItems.length },
       { id: "reports", label: "Executive", tone: reportsTone },
       { id: "ai-recommendations", label: "AI", tone: "info", count: drilldownAiScenarios.length }
@@ -729,6 +760,31 @@ export function buildProjectIntelligenceDrilldownModel(input: ProjectIntelligenc
       empty: fieldOperations.summary.status === "no_reports",
       ctaTab: "Рапорты",
       scheduleTab: "График"
+    },
+    photoEvidence: {
+      tone: photoEvidence.summary.tone === "neutral" ? "info" : photoEvidence.summary.tone,
+      status: photoEvidence.summary.status,
+      headline: photoEvidence.summary.headline,
+      evidenceDocuments: photoEvidence.summary.evidenceDocuments,
+      photoDocuments: photoEvidence.summary.photoDocuments,
+      reportEvidence: photoEvidence.summary.reportEvidence,
+      linkedScheduleItems: photoEvidence.summary.linkedScheduleItems,
+      ksBlockers: photoEvidence.summary.ksBlockers,
+      missingEvidenceItems: photoEvidence.summary.missingEvidenceItems,
+      items: photoEvidence.items.slice(0, 6).map((item) => ({
+        title: item.title,
+        detail: `${item.category} · ${item.source} · ${item.nextAction}`,
+        tone: item.tone === "neutral" ? "info" : item.tone
+      })),
+      actions: photoEvidence.actions.slice(0, 5).map((item) => ({
+        title: item.title,
+        detail: `${item.targetTab} · ${item.detail}`,
+        tone: item.priority === "high" ? "bad" : item.priority === "medium" ? "warn" : "info"
+      })),
+      empty: photoEvidence.summary.status === "no_evidence",
+      ctaTab: "Документы",
+      reportsTab: "Рапорты",
+      acceptanceTab: "КС"
     },
     reports: {
       tone: reportsTone,

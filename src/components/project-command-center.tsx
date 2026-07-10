@@ -45,6 +45,7 @@ const icons = {
   acceptance: <ReceiptText size={18} />,
   execution: <Users size={18} />,
   fieldOps: <ClipboardList size={18} />,
+  evidence: <FileText size={18} />,
   materials: <Package size={18} />,
   cash: <Landmark size={18} />
 };
@@ -88,6 +89,7 @@ function drilldownForKpi(key: string) {
   if (key === "proposal") return "proposal-submission";
   if (key === "execution") return "execution-control";
   if (key === "fieldOps") return "field-operations";
+  if (key === "evidence") return "photo-evidence";
   if (key === "risks") return "risks";
   if (key === "materials") return "procurement";
   if (key === "readiness") return "documents";
