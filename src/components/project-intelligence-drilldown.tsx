@@ -422,6 +422,41 @@ export function ProjectIntelligenceDrilldown({
         </article>
 
         <article className="panel intelligence-panel">
+          <SectionHeader id="photo-evidence" icon={<FileText size={18} />} title="Photo Evidence / Исполнительное подтверждение" tone={model.photoEvidence.tone}>
+            <button className="button secondary compact-button" type="button" onClick={() => onNavigate(model.photoEvidence.ctaTab)}>
+              Документы
+            </button>
+            <button className="button secondary compact-button" type="button" onClick={() => onNavigate(model.photoEvidence.reportsTab)}>
+              Рапорты
+            </button>
+            <button className="button secondary compact-button" type="button" onClick={() => onNavigate(model.photoEvidence.acceptanceTab)}>
+              КС
+            </button>
+          </SectionHeader>
+          <div className="intelligence-metrics">
+            <StatusInsightCard title="Evidence status" value={model.photoEvidence.status} detail={model.photoEvidence.headline} tone={model.photoEvidence.tone} />
+            <StatusInsightCard title="Фото / документы" value={`${model.photoEvidence.photoDocuments}/${model.photoEvidence.evidenceDocuments}`} detail="photo / evidence docs" tone={model.photoEvidence.evidenceDocuments ? "good" : "info"} />
+            <StatusInsightCard title="Рапорты / график" value={`${model.photoEvidence.reportEvidence}/${model.photoEvidence.linkedScheduleItems}`} detail="report mentions / linked schedule" tone={model.photoEvidence.reportEvidence || model.photoEvidence.linkedScheduleItems ? "info" : "neutral"} />
+            <StatusInsightCard title="КС blockers" value={String(model.photoEvidence.ksBlockers)} detail={`${model.photoEvidence.missingEvidenceItems} missing evidence`} tone={model.photoEvidence.ksBlockers ? "bad" : model.photoEvidence.missingEvidenceItems ? "warn" : "good"} />
+          </div>
+          {model.photoEvidence.empty ? (
+            <EmptyIntelligenceState text="Evidence пока не собрано. Загрузите фото/акты/журналы в Документы или добавьте ссылки в рапорты." />
+          ) : (
+            <SignalList
+              emptyText="Evidence-сигналов по текущему срезу нет."
+              items={[
+                ...model.photoEvidence.items,
+                ...model.photoEvidence.actions
+              ].slice(0, 8)}
+            />
+          )}
+          <div className="executive-action-note">
+            <Sparkles size={16} />
+            <span>{model.photoEvidence.headline}</span>
+          </div>
+        </article>
+
+        <article className="panel intelligence-panel">
           <SectionHeader id="reports" icon={<ClipboardList size={18} />} title="Reports / Executive Output" tone={model.reports.tone}>
             <button className="button secondary compact-button" type="button" onClick={() => onNavigate(model.reports.reportTab)}>
               Рапорты

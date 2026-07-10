@@ -59,7 +59,7 @@ describe("project command center model", () => {
     });
 
     expect(model.project.name).toContain("Демо объект");
-    expect(model.kpis).toHaveLength(13);
+    expect(model.kpis).toHaveLength(14);
     expect(model.kpis.find((kpi) => kpi.key === "baseline")).toMatchObject({ label: "Baseline" });
     expect(model.kpis.some((kpi) => kpi.key === "decisions")).toBe(true);
     expect(model.kpis.some((kpi) => kpi.key === "contract")).toBe(true);
@@ -67,6 +67,7 @@ describe("project command center model", () => {
     expect(model.kpis.some((kpi) => kpi.key === "acceptance")).toBe(true);
     expect(model.kpis.some((kpi) => kpi.key === "execution")).toBe(true);
     expect(model.kpis.some((kpi) => kpi.key === "fieldOps")).toBe(true);
+    expect(model.kpis.some((kpi) => kpi.key === "evidence")).toBe(true);
     expect(model.aiSummary.empty).toBe(false);
     expect(model.aiSummary.degraded).toBe(false);
     expect(model.aiSummary.bullets[0]).toContain("Работы идут");
@@ -91,6 +92,7 @@ describe("project command center model", () => {
     expect(model.statusBoard.find((item) => item.key === "proposal")).toBeTruthy();
     expect(model.statusBoard.find((item) => item.key === "execution")).toBeTruthy();
     expect(model.statusBoard.find((item) => item.key === "fieldOps")).toBeTruthy();
+    expect(model.statusBoard.find((item) => item.key === "evidence")).toBeTruthy();
   });
 
   it("keeps degraded AI insight readable without leaking raw provider state", () => {
