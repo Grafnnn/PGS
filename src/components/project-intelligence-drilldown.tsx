@@ -389,6 +389,39 @@ export function ProjectIntelligenceDrilldown({
         </article>
 
         <article className="panel intelligence-panel">
+          <SectionHeader id="field-operations" icon={<ClipboardList size={18} />} title="Field Operations / Daily Reports" tone={model.fieldOperations.tone}>
+            <button className="button secondary compact-button" type="button" onClick={() => onNavigate(model.fieldOperations.ctaTab)}>
+              Рапорты
+            </button>
+            <button className="button secondary compact-button" type="button" onClick={() => onNavigate(model.fieldOperations.scheduleTab)}>
+              График
+            </button>
+          </SectionHeader>
+          <div className="intelligence-metrics">
+            <StatusInsightCard title="Site facts" value={model.fieldOperations.status} detail={model.fieldOperations.headline} tone={model.fieldOperations.tone} />
+            <StatusInsightCard title="Люди" value={`${model.fieldOperations.totalWorkers}/${model.fieldOperations.totalEngineers}`} detail={`${model.fieldOperations.reportCount} рапортов`} tone={model.fieldOperations.reportCount ? "info" : "neutral"} />
+            <StatusInsightCard title="Простои / замечания" value={`${model.fieldOperations.downtimeReports}/${model.fieldOperations.issueReports}`} detail="signals from site" tone={model.fieldOperations.downtimeReports || model.fieldOperations.issueReports ? "bad" : "good"} />
+            <StatusInsightCard title="Связи" value={`${model.fieldOperations.linkedScheduleItems}/${model.fieldOperations.materialSignals}`} detail="график / материалы" tone={model.fieldOperations.linkedScheduleItems || model.fieldOperations.materialSignals ? "warn" : "info"} />
+          </div>
+          {model.fieldOperations.empty ? (
+            <EmptyIntelligenceState text="Ежедневных рапортов пока нет. Создайте первый рапорт, чтобы связать факт площадки с графиком, снабжением и КС." />
+          ) : (
+            <SignalList
+              emptyText="Нет полевых сигналов по текущему срезу."
+              items={[
+                ...(model.fieldOperations.latestReport ? [{ title: model.fieldOperations.latestReport.title, detail: model.fieldOperations.latestReport.detail, tone: model.fieldOperations.tone }] : []),
+                ...model.fieldOperations.signals,
+                ...model.fieldOperations.actions
+              ].slice(0, 8)}
+            />
+          )}
+          <div className="executive-action-note">
+            <Sparkles size={16} />
+            <span>{model.fieldOperations.headline}</span>
+          </div>
+        </article>
+
+        <article className="panel intelligence-panel">
           <SectionHeader id="reports" icon={<ClipboardList size={18} />} title="Reports / Executive Output" tone={model.reports.tone}>
             <button className="button secondary compact-button" type="button" onClick={() => onNavigate(model.reports.reportTab)}>
               Рапорты

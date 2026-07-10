@@ -3,6 +3,7 @@ import { buildAcceptanceBillingIntelligence } from "@/lib/acceptance-billing-int
 import { buildCommercialProposalIntelligence } from "@/lib/commercial-proposal-intelligence";
 import { buildContractTenderIntelligence } from "@/lib/contract-tender-intelligence";
 import { buildDocumentComplianceIntelligence } from "@/lib/document-compliance-intelligence";
+import { buildFieldOperationsIntelligence } from "@/lib/field-operations-intelligence";
 import { buildProcurementIntelligenceModel } from "@/lib/procurement-intelligence";
 import { buildInitialProjectReadiness } from "@/lib/project-onboarding-intelligence";
 import type { DocumentChecklistItem, PipelineAction, PipelineReadiness } from "@/lib/project-pipeline";
@@ -225,6 +226,24 @@ export type ProjectIntelligenceDrilldownModel = {
     ctaTab: "Исполнение";
     scheduleTab: "График";
   };
+  fieldOperations: {
+    tone: DrilldownTone;
+    status: string;
+    headline: string;
+    reportCount: number;
+    totalWorkers: number;
+    totalEngineers: number;
+    downtimeReports: number;
+    issueReports: number;
+    linkedScheduleItems: number;
+    materialSignals: number;
+    latestReport?: { title: string; detail: string; status: string };
+    signals: Array<{ title: string; detail: string; tone: DrilldownTone }>;
+    actions: Array<{ title: string; detail: string; tone: DrilldownTone }>;
+    empty: boolean;
+    ctaTab: "Рапорты";
+    scheduleTab: "График";
+  };
   reports: {
     tone: DrilldownTone;
     latestReport?: { title: string; detail: string; status: string };
@@ -374,6 +393,18 @@ export function buildProjectIntelligenceDrilldownModel(input: ProjectIntelligenc
     documents,
     documentChecklist
   });
+  const fieldOperations = buildFieldOperationsIntelligence({
+    project,
+    budgetItems,
+    scheduleItems,
+    materials,
+    procurementRequests,
+    payments,
+    dailyReports: reports,
+    risks,
+    documents,
+    documentChecklist
+  });
   const riskExecutive = buildRiskExecutiveIntelligence({
     ...input,
     project,
@@ -443,6 +474,7 @@ export function buildProjectIntelligenceDrilldownModel(input: ProjectIntelligenc
       { id: "proposal-submission", label: "КП", tone: commercialProposal.readiness.tone, count: commercialProposal.readiness.blockers.length },
       { id: "acceptance-billing", label: "КС", tone: acceptanceBilling.summary.tone, count: acceptanceBilling.summary.readyItems || acceptanceBilling.summary.blockedItems },
       { id: "execution-control", label: "Исполнение", tone: executionControl.summary.tone === "neutral" ? "info" : executionControl.summary.tone, count: executionControl.summary.delayedFronts || executionControl.summary.unassignedItems },
+      { id: "field-operations", label: "Площадка", tone: fieldOperations.summary.tone === "neutral" ? "info" : fieldOperations.summary.tone, count: fieldOperations.summary.downtimeReports || fieldOperations.summary.issueReports || fieldOperations.summary.reportCount },
       { id: "procurement", label: "Снабжение", tone: procurementTone, count: procurementIntelligence.summary.candidates || materialStats.deficitItems.length },
       { id: "reports", label: "Executive", tone: reportsTone },
       { id: "ai-recommendations", label: "AI", tone: "info", count: drilldownAiScenarios.length }
@@ -664,6 +696,38 @@ export function buildProjectIntelligenceDrilldownModel(input: ProjectIntelligenc
       })),
       empty: executionControl.summary.status === "no_data",
       ctaTab: "Исполнение",
+      scheduleTab: "График"
+    },
+    fieldOperations: {
+      tone: fieldOperations.summary.tone === "neutral" ? "info" : fieldOperations.summary.tone,
+      status: fieldOperations.summary.status,
+      headline: fieldOperations.summary.headline,
+      reportCount: fieldOperations.summary.reportCount,
+      totalWorkers: fieldOperations.summary.totalWorkers,
+      totalEngineers: fieldOperations.summary.totalEngineers,
+      downtimeReports: fieldOperations.summary.downtimeReports,
+      issueReports: fieldOperations.summary.issueReports,
+      linkedScheduleItems: fieldOperations.summary.linkedScheduleItems,
+      materialSignals: fieldOperations.summary.materialSignals,
+      latestReport: fieldOperations.snapshots[0]
+        ? {
+            title: fieldOperations.snapshots[0].title,
+            detail: fieldOperations.snapshots[0].issues !== "Замечаний не указано" ? fieldOperations.snapshots[0].issues : fieldOperations.snapshots[0].completedWorks,
+            status: fieldOperations.snapshots[0].status
+          }
+        : undefined,
+      signals: fieldOperations.signals.slice(0, 5).map((signal) => ({
+        title: signal.title,
+        detail: signal.detail,
+        tone: signal.tone === "neutral" ? "info" : signal.tone
+      })),
+      actions: fieldOperations.actions.slice(0, 5).map((action) => ({
+        title: action.title,
+        detail: `${action.ownerRole} · ${action.detail}`,
+        tone: action.priority === "high" ? "bad" : action.priority === "medium" ? "warn" : "info"
+      })),
+      empty: fieldOperations.summary.status === "no_reports",
+      ctaTab: "Рапорты",
       scheduleTab: "График"
     },
     reports: {

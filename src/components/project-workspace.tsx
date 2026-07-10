@@ -5,6 +5,7 @@ import { AlertTriangle, BarChart3, Bot, ClipboardList, FileText, Landmark, Layou
 import { AcceptanceBillingWorkspace } from "@/components/acceptance-billing-workspace";
 import { CommercialProposalWorkspace } from "@/components/commercial-proposal-workspace";
 import { ContractTenderWorkspace } from "@/components/contract-tender-workspace";
+import { FieldOperationsWorkspace } from "@/components/field-operations-workspace";
 import { ProjectCommandCenter } from "@/components/project-command-center";
 import { DocumentComplianceWorkspace } from "@/components/document-compliance-workspace";
 import { ProjectIntelligenceDrilldown } from "@/components/project-intelligence-drilldown";
@@ -1199,6 +1200,19 @@ export function ProjectWorkspace({ initialBundle, createdFromOnboarding = false 
 
       {activeTab === "Рапорты" && (
         <Panel title="Ежедневные рапорты стройплощадки" icon={<ClipboardList size={18} />}>
+          <FieldOperationsWorkspace
+            project={initialBundle.project}
+            budgetItems={budgetItems}
+            scheduleItems={scheduleItems}
+            materials={materials}
+            procurementRequests={procurementRequests}
+            payments={payments}
+            dailyReports={reports}
+            risks={risks}
+            documents={documents}
+            documentChecklist={documentChecklist}
+            onNavigate={setActiveTab}
+          />
           <RiskExecutiveWorkspace
             project={initialBundle.project}
             budgetItems={budgetItems}

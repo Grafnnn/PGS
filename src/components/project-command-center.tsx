@@ -44,6 +44,7 @@ const icons = {
   proposal: <Send size={18} />,
   acceptance: <ReceiptText size={18} />,
   execution: <Users size={18} />,
+  fieldOps: <ClipboardList size={18} />,
   materials: <Package size={18} />,
   cash: <Landmark size={18} />
 };
@@ -72,8 +73,8 @@ function drilldownForTab(tab: string) {
   if (tab === "КП / Подача") return "proposal-submission";
   if (tab === "Бюджет / ВОР" || tab === "Финансы") return "finance-vor";
   if (tab === "Исполнение") return "execution-control";
+  if (tab === "Рапорты") return "field-operations";
   if (tab === "Материалы" || tab === "Заявки") return "procurement";
-  if (tab === "Рапорты") return "reports";
   if (tab === "AI-помощник" || tab === "Аналитика") return "ai-recommendations";
   return null;
 }
@@ -86,6 +87,7 @@ function drilldownForKpi(key: string) {
   if (key === "contract") return "contract-tender";
   if (key === "proposal") return "proposal-submission";
   if (key === "execution") return "execution-control";
+  if (key === "fieldOps") return "field-operations";
   if (key === "risks") return "risks";
   if (key === "materials") return "procurement";
   if (key === "readiness") return "documents";
