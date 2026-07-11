@@ -1,5 +1,62 @@
 # PGS Project Log
 
+## 2026-07-10 - Photo & Evidence Capture v1 online/core GO
+
+Status: Photo & Evidence Capture v1 reached ONLINE/CORE GO on Render after PR #84. Full authenticated upload/evidence-linking/browser smoke was not run for this train.
+
+- Online URL: https://pgs-frankfurt.onrender.com
+- Online commit: `7054b4fc1d7f4e699cc782000c56d70e4496b4df`
+- PR: #84
+- Decision: ONLINE/CORE GO
+- Git SHA source: `RENDER_GIT_COMMIT`
+
+Health:
+
+- first health attempts hit Render warm-up behavior: timeout / 502.
+- subsequent `/api/health` retries returned HTTP 200 / `ok`.
+- deployed SHA matched the expected feature commit.
+- DB: `ok`
+- migrations: `ok`, count `6`
+- auth required: `true`
+- AI configured: `true`
+
+Pages and markers:
+
+- `/dashboard`: 200
+- `/projects`: 200
+- `/projects/project-demo`: 404 as expected
+- `/projects/project-smoke`: 200
+- `Photo Evidence / Исполнительное подтверждение`: present in the Project Intelligence SSR/DOM.
+- `Фото / evidence`: present in the Command Center SSR/DOM.
+- `Photo & Evidence Capture`: present in the deployed project page bundle.
+- `Фотофиксация / Evidence`: present in the deployed project page bundle.
+- `Evidence register`: present in the deployed project page bundle.
+- `Evidence actions`: present in the deployed project page bundle.
+- `Evidence handoff`: present in the deployed project page bundle.
+- `photo-evidence-workspace`, `photo-evidence-card`, and `photo-evidence-grid`: present in deployed CSS.
+
+Unauthenticated guards:
+
+- `/api/auth/me`: 401
+- AI summary: 403
+- data-readiness: 401
+- intelligence: 401
+
+Not run / not touched:
+
+- no live AI call was run.
+- no online mutation/import/delete/upload smoke was run.
+- no real evidence/photo upload was run.
+- no OCR or Computer Vision flow was run.
+- no manual deploy/redeploy was triggered.
+- no Render env/secrets were changed.
+- no DB schema or migration changes were made.
+- no secrets, cookies, tokens, provider keys, smoke secrets, session IDs, or env values were printed.
+
+Remaining optional follow-up:
+
+- authenticated browser smoke for uploading a disposable photo/evidence document, verifying it appears in the Documents tab and evidence workspace, then cleaning it up through the approved safe path.
+
 ## 2026-07-10 - Field Operations & Daily Reports v1 online/core GO
 
 Status: Field Operations & Daily Reports v1 reached ONLINE/CORE GO on Render after PR #82. Full authenticated browser tab smoke was not run for this train.
