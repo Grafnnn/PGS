@@ -59,7 +59,7 @@ describe("project command center model", () => {
     });
 
     expect(model.project.name).toContain("Демо объект");
-    expect(model.kpis).toHaveLength(17);
+    expect(model.kpis).toHaveLength(18);
     expect(model.kpis.find((kpi) => kpi.key === "baseline")).toMatchObject({ label: "Baseline" });
     expect(model.kpis.some((kpi) => kpi.key === "decisions")).toBe(true);
     expect(model.kpis.some((kpi) => kpi.key === "contract")).toBe(true);
@@ -70,6 +70,7 @@ describe("project command center model", () => {
     expect(model.kpis.some((kpi) => kpi.key === "resources")).toBe(true);
     expect(model.kpis.some((kpi) => kpi.key === "evidence")).toBe(true);
     expect(model.kpis.some((kpi) => kpi.key === "quality")).toBe(true);
+    expect(model.kpis.some((kpi) => kpi.key === "changeOrders")).toBe(true);
     expect(model.aiSummary.empty).toBe(false);
     expect(model.aiSummary.degraded).toBe(false);
     expect(model.aiSummary.bullets[0]).toContain("Работы идут");

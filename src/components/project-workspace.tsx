@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { AlertTriangle, BarChart3, Bot, ClipboardList, FileText, Landmark, LayoutList, Package, Pencil, Plus, ReceiptText, Search, Send, Table2, TimerReset, Trash2, Truck, Users } from "lucide-react";
 import { AcceptanceBillingWorkspace } from "@/components/acceptance-billing-workspace";
 import { CommercialProposalWorkspace } from "@/components/commercial-proposal-workspace";
+import { ChangeOrdersWorkspace } from "@/components/change-orders-workspace";
 import { ContractTenderWorkspace } from "@/components/contract-tender-workspace";
 import { CostToCompleteWorkspace } from "@/components/cost-to-complete-workspace";
 import { FieldOperationsWorkspace } from "@/components/field-operations-workspace";
@@ -897,6 +898,16 @@ export function ProjectWorkspace({ initialBundle, createdFromOnboarding = false 
       {activeTab === "Бюджет / ВОР" && (
         <Panel title="Бюджет, ВОР и классификация затрат" icon={<Table2 size={18} />}>
           <BudgetAnalytics items={budgetItems} contractAmount={initialBundle.project.contractAmount} paid={finance.incomingPayments} forecastProfit={budget.forecastProfit} />
+          <ChangeOrdersWorkspace
+            project={initialBundle.project}
+            budgetItems={budgetItems}
+            scheduleItems={scheduleItems}
+            materials={materials}
+            procurementRequests={procurementRequests}
+            payments={payments}
+            risks={risks}
+            onNavigate={setActiveTab}
+          />
           <ImportPanel
             file={importFile}
             mode={importMode}

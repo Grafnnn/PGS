@@ -39,6 +39,7 @@ const icons = {
   readiness: <CheckCircle2 size={18} />,
   budget: <Landmark size={18} />,
   costToComplete: <Landmark size={18} />,
+  changeOrders: <ClipboardList size={18} />,
   schedule: <TimerReset size={18} />,
   risks: <AlertTriangle size={18} />,
   contract: <Scale size={18} />,
@@ -85,7 +86,7 @@ function drilldownForTab(tab: string) {
 
 function drilldownForKpi(key: string) {
   if (key === "baseline") return "baseline";
-  if (key === "budget" || key === "cash" || key === "costToComplete") return "finance-vor";
+  if (key === "budget" || key === "cash" || key === "costToComplete" || key === "changeOrders") return "finance-vor";
   if (key === "schedule") return "schedule";
   if (key === "acceptance") return "acceptance-billing";
   if (key === "contract") return "contract-tender";
