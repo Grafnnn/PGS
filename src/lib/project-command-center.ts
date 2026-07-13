@@ -4,6 +4,7 @@ import { buildCommercialProposalIntelligence } from "@/lib/commercial-proposal-i
 import { buildContractTenderIntelligence } from "@/lib/contract-tender-intelligence";
 import { buildDocumentComplianceIntelligence } from "@/lib/document-compliance-intelligence";
 import { buildFieldOperationsIntelligence } from "@/lib/field-operations-intelligence";
+import { buildHseSafetyPermitIntelligence } from "@/lib/hse-safety-permit-intelligence";
 import { buildPhotoEvidenceIntelligence } from "@/lib/photo-evidence-intelligence";
 import { buildInitialProjectReadiness } from "@/lib/project-onboarding-intelligence";
 import type { DocumentChecklistItem, PipelineAction, PipelineReadiness } from "@/lib/project-pipeline";
@@ -274,6 +275,7 @@ export function buildProjectCommandCenterModel(input: ProjectCommandCenterInput)
     documents,
     documentChecklist: documentItems
   });
+  const hseSafety = buildHseSafetyPermitIntelligence({ project, scheduleItems, dailyReports: reports, risks, documents, documentChecklist: documentItems });
   const scheduleScore = works.completionPercent;
   const materialScore = materials.length ? ((materials.length - materialStats.deficitItems.length) / materials.length) * 100 : 0;
   const financeScore = finance.cashGap < 0 || finance.financingNeed > 0 ? 35 : 80;
@@ -320,6 +322,7 @@ export function buildProjectCommandCenterModel(input: ProjectCommandCenterInput)
     fieldOperations.summary.status === "controlled" ? "Сверить факт площадки с КС" : "Проверить рапорты площадки",
     photoEvidence.summary.status === "ready_for_review" ? "Проверить evidence перед КС" : "Добрать фото / evidence",
     qualityIssues.summary.totalIssues ? "Провести triage замечаний" : "Подтвердить отсутствие замечаний",
+    hseSafety.summary.totalSignals ? "Провести HSE-review" : "Проверить готовность допусков",
     activeRisks[0] ? "Назначить владельца риска" : "Обновить реестр рисков"
   ];
 
@@ -352,6 +355,7 @@ export function buildProjectCommandCenterModel(input: ProjectCommandCenterInput)
     defaultAction("Проверить площадку", fieldOperations.summary.nextStep, fieldOperations.summary.tone === "neutral" ? "info" : fieldOperations.summary.tone, "Рапорты"),
     defaultAction("Проверить фото / evidence", photoEvidence.summary.nextStep, photoEvidence.summary.tone === "neutral" ? "info" : photoEvidence.summary.tone, "Документы"),
     defaultAction("Проверить качество / замечания", qualityIssues.summary.nextStep, qualityIssues.summary.tone === "neutral" ? "info" : qualityIssues.summary.tone, "Риски"),
+    defaultAction("Проверить ОТиПБ / допуски", hseSafety.summary.nextStep, hseSafety.summary.tone === "neutral" ? "info" : hseSafety.summary.tone, "Исполнение"),
     defaultAction("Проверить решения руководства", riskExecutive.decisions[0]?.title ?? "Decision register готов к проверке.", riskExecutive.decisions.length ? "warn" : "info", "Риски"),
     defaultAction("Сформировать AI-сводку", "Запустить existing AI scenario по клику.", "info", "AI-помощник")
   ];
@@ -424,6 +428,7 @@ export function buildProjectCommandCenterModel(input: ProjectCommandCenterInput)
       { key: "fieldOps", label: "Площадка / рапорты", value: fieldOperations.summary.status, tone: fieldOperations.summary.tone === "neutral" ? "info" : fieldOperations.summary.tone, detail: fieldOperations.summary.nextStep, tab: "Рапорты" },
       { key: "evidence", label: "Фото / evidence", value: photoEvidence.summary.status, tone: photoEvidence.summary.tone === "neutral" ? "info" : photoEvidence.summary.tone, detail: photoEvidence.summary.nextStep, tab: "Документы" },
       { key: "quality", label: "Качество / замечания", value: qualityIssues.summary.status, tone: qualityIssues.summary.tone === "neutral" ? "info" : qualityIssues.summary.tone, detail: qualityIssues.summary.nextStep, tab: "Риски" },
+      { key: "hse", label: "ОТиПБ / допуски", value: hseSafety.summary.status, tone: hseSafety.summary.tone === "neutral" ? "info" : hseSafety.summary.tone, detail: hseSafety.summary.nextStep, tab: "Исполнение" },
       { key: "actions", label: "Следующие шаги", value: String(input.intelligence?.nextActions.length ?? 0), tone: input.intelligence?.nextActions.length ? "warn" : "info", detail: input.intelligence?.nextActions[0]?.title ?? "Действия появятся после загрузки pipeline.", tab: "Аналитика" },
       { key: "executive", label: "Executive report", value: riskExecutive.executiveReport.reportReadiness, tone: riskExecutive.executiveReport.status === "red" ? "bad" : riskExecutive.executiveReport.status === "amber" ? "warn" : riskExecutive.executiveReport.status === "green" ? "good" : "info", detail: riskExecutive.managementSummary.nextManagementAction, tab: "Рапорты" },
       { key: "ai", label: "AI Command Layer", value: aiInsight ? aiInsight.provider ?? "ready" : "по запросу", tone: aiInsight?.provider === "degraded" ? "warn" : "info", detail: aiInsight ? "Есть последний результат сценария." : "Live AI не вызывается автоматически.", tab: "AI-помощник" }

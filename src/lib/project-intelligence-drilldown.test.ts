@@ -40,7 +40,7 @@ describe("project intelligence drill-down model", () => {
       }
     });
 
-    expect(model.nav.map((item) => item.id)).toEqual(["baseline", "documents", "risks", "schedule", "finance-vor", "contract-tender", "proposal-submission", "acceptance-billing", "execution-control", "field-operations", "photo-evidence", "quality-issues", "procurement", "reports", "ai-recommendations"]);
+    expect(model.nav.map((item) => item.id)).toEqual(["baseline", "documents", "risks", "schedule", "finance-vor", "contract-tender", "proposal-submission", "acceptance-billing", "execution-control", "field-operations", "photo-evidence", "quality-issues", "hse-safety", "procurement", "reports", "ai-recommendations"]);
     expect(model.baseline.templateTitle).toBe("Общестрой");
     expect(model.baseline.firstActions).toContain("Импортировать ВОР");
     expect(model.documents).toMatchObject({ present: 1, total: 2, ctaTab: "Документы" });
@@ -72,6 +72,8 @@ describe("project intelligence drill-down model", () => {
     expect(model.photoEvidence.headline).toBeTruthy();
     expect(model.qualityIssues.ctaTab).toBe("Риски");
     expect(model.qualityIssues.headline).toBeTruthy();
+    expect(model.hseSafety.ctaTab).toBe("Исполнение");
+    expect(model.hseSafety.headline).toBeTruthy();
     expect(model.reports.executiveScenario).toBe("executive-report");
     expect(model.ai.scenarios).toHaveLength(drilldownAiScenarios.length);
     expect(model.ai.limitations).toContain("Нет КС");
@@ -97,6 +99,7 @@ describe("project intelligence drill-down model", () => {
     expect(model.fieldOperations.empty).toBe(true);
     expect(model.photoEvidence.empty).toBe(true);
     expect(model.qualityIssues.empty).toBe(true);
+    expect(model.hseSafety.empty).toBe(true);
     expect(model.reports.empty).toBe(true);
     expect(model.ai.scenarios.some((scenario) => scenario.scenario === "executive-report")).toBe(true);
     expect(model.ai.scenarios.some((scenario) => scenario.scenario === "contract-review")).toBe(true);

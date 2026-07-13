@@ -6,6 +6,7 @@ import { AcceptanceBillingWorkspace } from "@/components/acceptance-billing-work
 import { CommercialProposalWorkspace } from "@/components/commercial-proposal-workspace";
 import { ContractTenderWorkspace } from "@/components/contract-tender-workspace";
 import { FieldOperationsWorkspace } from "@/components/field-operations-workspace";
+import { HseSafetyPermitWorkspace } from "@/components/hse-safety-permit-workspace";
 import { ProjectCommandCenter } from "@/components/project-command-center";
 import { DocumentComplianceWorkspace } from "@/components/document-compliance-workspace";
 import { PhotoEvidenceWorkspace } from "@/components/photo-evidence-workspace";
@@ -1223,6 +1224,15 @@ export function ProjectWorkspace({ initialBundle, createdFromOnboarding = false 
             documentChecklist={documentChecklist}
             onNavigate={setActiveTab}
           />
+          <HseSafetyPermitWorkspace
+            project={initialBundle.project}
+            scheduleItems={scheduleItems}
+            dailyReports={reports}
+            risks={risks}
+            documents={documents}
+            documentChecklist={documentChecklist}
+            onNavigate={setActiveTab}
+          />
         </Panel>
       )}
 
@@ -1390,6 +1400,15 @@ export function ProjectWorkspace({ initialBundle, createdFromOnboarding = false 
             materials={materials}
             procurementRequests={procurementRequests}
             payments={payments}
+            dailyReports={reports}
+            risks={risks}
+            documents={documents}
+            documentChecklist={documentChecklist}
+            onNavigate={setActiveTab}
+          />
+          <HseSafetyPermitWorkspace
+            project={initialBundle.project}
+            scheduleItems={scheduleItems}
             dailyReports={reports}
             risks={risks}
             documents={documents}
