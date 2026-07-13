@@ -4,6 +4,7 @@ import type { AppUser } from "@/lib/auth/permissions";
 const getCurrentUserMock = vi.fn();
 const canProjectMock = vi.fn();
 const parseProjectWorkbookBufferMock = vi.fn();
+const parseProjectWorkbookSheetOverridesMock = vi.fn();
 const validateExcelFileMock = vi.fn();
 const projectFindUniqueMock = vi.fn();
 const transactionMock = vi.fn();
@@ -21,7 +22,8 @@ vi.mock("@/lib/excel/import-parser", () => ({
 }));
 
 vi.mock("@/lib/excel/project-workbook-import", () => ({
-  parseProjectWorkbookBuffer: parseProjectWorkbookBufferMock
+  parseProjectWorkbookBuffer: parseProjectWorkbookBufferMock,
+  parseProjectWorkbookSheetOverrides: parseProjectWorkbookSheetOverridesMock
 }));
 
 vi.mock("@/lib/prisma", () => ({
@@ -58,6 +60,8 @@ describe("budget import preview route", () => {
     getCurrentUserMock.mockReset();
     canProjectMock.mockReset();
     parseProjectWorkbookBufferMock.mockReset();
+    parseProjectWorkbookSheetOverridesMock.mockReset();
+    parseProjectWorkbookSheetOverridesMock.mockReturnValue({});
     validateExcelFileMock.mockReset();
     projectFindUniqueMock.mockReset();
     transactionMock.mockReset();
@@ -134,5 +138,39 @@ describe("budget import preview route", () => {
     expect(canProjectMock).toHaveBeenCalledWith(authorizedUser, "project-demo", "import");
     expect(formData).toHaveBeenCalledTimes(1);
     expect(parseProjectWorkbookBufferMock).not.toHaveBeenCalled();
+  });
+
+  it("passes the confirmed sheet mapping into the persisted import preview", async () => {
+    getCurrentUserMock.mockResolvedValue(authorizedUser);
+    canProjectMock.mockResolvedValue(true);
+    projectFindUniqueMock.mockResolvedValue({ id: "project-demo", organizationId: "org-demo", startsAt: new Date("2026-07-01") });
+    validateExcelFileMock.mockReturnValue(null);
+    parseProjectWorkbookSheetOverridesMock.mockReturnValue({ Materials: { enabled: false } });
+    parseProjectWorkbookBufferMock.mockReturnValue({
+      parserVersion: "project_workbook_v1",
+      sheets: ["Materials"],
+      mapping: [],
+      summary: { budgetItems: 0 },
+      budgetItems: [],
+      materials: [],
+      scheduleItems: [],
+      warnings: [],
+      errors: []
+    });
+    transactionMock.mockImplementation(async (callback) => callback({ importBatch: { create: vi.fn() } }));
+    const form = new FormData();
+    form.append("file", new File(["xlsx"], "project.xlsx", { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }));
+    form.append("sheetOverrides", JSON.stringify({ Materials: { enabled: false } }));
+    const { POST } = await import("./route");
+
+    const response = await POST(requestWithFormData(async () => form), { params: { projectId: "project-demo" } });
+
+    expect(response.status).toBe(200);
+    expect(parseProjectWorkbookSheetOverridesMock).toHaveBeenCalledWith(JSON.stringify({ Materials: { enabled: false } }));
+    expect(parseProjectWorkbookBufferMock).toHaveBeenCalledWith(expect.any(Buffer), "project.xlsx", "project-demo", {
+      startsAt: new Date("2026-07-01"),
+      sheetOverrides: { Materials: { enabled: false } }
+    });
+    expect(transactionMock).toHaveBeenCalledTimes(1);
   });
 });
