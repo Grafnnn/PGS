@@ -5,6 +5,7 @@ import { AlertTriangle, BarChart3, Bot, ClipboardList, FileText, Landmark, Layou
 import { AcceptanceBillingWorkspace } from "@/components/acceptance-billing-workspace";
 import { CommercialProposalWorkspace } from "@/components/commercial-proposal-workspace";
 import { ChangeOrdersWorkspace } from "@/components/change-orders-workspace";
+import { ClaimsNoticesWorkspace } from "@/components/claims-notices-workspace";
 import { ContractTenderWorkspace } from "@/components/contract-tender-workspace";
 import { CostToCompleteWorkspace } from "@/components/cost-to-complete-workspace";
 import { FieldOperationsWorkspace } from "@/components/field-operations-workspace";
@@ -1155,6 +1156,18 @@ export function ProjectWorkspace({ initialBundle, createdFromOnboarding = false 
       {activeTab === "Договор / Тендер" && (
         <Panel title="Договор, тендер и КП" icon={<Search size={18} />}>
           <ContractTenderWorkspace
+            project={initialBundle.project}
+            budgetItems={budgetItems}
+            scheduleItems={scheduleItems}
+            materials={materials}
+            procurementRequests={procurementRequests}
+            payments={payments}
+            risks={risks}
+            documents={documents}
+            documentChecklist={documentChecklist}
+            onNavigate={setActiveTab}
+          />
+          <ClaimsNoticesWorkspace
             project={initialBundle.project}
             budgetItems={budgetItems}
             scheduleItems={scheduleItems}
