@@ -1,5 +1,55 @@
 # PGS Project Log
 
+## 2026-07-13 - Change Orders & Variations v1 online/core GO
+
+Status: Change Orders & Variations v1 reached ONLINE/CORE GO on Render after PR #94. The train adds a read-only register of candidates for scope, price, schedule, material, and contract-risk changes; it does not create change orders, supplemental agreements, budget rows, KS, or cashflow entries.
+
+- Online URL: https://pgs-frankfurt.onrender.com
+- Online commit: `1842079487285cf53d48dbdb4d460bcfe839351d`
+- PR: #94
+- Decision: ONLINE/CORE GO
+- Git SHA source: `RENDER_GIT_COMMIT`
+
+Health:
+
+- `/api/health`: HTTP 200 / `ok`
+- DB: `ok`
+- migrations: `ok`, count `6`
+- auth required: `true`
+- AI configured: `true`
+- storage: local and writable
+
+Pages and markers:
+
+- `/dashboard`: 200
+- `/projects`: 200
+- `/projects/project-demo`: 404 as expected
+- `/projects/project-smoke`: 200
+- `Change Orders & Variations`: present in the deployed project page bundle.
+- `Допработы, изменения ВОР и влияние на проект`: present in the deployed project page bundle.
+- `Variation register`, `Impact signals`, and `Approval actions`: present in the deployed project page bundle.
+- `changeOrders`: present in the deployed Command Center bundle.
+
+Unauthenticated guards:
+
+- `/api/auth/me`: 401
+- AI summary: 403
+- data-readiness: 401
+- intelligence: 401
+
+Not run / not touched:
+
+- no live AI call was run.
+- no online mutation/import/delete/upload smoke was run.
+- no manual deploy/redeploy was triggered; Render auto-deploy was used.
+- no Render env/secrets were changed.
+- no DB schema or migration changes were made.
+- no secrets, cookies, tokens, provider keys, smoke secrets, session IDs, or env values were printed.
+
+Remaining optional follow-up:
+
+- authenticated browser smoke using a disposable change candidate and a separately approved workflow for formal customer notification or supplemental agreement preparation.
+
 ## 2026-07-13 - Cost-to-Complete & Margin Forecast v1 online/core GO
 
 Status: Cost-to-Complete & Margin Forecast v1 reached ONLINE/CORE GO on Render after PR #92. The full authenticated browser interaction with factual cost updates was not run for this read-only intelligence train.
