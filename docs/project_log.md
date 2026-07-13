@@ -1,5 +1,57 @@
 # PGS Project Log
 
+## 2026-07-14 - Workbook Import Exception Resolution v1 online/core GO
+
+Status: Workbook Import Exception Resolution v1 reached ONLINE/CORE GO on Render after PR #104. Workbook warnings now produce a deterministic resolution plan with required source corrections, individual user decisions, blockers, informational notes, progress, and a final create/no-create decision.
+
+- Online URL: https://pgs-frankfurt.onrender.com
+- Online commit: `86fdf7c262d138fd7a635c882fc95f238c574cb9`
+- Render deploy: `dep-d9amqm5ckfvc73bpos0g`
+- PR: #104
+- Decision: ONLINE/CORE GO
+- Git SHA source: `RENDER_GIT_COMMIT`
+
+Health and pages:
+
+- `/api/health`: HTTP 200 / `ok`
+- DB: `ok`
+- migrations: `ok`, count `6`
+- auth required: `true`
+- AI configured: `true`
+- `/dashboard`: 200
+- `/projects`: 200
+- `/projects/project-demo`: 404 as expected
+- `/projects/project-smoke`: 200
+
+Deployed UI and behavior:
+
+- `Import exception resolution`, `Финальный план решений`, `нужно исправить`, `нужно решение`, and `Проверено, решение принимаю в план импорта` are present in the deployed projects bundle.
+- The old global acknowledgement was replaced with individual decisions for each current warning.
+- Uncertain sheet mapping requires a real role/exclusion change and recalculation; it cannot be bypassed by acknowledgement.
+- Saved formula values, financial reconciliation gaps, and automatic duplicate handling can be accepted only as separate explicit decisions.
+- Mapping changes and reanalysis reset stale decisions. Project creation remains blocked until the current resolution plan is ready.
+- The provided example workbook was analyzed locally only: initial score 76/100, four review sheets represented one required source correction, and two acknowledgement decisions remained. After assigning those sheet roles, reanalyzing, and confirming the two current decisions, the plan reached ready/100%. The workbook was not uploaded online.
+
+Unauthenticated guards:
+
+- `/api/auth/me`: 401
+- workbook analysis: 403
+- project creation: 403
+- project import preview: 401
+- AI summary: 403
+
+Validation and safety:
+
+- Vitest: 276/276 passed; ESLint, TypeScript, Prisma generate/validate, Next production build, and `git diff --check` passed.
+- Desktop 1280px and mobile 390px passed without horizontal overflow; mobile drawer opened and closed with one sidebar; browser console errors: none.
+- no real online workbook upload, project creation, import commit, project deletion, or live AI call was run.
+- no Render env/secrets, DB schema, migrations, auth/session model, API permissions, or deploy configuration were changed.
+- no secrets, cookies, tokens, provider keys, smoke secrets, session IDs, or env values were printed.
+
+Remaining optional follow-up:
+
+- authenticated disposable browser smoke: upload a synthetic workbook, resolve mapping exceptions, confirm current decisions, create the project, verify populated modules, and delete the project. Full browser file-picker interaction is not claimed by this core gate.
+
 ## 2026-07-14 - Workbook Import Quality Gate v1 online/core GO
 
 Status: Workbook Import Quality Gate v1 reached ONLINE/CORE GO on Render after PR #102. Project creation now evaluates workbook readiness, blocks critical import failures, and requires explicit acknowledgement when data can be imported only with review.
