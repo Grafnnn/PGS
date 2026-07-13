@@ -59,7 +59,7 @@ describe("project command center model", () => {
     });
 
     expect(model.project.name).toContain("Демо объект");
-    expect(model.kpis).toHaveLength(15);
+    expect(model.kpis).toHaveLength(16);
     expect(model.kpis.find((kpi) => kpi.key === "baseline")).toMatchObject({ label: "Baseline" });
     expect(model.kpis.some((kpi) => kpi.key === "decisions")).toBe(true);
     expect(model.kpis.some((kpi) => kpi.key === "contract")).toBe(true);
@@ -67,6 +67,7 @@ describe("project command center model", () => {
     expect(model.kpis.some((kpi) => kpi.key === "acceptance")).toBe(true);
     expect(model.kpis.some((kpi) => kpi.key === "execution")).toBe(true);
     expect(model.kpis.some((kpi) => kpi.key === "fieldOps")).toBe(true);
+    expect(model.kpis.some((kpi) => kpi.key === "resources")).toBe(true);
     expect(model.kpis.some((kpi) => kpi.key === "evidence")).toBe(true);
     expect(model.kpis.some((kpi) => kpi.key === "quality")).toBe(true);
     expect(model.aiSummary.empty).toBe(false);
@@ -93,6 +94,7 @@ describe("project command center model", () => {
     expect(model.statusBoard.find((item) => item.key === "proposal")).toBeTruthy();
     expect(model.statusBoard.find((item) => item.key === "execution")).toBeTruthy();
     expect(model.statusBoard.find((item) => item.key === "fieldOps")).toBeTruthy();
+    expect(model.statusBoard.find((item) => item.key === "resources")).toBeTruthy();
     expect(model.statusBoard.find((item) => item.key === "evidence")).toBeTruthy();
     expect(model.statusBoard.find((item) => item.key === "quality")).toBeTruthy();
     expect(model.statusBoard.find((item) => item.key === "hse")).toBeTruthy();

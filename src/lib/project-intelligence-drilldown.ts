@@ -10,6 +10,7 @@ import { buildProcurementIntelligenceModel } from "@/lib/procurement-intelligenc
 import { buildInitialProjectReadiness } from "@/lib/project-onboarding-intelligence";
 import type { DocumentChecklistItem, PipelineAction, PipelineReadiness } from "@/lib/project-pipeline";
 import { buildQualityIssuesIntelligence } from "@/lib/quality-issues-intelligence";
+import { buildResourcesEquipmentIntelligence } from "@/lib/resources-equipment-intelligence";
 import { buildRiskExecutiveIntelligence, type RiskExecutiveImportHistoryItem } from "@/lib/risk-executive-intelligence";
 import { buildScheduleCashflowIntelligenceModel } from "@/lib/schedule-cashflow-intelligence";
 import { buildSubcontractorExecutionIntelligence } from "@/lib/subcontractor-execution-intelligence";
@@ -241,6 +242,23 @@ export type ProjectIntelligenceDrilldownModel = {
     linkedScheduleItems: number;
     materialSignals: number;
     latestReport?: { title: string; detail: string; status: string };
+    signals: Array<{ title: string; detail: string; tone: DrilldownTone }>;
+    actions: Array<{ title: string; detail: string; tone: DrilldownTone }>;
+    empty: boolean;
+    ctaTab: "Рапорты";
+    scheduleTab: "График";
+  };
+  resourcesEquipment: {
+    tone: DrilldownTone;
+    status: string;
+    headline: string;
+    latestWorkers: number;
+    latestEngineers: number;
+    equipmentUnits: number;
+    downtimeReports: number;
+    equipmentDowntimeReports: number;
+    stoppedWorks: number;
+    equipment: Array<{ title: string; detail: string; tone: DrilldownTone }>;
     signals: Array<{ title: string; detail: string; tone: DrilldownTone }>;
     actions: Array<{ title: string; detail: string; tone: DrilldownTone }>;
     empty: boolean;
@@ -481,6 +499,7 @@ export function buildProjectIntelligenceDrilldownModel(input: ProjectIntelligenc
     documentChecklist
   });
   const hseSafety = buildHseSafetyPermitIntelligence({ project, scheduleItems, dailyReports: reports, risks, documents, documentChecklist });
+  const resourcesEquipment = buildResourcesEquipmentIntelligence({ project, dailyReports: reports, scheduleItems });
   const riskExecutive = buildRiskExecutiveIntelligence({
     ...input,
     project,
@@ -551,6 +570,7 @@ export function buildProjectIntelligenceDrilldownModel(input: ProjectIntelligenc
       { id: "acceptance-billing", label: "КС", tone: acceptanceBilling.summary.tone, count: acceptanceBilling.summary.readyItems || acceptanceBilling.summary.blockedItems },
       { id: "execution-control", label: "Исполнение", tone: executionControl.summary.tone === "neutral" ? "info" : executionControl.summary.tone, count: executionControl.summary.delayedFronts || executionControl.summary.unassignedItems },
       { id: "field-operations", label: "Площадка", tone: fieldOperations.summary.tone === "neutral" ? "info" : fieldOperations.summary.tone, count: fieldOperations.summary.downtimeReports || fieldOperations.summary.issueReports || fieldOperations.summary.reportCount },
+      { id: "resources-equipment", label: "Ресурсы", tone: resourcesEquipment.summary.tone === "neutral" ? "info" : resourcesEquipment.summary.tone, count: resourcesEquipment.summary.equipmentDowntimeReports || resourcesEquipment.summary.stoppedWorks || resourcesEquipment.summary.equipmentUnits },
       { id: "photo-evidence", label: "Evidence", tone: photoEvidence.summary.tone === "neutral" ? "info" : photoEvidence.summary.tone, count: photoEvidence.summary.ksBlockers || photoEvidence.summary.missingEvidenceItems || photoEvidence.summary.evidenceDocuments },
       { id: "quality-issues", label: "Качество", tone: qualityIssues.summary.tone === "neutral" ? "info" : qualityIssues.summary.tone, count: qualityIssues.summary.criticalIssues || qualityIssues.summary.totalIssues },
       { id: "hse-safety", label: "ОТиПБ", tone: hseSafety.summary.tone === "neutral" ? "info" : hseSafety.summary.tone, count: hseSafety.summary.criticalSignals || hseSafety.summary.permitBlockers || hseSafety.summary.totalSignals },
@@ -806,6 +826,23 @@ export function buildProjectIntelligenceDrilldownModel(input: ProjectIntelligenc
         tone: action.priority === "high" ? "bad" : action.priority === "medium" ? "warn" : "info"
       })),
       empty: fieldOperations.summary.status === "no_reports",
+      ctaTab: "Рапорты",
+      scheduleTab: "График"
+    },
+    resourcesEquipment: {
+      tone: resourcesEquipment.summary.tone === "neutral" ? "info" : resourcesEquipment.summary.tone,
+      status: resourcesEquipment.summary.status,
+      headline: resourcesEquipment.summary.headline,
+      latestWorkers: resourcesEquipment.summary.latestWorkers,
+      latestEngineers: resourcesEquipment.summary.latestEngineers,
+      equipmentUnits: resourcesEquipment.summary.equipmentUnits,
+      downtimeReports: resourcesEquipment.summary.downtimeReports,
+      equipmentDowntimeReports: resourcesEquipment.summary.equipmentDowntimeReports,
+      stoppedWorks: resourcesEquipment.summary.stoppedWorks,
+      equipment: resourcesEquipment.equipment.slice(0, 5).map((item) => ({ title: item.name, detail: `${item.mentions} упоминаний · ${item.lastSeen}`, tone: item.tone === "neutral" ? "info" : item.tone })),
+      signals: resourcesEquipment.signals.slice(0, 5).map((item) => ({ title: item.title, detail: `${item.source} · ${item.detail}`, tone: item.tone === "neutral" ? "info" : item.tone })),
+      actions: resourcesEquipment.actions.slice(0, 5).map((item) => ({ title: item.title, detail: `${item.ownerRole} · ${item.detail}`, tone: item.priority === "high" ? "bad" : item.priority === "medium" ? "warn" : "info" })),
+      empty: resourcesEquipment.summary.status === "no_reports",
       ctaTab: "Рапорты",
       scheduleTab: "График"
     },

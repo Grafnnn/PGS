@@ -40,7 +40,7 @@ describe("project intelligence drill-down model", () => {
       }
     });
 
-    expect(model.nav.map((item) => item.id)).toEqual(["baseline", "documents", "risks", "schedule", "finance-vor", "contract-tender", "proposal-submission", "acceptance-billing", "execution-control", "field-operations", "photo-evidence", "quality-issues", "hse-safety", "procurement", "reports", "ai-recommendations"]);
+    expect(model.nav.map((item) => item.id)).toEqual(["baseline", "documents", "risks", "schedule", "finance-vor", "contract-tender", "proposal-submission", "acceptance-billing", "execution-control", "field-operations", "resources-equipment", "photo-evidence", "quality-issues", "hse-safety", "procurement", "reports", "ai-recommendations"]);
     expect(model.baseline.templateTitle).toBe("Общестрой");
     expect(model.baseline.firstActions).toContain("Импортировать ВОР");
     expect(model.documents).toMatchObject({ present: 1, total: 2, ctaTab: "Документы" });
@@ -68,6 +68,8 @@ describe("project intelligence drill-down model", () => {
     expect(model.executionControl.headline).toBeTruthy();
     expect(model.fieldOperations.ctaTab).toBe("Рапорты");
     expect(model.fieldOperations.headline).toBeTruthy();
+    expect(model.resourcesEquipment.ctaTab).toBe("Рапорты");
+    expect(model.resourcesEquipment.headline).toBeTruthy();
     expect(model.photoEvidence.ctaTab).toBe("Документы");
     expect(model.photoEvidence.headline).toBeTruthy();
     expect(model.qualityIssues.ctaTab).toBe("Риски");
@@ -97,6 +99,7 @@ describe("project intelligence drill-down model", () => {
     expect(model.acceptanceBilling.empty).toBe(true);
     expect(model.executionControl.empty).toBe(true);
     expect(model.fieldOperations.empty).toBe(true);
+    expect(model.resourcesEquipment.empty).toBe(true);
     expect(model.photoEvidence.empty).toBe(true);
     expect(model.qualityIssues.empty).toBe(true);
     expect(model.hseSafety.empty).toBe(true);
