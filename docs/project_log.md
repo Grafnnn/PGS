@@ -1,5 +1,56 @@
 # PGS Project Log
 
+## 2026-07-14 - Workbook Import Quality Gate v1 online/core GO
+
+Status: Workbook Import Quality Gate v1 reached ONLINE/CORE GO on Render after PR #102. Project creation now evaluates workbook readiness, blocks critical import failures, and requires explicit acknowledgement when data can be imported only with review.
+
+- Online URL: https://pgs-frankfurt.onrender.com
+- Online commit: `cfe2d717766c15519e343180c19ed91e797750c3`
+- Render deploy: `dep-d9ameqd7vvec73etvogg`
+- PR: #102
+- Decision: ONLINE/CORE GO
+- Git SHA source: `RENDER_GIT_COMMIT`
+
+Health and pages:
+
+- `/api/health`: HTTP 200 / `ok`
+- DB: `ok`
+- migrations: `ok`, count `6`
+- auth required: `true`
+- AI configured: `true`
+- `/dashboard`: 200
+- `/projects`: 200
+- `/projects/project-demo`: 404 as expected
+- `/projects/project-smoke`: 200
+
+Deployed UI and behavior:
+
+- `Workbook import quality gate`, `Проверка качества перед созданием проекта`, `Quality score`, and `Я проверил предупреждения` are present in the deployed projects bundle.
+- The deterministic gate classifies an import as `ready`, `review_required`, or `blocked` and shows recognized records, mapping review, formulas, hidden rows, cost reconciliation, module coverage, and actionable issues.
+- Parser failures and workbooks without usable budget/work cost data block creation. Mapping uncertainty, duplicates, formulas, and financial reconciliation gaps require explicit user acknowledgement.
+- Preview remains read-only, mapping recalculation remains explicit, and project creation remains a separate user action.
+- The provided example workbook was analyzed locally only: 44 sheets, 1,115 recognized records, score 76/100, `review_required`, with four mapping-review sheets, a 15.3% reconciliation gap, and 682 formula cells. It was not uploaded online.
+
+Unauthenticated guards:
+
+- `/api/auth/me`: 401
+- workbook analysis: 403
+- project creation: 403
+- project import preview: 401
+- AI summary: 403
+
+Validation and safety:
+
+- Vitest: 272/272 passed; ESLint, TypeScript, Prisma generate/validate, Next production build, and `git diff --check` passed.
+- Desktop 1280px and mobile 390px layouts passed without horizontal overflow.
+- no real online workbook upload, project creation, import commit, project deletion, or live AI call was run.
+- no Render env/secrets, DB schema, migrations, auth/session model, or deploy configuration were changed.
+- no secrets, cookies, tokens, provider keys, smoke secrets, session IDs, or env values were printed.
+
+Remaining optional follow-up:
+
+- authenticated disposable browser smoke: upload a synthetic workbook, review quality issues, acknowledge warnings, create the project, verify populated modules, and delete the project. Full browser file-picker interaction is not claimed by this core gate.
+
 ## 2026-07-14 - Workbook Import Review & Mapping v1 online/core GO
 
 Status: Workbook Import Review & Mapping v1 reached ONLINE/CORE GO on Render after PR #100. Project onboarding now exposes every workbook sheet for review before creation, with the detected role, confidence, row counts, inclusion state, and an explicit recalculation step for manual decisions.
