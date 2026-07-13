@@ -1,5 +1,55 @@
 # PGS Project Log
 
+## 2026-07-13 - HSE / Safety & Permit Compliance v1 online/core GO
+
+Status: HSE / Safety & Permit Compliance v1 reached ONLINE/CORE GO on Render after PR #88. Full authenticated browser interaction with disposable permits or safety evidence was not run for this train.
+
+- Online URL: https://pgs-frankfurt.onrender.com
+- Online commit: `58b8f1962d1ecb7d0bde36fd12ee1696c7a54c52`
+- PR: #88
+- Decision: ONLINE/CORE GO
+- Git SHA source: `RENDER_GIT_COMMIT`
+
+Health:
+
+- `/api/health`: HTTP 200 / `ok`
+- DB: `ok`
+- migrations: `ok`, count `6`
+- auth required: `true`
+- AI configured: `true`
+- storage: local and writable
+
+Pages and markers:
+
+- `/dashboard`: 200
+- `/projects`: 200
+- `/projects/project-demo`: 404 as expected
+- `/projects/project-smoke`: 200
+- `HSE / Safety & Permit Compliance`: present in the deployed project page bundle.
+- `ОТиПБ / Допуски`: present in the deployed project page bundle.
+- `HSE signal register`, `Safety actions`, and `HSE handoff`: present in the deployed project page bundle.
+- `hse-safety-workspace`: present in the deployed project page bundle.
+
+Unauthenticated guards:
+
+- `/api/auth/me`: 401
+- AI summary: 403
+- data-readiness: 401
+- intelligence: 401
+
+Not run / not touched:
+
+- no live AI call was run.
+- no online mutation/import/delete/upload smoke was run.
+- no manual deploy/redeploy was triggered.
+- no Render env/secrets were changed.
+- no DB schema or migration changes were made.
+- no secrets, cookies, tokens, provider keys, smoke secrets, session IDs, or env values were printed.
+
+Remaining optional follow-up:
+
+- authenticated browser smoke for HSE signals, permits, and safety actions using disposable evidence, then cleaning it up through the approved safe path.
+
 ## 2026-07-13 - Quality / Issues & Punch List v1 online/core GO
 
 Status: Quality / Issues & Punch List v1 reached ONLINE/CORE GO on Render after PR #86. Full authenticated browser interaction and real NCR/remark workflow smoke were not run for this train.
