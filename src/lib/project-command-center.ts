@@ -1,6 +1,7 @@
 import { budgetTotals, deriveAutoRisks, financeTotals, materialTotals, workTotals } from "@/lib/calculations";
 import { buildAcceptanceBillingIntelligence } from "@/lib/acceptance-billing-intelligence";
 import { buildCommercialProposalIntelligence } from "@/lib/commercial-proposal-intelligence";
+import { buildChangeOrdersIntelligence } from "@/lib/change-orders-intelligence";
 import { buildContractTenderIntelligence } from "@/lib/contract-tender-intelligence";
 import { buildCostToCompleteIntelligence } from "@/lib/cost-to-complete-intelligence";
 import { buildDocumentComplianceIntelligence } from "@/lib/document-compliance-intelligence";
@@ -239,6 +240,15 @@ export function buildProjectCommandCenterModel(input: ProjectCommandCenterInput)
     payments,
     risks
   });
+  const changeOrders = buildChangeOrdersIntelligence({
+    project,
+    budgetItems,
+    scheduleItems,
+    materials,
+    procurementRequests,
+    payments,
+    risks
+  });
   const executionControl = buildSubcontractorExecutionIntelligence({
     project,
     budgetItems,
@@ -400,6 +410,7 @@ export function buildProjectCommandCenterModel(input: ProjectCommandCenterInput)
       { key: "readiness", label: "Готовность данных", value: `${readinessScore}%`, tone: toneFromScore(readinessScore), hint: input.readiness?.status ?? "pipeline" },
       { key: "budget", label: "Бюджетный сигнал", value: compactMoney(budgetDeviation), tone: budgetDeviation > 0 ? "bad" : "good", hint: `Прогноз: ${compactMoney(budget.totalForecastCost)}` },
       { key: "costToComplete", label: "До завершения", value: compactMoney(costToComplete.summary.costToComplete), tone: costToComplete.summary.tone, hint: `${costToComplete.summary.forecastMarginPercent.toFixed(1)}% forecast margin` },
+      { key: "changeOrders", label: "Изменения", value: String(changeOrders.summary.candidateCount), tone: changeOrders.summary.tone, hint: changeOrders.summary.candidateCount ? `К оценке ${compactMoney(changeOrders.summary.estimatedAmount)}` : changeOrders.summary.headline },
       { key: "schedule", label: "План / факт", value: percent(works.completionPercent), tone: delayedWorks.length ? "bad" : "info", hint: delayedWorks.length ? `${delayedWorks.length} просроч.` : "Без критичных просрочек" },
       { key: "risks", label: "Открытые риски", value: String(activeRisks.length), tone: activeRisks.length ? "warn" : "good", hint: activeRisks[0]?.title ?? "Нет открытых рисков" },
       { key: "decisions", label: "Решения", value: String(riskExecutive.summary.decisionRequired), tone: riskExecutive.summary.decisionRequired ? "warn" : "good", hint: `Report ${riskExecutive.executiveReport.reportReadiness}` },
