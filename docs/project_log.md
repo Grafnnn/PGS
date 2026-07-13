@@ -1,5 +1,55 @@
 # PGS Project Log
 
+## 2026-07-13 - Cost-to-Complete & Margin Forecast v1 online/core GO
+
+Status: Cost-to-Complete & Margin Forecast v1 reached ONLINE/CORE GO on Render after PR #92. The full authenticated browser interaction with factual cost updates was not run for this read-only intelligence train.
+
+- Online URL: https://pgs-frankfurt.onrender.com
+- Online commit: `692eff59d31371e709b93e0e3d218c84636b7fa3`
+- PR: #92
+- Decision: ONLINE/CORE GO
+- Git SHA source: `RENDER_GIT_COMMIT`
+
+Health:
+
+- `/api/health`: HTTP 200 / `ok`
+- DB: `ok`
+- migrations: `ok`, count `6`
+- auth required: `true`
+- AI configured: `true`
+- storage: local and writable
+
+Pages and markers:
+
+- `/dashboard`: 200
+- `/projects`: 200
+- `/projects/project-demo`: 404 as expected
+- `/projects/project-smoke`: 200
+- `Cost-to-Complete & Margin Forecast`: present in the deployed project page bundle.
+- `Прогноз затрат до завершения и маржи`: present in the deployed project page bundle.
+- `Forecast cost`, `До завершения`, `Forecast margin`, and `Margin protection actions`: present in the deployed project page bundle.
+- `costToComplete`: present in the deployed Command Center bundle.
+
+Unauthenticated guards:
+
+- `/api/auth/me`: 401
+- AI summary: 403
+- data-readiness: 401
+- intelligence: 401
+
+Not run / not touched:
+
+- no live AI call was run.
+- no online mutation/import/delete/upload smoke was run.
+- no manual deploy/redeploy was triggered; Render auto-deploy was used.
+- no Render env/secrets were changed.
+- no DB schema or migration changes were made.
+- no secrets, cookies, tokens, provider keys, smoke secrets, session IDs, or env values were printed.
+
+Remaining optional follow-up:
+
+- authenticated browser smoke using disposable factual costs and payments, with cleanup through the approved safe path.
+
 ## 2026-07-13 - Resources & Equipment Intelligence v1 online/core GO
 
 Status: Resources & Equipment Intelligence v1 reached ONLINE/CORE GO on Render after PR #90. Full authenticated browser interaction with resource daily reports or equipment downtime evidence was not run for this train.
