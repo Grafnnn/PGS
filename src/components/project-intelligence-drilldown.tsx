@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, Bot, ClipboardList, FileText, HardHat, Landmark, PackageCheck, ReceiptText, Scale, Send, Sparkles, TimerReset, Users } from "lucide-react";
+import { AlertTriangle, Bot, ClipboardList, FileText, HardHat, Landmark, PackageCheck, ReceiptText, Scale, Send, Sparkles, TimerReset, Users, Wrench } from "lucide-react";
 import React from "react";
 import {
   buildProjectIntelligenceDrilldownModel,
@@ -418,6 +418,39 @@ export function ProjectIntelligenceDrilldown({
           <div className="executive-action-note">
             <Sparkles size={16} />
             <span>{model.fieldOperations.headline}</span>
+          </div>
+        </article>
+
+        <article className="panel intelligence-panel">
+          <SectionHeader id="resources-equipment" icon={<Wrench size={18} />} title="Resources & Equipment Intelligence" tone={model.resourcesEquipment.tone}>
+            <button className="button secondary compact-button" type="button" onClick={() => onNavigate(model.resourcesEquipment.ctaTab)}>
+              Рапорты
+            </button>
+            <button className="button secondary compact-button" type="button" onClick={() => onNavigate(model.resourcesEquipment.scheduleTab)}>
+              График
+            </button>
+          </SectionHeader>
+          <div className="intelligence-metrics">
+            <StatusInsightCard title="Resource status" value={model.resourcesEquipment.status} detail={model.resourcesEquipment.headline} tone={model.resourcesEquipment.tone} />
+            <StatusInsightCard title="Люди" value={`${model.resourcesEquipment.latestWorkers}/${model.resourcesEquipment.latestEngineers}`} detail="рабочие / ИТР в последнем рапорте" tone={model.resourcesEquipment.empty ? "neutral" : "info"} />
+            <StatusInsightCard title="Техника" value={String(model.resourcesEquipment.equipmentUnits)} detail={`${model.resourcesEquipment.equipmentDowntimeReports} простоев техники`} tone={model.resourcesEquipment.equipmentDowntimeReports ? "bad" : model.resourcesEquipment.equipmentUnits ? "info" : "neutral"} />
+            <StatusInsightCard title="График" value={String(model.resourcesEquipment.stoppedWorks)} detail={`${model.resourcesEquipment.downtimeReports} рапортов с простоями`} tone={model.resourcesEquipment.stoppedWorks ? "bad" : model.resourcesEquipment.downtimeReports ? "warn" : "good"} />
+          </div>
+          {model.resourcesEquipment.empty ? (
+            <EmptyIntelligenceState text="Для контроля людей и техники нужен хотя бы один ежедневный рапорт площадки." />
+          ) : (
+            <SignalList
+              emptyText="Ресурсных сигналов по текущему срезу нет."
+              items={[
+                ...model.resourcesEquipment.equipment,
+                ...model.resourcesEquipment.signals,
+                ...model.resourcesEquipment.actions
+              ].slice(0, 8)}
+            />
+          )}
+          <div className="executive-action-note">
+            <Sparkles size={16} />
+            <span>{model.resourcesEquipment.headline}</span>
           </div>
         </article>
 

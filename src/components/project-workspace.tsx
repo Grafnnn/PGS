@@ -13,6 +13,7 @@ import { PhotoEvidenceWorkspace } from "@/components/photo-evidence-workspace";
 import { ProjectIntelligenceDrilldown } from "@/components/project-intelligence-drilldown";
 import { ProcurementIntelligenceWorkspace } from "@/components/procurement-intelligence-workspace";
 import { QualityIssuesWorkspace } from "@/components/quality-issues-workspace";
+import { ResourcesEquipmentWorkspace } from "@/components/resources-equipment-workspace";
 import { RiskExecutiveWorkspace } from "@/components/risk-executive-workspace";
 import { ScheduleCashflowWorkspace } from "@/components/schedule-cashflow-workspace";
 import { SubcontractorExecutionWorkspace } from "@/components/subcontractor-execution-workspace";
@@ -1249,6 +1250,12 @@ export function ProjectWorkspace({ initialBundle, createdFromOnboarding = false 
             risks={risks}
             documents={documents}
             documentChecklist={documentChecklist}
+            onNavigate={setActiveTab}
+          />
+          <ResourcesEquipmentWorkspace
+            project={initialBundle.project}
+            dailyReports={reports}
+            scheduleItems={scheduleItems}
             onNavigate={setActiveTab}
           />
           <QualityIssuesWorkspace
