@@ -1,5 +1,55 @@
 # PGS Project Log
 
+## 2026-07-13 - Claims & Notices v1 online/core GO
+
+Status: Claims & Notices v1 reached ONLINE/CORE GO on Render after PR #96. The train adds a read-only register of notice and claim candidates from changes, schedule, risks, documents, and the project checklist. It does not send notifications, create claims, letters, supplemental agreements, or legal obligations.
+
+- Online URL: https://pgs-frankfurt.onrender.com
+- Online commit: `7a2870ed8a56e3c9e5499ba7b3490e642f373b53`
+- PR: #96
+- Decision: ONLINE/CORE GO
+- Git SHA source: `RENDER_GIT_COMMIT`
+
+Health:
+
+- `/api/health`: HTTP 200 / `ok`
+- DB: `ok`
+- migrations: `ok`, count `6`
+- auth required: `true`
+- AI configured: `true`
+- storage: local and writable
+
+Pages and markers:
+
+- `/dashboard`: 200
+- `/projects`: 200
+- `/projects/project-demo`: 404 as expected
+- `/projects/project-smoke`: 200
+- `Claims & Notices`: present in the deployed project page bundle.
+- `Уведомления, претензии и договорные сроки`: present in the deployed project page bundle.
+- `Notice register`, `Draft guidance`, and `Preparation actions`: present in the deployed project page bundle.
+- `notices`: present in the deployed Command Center bundle.
+
+Unauthenticated guards:
+
+- `/api/auth/me`: 401
+- AI summary: 403
+- data-readiness: 401
+- intelligence: 401
+
+Not run / not touched:
+
+- no live AI call was run.
+- no notice, claim, email, external correspondence, or online mutation smoke was run.
+- no manual deploy/redeploy was triggered; Render auto-deploy was used.
+- no Render env/secrets were changed.
+- no DB schema or migration changes were made.
+- no secrets, cookies, tokens, provider keys, smoke secrets, session IDs, or env values were printed.
+
+Remaining optional follow-up:
+
+- authenticated browser smoke using disposable evidence and a review-only notice draft; any real external correspondence remains a separately approved operator action.
+
 ## 2026-07-13 - Change Orders & Variations v1 online/core GO
 
 Status: Change Orders & Variations v1 reached ONLINE/CORE GO on Render after PR #94. The train adds a read-only register of candidates for scope, price, schedule, material, and contract-risk changes; it does not create change orders, supplemental agreements, budget rows, KS, or cashflow entries.
