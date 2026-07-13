@@ -5,6 +5,7 @@ import { AlertTriangle, BarChart3, Bot, ClipboardList, FileText, Landmark, Layou
 import { AcceptanceBillingWorkspace } from "@/components/acceptance-billing-workspace";
 import { CommercialProposalWorkspace } from "@/components/commercial-proposal-workspace";
 import { ContractTenderWorkspace } from "@/components/contract-tender-workspace";
+import { CostToCompleteWorkspace } from "@/components/cost-to-complete-workspace";
 import { FieldOperationsWorkspace } from "@/components/field-operations-workspace";
 import { HseSafetyPermitWorkspace } from "@/components/hse-safety-permit-workspace";
 import { ProjectCommandCenter } from "@/components/project-command-center";
@@ -1093,6 +1094,16 @@ export function ProjectWorkspace({ initialBundle, createdFromOnboarding = false 
 
       {activeTab === "Финансы" && (
         <Panel title="Платежи и кассовый план" icon={<Landmark size={18} />}>
+          <CostToCompleteWorkspace
+            project={initialBundle.project}
+            budgetItems={budgetItems}
+            scheduleItems={scheduleItems}
+            materials={materials}
+            procurementRequests={procurementRequests}
+            payments={payments}
+            risks={risks}
+            onNavigate={setActiveTab}
+          />
           <ScheduleCashflowWorkspace
             projectName={initialBundle.project.name}
             projectStartsAt={initialBundle.project.startsAt}
