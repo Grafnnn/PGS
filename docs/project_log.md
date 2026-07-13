@@ -1,5 +1,55 @@
 # PGS Project Log
 
+## 2026-07-14 - Universal Project Workbook Import v1 online/core GO
+
+Status: Universal Project Workbook Import v1 reached ONLINE/CORE GO on Render after PR #98. During project creation, a user can provide one Excel workbook and PGS can classify detailed works/VOR, materials, schedule, equipment, payroll/FOT, summary, reference, and control sheets before an explicit project creation and import commit.
+
+- Online URL: https://pgs-frankfurt.onrender.com
+- Online commit: `098cc2b42b5d1666ce33a2e099228c0c5ee6b215`
+- PR: #98
+- Decision: ONLINE/CORE GO
+- Git SHA source: `RENDER_GIT_COMMIT`
+
+Health and pages:
+
+- `/api/health`: HTTP 200 / `ok`
+- DB: `ok`
+- migrations: `ok`, count `6`
+- auth required: `true`
+- AI configured: `true`
+- `/dashboard`: 200
+- `/projects`: 200
+- `/projects/project-demo`: 404 as expected
+- `/projects/project-smoke`: 200
+
+Deployed UI and behavior:
+
+- `Project Creation & Onboarding`, `Единый Excel проекта`, `.xlsx` file input, ВОР, materials, schedule, FOT, and equipment distribution markers are present.
+- Summary/reference/control sheets are used for reconciliation rather than duplicate import.
+- The UI exposes automatic coverage and the remaining reconciliation gap instead of inventing missing detail.
+- The source workbook is intended to be stored in Documents after explicit project creation.
+- Desktop page width is stable, the sidebar is not duplicated, and no browser console errors were observed.
+
+Unauthenticated guards:
+
+- `/api/auth/me`: 401
+- workbook analysis: 403
+- project creation: 403
+- project import preview: 401
+
+Not run / not touched:
+
+- no real online project creation, workbook import commit, document upload, or project deletion was run.
+- no live AI call was run.
+- no manual deploy/redeploy was triggered; Render auto-deploy was used.
+- no Render env/secrets were changed.
+- no DB schema or migration changes were made.
+- no secrets, cookies, tokens, provider keys, smoke secrets, session IDs, or env values were printed.
+
+Remaining follow-up:
+
+- authenticated disposable create -> analyze workbook -> commit import -> verify populated modules and source document -> delete project smoke using a synthetic workbook or separately approved copy of the example workbook.
+
 ## 2026-07-13 - Claims & Notices v1 online/core GO
 
 Status: Claims & Notices v1 reached ONLINE/CORE GO on Render after PR #96. The train adds a read-only register of notice and claim candidates from changes, schedule, risks, documents, and the project checklist. It does not send notifications, create claims, letters, supplemental agreements, or legal obligations.
