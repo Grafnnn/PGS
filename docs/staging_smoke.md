@@ -156,6 +156,30 @@ Expected:
 - the project name starts with `SMOKE-`;
 - no real client files, live AI calls, arbitrary project mutations, passwords, cookies, session tokens, `DATABASE_URL`, `OPENAI_API_KEY`, or smoke secret.
 
+## Browser session handoff
+
+For a controlled browser-only staging smoke, request a short-lived session without exposing a password or session token in JSON:
+
+```bash
+curl -sS -c /tmp/pgs-browser-smoke.cookies \
+  -X POST \
+  -H "x-pgs-staging-smoke-secret: $STAGING_SMOKE_SECRET" \
+  "$APP_URL/api/internal/staging-smoke/browser-session"
+```
+
+The endpoint is available only when `APP_ENV=staging`, grants the synthetic smoke user temporary admin access for 20 minutes, and places an `HttpOnly` session cookie in the caller's cookie jar. Use a disposable browser profile and only synthetic projects/files.
+
+Always close the handoff after the browser flow. This revokes all active smoke-user sessions and restores `VIEWER`:
+
+```bash
+curl -sS -b /tmp/pgs-browser-smoke.cookies \
+  -X DELETE \
+  -H "x-pgs-staging-smoke-secret: $STAGING_SMOKE_SECRET" \
+  "$APP_URL/api/internal/staging-smoke/browser-session"
+```
+
+Delete the temporary cookie jar after cleanup. Production returns `404`; missing or invalid smoke secrets return `403`.
+
 ## Safety notes
 
 - The endpoint must not be used for arbitrary mutation smoke; only built-in synthetic `project-smoke` checks with cleanup are allowed.

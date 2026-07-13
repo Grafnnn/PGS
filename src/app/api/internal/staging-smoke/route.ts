@@ -1,28 +1,7 @@
-import { createHash, timingSafeEqual } from "crypto";
 import { NextRequest } from "next/server";
 import { apiError, apiOk, getRequestId } from "@/lib/api/errors";
+import { isStagingSmokeRuntime, providedStagingSmokeSecret, stagingSmokeSecretsMatch } from "@/lib/smoke/guard";
 import { runStagingSmokeBootstrap } from "@/lib/smoke/runtime";
-
-function isStagingRuntime() {
-  return process.env.APP_ENV === "staging";
-}
-
-function hashSecret(value: string) {
-  return createHash("sha256").update(value).digest();
-}
-
-function secretsMatch(provided: string, expected: string) {
-  return timingSafeEqual(hashSecret(provided), hashSecret(expected));
-}
-
-function providedSecret(request: NextRequest) {
-  const headerSecret = request.headers.get("x-pgs-staging-smoke-secret")?.trim();
-  if (headerSecret) return headerSecret;
-
-  const authorization = request.headers.get("authorization")?.trim();
-  if (!authorization?.toLowerCase().startsWith("bearer ")) return "";
-  return authorization.slice("bearer ".length).trim();
-}
 
 function sanitizeError(error: unknown) {
   if (!(error instanceof Error)) return "Staging smoke failed.";
@@ -42,7 +21,7 @@ function stagingSmokeBaseUrl(fallbackOrigin: string) {
 export async function POST(request: NextRequest) {
   const requestId = getRequestId(request);
 
-  if (!isStagingRuntime()) {
+  if (!isStagingSmokeRuntime()) {
     return apiError(requestId, "NOT_FOUND", "Not found", 404);
   }
 
@@ -51,7 +30,7 @@ export async function POST(request: NextRequest) {
     return apiError(requestId, "STAGING_SMOKE_SECRET_MISSING", "Staging smoke secret is not configured.", 403);
   }
 
-  if (!secretsMatch(providedSecret(request), expectedSecret)) {
+  if (!stagingSmokeSecretsMatch(providedStagingSmokeSecret(request), expectedSecret)) {
     return apiError(requestId, "FORBIDDEN", "Forbidden", 403);
   }
 
