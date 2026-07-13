@@ -2479,6 +2479,157 @@ tr:last-child td {
   margin: 2px 0 0;
 }
 
+.project-workbook-card {
+  background: #f7faf8;
+  border: 1px solid #b9d4c5;
+  border-radius: var(--radius-sm);
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding: 14px;
+}
+
+.project-workbook-card-head {
+  align-items: center;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+}
+
+.project-workbook-card-head div,
+.project-workbook-result div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.project-workbook-card-head span,
+.project-workbook-result span,
+.project-workbook-module p,
+.project-workbook-module small,
+.project-workbook-fot-note span {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.project-workbook-icon {
+  align-items: center;
+  background: #dcefe4;
+  border-radius: var(--radius-sm);
+  color: #166534;
+  display: inline-flex;
+  height: 40px;
+  justify-content: center;
+  width: 40px;
+}
+
+.project-workbook-upload {
+  align-items: center;
+  background: var(--surface);
+  border: 1px dashed #6f9d83;
+  border-radius: var(--radius-sm);
+  color: #166534;
+  cursor: pointer;
+  display: inline-flex;
+  font-weight: 700;
+  gap: 8px;
+  justify-content: center;
+  min-height: 46px;
+  padding: 10px 14px;
+}
+
+.project-workbook-upload input {
+  height: 1px;
+  opacity: 0;
+  overflow: hidden;
+  position: absolute;
+  width: 1px;
+}
+
+.project-workbook-result {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.project-workbook-result div {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 10px;
+}
+
+.project-workbook-result small,
+.project-workbook-review small {
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.project-workbook-distribution {
+  display: grid;
+  gap: 12px;
+}
+
+.project-workbook-module-grid {
+  display: grid;
+  gap: 9px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.project-workbook-module {
+  border: 1px solid var(--line);
+  border-left: 3px solid #64748b;
+  border-radius: var(--radius-sm);
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  padding: 11px;
+}
+
+.project-workbook-module.tone-good {
+  border-left-color: #16845b;
+}
+
+.project-workbook-module.tone-info {
+  border-left-color: #2563eb;
+}
+
+.project-workbook-module > div {
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+.project-workbook-module p,
+.project-workbook-module small {
+  margin: 0;
+}
+
+.project-workbook-fot-note {
+  align-items: flex-start;
+  background: #fff8e8;
+  border: 1px solid #e5c56d;
+  border-radius: var(--radius-sm);
+  color: #8a5a00;
+  display: flex;
+  gap: 9px;
+  padding: 11px;
+}
+
+.project-workbook-fot-note div,
+.project-workbook-review {
+  display: grid;
+  gap: 3px;
+}
+
+.project-workbook-review {
+  border-left: 3px solid #16845b;
+  padding-left: 10px;
+}
+
 .project-create-review {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
@@ -5297,7 +5448,9 @@ input[type="checkbox"] {
 
   .template-selector-grid,
   .baseline-preview-grid,
-  .project-baseline-mini-grid {
+  .project-baseline-mini-grid,
+  .project-workbook-module-grid,
+  .project-workbook-result {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -5326,8 +5479,19 @@ input[type="checkbox"] {
   .module-link-grid,
   .template-selector-grid,
   .baseline-preview-grid,
-  .project-baseline-mini-grid {
+  .project-baseline-mini-grid,
+  .project-workbook-module-grid,
+  .project-workbook-result {
     grid-template-columns: 1fr;
+  }
+
+  .project-workbook-card-head {
+    align-items: flex-start;
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .project-workbook-card-head .button {
+    grid-column: 1 / -1;
   }
 
   .baseline-preview-head,
