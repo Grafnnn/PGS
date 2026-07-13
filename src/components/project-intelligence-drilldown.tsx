@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, Bot, ClipboardList, FileText, Landmark, PackageCheck, ReceiptText, Scale, Send, Sparkles, TimerReset, Users } from "lucide-react";
+import { AlertTriangle, Bot, ClipboardList, FileText, HardHat, Landmark, PackageCheck, ReceiptText, Scale, Send, Sparkles, TimerReset, Users } from "lucide-react";
 import React from "react";
 import {
   buildProjectIntelligenceDrilldownModel,
@@ -489,6 +489,25 @@ export function ProjectIntelligenceDrilldown({
             <Sparkles size={16} />
             <span>{model.qualityIssues.headline}</span>
           </div>
+        </article>
+
+        <article className="panel intelligence-panel">
+          <SectionHeader id="hse-safety" icon={<HardHat size={18} />} title="HSE / Safety & Permit Compliance" tone={model.hseSafety.tone}>
+            <button className="button secondary compact-button" type="button" onClick={() => onNavigate(model.hseSafety.ctaTab)}>
+              Исполнение
+            </button>
+            <button className="button secondary compact-button" type="button" onClick={() => onNavigate(model.hseSafety.documentsTab)}>
+              Документы
+            </button>
+          </SectionHeader>
+          <div className="intelligence-metrics">
+            <StatusInsightCard title="HSE status" value={model.hseSafety.status} detail={model.hseSafety.headline} tone={model.hseSafety.tone} />
+            <StatusInsightCard title="Сигналы" value={`${model.hseSafety.criticalSignals}/${model.hseSafety.totalSignals}`} detail="critical / всего" tone={model.hseSafety.criticalSignals ? "bad" : model.hseSafety.totalSignals ? "warn" : "good"} />
+            <StatusInsightCard title="Документы HSE" value={String(model.hseSafety.safetyDocuments)} detail="допуски / инструкции" tone={model.hseSafety.safetyDocuments ? "info" : "neutral"} />
+            <StatusInsightCard title="Permit blockers" value={String(model.hseSafety.permitBlockers)} detail="требуют подтверждения" tone={model.hseSafety.permitBlockers ? "bad" : "good"} />
+          </div>
+          {model.hseSafety.empty ? <EmptyIntelligenceState text="Для HSE-контроля нужны рапорты, риски, график, документы или checklist. Ложный зеленый статус не показывается." /> : <SignalList emptyText="HSE-сигналов по текущему срезу нет." items={[...model.hseSafety.items, ...model.hseSafety.actions].slice(0, 8)} />}
+          <div className="executive-action-note"><Sparkles size={16} /><span>{model.hseSafety.headline}</span></div>
         </article>
 
         <article className="panel intelligence-panel">

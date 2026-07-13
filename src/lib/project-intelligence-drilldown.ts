@@ -4,6 +4,7 @@ import { buildCommercialProposalIntelligence } from "@/lib/commercial-proposal-i
 import { buildContractTenderIntelligence } from "@/lib/contract-tender-intelligence";
 import { buildDocumentComplianceIntelligence } from "@/lib/document-compliance-intelligence";
 import { buildFieldOperationsIntelligence } from "@/lib/field-operations-intelligence";
+import { buildHseSafetyPermitIntelligence } from "@/lib/hse-safety-permit-intelligence";
 import { buildPhotoEvidenceIntelligence } from "@/lib/photo-evidence-intelligence";
 import { buildProcurementIntelligenceModel } from "@/lib/procurement-intelligence";
 import { buildInitialProjectReadiness } from "@/lib/project-onboarding-intelligence";
@@ -280,6 +281,20 @@ export type ProjectIntelligenceDrilldownModel = {
     reportsTab: "Рапорты";
     documentsTab: "Документы";
   };
+  hseSafety: {
+    tone: DrilldownTone;
+    status: string;
+    headline: string;
+    totalSignals: number;
+    criticalSignals: number;
+    safetyDocuments: number;
+    permitBlockers: number;
+    items: Array<{ title: string; detail: string; tone: DrilldownTone }>;
+    actions: Array<{ title: string; detail: string; tone: DrilldownTone }>;
+    empty: boolean;
+    ctaTab: "Исполнение";
+    documentsTab: "Документы";
+  };
   reports: {
     tone: DrilldownTone;
     latestReport?: { title: string; detail: string; status: string };
@@ -465,6 +480,7 @@ export function buildProjectIntelligenceDrilldownModel(input: ProjectIntelligenc
     documents,
     documentChecklist
   });
+  const hseSafety = buildHseSafetyPermitIntelligence({ project, scheduleItems, dailyReports: reports, risks, documents, documentChecklist });
   const riskExecutive = buildRiskExecutiveIntelligence({
     ...input,
     project,
@@ -537,6 +553,7 @@ export function buildProjectIntelligenceDrilldownModel(input: ProjectIntelligenc
       { id: "field-operations", label: "Площадка", tone: fieldOperations.summary.tone === "neutral" ? "info" : fieldOperations.summary.tone, count: fieldOperations.summary.downtimeReports || fieldOperations.summary.issueReports || fieldOperations.summary.reportCount },
       { id: "photo-evidence", label: "Evidence", tone: photoEvidence.summary.tone === "neutral" ? "info" : photoEvidence.summary.tone, count: photoEvidence.summary.ksBlockers || photoEvidence.summary.missingEvidenceItems || photoEvidence.summary.evidenceDocuments },
       { id: "quality-issues", label: "Качество", tone: qualityIssues.summary.tone === "neutral" ? "info" : qualityIssues.summary.tone, count: qualityIssues.summary.criticalIssues || qualityIssues.summary.totalIssues },
+      { id: "hse-safety", label: "ОТиПБ", tone: hseSafety.summary.tone === "neutral" ? "info" : hseSafety.summary.tone, count: hseSafety.summary.criticalSignals || hseSafety.summary.permitBlockers || hseSafety.summary.totalSignals },
       { id: "procurement", label: "Снабжение", tone: procurementTone, count: procurementIntelligence.summary.candidates || materialStats.deficitItems.length },
       { id: "reports", label: "Executive", tone: reportsTone },
       { id: "ai-recommendations", label: "AI", tone: "info", count: drilldownAiScenarios.length }
@@ -840,6 +857,20 @@ export function buildProjectIntelligenceDrilldownModel(input: ProjectIntelligenc
       empty: qualityIssues.summary.status === "no_data",
       ctaTab: "Риски",
       reportsTab: "Рапорты",
+      documentsTab: "Документы"
+    },
+    hseSafety: {
+      tone: hseSafety.summary.tone === "neutral" ? "info" : hseSafety.summary.tone,
+      status: hseSafety.summary.status,
+      headline: hseSafety.summary.headline,
+      totalSignals: hseSafety.summary.totalSignals,
+      criticalSignals: hseSafety.summary.criticalSignals,
+      safetyDocuments: hseSafety.summary.safetyDocuments,
+      permitBlockers: hseSafety.summary.permitBlockers,
+      items: hseSafety.signals.slice(0, 6).map((item) => ({ title: item.title, detail: `${item.source} · ${item.detail}`, tone: item.tone === "neutral" ? "info" : item.tone })),
+      actions: hseSafety.actions.slice(0, 5).map((item) => ({ title: item.title, detail: `${item.ownerRole} · ${item.detail}`, tone: item.priority === "high" ? "bad" : item.priority === "medium" ? "warn" : "info" })),
+      empty: hseSafety.summary.status === "no_data",
+      ctaTab: "Исполнение",
       documentsTab: "Документы"
     },
     reports: {

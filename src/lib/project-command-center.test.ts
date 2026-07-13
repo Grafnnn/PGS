@@ -95,6 +95,7 @@ describe("project command center model", () => {
     expect(model.statusBoard.find((item) => item.key === "fieldOps")).toBeTruthy();
     expect(model.statusBoard.find((item) => item.key === "evidence")).toBeTruthy();
     expect(model.statusBoard.find((item) => item.key === "quality")).toBeTruthy();
+    expect(model.statusBoard.find((item) => item.key === "hse")).toBeTruthy();
   });
 
   it("keeps degraded AI insight readable without leaking raw provider state", () => {
