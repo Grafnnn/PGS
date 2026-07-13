@@ -59,7 +59,7 @@ describe("project command center model", () => {
     });
 
     expect(model.project.name).toContain("Демо объект");
-    expect(model.kpis).toHaveLength(16);
+    expect(model.kpis).toHaveLength(17);
     expect(model.kpis.find((kpi) => kpi.key === "baseline")).toMatchObject({ label: "Baseline" });
     expect(model.kpis.some((kpi) => kpi.key === "decisions")).toBe(true);
     expect(model.kpis.some((kpi) => kpi.key === "contract")).toBe(true);
