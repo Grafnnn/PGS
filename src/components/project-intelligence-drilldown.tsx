@@ -457,6 +457,41 @@ export function ProjectIntelligenceDrilldown({
         </article>
 
         <article className="panel intelligence-panel">
+          <SectionHeader id="quality-issues" icon={<AlertTriangle size={18} />} title="Quality / Issues & Punch List" tone={model.qualityIssues.tone}>
+            <button className="button secondary compact-button" type="button" onClick={() => onNavigate(model.qualityIssues.ctaTab)}>
+              Риски
+            </button>
+            <button className="button secondary compact-button" type="button" onClick={() => onNavigate(model.qualityIssues.reportsTab)}>
+              Рапорты
+            </button>
+            <button className="button secondary compact-button" type="button" onClick={() => onNavigate(model.qualityIssues.documentsTab)}>
+              Документы
+            </button>
+          </SectionHeader>
+          <div className="intelligence-metrics">
+            <StatusInsightCard title="Quality status" value={model.qualityIssues.status} detail={model.qualityIssues.headline} tone={model.qualityIssues.tone} />
+            <StatusInsightCard title="Замечания" value={`${model.qualityIssues.criticalIssues}/${model.qualityIssues.totalIssues}`} detail="critical / всего" tone={model.qualityIssues.criticalIssues ? "bad" : model.qualityIssues.totalIssues ? "warn" : "good"} />
+            <StatusInsightCard title="Рапорты / evidence" value={`${model.qualityIssues.reportIssues}/${model.qualityIssues.evidenceDocuments}`} detail="site signals / подтверждения" tone={model.qualityIssues.reportIssues || model.qualityIssues.evidenceDocuments ? "info" : "neutral"} />
+            <StatusInsightCard title="График / КС" value={`${model.qualityIssues.delayedWorkItems}/${model.qualityIssues.acceptanceBlockers}`} detail="отклонения / блокеры" tone={model.qualityIssues.delayedWorkItems || model.qualityIssues.acceptanceBlockers ? "warn" : "good"} />
+          </div>
+          {model.qualityIssues.empty ? (
+            <EmptyIntelligenceState text="Для реестра качества нужны рапорты, риски, график, документы или чеклист КС. Система не показывает ложный зеленый статус." />
+          ) : (
+            <SignalList
+              emptyText="Сигналов качества в текущем срезе нет."
+              items={[
+                ...model.qualityIssues.items,
+                ...model.qualityIssues.actions
+              ].slice(0, 8)}
+            />
+          )}
+          <div className="executive-action-note">
+            <Sparkles size={16} />
+            <span>{model.qualityIssues.headline}</span>
+          </div>
+        </article>
+
+        <article className="panel intelligence-panel">
           <SectionHeader id="reports" icon={<ClipboardList size={18} />} title="Reports / Executive Output" tone={model.reports.tone}>
             <button className="button secondary compact-button" type="button" onClick={() => onNavigate(model.reports.reportTab)}>
               Рапорты
