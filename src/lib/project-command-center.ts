@@ -7,6 +7,7 @@ import { buildFieldOperationsIntelligence } from "@/lib/field-operations-intelli
 import { buildPhotoEvidenceIntelligence } from "@/lib/photo-evidence-intelligence";
 import { buildInitialProjectReadiness } from "@/lib/project-onboarding-intelligence";
 import type { DocumentChecklistItem, PipelineAction, PipelineReadiness } from "@/lib/project-pipeline";
+import { buildQualityIssuesIntelligence } from "@/lib/quality-issues-intelligence";
 import { buildRiskExecutiveIntelligence, type RiskExecutiveImportHistoryItem } from "@/lib/risk-executive-intelligence";
 import { buildSubcontractorExecutionIntelligence } from "@/lib/subcontractor-execution-intelligence";
 import type { BudgetItem, DailyReport, Material, Payment, ProcurementRequest, Project, ProjectDocument, Risk, ScheduleItem } from "@/lib/types";
@@ -261,6 +262,18 @@ export function buildProjectCommandCenterModel(input: ProjectCommandCenterInput)
     documents,
     documentChecklist: documentItems
   });
+  const qualityIssues = buildQualityIssuesIntelligence({
+    project,
+    budgetItems,
+    scheduleItems,
+    materials,
+    procurementRequests,
+    payments,
+    dailyReports: reports,
+    risks,
+    documents,
+    documentChecklist: documentItems
+  });
   const scheduleScore = works.completionPercent;
   const materialScore = materials.length ? ((materials.length - materialStats.deficitItems.length) / materials.length) * 100 : 0;
   const financeScore = finance.cashGap < 0 || finance.financingNeed > 0 ? 35 : 80;
@@ -306,6 +319,7 @@ export function buildProjectCommandCenterModel(input: ProjectCommandCenterInput)
     executionControl.summary.status === "controlled" ? "Подтвердить недельный план исполнителей" : "Закрыть блокеры исполнения",
     fieldOperations.summary.status === "controlled" ? "Сверить факт площадки с КС" : "Проверить рапорты площадки",
     photoEvidence.summary.status === "ready_for_review" ? "Проверить evidence перед КС" : "Добрать фото / evidence",
+    qualityIssues.summary.totalIssues ? "Провести triage замечаний" : "Подтвердить отсутствие замечаний",
     activeRisks[0] ? "Назначить владельца риска" : "Обновить реестр рисков"
   ];
 
@@ -337,6 +351,7 @@ export function buildProjectCommandCenterModel(input: ProjectCommandCenterInput)
     defaultAction("Проверить исполнение", executionControl.summary.nextStep, executionControl.summary.tone === "neutral" ? "info" : executionControl.summary.tone, "Исполнение"),
     defaultAction("Проверить площадку", fieldOperations.summary.nextStep, fieldOperations.summary.tone === "neutral" ? "info" : fieldOperations.summary.tone, "Рапорты"),
     defaultAction("Проверить фото / evidence", photoEvidence.summary.nextStep, photoEvidence.summary.tone === "neutral" ? "info" : photoEvidence.summary.tone, "Документы"),
+    defaultAction("Проверить качество / замечания", qualityIssues.summary.nextStep, qualityIssues.summary.tone === "neutral" ? "info" : qualityIssues.summary.tone, "Риски"),
     defaultAction("Проверить решения руководства", riskExecutive.decisions[0]?.title ?? "Decision register готов к проверке.", riskExecutive.decisions.length ? "warn" : "info", "Риски"),
     defaultAction("Сформировать AI-сводку", "Запустить existing AI scenario по клику.", "info", "AI-помощник")
   ];
@@ -376,6 +391,7 @@ export function buildProjectCommandCenterModel(input: ProjectCommandCenterInput)
       { key: "execution", label: "Исполнение", value: String(executionControl.summary.delayedFronts), tone: executionControl.summary.tone === "neutral" ? "info" : executionControl.summary.tone, hint: executionControl.summary.headline },
       { key: "fieldOps", label: "Площадка", value: String(fieldOperations.summary.reportCount), tone: fieldOperations.summary.tone === "neutral" ? "info" : fieldOperations.summary.tone, hint: fieldOperations.summary.headline },
       { key: "evidence", label: "Фото / evidence", value: String(photoEvidence.summary.ksBlockers), tone: photoEvidence.summary.tone === "neutral" ? "info" : photoEvidence.summary.tone, hint: photoEvidence.summary.headline },
+      { key: "quality", label: "Качество / замечания", value: String(qualityIssues.summary.totalIssues), tone: qualityIssues.summary.tone === "neutral" ? "info" : qualityIssues.summary.tone, hint: qualityIssues.summary.headline },
       { key: "cash", label: "Cash gap", value: compactMoney(finance.cashGap), tone: finance.cashGap < 0 ? "bad" : "good", hint: `Потребность: ${compactMoney(finance.financingNeed)}` }
     ],
     aiSummary: {
@@ -383,7 +399,7 @@ export function buildProjectCommandCenterModel(input: ProjectCommandCenterInput)
       subject: aiInsight?.subject ?? "Что требует внимания по объекту",
       bullets: aiBullets.length ? aiBullets : fallbackBullets,
       recommendedActions: recommendedActions.length ? recommendedActions : fallbackActions,
-      recommendedApps: ["ВОР", "График", "Снабжение", "Финансы", "Договор", "КП / Подача", "КС", "Исполнение", "Рапорты", "Документы", "Риски"].filter((item) => item !== "Снабжение" || materials.length),
+      recommendedApps: ["ВОР", "График", "Снабжение", "Финансы", "Договор", "КП / Подача", "КС", "Исполнение", "Рапорты", "Документы", "Риски", "Качество"].filter((item) => item !== "Снабжение" || materials.length),
       provider: aiInsight?.provider ?? "deterministic-preview",
       degraded: aiInsight?.provider === "degraded" || !aiInsight,
       empty: !aiInsight
@@ -407,6 +423,7 @@ export function buildProjectCommandCenterModel(input: ProjectCommandCenterInput)
       { key: "execution", label: "Подрядчики / исполнение", value: executionControl.summary.status, tone: executionControl.summary.tone === "neutral" ? "info" : executionControl.summary.tone, detail: executionControl.summary.nextStep, tab: "Исполнение" },
       { key: "fieldOps", label: "Площадка / рапорты", value: fieldOperations.summary.status, tone: fieldOperations.summary.tone === "neutral" ? "info" : fieldOperations.summary.tone, detail: fieldOperations.summary.nextStep, tab: "Рапорты" },
       { key: "evidence", label: "Фото / evidence", value: photoEvidence.summary.status, tone: photoEvidence.summary.tone === "neutral" ? "info" : photoEvidence.summary.tone, detail: photoEvidence.summary.nextStep, tab: "Документы" },
+      { key: "quality", label: "Качество / замечания", value: qualityIssues.summary.status, tone: qualityIssues.summary.tone === "neutral" ? "info" : qualityIssues.summary.tone, detail: qualityIssues.summary.nextStep, tab: "Риски" },
       { key: "actions", label: "Следующие шаги", value: String(input.intelligence?.nextActions.length ?? 0), tone: input.intelligence?.nextActions.length ? "warn" : "info", detail: input.intelligence?.nextActions[0]?.title ?? "Действия появятся после загрузки pipeline.", tab: "Аналитика" },
       { key: "executive", label: "Executive report", value: riskExecutive.executiveReport.reportReadiness, tone: riskExecutive.executiveReport.status === "red" ? "bad" : riskExecutive.executiveReport.status === "amber" ? "warn" : riskExecutive.executiveReport.status === "green" ? "good" : "info", detail: riskExecutive.managementSummary.nextManagementAction, tab: "Рапорты" },
       { key: "ai", label: "AI Command Layer", value: aiInsight ? aiInsight.provider ?? "ready" : "по запросу", tone: aiInsight?.provider === "degraded" ? "warn" : "info", detail: aiInsight ? "Есть последний результат сценария." : "Live AI не вызывается автоматически.", tab: "AI-помощник" }

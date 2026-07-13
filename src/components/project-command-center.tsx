@@ -46,6 +46,7 @@ const icons = {
   execution: <Users size={18} />,
   fieldOps: <ClipboardList size={18} />,
   evidence: <FileText size={18} />,
+  quality: <AlertTriangle size={18} />,
   materials: <Package size={18} />,
   cash: <Landmark size={18} />
 };
@@ -62,6 +63,7 @@ function tabForRecommendedApp(app: string) {
   if (app === "ВОР") return "Бюджет / ВОР";
   if (app === "Снабжение") return "Материалы";
   if (app === "Договор") return "Договор / Тендер";
+  if (app === "Качество") return "Риски";
   return app;
 }
 
@@ -90,6 +92,7 @@ function drilldownForKpi(key: string) {
   if (key === "execution") return "execution-control";
   if (key === "fieldOps") return "field-operations";
   if (key === "evidence") return "photo-evidence";
+  if (key === "quality") return "quality-issues";
   if (key === "risks") return "risks";
   if (key === "materials") return "procurement";
   if (key === "readiness") return "documents";
@@ -140,7 +143,7 @@ export function ProjectCommandCenter({
   const openKpi = (key: string) => {
     const section = drilldownForKpi(key);
     if (section && onDrilldown) onDrilldown(section);
-    else onNavigate(key === "cash" ? "Финансы" : key === "schedule" ? "График" : key === "acceptance" ? "КС" : key === "contract" ? "Договор / Тендер" : key === "proposal" ? "КП / Подача" : key === "execution" ? "Исполнение" : key === "materials" ? "Материалы" : key === "risks" ? "Риски" : key === "baseline" ? "Обзор" : key === "readiness" ? "Аналитика" : "Бюджет / ВОР");
+    else onNavigate(key === "cash" ? "Финансы" : key === "schedule" ? "График" : key === "acceptance" ? "КС" : key === "contract" ? "Договор / Тендер" : key === "proposal" ? "КП / Подача" : key === "execution" ? "Исполнение" : key === "materials" ? "Материалы" : key === "risks" || key === "quality" ? "Риски" : key === "baseline" ? "Обзор" : key === "readiness" ? "Аналитика" : "Бюджет / ВОР");
   };
 
   return (

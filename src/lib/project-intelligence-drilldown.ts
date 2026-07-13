@@ -8,6 +8,7 @@ import { buildPhotoEvidenceIntelligence } from "@/lib/photo-evidence-intelligenc
 import { buildProcurementIntelligenceModel } from "@/lib/procurement-intelligence";
 import { buildInitialProjectReadiness } from "@/lib/project-onboarding-intelligence";
 import type { DocumentChecklistItem, PipelineAction, PipelineReadiness } from "@/lib/project-pipeline";
+import { buildQualityIssuesIntelligence } from "@/lib/quality-issues-intelligence";
 import { buildRiskExecutiveIntelligence, type RiskExecutiveImportHistoryItem } from "@/lib/risk-executive-intelligence";
 import { buildScheduleCashflowIntelligenceModel } from "@/lib/schedule-cashflow-intelligence";
 import { buildSubcontractorExecutionIntelligence } from "@/lib/subcontractor-execution-intelligence";
@@ -262,6 +263,23 @@ export type ProjectIntelligenceDrilldownModel = {
     reportsTab: "Рапорты";
     acceptanceTab: "КС";
   };
+  qualityIssues: {
+    tone: DrilldownTone;
+    status: string;
+    headline: string;
+    totalIssues: number;
+    criticalIssues: number;
+    reportIssues: number;
+    evidenceDocuments: number;
+    acceptanceBlockers: number;
+    delayedWorkItems: number;
+    items: Array<{ title: string; detail: string; tone: DrilldownTone }>;
+    actions: Array<{ title: string; detail: string; tone: DrilldownTone }>;
+    empty: boolean;
+    ctaTab: "Риски";
+    reportsTab: "Рапорты";
+    documentsTab: "Документы";
+  };
   reports: {
     tone: DrilldownTone;
     latestReport?: { title: string; detail: string; status: string };
@@ -435,6 +453,18 @@ export function buildProjectIntelligenceDrilldownModel(input: ProjectIntelligenc
     documents,
     documentChecklist
   });
+  const qualityIssues = buildQualityIssuesIntelligence({
+    project,
+    budgetItems,
+    scheduleItems,
+    materials,
+    procurementRequests,
+    payments,
+    dailyReports: reports,
+    risks,
+    documents,
+    documentChecklist
+  });
   const riskExecutive = buildRiskExecutiveIntelligence({
     ...input,
     project,
@@ -506,6 +536,7 @@ export function buildProjectIntelligenceDrilldownModel(input: ProjectIntelligenc
       { id: "execution-control", label: "Исполнение", tone: executionControl.summary.tone === "neutral" ? "info" : executionControl.summary.tone, count: executionControl.summary.delayedFronts || executionControl.summary.unassignedItems },
       { id: "field-operations", label: "Площадка", tone: fieldOperations.summary.tone === "neutral" ? "info" : fieldOperations.summary.tone, count: fieldOperations.summary.downtimeReports || fieldOperations.summary.issueReports || fieldOperations.summary.reportCount },
       { id: "photo-evidence", label: "Evidence", tone: photoEvidence.summary.tone === "neutral" ? "info" : photoEvidence.summary.tone, count: photoEvidence.summary.ksBlockers || photoEvidence.summary.missingEvidenceItems || photoEvidence.summary.evidenceDocuments },
+      { id: "quality-issues", label: "Качество", tone: qualityIssues.summary.tone === "neutral" ? "info" : qualityIssues.summary.tone, count: qualityIssues.summary.criticalIssues || qualityIssues.summary.totalIssues },
       { id: "procurement", label: "Снабжение", tone: procurementTone, count: procurementIntelligence.summary.candidates || materialStats.deficitItems.length },
       { id: "reports", label: "Executive", tone: reportsTone },
       { id: "ai-recommendations", label: "AI", tone: "info", count: drilldownAiScenarios.length }
@@ -785,6 +816,31 @@ export function buildProjectIntelligenceDrilldownModel(input: ProjectIntelligenc
       ctaTab: "Документы",
       reportsTab: "Рапорты",
       acceptanceTab: "КС"
+    },
+    qualityIssues: {
+      tone: qualityIssues.summary.tone === "neutral" ? "info" : qualityIssues.summary.tone,
+      status: qualityIssues.summary.status,
+      headline: qualityIssues.summary.headline,
+      totalIssues: qualityIssues.summary.totalIssues,
+      criticalIssues: qualityIssues.summary.criticalIssues,
+      reportIssues: qualityIssues.summary.reportIssues,
+      evidenceDocuments: qualityIssues.summary.evidenceDocuments,
+      acceptanceBlockers: qualityIssues.summary.acceptanceBlockers,
+      delayedWorkItems: qualityIssues.summary.delayedWorkItems,
+      items: qualityIssues.issues.slice(0, 6).map((item) => ({
+        title: item.title,
+        detail: `${item.source} · ${item.detail}`,
+        tone: item.tone === "neutral" ? "info" : item.tone
+      })),
+      actions: qualityIssues.actions.slice(0, 5).map((item) => ({
+        title: item.title,
+        detail: `${item.ownerRole} · ${item.detail}`,
+        tone: item.priority === "high" ? "bad" : item.priority === "medium" ? "warn" : "info"
+      })),
+      empty: qualityIssues.summary.status === "no_data",
+      ctaTab: "Риски",
+      reportsTab: "Рапорты",
+      documentsTab: "Документы"
     },
     reports: {
       tone: reportsTone,

@@ -11,6 +11,7 @@ import { DocumentComplianceWorkspace } from "@/components/document-compliance-wo
 import { PhotoEvidenceWorkspace } from "@/components/photo-evidence-workspace";
 import { ProjectIntelligenceDrilldown } from "@/components/project-intelligence-drilldown";
 import { ProcurementIntelligenceWorkspace } from "@/components/procurement-intelligence-workspace";
+import { QualityIssuesWorkspace } from "@/components/quality-issues-workspace";
 import { RiskExecutiveWorkspace } from "@/components/risk-executive-workspace";
 import { ScheduleCashflowWorkspace } from "@/components/schedule-cashflow-workspace";
 import { SubcontractorExecutionWorkspace } from "@/components/subcontractor-execution-workspace";
@@ -1192,6 +1193,19 @@ export function ProjectWorkspace({ initialBundle, createdFromOnboarding = false 
             documentChecklist={documentChecklist}
             onNavigate={setActiveTab}
           />
+          <QualityIssuesWorkspace
+            project={initialBundle.project}
+            budgetItems={budgetItems}
+            scheduleItems={scheduleItems}
+            materials={materials}
+            procurementRequests={procurementRequests}
+            payments={payments}
+            dailyReports={reports}
+            risks={risks}
+            documents={documents}
+            documentChecklist={documentChecklist}
+            onNavigate={setActiveTab}
+          />
         </Panel>
       )}
 
@@ -1215,6 +1229,19 @@ export function ProjectWorkspace({ initialBundle, createdFromOnboarding = false 
       {activeTab === "Рапорты" && (
         <Panel title="Ежедневные рапорты стройплощадки" icon={<ClipboardList size={18} />}>
           <FieldOperationsWorkspace
+            project={initialBundle.project}
+            budgetItems={budgetItems}
+            scheduleItems={scheduleItems}
+            materials={materials}
+            procurementRequests={procurementRequests}
+            payments={payments}
+            dailyReports={reports}
+            risks={risks}
+            documents={documents}
+            documentChecklist={documentChecklist}
+            onNavigate={setActiveTab}
+          />
+          <QualityIssuesWorkspace
             project={initialBundle.project}
             budgetItems={budgetItems}
             scheduleItems={scheduleItems}
@@ -1305,6 +1332,19 @@ export function ProjectWorkspace({ initialBundle, createdFromOnboarding = false 
             aiLoading={aiScenarioLoading === "risk-review" || aiScenarioLoading === "executive-report"}
             onNavigate={setActiveTab}
             onRunExecutiveAi={() => void runAiCommandScenario("executive-report")}
+          />
+          <QualityIssuesWorkspace
+            project={initialBundle.project}
+            budgetItems={budgetItems}
+            scheduleItems={scheduleItems}
+            materials={materials}
+            procurementRequests={procurementRequests}
+            payments={payments}
+            dailyReports={reports}
+            risks={risks}
+            documents={documents}
+            documentChecklist={documentChecklist}
+            onNavigate={setActiveTab}
           />
           <RiskMatrix items={allRisks} />
           <button
