@@ -10,6 +10,9 @@ import type {
   ImportSheetDetectedType,
   ImportSheetMapping
 } from "./import-types";
+import { buildProjectWorkbookQualityGate, failedProjectWorkbookQualityGate, type ProjectWorkbookQualityGate } from "./project-workbook-quality";
+
+export type { ProjectWorkbookQualityGate, ProjectWorkbookQualityIssue, ProjectWorkbookQualityStatus } from "./project-workbook-quality";
 
 export const PROJECT_WORKBOOK_PARSER_VERSION = "project_workbook_v1";
 
@@ -36,6 +39,8 @@ export interface ProjectWorkbookSheetAnalysis {
   confidence: number;
   rows: number;
   importedRows: number;
+  formulaCells: number;
+  hiddenRows: number;
   reason: string;
 }
 
@@ -80,6 +85,7 @@ export interface ProjectWorkbookAnalysis {
     durationMonths?: number;
     selectedModules: Array<"vor" | "documents" | "schedule" | "materials">;
   };
+  quality: ProjectWorkbookQualityGate;
   warnings: string[];
   errors: string[];
 }
@@ -218,6 +224,8 @@ function buildProjectWorkbook(buffer: Buffer, fileName: string, projectId: strin
       confidence: sheet.confidence,
       rows: sheet.rows.length,
       importedRows,
+      formulaCells: sheet.formulaCells,
+      hiddenRows: sheet.hiddenRows,
       reason: sheet.enabled ? sheet.reason : "Лист исключен пользователем из анализа и импорта."
     });
     mappings.push({
@@ -342,7 +350,7 @@ function buildProjectWorkbook(buffer: Buffer, fileName: string, projectId: strin
 
   const specializedRoles = new Set(enabledSheetData.filter((sheet) => sheet.role !== "unknown" && sheet.role !== "control" && sheet.role !== "reference").map((sheet) => sheet.role));
   const specialized = workbook.SheetNames.length >= 3 && specializedRoles.size >= 2 && parsedRows > 0;
-  const analysis = buildAnalysis(fileName, buffer.byteLength, sheets, uniqueBudgetItems, uniqueMaterials, scheduleItems, suggestions, warnings, errors, sourceDirectCost, reconciliationGap);
+  const analysis = buildAnalysis(fileName, buffer.byteLength, sheets, uniqueBudgetItems, uniqueMaterials, scheduleItems, suggestions, warnings, errors, duplicateRows, sourceDirectCost, reconciliationGap);
   return { preview, analysis, specialized };
 }
 
@@ -695,6 +703,7 @@ function buildAnalysis(
   suggestions: ProjectWorkbookAnalysis["suggestions"],
   warnings: string[],
   errors: string[],
+  duplicateRows: number,
   sourceDirectCost?: number,
   reconciliationGap = 0
 ): ProjectWorkbookAnalysis {
@@ -717,6 +726,21 @@ function buildAnalysis(
       detail: "Своды, ставки, источники и контрольные листы остаются доказательной базой и не дублируют бюджет."
     }
   ];
+  const estimatedDirectCost = sumCost(budgetItems);
+  const quality = buildProjectWorkbookQualityGate({
+    errors,
+    warnings,
+    sheets,
+    budgetItems: budgetItems.length,
+    materials: materials.length,
+    scheduleItems: scheduleItems.length,
+    payrollItems: payrollItems.length,
+    equipmentItems: equipmentItems.length,
+    estimatedDirectCost,
+    sourceDirectCost,
+    reconciliationGap,
+    duplicateRows
+  });
   return {
     parserVersion: PROJECT_WORKBOOK_PARSER_VERSION,
     fileName,
@@ -735,7 +759,7 @@ function buildAnalysis(
       scheduleItems: scheduleItems.length,
       payrollItems: payrollItems.length,
       equipmentItems: equipmentItems.length,
-      estimatedDirectCost: sumCost(budgetItems),
+      estimatedDirectCost,
       sourceDirectCost,
       reconciliationGap: sourceDirectCost ? Math.max(0, reconciliationGap) : 0,
       automatedCoveragePercent: sourceDirectCost ? Math.min(100, Math.round(((sourceDirectCost - Math.max(0, reconciliationGap)) / sourceDirectCost) * 100)) : 100,
@@ -743,6 +767,7 @@ function buildAnalysis(
       equipmentCost: sumCost(equipmentItems)
     },
     suggestions,
+    quality,
     warnings,
     errors
   };
@@ -888,6 +913,7 @@ function failedResult(fileName: string, fileSize: number, projectId: string, err
     modules: [],
     summary: { totalSheets: 0, includedSheets: 0, referenceSheets: 0, excludedSheets: 0, reviewSheets: 0, overriddenSheets: 0, budgetItems: 0, materials: 0, scheduleItems: 0, payrollItems: 0, equipmentItems: 0, estimatedDirectCost: 0, reconciliationGap: 0, automatedCoveragePercent: 0, payrollCost: 0, equipmentCost: 0 },
     suggestions: { selectedModules: ["documents"] },
+    quality: failedProjectWorkbookQualityGate(error),
     warnings: [],
     errors: [error]
   };

@@ -52,6 +52,11 @@ describe("project workbook import", () => {
     expect(analysis.suggestions).toMatchObject({ contractAmount: 5000, vatPercent: 22, durationMonths: 2 });
     expect(analysis.summary).toMatchObject({ budgetItems: 4, materials: 1, scheduleItems: 1, payrollItems: 1, equipmentItems: 1, sourceDirectCost: 4200, reconciliationGap: 0, automatedCoveragePercent: 100 });
     expect(analysis.summary.estimatedDirectCost).toBeCloseTo(4200);
+    expect(analysis.quality).toMatchObject({
+      status: "ready",
+      acknowledgementRequired: false,
+      metrics: { recognizedRecords: 6, coveragePercent: 100, blockers: 0, warnings: 0 }
+    });
     expect(analysis.modules.find((module) => module.id === "source_control")?.sheets).toContain("01_ССР_КП");
     expect(analysis.sheets.find((sheet) => sheet.sheetName === "01_ССР_КП")).toMatchObject({ role: "summary", included: false });
   });
@@ -99,6 +104,11 @@ describe("project workbook import", () => {
       sourceDirectCost: undefined,
       reconciliationGap: 0,
       estimatedDirectCost: 1200
+    });
+    expect(analysis.quality).toMatchObject({
+      status: "ready",
+      acknowledgementRequired: false,
+      metrics: { sourceDirectCost: undefined, blockers: 0, warnings: 0 }
     });
     expect(analysis.sheets.find((sheet) => sheet.sheetName === "05_Материалы")).toMatchObject({
       detectedRole: "materials",
