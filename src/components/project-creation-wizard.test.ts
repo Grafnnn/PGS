@@ -42,20 +42,30 @@ describe("ProjectCreationWizard", () => {
   });
 
   it("blocks creation until mapping and quality warnings are explicitly resolved", () => {
-    const analysis = {
-      quality: {
-        status: "review_required" as const,
-        acknowledgementRequired: true
-      }
-    };
+    const quality = buildProjectWorkbookQualityGate({
+      errors: [],
+      warnings: [],
+      sheets: [{ sheetName: "ВОР", role: "works", enabled: true, overridden: false, confidence: 0.98, importedRows: 10, formulaCells: 4, hiddenRows: 0 }],
+      budgetItems: 10,
+      materials: 2,
+      scheduleItems: 0,
+      payrollItems: 0,
+      equipmentItems: 0,
+      estimatedDirectCost: 800,
+      sourceDirectCost: 1000,
+      reconciliationGap: 200,
+      duplicateRows: 0
+    });
+    const analysis = { quality };
+    const decisions = Object.fromEntries(quality.issues.filter((issue) => issue.severity === "warning").map((issue) => [issue.id, true]));
 
-    expect(projectWorkbookCreationBlockReason({ analysis, mappingDirty: true, qualityConfirmed: false })).toContain("Пересчитайте");
-    expect(projectWorkbookCreationBlockReason({ analysis, mappingDirty: false, qualityConfirmed: false })).toContain("Подтвердите");
-    expect(projectWorkbookCreationBlockReason({ analysis, mappingDirty: false, qualityConfirmed: true })).toBeNull();
+    expect(projectWorkbookCreationBlockReason({ analysis, mappingDirty: true, qualityDecisions: {} })).toContain("Пересчитайте");
+    expect(projectWorkbookCreationBlockReason({ analysis, mappingDirty: false, qualityDecisions: {} })).toContain("обязательные действия");
+    expect(projectWorkbookCreationBlockReason({ analysis, mappingDirty: false, qualityDecisions: decisions })).toBeNull();
     expect(projectWorkbookCreationBlockReason({
-      analysis: { quality: { status: "blocked", acknowledgementRequired: false } },
+      analysis: { quality: buildProjectWorkbookQualityGate({ ...qualityGateInput(), errors: ["Файл поврежден."], budgetItems: 0 }) },
       mappingDirty: false,
-      qualityConfirmed: false
+      qualityDecisions: { "parser-error-1": true }
     })).toContain("quality gate");
   });
 
@@ -80,17 +90,37 @@ describe("ProjectCreationWizard", () => {
     });
     const html = renderToStaticMarkup(React.createElement(WorkbookQualityGatePanel, {
       quality,
-      qualityConfirmed: false,
+      qualityDecisions: {},
       mappingDirty: false,
-      onConfirm: vi.fn()
+      onDecision: vi.fn()
     }));
 
     expect(html).toContain("Workbook import quality gate");
     expect(html).toContain("Проверка качества перед созданием проекта");
     expect(html).toContain("Есть разрыв со сводом прямых затрат");
-    expect(html).toContain("Я проверил предупреждения");
+    expect(html).toContain("Финальный план решений");
+    expect(html).toContain("Проверено, решение принимаю в план импорта");
+    expect(html).toContain("нужно решение");
+    expect(html).toContain("нужно исправить");
     expect(html).toContain(`${quality.score}`);
     expect(fetchMock).not.toHaveBeenCalled();
     fetchMock.mockRestore();
   });
 });
+
+function qualityGateInput() {
+  return {
+    errors: [],
+    warnings: [],
+    sheets: [{ sheetName: "ВОР", role: "works", enabled: true, overridden: false, confidence: 0.98, importedRows: 10, formulaCells: 0, hiddenRows: 0 }],
+    budgetItems: 10,
+    materials: 0,
+    scheduleItems: 0,
+    payrollItems: 0,
+    equipmentItems: 0,
+    estimatedDirectCost: 1000,
+    sourceDirectCost: 1000,
+    reconciliationGap: 0,
+    duplicateRows: 0
+  };
+}

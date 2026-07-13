@@ -29,6 +29,10 @@ import type {
   ProjectWorkbookSheetOverrides,
   ProjectWorkbookSheetRole
 } from "@/lib/excel/project-workbook-import";
+import {
+  buildProjectWorkbookResolutionPlan,
+  type ProjectWorkbookQualityDecisions
+} from "@/lib/excel/project-workbook-resolution";
 import type { Project } from "@/lib/types";
 
 type PendingOnboardingDocument = {
@@ -48,18 +52,19 @@ type ContractPrefillState =
 type ProjectWorkbookState =
   | { status: "idle" }
   | { status: "analyzing"; file: File; overrides: ProjectWorkbookSheetOverrides }
-  | { status: "ready"; file: File; analysis: ProjectWorkbookAnalysis; overrides: ProjectWorkbookSheetOverrides; mappingDirty: boolean; qualityConfirmed: boolean }
+  | { status: "ready"; file: File; analysis: ProjectWorkbookAnalysis; overrides: ProjectWorkbookSheetOverrides; mappingDirty: boolean; qualityDecisions: ProjectWorkbookQualityDecisions }
   | { status: "warning"; file: File; message: string; analysis?: ProjectWorkbookAnalysis }
   | { status: "failed"; file: File; message: string };
 
 export function projectWorkbookCreationBlockReason(state: {
   mappingDirty: boolean;
-  qualityConfirmed: boolean;
-  analysis: { quality: Pick<ProjectWorkbookAnalysis["quality"], "status" | "acknowledgementRequired"> };
+  qualityDecisions: ProjectWorkbookQualityDecisions;
+  analysis: { quality: ProjectWorkbookAnalysis["quality"] };
 }) {
   if (state.mappingDirty) return "Карта Excel изменена. Пересчитайте распределение листов перед созданием проекта.";
-  if (state.analysis.quality.status === "blocked") return "Excel не прошёл quality gate. Исправьте блокирующие проблемы перед созданием проекта.";
-  if (state.analysis.quality.acknowledgementRequired && !state.qualityConfirmed) return "Подтвердите, что предупреждения Excel проверены и понятны.";
+  const resolution = buildProjectWorkbookResolutionPlan(state.analysis.quality, state.qualityDecisions);
+  if (resolution.status === "blocked") return "Excel не прошёл quality gate. Исправьте блокирующие проблемы перед созданием проекта.";
+  if (resolution.status === "action_required") return `Закройте обязательные действия по Excel: ${resolution.summary.correctionsRequired + resolution.summary.decisionsRemaining}.`;
   return null;
 }
 
@@ -506,7 +511,7 @@ export function ProjectCreationWizard() {
         analysis,
         overrides,
         mappingDirty: false,
-        qualityConfirmed: analysis.quality.status === "ready"
+        qualityDecisions: {}
       });
       if (options.applySuggestions) {
         setDraft((current) => {
@@ -541,7 +546,7 @@ export function ProjectCreationWizard() {
       const nextOverrides = { ...current.overrides };
       if ((nextOverride.role ?? sheet.detectedRole) === sheet.detectedRole && (nextOverride.enabled ?? true)) delete nextOverrides[sheetName];
       else nextOverrides[sheetName] = nextOverride;
-      return { ...current, overrides: nextOverrides, mappingDirty: true, qualityConfirmed: false };
+      return { ...current, overrides: nextOverrides, mappingDirty: true, qualityDecisions: {} };
     });
   };
   const resetWorkbookSheetOverride = (sheetName: string) => {
@@ -549,11 +554,13 @@ export function ProjectCreationWizard() {
       if (current.status !== "ready") return current;
       const nextOverrides = { ...current.overrides };
       delete nextOverrides[sheetName];
-      return { ...current, overrides: nextOverrides, mappingDirty: true, qualityConfirmed: false };
+      return { ...current, overrides: nextOverrides, mappingDirty: true, qualityDecisions: {} };
     });
   };
-  const confirmWorkbookQuality = (qualityConfirmed: boolean) => {
-    setProjectWorkbook((current) => current.status === "ready" ? { ...current, qualityConfirmed } : current);
+  const decideWorkbookQualityIssue = (issueId: string, confirmed: boolean) => {
+    setProjectWorkbook((current) => current.status === "ready"
+      ? { ...current, qualityDecisions: { ...current.qualityDecisions, [issueId]: confirmed } }
+      : current);
   };
   const applyWorkbookMapping = async () => {
     if (projectWorkbook.status !== "ready") return;
@@ -835,7 +842,7 @@ export function ProjectCreationWizard() {
                   state={projectWorkbook}
                   onApplyMapping={applyWorkbookMapping}
                   onOverride={updateWorkbookSheetOverride}
-                  onQualityConfirm={confirmWorkbookQuality}
+                  onQualityDecision={decideWorkbookQualityIssue}
                   onResetOverride={resetWorkbookSheetOverride}
                 />
               )}
@@ -1090,13 +1097,13 @@ function ProjectWorkbookDistribution({
   state,
   onApplyMapping,
   onOverride,
-  onQualityConfirm,
+  onQualityDecision,
   onResetOverride
 }: {
   state: Extract<ProjectWorkbookState, { status: "ready" }>;
   onApplyMapping: () => void;
   onOverride: (sheetName: string, patch: ProjectWorkbookSheetOverride) => void;
-  onQualityConfirm: (confirmed: boolean) => void;
+  onQualityDecision: (issueId: string, confirmed: boolean) => void;
   onResetOverride: (sheetName: string) => void;
 }) {
   const [filter, setFilter] = useState<"all" | "work" | "source" | "review">("all");
@@ -1229,8 +1236,8 @@ function ProjectWorkbookDistribution({
       <WorkbookQualityGatePanel
         mappingDirty={state.mappingDirty}
         quality={state.analysis.quality}
-        qualityConfirmed={state.qualityConfirmed}
-        onConfirm={onQualityConfirm}
+        qualityDecisions={state.qualityDecisions}
+        onDecision={onQualityDecision}
       />
     </div>
   );
@@ -1238,16 +1245,17 @@ function ProjectWorkbookDistribution({
 
 export function WorkbookQualityGatePanel({
   quality,
-  qualityConfirmed,
+  qualityDecisions,
   mappingDirty,
-  onConfirm
+  onDecision
 }: {
   quality: ProjectWorkbookAnalysis["quality"];
-  qualityConfirmed: boolean;
+  qualityDecisions: ProjectWorkbookQualityDecisions;
   mappingDirty: boolean;
-  onConfirm: (confirmed: boolean) => void;
+  onDecision: (issueId: string, confirmed: boolean) => void;
 }) {
   const tone = quality.status === "blocked" ? "bad" : quality.status === "review_required" ? "warn" : "good";
+  const resolution = buildProjectWorkbookResolutionPlan(quality, qualityDecisions);
   return (
     <section className={`project-workbook-quality tone-${tone}`} aria-label="Workbook import quality gate">
       <div className="project-workbook-quality-head">
@@ -1272,13 +1280,28 @@ export function WorkbookQualityGatePanel({
       </div>
       {quality.issues.length ? (
         <div className="project-workbook-quality-issues">
-          {quality.issues.map((issue) => (
-            <div className={`project-workbook-quality-issue severity-${issue.severity}`} key={issue.id}>
+          {resolution.steps.map((issue) => (
+            <div className={`project-workbook-quality-issue severity-${issue.severity} state-${issue.state}`} key={issue.id}>
               {issue.severity === "blocker" || issue.severity === "warning" ? <AlertTriangle size={17} /> : <CheckCircle2 size={17} />}
               <div>
-                <strong>{issue.title}</strong>
+                <div className="project-workbook-quality-issue-title">
+                  <strong>{issue.title}</strong>
+                  <span className={`badge ${issue.state === "confirmed" ? "green" : issue.state === "needs_decision" || issue.state === "needs_action" ? "yellow" : issue.state === "blocked" ? "red" : "blue"}`}>
+                    {issue.state === "confirmed" ? "решение принято" : issue.state === "needs_decision" ? "нужно решение" : issue.state === "needs_action" ? "нужно исправить" : issue.state === "blocked" ? "блокирует" : "к сведению"}
+                  </span>
+                </div>
                 <span>{issue.detail}</span>
                 <small>{issue.action}</small>
+                {issue.decisionRequired && !mappingDirty && (
+                  <label className="project-workbook-quality-decision">
+                    <input
+                      checked={qualityDecisions[issue.id] === true}
+                      type="checkbox"
+                      onChange={(event) => onDecision(issue.id, event.target.checked)}
+                    />
+                    <span>Проверено, решение принимаю в план импорта</span>
+                  </label>
+                )}
               </div>
             </div>
           ))}
@@ -1289,15 +1312,32 @@ export function WorkbookQualityGatePanel({
           <span>Блокирующих проблем и предупреждений не найдено.</span>
         </div>
       )}
-      {quality.acknowledgementRequired && !mappingDirty && (
-        <label className="project-workbook-quality-confirm">
-          <input checked={qualityConfirmed} type="checkbox" onChange={(event) => onConfirm(event.target.checked)} />
-          <span>
-            <strong>Я проверил предупреждения и понимаю план импорта</strong>
-            <small>Это подтверждение не исправляет исходный Excel и не скрывает замечания в import batch.</small>
-          </span>
-        </label>
-      )}
+      <div className={`project-workbook-resolution tone-${resolution.status === "ready" ? "good" : resolution.status === "blocked" ? "bad" : "warn"}`}>
+        <div className="project-workbook-resolution-head">
+          <div>
+            <div className="eyebrow">Import exception resolution</div>
+            <strong>Финальный план решений</strong>
+            <span>{mappingDirty ? "Сначала пересчитайте изменённую карту листов." : resolution.message}</span>
+          </div>
+          <b>{mappingDirty ? 0 : resolution.progressPercent}%</b>
+        </div>
+        <div className="project-workbook-resolution-progress" aria-label="Прогресс решений по импорту">
+          <span style={{ width: `${mappingDirty ? 0 : resolution.progressPercent}%` }} />
+        </div>
+        <div className="project-workbook-resolution-summary">
+          <span>Исправить: {resolution.summary.correctionsRequired}</span>
+          <span>Подтверждено: {resolution.summary.decisionsConfirmed}</span>
+          <span>Осталось: {resolution.summary.decisionsRemaining}</span>
+          <span>Блокеров: {resolution.summary.blockers}</span>
+          <span>Инфо: {resolution.summary.information}</span>
+        </div>
+        {resolution.status === "ready" && !mappingDirty && (
+          <div className="project-workbook-resolution-ready">
+            <CheckCircle2 size={17} />
+            <span>План импорта готов. Создание проекта можно продолжить.</span>
+          </div>
+        )}
+      </div>
       {quality.status === "blocked" && (
         <div className="project-workbook-quality-blocked">Создание проекта с этим Excel заблокировано до устранения критических проблем.</div>
       )}

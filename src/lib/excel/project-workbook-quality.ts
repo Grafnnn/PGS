@@ -1,11 +1,13 @@
 export type ProjectWorkbookQualityStatus = "ready" | "review_required" | "blocked";
 export type ProjectWorkbookQualitySeverity = "blocker" | "warning" | "info";
 export type ProjectWorkbookQualityCategory = "structure" | "mapping" | "financial" | "formulas" | "duplicates" | "coverage" | "module";
+export type ProjectWorkbookQualityResolution = "source_change" | "acknowledgement" | "none";
 
 export interface ProjectWorkbookQualityIssue {
   id: string;
   severity: ProjectWorkbookQualitySeverity;
   category: ProjectWorkbookQualityCategory;
+  resolution: ProjectWorkbookQualityResolution;
   title: string;
   detail: string;
   action: string;
@@ -69,6 +71,7 @@ export function buildProjectWorkbookQualityGate(input: ProjectWorkbookQualityInp
     id: `parser-error-${index + 1}`,
     severity: "blocker",
     category: "structure",
+    resolution: "source_change",
     title: "Ошибка чтения или структуры Excel",
     detail: error,
     action: "Исправьте файл или его карту листов и запустите анализ повторно."
@@ -80,6 +83,7 @@ export function buildProjectWorkbookQualityGate(input: ProjectWorkbookQualityInp
       id: "budget-empty",
       severity: "blocker",
       category: "module",
+      resolution: "source_change",
       title: "ВОР и расходная часть не распознаны",
       detail: "В книге нет рабочих, материальных, ФОТ или технических строк, которые можно безопасно записать в бюджет проекта.",
       action: "Назначьте правильную роль детальному листу или проверьте заголовки наименования, единицы, количества и цены."
@@ -92,6 +96,7 @@ export function buildProjectWorkbookQualityGate(input: ProjectWorkbookQualityInp
       id: "sheet-mapping-review",
       severity: "warning",
       category: "mapping",
+      resolution: "source_change",
       title: `Требуют проверки листы: ${reviewSheets.length}`,
       detail: reviewSheets.slice(0, 6).map((sheet) => sheet.sheetName).join(" · ") + (reviewSheets.length > 6 ? ` · +${reviewSheets.length - 6}` : ""),
       action: "Подтвердите роль каждого листа или исключите его из импорта."
@@ -105,6 +110,7 @@ export function buildProjectWorkbookQualityGate(input: ProjectWorkbookQualityInp
       id: `manual-empty-${stableId(sheet.sheetName)}`,
       severity: "warning",
       category: "mapping",
+      resolution: "source_change",
       title: "Ручная роль не дала рабочих строк",
       detail: `Лист «${sheet.sheetName}» назначен как ${sheet.role}, но из него не распознано ни одной строки.`,
       action: "Проверьте заголовки и структуру листа или исключите его из карты.",
@@ -118,6 +124,7 @@ export function buildProjectWorkbookQualityGate(input: ProjectWorkbookQualityInp
       id: "financial-reconciliation-gap",
       severity: "warning",
       category: "financial",
+      resolution: "acknowledgement",
       title: "Есть разрыв со сводом прямых затрат",
       detail: `${Math.round(gapAbsolute).toLocaleString("ru-RU")} ₽ (${gapPercent.toLocaleString("ru-RU", { maximumFractionDigits: 1 })}%). ${input.reconciliationGap > 0 ? "Детализация ниже свода." : "Детализация выше свода."}`,
       action: "Проверьте исключённые листы, двойной учёт материалов и нераспределённые статьи до commit."
@@ -130,6 +137,7 @@ export function buildProjectWorkbookQualityGate(input: ProjectWorkbookQualityInp
       id: "saved-formula-values",
       severity: "warning",
       category: "formulas",
+      resolution: "acknowledgement",
       title: "Excel содержит формулы",
       detail: `Обнаружено ячеек с формулами: ${formulaCells}. Сервер использует сохранённые в файле значения и не пересчитывает формулы.`,
       action: "Перед загрузкой пересчитайте и сохраните книгу в Excel, затем сверьте контрольные суммы."
@@ -141,6 +149,7 @@ export function buildProjectWorkbookQualityGate(input: ProjectWorkbookQualityInp
       id: "deduplicated-rows",
       severity: "warning",
       category: "duplicates",
+      resolution: "acknowledgement",
       title: "Обнаружены возможные дубли",
       detail: `Из рабочего набора исключено повторов: ${input.duplicateRows}.`,
       action: "Проверьте, что одинаковые позиции действительно являются дублями, а не разными этапами или зонами."
@@ -153,6 +162,7 @@ export function buildProjectWorkbookQualityGate(input: ProjectWorkbookQualityInp
       id: "hidden-rows",
       severity: "info",
       category: "structure",
+      resolution: "none",
       title: "В книге есть скрытые строки",
       detail: `Скрытых строк: ${hiddenRows}. Они не должны незаметно менять рабочий импорт.`,
       action: "Проверьте скрытые строки в исходном Excel, если они содержат актуальные объёмы."
@@ -164,6 +174,7 @@ export function buildProjectWorkbookQualityGate(input: ProjectWorkbookQualityInp
       id: "source-total-missing",
       severity: "info",
       category: "coverage",
+      resolution: "none",
       title: "Свод прямых затрат не найден",
       detail: "Автоматическая финансовая сверка выполнена только по распознанной детализации.",
       action: "Добавьте или назначьте лист ССР/свода, если контрольная сумма есть в исходных данных."
@@ -175,6 +186,7 @@ export function buildProjectWorkbookQualityGate(input: ProjectWorkbookQualityInp
       id: "payroll-not-found",
       severity: "info",
       category: "module",
+      resolution: "none",
       title: "ФОТ не найден",
       detail: "Расходная часть не содержит отдельного расчёта собственных ИТР или привлечённых рабочих.",
       action: "Если в книге есть ФОТ, назначьте листу роль ФОТ и проверьте норму выработки и месячную зарплату."
@@ -186,6 +198,7 @@ export function buildProjectWorkbookQualityGate(input: ProjectWorkbookQualityInp
       id: "schedule-not-found",
       severity: "info",
       category: "module",
+      resolution: "none",
       title: "Сводный график не найден",
       detail: "Проект будет создан без автоматически заполненного календарного графика.",
       action: "Назначьте лист графика или сформируйте draft графика после создания проекта."
