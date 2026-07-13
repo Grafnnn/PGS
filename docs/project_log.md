@@ -1,5 +1,57 @@
 # PGS Project Log
 
+## 2026-07-14 - Workbook Import Review & Mapping v1 online/core GO
+
+Status: Workbook Import Review & Mapping v1 reached ONLINE/CORE GO on Render after PR #100. Project onboarding now exposes every workbook sheet for review before creation, with the detected role, confidence, row counts, inclusion state, and an explicit recalculation step for manual decisions.
+
+- Online URL: https://pgs-frankfurt.onrender.com
+- Online commit: `53f98c02ec74df3c1e4bf9615a24fb0507310994`
+- Render deploy: `dep-d9am03l7vvec73etka5g`
+- PR: #100
+- Decision: ONLINE/CORE GO
+- Git SHA source: `RENDER_GIT_COMMIT`
+
+Health and pages:
+
+- `/api/health`: HTTP 200 / `ok`
+- DB: `ok`
+- migrations: `ok`, count `6`
+- auth required: `true`
+- AI configured: `true`
+- `/dashboard`: 200
+- `/projects`: 200
+- `/projects/project-demo`: 404 as expected
+- `/projects/project-smoke`: 200
+
+Deployed UI and behavior:
+
+- `Import review & mapping`, `Проверьте карту листов`, `Фильтр карты листов`, and `Пересчитать карту` are present in the deployed projects bundle.
+- Users can include or exclude sheets, change a detected role, filter the mapping, and explicitly recalculate the workbook analysis before project creation.
+- A changed mapping blocks project creation until recalculation, and the confirmed mapping is passed to the protected import preview used by the explicit commit flow.
+- Disabled sheets do not affect VAT, contract suggestions, direct-cost reconciliation, or module totals.
+- Manual working roles with no recognized rows produce a warning rather than fabricated data.
+- The provided example workbook was analyzed locally only and was not uploaded online.
+
+Unauthenticated guards:
+
+- `/api/auth/me`: 401
+- workbook analysis: 403
+- project creation: 403
+- project import preview: 401
+
+Not run / not touched:
+
+- no real online project creation, workbook upload, import commit, or project deletion was run.
+- no live AI call was run.
+- no manual deploy/redeploy was triggered; Render auto-deploy was used.
+- no Render env/secrets were changed.
+- no DB schema or migration changes were made.
+- no secrets, cookies, tokens, provider keys, smoke secrets, session IDs, or env values were printed.
+
+Remaining optional follow-up:
+
+- authenticated disposable browser smoke: upload a synthetic workbook, review and override its sheet mapping, recalculate, create the project, verify populated modules, and delete the project.
+
 ## 2026-07-14 - Universal Project Workbook Import v1 online/core GO
 
 Status: Universal Project Workbook Import v1 reached ONLINE/CORE GO on Render after PR #98. During project creation, a user can provide one Excel workbook and PGS can classify detailed works/VOR, materials, schedule, equipment, payroll/FOT, summary, reference, and control sheets before an explicit project creation and import commit.
