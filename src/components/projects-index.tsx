@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, CheckCircle2, ChevronLeft, ChevronRight, ClipboardList, FileText, Grid2X2, Landmark, List, PackageCheck, Plus, RotateCcw, Search, Sparkles, TimerReset } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ChevronLeft, ChevronRight, ClipboardList, FileSpreadsheet, FileText, Grid2X2, Landmark, List, PackageCheck, Plus, RotateCcw, Search, Sparkles, TimerReset } from "lucide-react";
 import { money, percent } from "@/lib/calculations";
 import {
   mergePrefillIntoProjectDraft,
@@ -23,13 +23,14 @@ import {
   type ProjectVolumeChangeMode
 } from "@/lib/project-onboarding-intelligence";
 import { buildProjectBaselineFromTemplate, getProjectTemplateById, getProjectTemplates, type ProjectTemplateId } from "@/lib/project-templates";
+import type { ProjectWorkbookAnalysis } from "@/lib/excel/project-workbook-import";
 import type { Project } from "@/lib/types";
 
 type PendingOnboardingDocument = {
   id: string;
   file: File;
   category: string;
-  source?: "contract-prefill" | "manual";
+  source?: "contract-prefill" | "project-workbook" | "manual";
 };
 
 type ContractPrefillState =
@@ -38,6 +39,13 @@ type ContractPrefillState =
   | { status: "ready"; fileName: string; result: ContractProjectPrefill }
   | { status: "warning"; fileName: string; message: string }
   | { status: "failed"; fileName: string; message: string };
+
+type ProjectWorkbookState =
+  | { status: "idle" }
+  | { status: "analyzing"; file: File }
+  | { status: "ready"; file: File; analysis: ProjectWorkbookAnalysis }
+  | { status: "warning"; file: File; message: string; analysis?: ProjectWorkbookAnalysis }
+  | { status: "failed"; file: File; message: string };
 
 function compactMoney(value: number) {
   const absolute = Math.abs(value);
@@ -296,6 +304,7 @@ export function ProjectCreationWizard() {
   const [createdProjectPath, setCreatedProjectPath] = useState("");
   const [pendingDocuments, setPendingDocuments] = useState<PendingOnboardingDocument[]>([]);
   const [contractPrefill, setContractPrefill] = useState<ContractPrefillState>({ status: "idle" });
+  const [projectWorkbook, setProjectWorkbook] = useState<ProjectWorkbookState>({ status: "idle" });
   const [manualFields, setManualFields] = useState<Set<keyof ProjectCreationDraft>>(() => new Set());
   const plan = buildProjectOnboardingPlan(draft);
   const summary = buildProjectCreationSummary(draft);
@@ -352,6 +361,7 @@ export function ProjectCreationWizard() {
     setCreatedProjectPath("");
     setPendingDocuments([]);
     setContractPrefill({ status: "idle" });
+    setProjectWorkbook({ status: "idle" });
     setManualFields(new Set());
   };
   const addPendingDocuments = (files: FileList | null) => {
@@ -374,6 +384,17 @@ export function ProjectCreationWizard() {
         file,
         category: "договор",
         source: "contract-prefill"
+      }
+    ]);
+  };
+  const setWorkbookAsPendingDocument = (file: File) => {
+    setPendingDocuments((current) => [
+      ...current.filter((item) => item.source !== "project-workbook"),
+      {
+        id: `project-workbook-${file.name}-${file.size}-${file.lastModified}`,
+        file,
+        category: "вор",
+        source: "project-workbook"
       }
     ]);
   };
@@ -425,6 +446,38 @@ export function ProjectCreationWizard() {
       });
     }
   };
+  const handleProjectWorkbookFile = async (file: File | undefined) => {
+    if (!file) return;
+    setWorkbookAsPendingDocument(file);
+    setProjectWorkbook({ status: "analyzing", file });
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("startsAt", String(draft.startsAt ?? ""));
+    try {
+      const response = await fetch("/api/projects/onboarding/workbook-analyze", { method: "POST", body: formData });
+      const data = (await response.json().catch(() => ({}))) as { analysis?: ProjectWorkbookAnalysis; error?: string };
+      if (!response.ok || !data.analysis) {
+        setProjectWorkbook({ status: "warning", file, analysis: data.analysis, message: data.error ?? "Файл сохранится как документ, но автоматическое распределение недоступно." });
+        return;
+      }
+      const analysis = data.analysis;
+      setProjectWorkbook({ status: "ready", file, analysis });
+      setDraft((current) => {
+        const next = { ...current };
+        if (analysis.suggestions.contractAmount && !manualFields.has("contractAmount")) next.contractAmount = String(Math.round(analysis.suggestions.contractAmount));
+        if (analysis.suggestions.vatPercent && !manualFields.has("vatPercent")) next.vatPercent = String(analysis.suggestions.vatPercent);
+        if (analysis.suggestions.durationMonths && current.startsAt && !manualFields.has("endsAt")) {
+          const finish = new Date(`${current.startsAt}T00:00:00Z`);
+          finish.setUTCMonth(finish.getUTCMonth() + analysis.suggestions.durationMonths);
+          next.endsAt = finish.toISOString().slice(0, 10);
+        }
+        next.selectedModules = Array.from(new Set([...(current.selectedModules ?? []), ...analysis.suggestions.selectedModules]));
+        return next;
+      });
+    } catch (error) {
+      setProjectWorkbook({ status: "failed", file, message: error instanceof Error ? error.message : "Не удалось проанализировать Excel." });
+    }
+  };
   const applyContractSuggestion = (result: ContractProjectPrefill, field: ContractPrefillField) => {
     const next = mergePrefillIntoProjectDraft(draft, result, { overwrite: true, fields: [field] });
     applyDraftPatch(next);
@@ -434,6 +487,22 @@ export function ProjectCreationWizard() {
       .filter((item) => item.draftKey && !manualFields.has(item.draftKey))
       .map((item) => item.field);
     applyDraftPatch(mergePrefillIntoProjectDraft(draft, result, { fields: safeFields }));
+  };
+  const commitProjectWorkbook = async (projectId: string, workbook: Extract<ProjectWorkbookState, { status: "ready" }>) => {
+    const formData = new FormData();
+    formData.append("file", workbook.file);
+    const previewResponse = await fetch(`/api/projects/${projectId}/imports/budget/preview`, { method: "POST", body: formData });
+    const preview = (await previewResponse.json().catch(() => ({}))) as { importBatchId?: string; error?: string; errors?: string[] };
+    if (!previewResponse.ok || !preview.importBatchId) {
+      throw new Error(preview.error ?? preview.errors?.[0] ?? "Не удалось подготовить распределение Excel по модулям.");
+    }
+    const commitResponse = await fetch(`/api/projects/${projectId}/imports/budget/commit`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ importBatchId: preview.importBatchId, mode: "append", replaceConfirmed: false })
+    });
+    const commit = (await commitResponse.json().catch(() => ({}))) as { error?: string };
+    if (!commitResponse.ok) throw new Error(commit.error ?? "Не удалось заполнить модули данными Excel.");
   };
   const submit = async () => {
     const issues = buildProjectOnboardingPlan(draft).issues;
@@ -457,20 +526,26 @@ export function ProjectCreationWizard() {
         const message = typeof data.error === "string" ? data.error : data.error?.message ?? data.issues?.[0]?.message;
         throw new Error(message ?? "Не удалось создать проект.");
       }
+      const setupErrors: string[] = [];
+      if (projectWorkbook.status === "ready") {
+        try {
+          await commitProjectWorkbook(data.project.id, projectWorkbook);
+        } catch (importError) {
+          setupErrors.push(importError instanceof Error ? `Excel не распределился по модулям: ${importError.message}` : "Excel не распределился по модулям.");
+        }
+      }
       if (pendingDocuments.length) {
         try {
           await uploadPendingDocuments(data.project.id);
         } catch (uploadError) {
-          setPendingDocuments([]);
-          setCreatedProjectPath(`/projects/${data.project.id}?created=1`);
-          setCreateError(
-            uploadError instanceof Error
-              ? `Проект создан, но стартовые документы не загрузились: ${uploadError.message}`
-              : "Проект создан, но стартовые документы не загрузились."
-          );
-          router.refresh();
-          return;
+          setupErrors.push(uploadError instanceof Error ? `Стартовые документы не загрузились: ${uploadError.message}` : "Стартовые документы не загрузились.");
         }
+      }
+      if (setupErrors.length) {
+        setCreatedProjectPath(`/projects/${data.project.id}?created=1`);
+        setCreateError(`Проект создан. ${setupErrors.join(" ")}`);
+        router.refresh();
+        return;
       }
       router.push(`/projects/${data.project.id}?created=1`);
       router.refresh();
@@ -487,7 +562,7 @@ export function ProjectCreationWizard() {
         <div>
           <div className="eyebrow">Project Creation & Onboarding</div>
           <h2>Создать проект и запустить baseline</h2>
-          <p className="muted">Wizard создает объект через защищенный `/api/projects`, а на финальном шаге позволяет приложить стартовые документы к новому объекту.</p>
+          <p className="muted">Загрузите единый Excel проекта: система разберет листы, покажет план распределения и после создания заполнит ВОР, материалы, график, ФОТ и технику.</p>
         </div>
         <div className={`onboarding-score tone-${plan.status === "ready_to_create" ? "good" : "warn"}`}>
           <strong>{plan.score}%</strong>
@@ -537,6 +612,14 @@ export function ProjectCreationWizard() {
                 onClear={() => {
                   setContractPrefill({ status: "idle" });
                   setPendingDocuments((current) => current.filter((item) => item.source !== "contract-prefill"));
+                }}
+              />
+              <ProjectWorkbookCard
+                state={projectWorkbook}
+                onFile={handleProjectWorkbookFile}
+                onClear={() => {
+                  setProjectWorkbook({ status: "idle" });
+                  setPendingDocuments((current) => current.filter((item) => item.source !== "project-workbook"));
                 }}
               />
               <label>
@@ -659,6 +742,7 @@ export function ProjectCreationWizard() {
 
           {step === 3 && (
             <div className="template-baseline-preview">
+              {projectWorkbook.status === "ready" && <ProjectWorkbookDistribution analysis={projectWorkbook.analysis} />}
               <div className="baseline-preview-head">
                 <div>
                   <div className="eyebrow">Template baseline</div>
@@ -713,6 +797,15 @@ export function ProjectCreationWizard() {
                 <strong>{plan.recommendedFirstWorkflow}</strong>
                 <span>{summary.moduleLabels.join(", ")}</span>
               </div>
+              {projectWorkbook.status === "ready" && (
+                <div className="project-workbook-review">
+                  <small>Автозаполнение из Excel</small>
+                  <strong>{projectWorkbook.file.name}</strong>
+                  <span>
+                    {projectWorkbook.analysis.summary.budgetItems} строк бюджета · {projectWorkbook.analysis.summary.materials} материалов · {projectWorkbook.analysis.summary.scheduleItems} задач · {projectWorkbook.analysis.summary.payrollItems} строк ФОТ
+                  </span>
+                </div>
+              )}
               <div className="pending-documents-panel">
                 <small>Стартовые документы</small>
                 <strong>{pendingDocuments.length ? `${pendingDocuments.length} файл(ов) к загрузке` : "Можно приложить сейчас"}</strong>
@@ -816,6 +909,102 @@ export function ProjectCreationWizard() {
 function suggestionValue(value: string | number | undefined) {
   if (value === undefined || value === "") return "";
   return typeof value === "number" ? value.toLocaleString("ru-RU") : String(value);
+}
+
+function ProjectWorkbookCard({
+  state,
+  onFile,
+  onClear
+}: {
+  state: ProjectWorkbookState;
+  onFile: (file: File | undefined) => void;
+  onClear: () => void;
+}) {
+  const analysis = state.status === "ready" || state.status === "warning" ? state.analysis : undefined;
+  return (
+    <div className="project-workbook-card wide-field">
+      <div className="project-workbook-card-head">
+        <span className="project-workbook-icon"><FileSpreadsheet size={21} /></span>
+        <div>
+          <strong>Единый Excel проекта</strong>
+          <span>Загрузите то, что есть: ВОР, ССР, материалы, графики, машины, ФОТ и вспомогательные листы.</span>
+        </div>
+        {state.status !== "idle" && <button className="button secondary" type="button" onClick={onClear}>Убрать</button>}
+      </div>
+      <label className="project-workbook-upload">
+        <FileSpreadsheet size={18} />
+        <span>{state.status === "analyzing" ? "Анализируем книгу..." : state.status === "idle" ? "Выбрать Excel проекта" : "Заменить Excel"}</span>
+        <input accept=".xlsx,.xls,.xlsm" disabled={state.status === "analyzing"} type="file" onChange={(event) => onFile(event.target.files?.[0])} />
+      </label>
+      {state.status === "ready" && (
+        <div className="project-workbook-result">
+          <div>
+            <small>Распознано</small>
+            <strong>{state.analysis.summary.totalSheets} листов</strong>
+            <span>{state.analysis.summary.includedSheets} рабочих · {state.analysis.summary.referenceSheets} для сверки</span>
+          </div>
+          <div>
+            <small>Расходная часть</small>
+            <strong>{compactMoney(state.analysis.summary.estimatedDirectCost)}</strong>
+            <span>
+              {state.analysis.summary.reconciliationGap > 0
+                ? `${state.analysis.summary.automatedCoveragePercent}% распределено · остаток ${compactMoney(
+                    state.analysis.summary.reconciliationGap,
+                  )}`
+                : "сверка с ССР закрыта"}
+            </span>
+          </div>
+          <div>
+            <small>ФОТ</small>
+            <strong>{compactMoney(state.analysis.summary.payrollCost)}</strong>
+            <span>{state.analysis.summary.payrollItems} должностей / бригад</span>
+          </div>
+          <div>
+            <small>Техника</small>
+            <strong>{compactMoney(state.analysis.summary.equipmentCost)}</strong>
+            <span>{state.analysis.summary.equipmentItems} позиций</span>
+          </div>
+        </div>
+      )}
+      {(state.status === "warning" || state.status === "failed") && <p className="error-text">{state.message}</p>}
+      {analysis?.warnings.slice(0, 2).map((warning) => <p className="muted" key={warning}>{warning}</p>)}
+    </div>
+  );
+}
+
+function ProjectWorkbookDistribution({ analysis }: { analysis: ProjectWorkbookAnalysis }) {
+  return (
+    <div className="project-workbook-distribution">
+      <div className="baseline-preview-head">
+        <div>
+          <div className="eyebrow">Workbook distribution</div>
+          <h3>Как система заполнит проект</h3>
+          <p>{analysis.fileName} · {analysis.summary.totalSheets} листов. Своды, источники и контрольные вкладки не создают дубли.</p>
+        </div>
+        <span className="badge green">готово к импорту</span>
+      </div>
+      <div className="project-workbook-module-grid">
+        {analysis.modules.map((module) => (
+          <div className={`project-workbook-module tone-${module.status === "ready" ? "good" : module.status === "reference" ? "info" : "neutral"}`} key={module.id}>
+            <div>
+              <strong>{module.label}</strong>
+              <span>{module.rows ? `${module.rows} строк` : module.status === "reference" ? `${module.sheets.length} листов` : "не найдено"}</span>
+            </div>
+            {module.amount > 0 && <b>{compactMoney(module.amount)}</b>}
+            <p>{module.detail}</p>
+            {module.sheets.length > 0 && <small>{module.sheets.slice(0, 4).join(" · ")}{module.sheets.length > 4 ? ` · +${module.sheets.length - 4}` : ""}</small>}
+          </div>
+        ))}
+      </div>
+      <div className="project-workbook-fot-note">
+        <AlertTriangle size={18} />
+        <div>
+          <strong>ФОТ формирует расходную часть проекта</strong>
+          <span>Система использует человеко-месяцы или считает их из объема и нормы выработки. Месячная зарплата становится ставкой, а помесячная загрузка сохраняется в обосновании.</span>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function ContractPrefillCard({

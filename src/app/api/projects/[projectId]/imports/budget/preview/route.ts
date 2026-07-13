@@ -4,7 +4,8 @@ import { Prisma } from "@prisma/client";
 import { writeAudit } from "@/lib/audit";
 import { canProject } from "@/lib/auth/project-permissions";
 import { getCurrentUser } from "@/lib/auth/session";
-import { parseExcelBuffer, validateExcelFile } from "@/lib/excel/import-parser";
+import { validateExcelFile } from "@/lib/excel/import-parser";
+import { parseProjectWorkbookBuffer } from "@/lib/excel/project-workbook-import";
 import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
@@ -19,7 +20,7 @@ export async function POST(request: NextRequest, { params }: { params: { project
 
     const project = await prisma.project.findUnique({
       where: { id: params.projectId },
-      select: { id: true, organizationId: true }
+      select: { id: true, organizationId: true, startsAt: true }
     });
     if (!project) return NextResponse.json({ error: "Project not found" }, { status: 404 });
 
@@ -37,7 +38,10 @@ export async function POST(request: NextRequest, { params }: { params: { project
 
     const buffer = Buffer.from(await file.arrayBuffer());
     const batchId = randomUUID();
-    const preview = { ...parseExcelBuffer(buffer, file.name, params.projectId), importBatchId: batchId };
+    const preview = {
+      ...parseProjectWorkbookBuffer(buffer, file.name, params.projectId, { startsAt: project.startsAt }),
+      importBatchId: batchId
+    };
 
     await prisma.$transaction(async (tx) => {
       await tx.importBatch.create({

@@ -185,7 +185,7 @@ export async function POST(request: NextRequest, { params }: { params: { project
         materials: materials.map(serializeMaterial),
         scheduleItems: scheduleItems.map(serializeScheduleItem)
       };
-    });
+    }, { maxWait: 10_000, timeout: 30_000 });
 
     return NextResponse.json({ ok: true, importBatchId: batch.id, ...result });
   } catch (error) {
