@@ -28,7 +28,10 @@ export type ProjectWorkbookModuleId = "budget" | "materials" | "schedule" | "pay
 
 export interface ProjectWorkbookSheetAnalysis {
   sheetName: string;
+  detectedRole: ProjectWorkbookSheetRole;
   role: ProjectWorkbookSheetRole;
+  enabled: boolean;
+  overridden: boolean;
   included: boolean;
   confidence: number;
   rows: number;
@@ -56,6 +59,9 @@ export interface ProjectWorkbookAnalysis {
     totalSheets: number;
     includedSheets: number;
     referenceSheets: number;
+    excludedSheets: number;
+    reviewSheets: number;
+    overriddenSheets: number;
     budgetItems: number;
     materials: number;
     scheduleItems: number;
@@ -78,15 +84,26 @@ export interface ProjectWorkbookAnalysis {
   errors: string[];
 }
 
-interface ProjectWorkbookOptions {
+export interface ProjectWorkbookSheetOverride {
+  role?: ProjectWorkbookSheetRole;
+  enabled?: boolean;
+}
+
+export type ProjectWorkbookSheetOverrides = Record<string, ProjectWorkbookSheetOverride>;
+
+export interface ProjectWorkbookOptions {
   startsAt?: string | Date;
+  sheetOverrides?: ProjectWorkbookSheetOverrides;
 }
 
 interface SheetData {
   name: string;
   worksheet: XLSX.WorkSheet;
   rows: unknown[][];
+  detectedRole: ProjectWorkbookSheetRole;
   role: ProjectWorkbookSheetRole;
+  enabled: boolean;
+  overridden: boolean;
   confidence: number;
   reason: string;
   formulaCells: number;
@@ -116,13 +133,49 @@ const roleLabels: Record<ProjectWorkbookModuleId, string> = {
   source_control: "Сверка и источники"
 };
 
+const sheetRoles: ProjectWorkbookSheetRole[] = ["works", "materials", "schedule", "payroll", "equipment", "summary", "reference", "control", "unknown"];
+
+export function parseProjectWorkbookSheetOverrides(value: unknown): ProjectWorkbookSheetOverrides {
+  if (value === undefined || value === null || value === "") return {};
+  if (typeof value !== "string") throw new Error("Карта листов должна быть передана в JSON.");
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(value);
+  } catch {
+    throw new Error("Карта листов содержит некорректный JSON.");
+  }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("Карта листов должна быть объектом.");
+
+  const entries = Object.entries(parsed as Record<string, unknown>);
+  if (entries.length > 200) throw new Error("Карта листов содержит слишком много записей.");
+  const result: ProjectWorkbookSheetOverrides = {};
+  for (const [sheetName, rawOverride] of entries) {
+    if (!sheetName.trim() || sheetName.length > 128 || !rawOverride || typeof rawOverride !== "object" || Array.isArray(rawOverride)) {
+      throw new Error("Карта листов содержит некорректную запись.");
+    }
+    const candidate = rawOverride as Record<string, unknown>;
+    const role = candidate.role;
+    const enabled = candidate.enabled;
+    if (role !== undefined && (typeof role !== "string" || !sheetRoles.includes(role as ProjectWorkbookSheetRole))) {
+      throw new Error(`Недопустимая роль листа «${sheetName}».`);
+    }
+    if (enabled !== undefined && typeof enabled !== "boolean") throw new Error(`Некорректный флаг листа «${sheetName}».`);
+    result[sheetName] = {
+      ...(role === undefined ? {} : { role: role as ProjectWorkbookSheetRole }),
+      ...(enabled === undefined ? {} : { enabled })
+    };
+  }
+  return result;
+}
+
 export function analyzeProjectWorkbookBuffer(buffer: Buffer, fileName: string, projectId = "onboarding-preview", options: ProjectWorkbookOptions = {}) {
   return buildProjectWorkbook(buffer, fileName, projectId, options).analysis;
 }
 
 export function parseProjectWorkbookBuffer(buffer: Buffer, fileName: string, projectId: string, options: ProjectWorkbookOptions = {}) {
   const result = buildProjectWorkbook(buffer, fileName, projectId, options);
-  return result.specialized ? result.preview : parseExcelBuffer(buffer, fileName, projectId);
+  return result.specialized || Object.keys(options.sheetOverrides ?? {}).length > 0 ? result.preview : parseExcelBuffer(buffer, fileName, projectId);
 }
 
 function buildProjectWorkbook(buffer: Buffer, fileName: string, projectId: string, options: ProjectWorkbookOptions): BuildResult {
@@ -136,7 +189,8 @@ function buildProjectWorkbook(buffer: Buffer, fileName: string, projectId: strin
     return failedResult(fileName, buffer.byteLength, projectId, "Excel-файл не удалось прочитать. Проверьте формат и целостность файла.");
   }
 
-  const sheetData = workbook.SheetNames.map((name) => buildSheetData(name, workbook.Sheets[name]));
+  const sheetData = workbook.SheetNames.map((name) => buildSheetData(name, workbook.Sheets[name], options.sheetOverrides?.[name]));
+  const enabledSheetData = sheetData.filter((sheet) => sheet.enabled);
   const budgetItems: ImportBudgetItem[] = [];
   const materials: ImportMaterial[] = [];
   const scheduleItems: ImportScheduleItem[] = [];
@@ -144,10 +198,10 @@ function buildProjectWorkbook(buffer: Buffer, fileName: string, projectId: strin
   const sheets: ProjectWorkbookSheetAnalysis[] = [];
   const warnings: string[] = [];
   const startsAt = safeDate(options.startsAt) ?? new Date();
-  const vatPercent = extractVatPercent(sheetData) ?? 0;
+  const vatPercent = extractVatPercent(enabledSheetData) ?? 0;
 
   for (const sheet of sheetData) {
-    const parsed = parseSheet(sheet, startsAt, vatPercent);
+    const parsed = sheet.enabled ? parseSheet(sheet, startsAt, vatPercent) : emptyParsedSheet();
     budgetItems.push(...parsed.budgetItems);
     materials.push(...parsed.materials);
     scheduleItems.push(...parsed.scheduleItems);
@@ -156,12 +210,15 @@ function buildProjectWorkbook(buffer: Buffer, fileName: string, projectId: strin
 
     sheets.push({
       sheetName: sheet.name,
+      detectedRole: sheet.detectedRole,
       role: sheet.role,
+      enabled: sheet.enabled,
+      overridden: sheet.overridden,
       included,
       confidence: sheet.confidence,
       rows: sheet.rows.length,
       importedRows,
-      reason: sheet.reason
+      reason: sheet.enabled ? sheet.reason : "Лист исключен пользователем из анализа и импорта."
     });
     mappings.push({
       sheetName: sheet.name,
@@ -176,8 +233,19 @@ function buildProjectWorkbook(buffer: Buffer, fileName: string, projectId: strin
       parsedRows: importedRows,
       hiddenRows: sheet.hiddenRows,
       formulaCells: sheet.formulaCells,
-      warnings: included ? [] : [sheet.role === "summary" || sheet.role === "reference" || sheet.role === "control" ? "Лист используется для сверки и не переносится как рабочие строки." : "Импортируемые строки не найдены."]
+      warnings: included
+        ? []
+        : [
+            !sheet.enabled
+              ? "Лист исключен пользователем."
+              : sheet.role === "summary" || sheet.role === "reference" || sheet.role === "control"
+                ? "Лист используется для сверки и не переносится как рабочие строки."
+                : "Импортируемые строки не найдены."
+          ]
     });
+    if (sheet.enabled && sheet.overridden && ["works", "materials", "schedule", "payroll", "equipment"].includes(sheet.role) && !included) {
+      warnings.push(`Лист «${sheet.name}» назначен как «${sheet.role}», но рабочие строки не распознаны. Проверьте заголовки или исключите лист.`);
+    }
   }
 
   const uniqueMaterials = dedupeMaterials(materials);
@@ -185,11 +253,11 @@ function buildProjectWorkbook(buffer: Buffer, fileName: string, projectId: strin
   const selectedBudgetItems = budgetItems.filter((item) => item.kind !== "material" || selectedMaterialRows.has(rowKey(item.sheetName, item.rowNumber)));
   let uniqueBudgetItems = dedupeBudgetItems(selectedBudgetItems);
   const duplicateRows = selectedBudgetItems.length - uniqueBudgetItems.length;
-  const sourceDirectCost = extractDirectCost(sheetData);
+  const sourceDirectCost = extractDirectCost(enabledSheetData);
   const parsedDirectCost = sumCost(uniqueBudgetItems);
   const reconciliationGap = sourceDirectCost ? sourceDirectCost - parsedDirectCost : 0;
   if (sourceDirectCost && reconciliationGap > Math.max(1, sourceDirectCost * 0.01)) {
-    const sourceSheet = sheetData.find((sheet) => sheet.role === "summary")?.name ?? "ССР";
+    const sourceSheet = enabledSheetData.find((sheet) => sheet.role === "summary")?.name ?? "ССР";
     uniqueBudgetItems = [
       ...uniqueBudgetItems,
       {
@@ -217,10 +285,12 @@ function buildProjectWorkbook(buffer: Buffer, fileName: string, projectId: strin
     return { name, sheetName: source.sheetName, rowNumber: Math.max(1, source.rowNumber - 1) };
   });
   if (duplicateRows > 0) warnings.push(`Исключено возможных дублей рабочих строк: ${duplicateRows}.`);
-  if (sheetData.some((sheet) => sheet.role === "summary")) {
+  if (enabledSheetData.some((sheet) => sheet.role === "summary")) {
     warnings.push("Сводные листы используются только для сверки итогов: рабочий бюджет собирается из детальных листов без двойного учета.");
   }
   warnings.push("Формулы Excel не выполняются на сервере; используются сохраненные значения ячеек.");
+  const excludedSheets = sheetData.filter((sheet) => !sheet.enabled).length;
+  if (excludedSheets) warnings.push(`Пользователь исключил листов из анализа и импорта: ${excludedSheets}.`);
 
   const errors: string[] = [];
   if (!uniqueBudgetItems.length && !uniqueMaterials.length && !scheduleItems.length) {
@@ -230,7 +300,7 @@ function buildProjectWorkbook(buffer: Buffer, fileName: string, projectId: strin
   const totalRows = sheetData.reduce((sum, sheet) => sum + sheet.rows.length, 0);
   const parsedRows = uniqueBudgetItems.length + scheduleItems.length;
   const estimatedDirectCost = sumCost(uniqueBudgetItems);
-  const suggestions = extractSuggestions(sheetData, startsAt, scheduleItems);
+  const suggestions = extractSuggestions(enabledSheetData, startsAt, scheduleItems);
   const preview: ImportPreview = {
     projectId,
     fileName,
@@ -270,13 +340,13 @@ function buildProjectWorkbook(buffer: Buffer, fileName: string, projectId: strin
     errors
   };
 
-  const specializedRoles = new Set(sheetData.filter((sheet) => sheet.role !== "unknown" && sheet.role !== "control" && sheet.role !== "reference").map((sheet) => sheet.role));
+  const specializedRoles = new Set(enabledSheetData.filter((sheet) => sheet.role !== "unknown" && sheet.role !== "control" && sheet.role !== "reference").map((sheet) => sheet.role));
   const specialized = workbook.SheetNames.length >= 3 && specializedRoles.size >= 2 && parsedRows > 0;
   const analysis = buildAnalysis(fileName, buffer.byteLength, sheets, uniqueBudgetItems, uniqueMaterials, scheduleItems, suggestions, warnings, errors, sourceDirectCost, reconciliationGap);
   return { preview, analysis, specialized };
 }
 
-function buildSheetData(name: string, worksheet: XLSX.WorkSheet): SheetData {
+function buildSheetData(name: string, worksheet: XLSX.WorkSheet, override?: ProjectWorkbookSheetOverride): SheetData {
   const rows = XLSX.utils.sheet_to_json<unknown[]>(worksheet, { header: 1, defval: "", raw: true, blankrows: true });
   const classification = classifySheet(name, rows);
   let formulaCells = 0;
@@ -284,7 +354,13 @@ function buildSheetData(name: string, worksheet: XLSX.WorkSheet): SheetData {
     if (!address.startsWith("!") && typeof (cell as XLSX.CellObject).f === "string") formulaCells += 1;
   }
   const hiddenRows = worksheet["!rows"]?.filter((row) => row?.hidden).length ?? 0;
-  return { name, worksheet, rows, ...classification, formulaCells, hiddenRows };
+  const role = override?.role ?? classification.role;
+  const enabled = override?.enabled ?? true;
+  const overridden = override?.role !== undefined || override?.enabled !== undefined;
+  const reason = override?.role && override.role !== classification.role
+    ? `Роль изменена пользователем. Автоматически: ${classification.role}. ${classification.reason}`
+    : classification.reason;
+  return { name, worksheet, rows, detectedRole: classification.role, role, enabled, overridden, confidence: classification.confidence, reason, formulaCells, hiddenRows };
 }
 
 function classifySheet(name: string, rows: unknown[][]): Pick<SheetData, "role" | "confidence" | "reason"> {
@@ -327,6 +403,10 @@ function parseSheet(sheet: SheetData, startsAt: Date, vatPercent: number): Parse
   if (sheet.role === "payroll") return parsePayroll(sheet);
   if (sheet.role === "equipment") return parseEquipment(sheet);
   if (sheet.role === "schedule") return parseSchedule(sheet, startsAt);
+  return { budgetItems: [], materials: [], scheduleItems: [], headerRow: null, columns: {} };
+}
+
+function emptyParsedSheet(): ParsedSheetItems {
   return { budgetItems: [], materials: [], scheduleItems: [], headerRow: null, columns: {} };
 }
 
@@ -620,7 +700,7 @@ function buildAnalysis(
 ): ProjectWorkbookAnalysis {
   const payrollItems = budgetItems.filter((item) => item.kind === "payroll");
   const equipmentItems = budgetItems.filter((item) => item.kind === "equipment");
-  const moduleRows = (roles: ProjectWorkbookSheetRole[]) => sheets.filter((sheet) => roles.includes(sheet.role));
+  const moduleRows = (roles: ProjectWorkbookSheetRole[]) => sheets.filter((sheet) => sheet.enabled && roles.includes(sheet.role));
   const modules: ProjectWorkbookModuleSummary[] = [
     moduleSummary("budget", moduleRows(["works"]), budgetItems.filter((item) => item.kind === "work" || item.kind === "overhead" || item.kind === "other"), "Детальные работы и явный остаток сверки без повторного импорта сводных итогов."),
     moduleSummary("materials", moduleRows(["materials"]), materials, "Потребность, плановые цены и будущий контур закупок."),
@@ -646,7 +726,10 @@ function buildAnalysis(
     summary: {
       totalSheets: sheets.length,
       includedSheets: sheets.filter((sheet) => sheet.included).length,
-      referenceSheets: sheets.filter((sheet) => !sheet.included).length,
+      referenceSheets: sheets.filter((sheet) => sheet.enabled && !sheet.included).length,
+      excludedSheets: sheets.filter((sheet) => !sheet.enabled).length,
+      reviewSheets: sheets.filter((sheet) => sheet.enabled && !sheet.overridden && (sheet.role === "unknown" || sheet.confidence < 0.8)).length,
+      overriddenSheets: sheets.filter((sheet) => sheet.overridden).length,
       budgetItems: budgetItems.length,
       materials: materials.length,
       scheduleItems: scheduleItems.length,
@@ -803,7 +886,7 @@ function failedResult(fileName: string, fileSize: number, projectId: string, err
     fileSize,
     sheets: [],
     modules: [],
-    summary: { totalSheets: 0, includedSheets: 0, referenceSheets: 0, budgetItems: 0, materials: 0, scheduleItems: 0, payrollItems: 0, equipmentItems: 0, estimatedDirectCost: 0, reconciliationGap: 0, automatedCoveragePercent: 0, payrollCost: 0, equipmentCost: 0 },
+    summary: { totalSheets: 0, includedSheets: 0, referenceSheets: 0, excludedSheets: 0, reviewSheets: 0, overriddenSheets: 0, budgetItems: 0, materials: 0, scheduleItems: 0, payrollItems: 0, equipmentItems: 0, estimatedDirectCost: 0, reconciliationGap: 0, automatedCoveragePercent: 0, payrollCost: 0, equipmentCost: 0 },
     suggestions: { selectedModules: ["documents"] },
     warnings: [],
     errors: [error]

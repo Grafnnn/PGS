@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import * as XLSX from "xlsx";
-import { analyzeProjectWorkbookBuffer, parseProjectWorkbookBuffer } from "./project-workbook-import";
+import { analyzeProjectWorkbookBuffer, parseProjectWorkbookBuffer, parseProjectWorkbookSheetOverrides } from "./project-workbook-import";
 
 function workbookBuffer() {
   const workbook = XLSX.utils.book_new();
@@ -78,5 +78,49 @@ describe("project workbook import", () => {
     expect(payroll).toMatchObject({ name: "Монтажник", unit: "чел.-мес.", qty: 4, plannedUnitPrice: 120000, actualUnitPrice: 0 });
     expect(payroll?.comment).toContain("Норма выработки: 50");
     expect(payroll?.comment).toContain("Объем для расчета: 200");
+  });
+
+  it("recalculates the workbook from confirmed sheet roles and exclusions", () => {
+    const analysis = analyzeProjectWorkbookBuffer(workbookBuffer(), "project.xlsx", "preview", {
+      startsAt: "2026-07-01",
+      sheetOverrides: {
+        "01_ССР_КП": { enabled: false },
+        "05_Материалы": { enabled: false },
+        "23_ИТР_ФОТ": { role: "reference" }
+      }
+    });
+
+    expect(analysis.errors).toEqual([]);
+    expect(analysis.summary).toMatchObject({
+      excludedSheets: 2,
+      overriddenSheets: 3,
+      materials: 0,
+      payrollItems: 0,
+      sourceDirectCost: undefined,
+      reconciliationGap: 0,
+      estimatedDirectCost: 1200
+    });
+    expect(analysis.sheets.find((sheet) => sheet.sheetName === "05_Материалы")).toMatchObject({
+      detectedRole: "materials",
+      role: "materials",
+      enabled: false,
+      overridden: true,
+      included: false
+    });
+    expect(analysis.sheets.find((sheet) => sheet.sheetName === "23_ИТР_ФОТ")).toMatchObject({
+      detectedRole: "payroll",
+      role: "reference",
+      enabled: true,
+      overridden: true,
+      included: false
+    });
+  });
+
+  it("validates the serialized sheet mapping contract", () => {
+    expect(parseProjectWorkbookSheetOverrides(JSON.stringify({ Sheet1: { role: "works", enabled: true } }))).toEqual({
+      Sheet1: { role: "works", enabled: true }
+    });
+    expect(() => parseProjectWorkbookSheetOverrides(JSON.stringify({ Sheet1: { role: "database" } }))).toThrow("Недопустимая роль");
+    expect(() => parseProjectWorkbookSheetOverrides("not-json")).toThrow("некорректный JSON");
   });
 });

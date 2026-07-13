@@ -5,7 +5,7 @@ import { writeAudit } from "@/lib/audit";
 import { canProject } from "@/lib/auth/project-permissions";
 import { getCurrentUser } from "@/lib/auth/session";
 import { validateExcelFile } from "@/lib/excel/import-parser";
-import { parseProjectWorkbookBuffer } from "@/lib/excel/project-workbook-import";
+import { parseProjectWorkbookBuffer, parseProjectWorkbookSheetOverrides } from "@/lib/excel/project-workbook-import";
 import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
@@ -36,10 +36,17 @@ export async function POST(request: NextRequest, { params }: { params: { project
       return NextResponse.json({ error: validationError }, { status: 400 });
     }
 
+    let sheetOverrides;
+    try {
+      sheetOverrides = parseProjectWorkbookSheetOverrides(formData.get("sheetOverrides"));
+    } catch (error) {
+      return NextResponse.json({ error: error instanceof Error ? error.message : "Некорректная карта листов." }, { status: 400 });
+    }
+
     const buffer = Buffer.from(await file.arrayBuffer());
     const batchId = randomUUID();
     const preview = {
-      ...parseProjectWorkbookBuffer(buffer, file.name, params.projectId, { startsAt: project.startsAt }),
+      ...parseProjectWorkbookBuffer(buffer, file.name, params.projectId, { startsAt: project.startsAt, sheetOverrides }),
       importBatchId: batchId
     };
 

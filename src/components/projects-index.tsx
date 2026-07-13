@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, CheckCircle2, ChevronLeft, ChevronRight, ClipboardList, FileSpreadsheet, FileText, Grid2X2, Landmark, List, PackageCheck, Plus, RotateCcw, Search, Sparkles, TimerReset } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ChevronLeft, ChevronRight, ClipboardList, FileSpreadsheet, FileText, Filter, Grid2X2, Landmark, List, PackageCheck, Plus, RotateCcw, Search, Sparkles, TimerReset } from "lucide-react";
 import { money, percent } from "@/lib/calculations";
 import {
   mergePrefillIntoProjectDraft,
@@ -23,7 +23,12 @@ import {
   type ProjectVolumeChangeMode
 } from "@/lib/project-onboarding-intelligence";
 import { buildProjectBaselineFromTemplate, getProjectTemplateById, getProjectTemplates, type ProjectTemplateId } from "@/lib/project-templates";
-import type { ProjectWorkbookAnalysis } from "@/lib/excel/project-workbook-import";
+import type {
+  ProjectWorkbookAnalysis,
+  ProjectWorkbookSheetOverride,
+  ProjectWorkbookSheetOverrides,
+  ProjectWorkbookSheetRole
+} from "@/lib/excel/project-workbook-import";
 import type { Project } from "@/lib/types";
 
 type PendingOnboardingDocument = {
@@ -42,10 +47,24 @@ type ContractPrefillState =
 
 type ProjectWorkbookState =
   | { status: "idle" }
-  | { status: "analyzing"; file: File }
-  | { status: "ready"; file: File; analysis: ProjectWorkbookAnalysis }
+  | { status: "analyzing"; file: File; overrides: ProjectWorkbookSheetOverrides }
+  | { status: "ready"; file: File; analysis: ProjectWorkbookAnalysis; overrides: ProjectWorkbookSheetOverrides; mappingDirty: boolean }
   | { status: "warning"; file: File; message: string; analysis?: ProjectWorkbookAnalysis }
   | { status: "failed"; file: File; message: string };
+
+const workbookSheetRoleOptions: Array<{ value: ProjectWorkbookSheetRole; label: string }> = [
+  { value: "works", label: "ВОР / работы" },
+  { value: "materials", label: "Материалы" },
+  { value: "schedule", label: "График" },
+  { value: "payroll", label: "ФОТ" },
+  { value: "equipment", label: "Техника" },
+  { value: "summary", label: "Свод / ССР" },
+  { value: "reference", label: "Справочник" },
+  { value: "control", label: "Контроль" },
+  { value: "unknown", label: "Не определено" }
+];
+
+const workbookSheetRoleLabels = Object.fromEntries(workbookSheetRoleOptions.map((option) => [option.value, option.label])) as Record<ProjectWorkbookSheetRole, string>;
 
 function compactMoney(value: number) {
   const absolute = Math.abs(value);
@@ -446,13 +465,16 @@ export function ProjectCreationWizard() {
       });
     }
   };
-  const handleProjectWorkbookFile = async (file: File | undefined) => {
-    if (!file) return;
-    setWorkbookAsPendingDocument(file);
-    setProjectWorkbook({ status: "analyzing", file });
+  const analyzeProjectWorkbook = async (
+    file: File,
+    overrides: ProjectWorkbookSheetOverrides,
+    options: { applySuggestions: boolean }
+  ) => {
+    setProjectWorkbook({ status: "analyzing", file, overrides });
     const formData = new FormData();
     formData.append("file", file);
     formData.append("startsAt", String(draft.startsAt ?? ""));
+    formData.append("sheetOverrides", JSON.stringify(overrides));
     try {
       const response = await fetch("/api/projects/onboarding/workbook-analyze", { method: "POST", body: formData });
       const data = (await response.json().catch(() => ({}))) as { analysis?: ProjectWorkbookAnalysis; error?: string };
@@ -461,22 +483,54 @@ export function ProjectCreationWizard() {
         return;
       }
       const analysis = data.analysis;
-      setProjectWorkbook({ status: "ready", file, analysis });
-      setDraft((current) => {
-        const next = { ...current };
-        if (analysis.suggestions.contractAmount && !manualFields.has("contractAmount")) next.contractAmount = String(Math.round(analysis.suggestions.contractAmount));
-        if (analysis.suggestions.vatPercent && !manualFields.has("vatPercent")) next.vatPercent = String(analysis.suggestions.vatPercent);
-        if (analysis.suggestions.durationMonths && current.startsAt && !manualFields.has("endsAt")) {
-          const finish = new Date(`${current.startsAt}T00:00:00Z`);
-          finish.setUTCMonth(finish.getUTCMonth() + analysis.suggestions.durationMonths);
-          next.endsAt = finish.toISOString().slice(0, 10);
-        }
-        next.selectedModules = Array.from(new Set([...(current.selectedModules ?? []), ...analysis.suggestions.selectedModules]));
-        return next;
-      });
+      setProjectWorkbook({ status: "ready", file, analysis, overrides, mappingDirty: false });
+      if (options.applySuggestions) {
+        setDraft((current) => {
+          const next = { ...current };
+          if (analysis.suggestions.contractAmount && !manualFields.has("contractAmount")) next.contractAmount = String(Math.round(analysis.suggestions.contractAmount));
+          if (analysis.suggestions.vatPercent && !manualFields.has("vatPercent")) next.vatPercent = String(analysis.suggestions.vatPercent);
+          if (analysis.suggestions.durationMonths && current.startsAt && !manualFields.has("endsAt")) {
+            const finish = new Date(`${current.startsAt}T00:00:00Z`);
+            finish.setUTCMonth(finish.getUTCMonth() + analysis.suggestions.durationMonths);
+            next.endsAt = finish.toISOString().slice(0, 10);
+          }
+          next.selectedModules = Array.from(new Set([...(current.selectedModules ?? []), ...analysis.suggestions.selectedModules]));
+          return next;
+        });
+      }
     } catch (error) {
       setProjectWorkbook({ status: "failed", file, message: error instanceof Error ? error.message : "Не удалось проанализировать Excel." });
     }
+  };
+  const handleProjectWorkbookFile = async (file: File | undefined) => {
+    if (!file) return;
+    setWorkbookAsPendingDocument(file);
+    await analyzeProjectWorkbook(file, {}, { applySuggestions: true });
+  };
+  const updateWorkbookSheetOverride = (sheetName: string, patch: ProjectWorkbookSheetOverride) => {
+    setProjectWorkbook((current) => {
+      if (current.status !== "ready") return current;
+      const sheet = current.analysis.sheets.find((item) => item.sheetName === sheetName);
+      if (!sheet) return current;
+      const previous = current.overrides[sheetName] ?? {};
+      const nextOverride = { ...previous, ...patch };
+      const nextOverrides = { ...current.overrides };
+      if ((nextOverride.role ?? sheet.detectedRole) === sheet.detectedRole && (nextOverride.enabled ?? true)) delete nextOverrides[sheetName];
+      else nextOverrides[sheetName] = nextOverride;
+      return { ...current, overrides: nextOverrides, mappingDirty: true };
+    });
+  };
+  const resetWorkbookSheetOverride = (sheetName: string) => {
+    setProjectWorkbook((current) => {
+      if (current.status !== "ready") return current;
+      const nextOverrides = { ...current.overrides };
+      delete nextOverrides[sheetName];
+      return { ...current, overrides: nextOverrides, mappingDirty: true };
+    });
+  };
+  const applyWorkbookMapping = async () => {
+    if (projectWorkbook.status !== "ready") return;
+    await analyzeProjectWorkbook(projectWorkbook.file, projectWorkbook.overrides, { applySuggestions: false });
   };
   const applyContractSuggestion = (result: ContractProjectPrefill, field: ContractPrefillField) => {
     const next = mergePrefillIntoProjectDraft(draft, result, { overwrite: true, fields: [field] });
@@ -491,6 +545,7 @@ export function ProjectCreationWizard() {
   const commitProjectWorkbook = async (projectId: string, workbook: Extract<ProjectWorkbookState, { status: "ready" }>) => {
     const formData = new FormData();
     formData.append("file", workbook.file);
+    formData.append("sheetOverrides", JSON.stringify(workbook.overrides));
     const previewResponse = await fetch(`/api/projects/${projectId}/imports/budget/preview`, { method: "POST", body: formData });
     const preview = (await previewResponse.json().catch(() => ({}))) as { importBatchId?: string; error?: string; errors?: string[] };
     if (!previewResponse.ok || !preview.importBatchId) {
@@ -509,6 +564,11 @@ export function ProjectCreationWizard() {
     if (issues.length) {
       setCreateError(issues[0]?.message ?? "Проверьте обязательные поля.");
       setStep(0);
+      return;
+    }
+    if (projectWorkbook.status === "ready" && projectWorkbook.mappingDirty) {
+      setCreateError("Карта Excel изменена. Пересчитайте распределение листов перед созданием проекта.");
+      setStep(3);
       return;
     }
     if (creating) return;
@@ -742,7 +802,14 @@ export function ProjectCreationWizard() {
 
           {step === 3 && (
             <div className="template-baseline-preview">
-              {projectWorkbook.status === "ready" && <ProjectWorkbookDistribution analysis={projectWorkbook.analysis} />}
+              {projectWorkbook.status === "ready" && (
+                <ProjectWorkbookDistribution
+                  state={projectWorkbook}
+                  onApplyMapping={applyWorkbookMapping}
+                  onOverride={updateWorkbookSheetOverride}
+                  onResetOverride={resetWorkbookSheetOverride}
+                />
+              )}
               <div className="baseline-preview-head">
                 <div>
                   <div className="eyebrow">Template baseline</div>
@@ -804,6 +871,9 @@ export function ProjectCreationWizard() {
                   <span>
                     {projectWorkbook.analysis.summary.budgetItems} строк бюджета · {projectWorkbook.analysis.summary.materials} материалов · {projectWorkbook.analysis.summary.scheduleItems} задач · {projectWorkbook.analysis.summary.payrollItems} строк ФОТ
                   </span>
+                  <span>
+                    {projectWorkbook.analysis.summary.overriddenSheets} ручных решений · {projectWorkbook.analysis.summary.excludedSheets} листов исключено
+                  </span>
                 </div>
               )}
               <div className="pending-documents-panel">
@@ -852,7 +922,12 @@ export function ProjectCreationWizard() {
                 <ChevronRight size={17} />
               </button>
             ) : (
-              <button className="button primary" disabled={creating || plan.issues.length > 0} type="button" onClick={submit}>
+              <button
+                className="button primary"
+                disabled={creating || plan.issues.length > 0 || (projectWorkbook.status === "ready" && projectWorkbook.mappingDirty)}
+                type="button"
+                onClick={submit}
+              >
                 <Plus size={17} />
                 {creating ? "Создаем..." : "Создать и открыть"}
               </button>
@@ -941,7 +1016,10 @@ function ProjectWorkbookCard({
           <div>
             <small>Распознано</small>
             <strong>{state.analysis.summary.totalSheets} листов</strong>
-            <span>{state.analysis.summary.includedSheets} рабочих · {state.analysis.summary.referenceSheets} для сверки</span>
+            <span>
+              {state.analysis.summary.includedSheets} рабочих · {state.analysis.summary.referenceSheets} для сверки
+              {state.analysis.summary.reviewSheets ? ` · ${state.analysis.summary.reviewSheets} проверить` : ""}
+            </span>
           </div>
           <div>
             <small>Расходная часть</small>
@@ -972,7 +1050,29 @@ function ProjectWorkbookCard({
   );
 }
 
-function ProjectWorkbookDistribution({ analysis }: { analysis: ProjectWorkbookAnalysis }) {
+function ProjectWorkbookDistribution({
+  state,
+  onApplyMapping,
+  onOverride,
+  onResetOverride
+}: {
+  state: Extract<ProjectWorkbookState, { status: "ready" }>;
+  onApplyMapping: () => void;
+  onOverride: (sheetName: string, patch: ProjectWorkbookSheetOverride) => void;
+  onResetOverride: (sheetName: string) => void;
+}) {
+  const [filter, setFilter] = useState<"all" | "work" | "source" | "review">("all");
+  const { analysis, overrides } = state;
+  const visibleSheets = analysis.sheets.filter((sheet) => {
+    const override = overrides[sheet.sheetName];
+    const enabled = override?.enabled ?? sheet.enabled;
+    const role = override?.role ?? sheet.role;
+    if (filter === "work") return enabled && ["works", "materials", "schedule", "payroll", "equipment"].includes(role);
+    if (filter === "source") return !enabled || ["summary", "reference", "control"].includes(role);
+    if (filter === "review") return enabled && (role === "unknown" || sheet.confidence < 0.8 || Boolean(override));
+    return true;
+  });
+  const pendingOverrides = Object.keys(overrides).length;
   return (
     <div className="project-workbook-distribution">
       <div className="baseline-preview-head">
@@ -1002,6 +1102,91 @@ function ProjectWorkbookDistribution({ analysis }: { analysis: ProjectWorkbookAn
           <strong>ФОТ формирует расходную часть проекта</strong>
           <span>Система использует человеко-месяцы или считает их из объема и нормы выработки. Месячная зарплата становится ставкой, а помесячная загрузка сохраняется в обосновании.</span>
         </div>
+      </div>
+      <div className="project-workbook-mapping">
+        <div className="project-workbook-mapping-head">
+          <div>
+            <div className="eyebrow">Import review & mapping</div>
+            <h3>Проверьте карту листов</h3>
+            <p>Роль определена автоматически. Исключённые листы не участвуют ни в импорте, ни в сверке итогов.</p>
+          </div>
+          <div className="project-workbook-mapping-summary">
+            <span>{analysis.summary.includedSheets} рабочих</span>
+            <span>{analysis.summary.referenceSheets} источников</span>
+            <span>{analysis.summary.reviewSheets} требуют проверки</span>
+          </div>
+        </div>
+        <div className="project-workbook-mapping-toolbar">
+          <div className="density-toggle" aria-label="Фильтр карты листов">
+            {([
+              ["all", "Все"],
+              ["work", "Рабочие"],
+              ["source", "Сверка"],
+              ["review", "Проверить"]
+            ] as const).map(([value, label]) => (
+              <button className={filter === value ? "active" : ""} key={value} type="button" onClick={() => setFilter(value)}>
+                {value === "review" && <Filter size={14} />}
+                {label}
+              </button>
+            ))}
+          </div>
+          <span className={`badge ${state.mappingDirty ? "yellow" : "green"}`}>
+            {state.mappingDirty ? `${pendingOverrides} изменений не пересчитано` : `${analysis.summary.overriddenSheets} ручных решений применено`}
+          </span>
+        </div>
+        <div className="project-workbook-sheet-list">
+          {visibleSheets.map((sheet) => {
+            const override = overrides[sheet.sheetName];
+            const enabled = override?.enabled ?? sheet.enabled;
+            const role = override?.role ?? sheet.role;
+            const needsReview = enabled && !override && !sheet.overridden && (role === "unknown" || sheet.confidence < 0.8);
+            return (
+              <div className={`project-workbook-sheet-row ${!enabled ? "is-disabled" : ""} ${needsReview ? "needs-review" : ""}`} key={sheet.sheetName}>
+                <label className="project-workbook-sheet-enabled">
+                  <input
+                    checked={enabled}
+                    type="checkbox"
+                    onChange={(event) => onOverride(sheet.sheetName, { enabled: event.target.checked })}
+                  />
+                  <span>{enabled ? "учитывать" : "исключён"}</span>
+                </label>
+                <div className="project-workbook-sheet-name">
+                  <strong>{sheet.sheetName}</strong>
+                  <span>{sheet.rows} строк · {sheet.importedRows} распознано</span>
+                  <small>{sheet.reason}</small>
+                </div>
+                <label className="project-workbook-sheet-role">
+                  Роль
+                  <select value={role} onChange={(event) => onOverride(sheet.sheetName, { role: event.target.value as ProjectWorkbookSheetRole })}>
+                    {workbookSheetRoleOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                  </select>
+                </label>
+                <div className="project-workbook-sheet-confidence">
+                  <span className={`badge ${needsReview ? "yellow" : sheet.confidence >= 0.9 ? "green" : "blue"}`}>{Math.round(sheet.confidence * 100)}%</span>
+                  <small>авто: {workbookSheetRoleLabels[sheet.detectedRole]}</small>
+                </div>
+                {(override || sheet.overridden) && (
+                  <button className="icon-button" type="button" title="Вернуть автоматическое решение" aria-label={`Вернуть автоматическую роль листа ${sheet.sheetName}`} onClick={() => onResetOverride(sheet.sheetName)}>
+                    <RotateCcw size={15} />
+                  </button>
+                )}
+              </div>
+            );
+          })}
+          {!visibleSheets.length && <div className="empty-state">В этом фильтре листов нет.</div>}
+        </div>
+        {state.mappingDirty && (
+          <div className="project-workbook-mapping-action">
+            <div>
+              <strong>Карта изменена</strong>
+              <span>Пересчитайте суммы и модули. До этого создание проекта заблокировано.</span>
+            </div>
+            <button className="button primary" type="button" onClick={onApplyMapping}>
+              <RotateCcw size={16} />
+              Пересчитать карту
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
