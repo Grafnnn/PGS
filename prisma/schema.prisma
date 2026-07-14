@@ -144,6 +144,7 @@ model Project {
   auditLogs       AuditLog[]
   importBatches   ImportBatch[]
   actionItems     ProjectActionItem[]
+  executiveReports ExecutiveReport[]
 
   @@map("projects")
 }
@@ -588,4 +589,26 @@ model ProjectActionItem {
   @@index([projectId, status, dueAt])
   @@index([projectId, assignee])
   @@map("project_action_items")
+}
+
+model ExecutiveReport {
+  id               String   @id @default(cuid())
+  organizationId   String   @map("organization_id")
+  projectId        String   @map("project_id")
+  version          Int
+  title            String
+  reportDate       DateTime @map("report_date")
+  status           String   @default("draft")
+  content          Json
+  sourceSnapshot   Json?    @map("source_snapshot")
+  createdBy        String?  @map("created_by")
+  publishedAt      DateTime? @map("published_at")
+  publishedBy      String?  @map("published_by")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+  project          Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, version])
+  @@index([projectId, status, createdAt])
+  @@map("executive_reports")
 }

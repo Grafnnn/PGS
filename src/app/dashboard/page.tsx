@@ -1,8 +1,11 @@
 import Link from "next/link";
 import type { Route } from "next";
+import { redirect } from "next/navigation";
 import { AlertTriangle, Banknote, BarChart3, CalendarClock, ClipboardList, FileWarning, FolderKanban, PackageCheck, Sparkles, TrendingUp } from "lucide-react";
 import { budgetTotals, deriveAutoRisks, financeTotals, materialTotals, money, percent, workTotals } from "@/lib/calculations";
 import { loadDashboardData } from "@/lib/project-page-data";
+import { getCurrentUser } from "@/lib/auth/session";
+import { listProjectsFromDb } from "@/lib/project-data";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +17,11 @@ function compactMoney(value: number) {
 }
 
 export default async function DashboardPage() {
-  const { projects, bundle: loadedBundle, primaryProjectHref } = await loadDashboardData();
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  const { projects, bundle: loadedBundle, primaryProjectHref } = await loadDashboardData({
+    loadProjects: () => listProjectsFromDb(user)
+  });
   const primaryProjectRoute = primaryProjectHref as Route;
   const bundle = loadedBundle ?? {
     project: { contractAmount: 0 },

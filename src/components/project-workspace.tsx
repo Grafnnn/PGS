@@ -18,6 +18,7 @@ import { ProjectIntelligenceDrilldown } from "@/components/project-intelligence-
 import { ProcurementIntelligenceWorkspace } from "@/components/procurement-intelligence-workspace";
 import { QualityIssuesWorkspace } from "@/components/quality-issues-workspace";
 import { ResourcesEquipmentWorkspace } from "@/components/resources-equipment-workspace";
+import { ReportsWorkflow } from "@/components/reports-workflow";
 import { RiskExecutiveWorkspace } from "@/components/risk-executive-workspace";
 import { ScheduleCashflowWorkspace } from "@/components/schedule-cashflow-workspace";
 import { SubcontractorExecutionWorkspace } from "@/components/subcontractor-execution-workspace";
@@ -1300,6 +1301,13 @@ export function ProjectWorkspace({ initialBundle, createdFromOnboarding = false 
 
       {activeTab === "Рапорты" && (
         <Panel title="Ежедневные рапорты стройплощадки" icon={<ClipboardList size={18} />}>
+          <ReportsWorkflow
+            currentUser={currentUser}
+            currentUserLoaded={currentUserLoaded}
+            projectId={initialBundle.project.id}
+            reports={reports}
+            onReportsChange={setReports}
+          />
           <FieldOperationsWorkspace
             project={initialBundle.project}
             budgetItems={budgetItems}
@@ -1360,34 +1368,10 @@ export function ProjectWorkspace({ initialBundle, createdFromOnboarding = false 
             intelligence={intelligence}
             importHistory={importHistory}
             aiLoading={aiScenarioLoading === "executive-report"}
+            aiInsight={aiResults["executive-report"] ?? null}
             onNavigate={setActiveTab}
             onRunExecutiveAi={() => void runAiCommandScenario("executive-report")}
           />
-          <ReportCards items={reports} />
-          <button
-            className="button primary"
-            onClick={async () => {
-              const saved = await createResource<DailyReport>("daily-reports", {
-                date: new Date().toISOString().slice(0, 10),
-                author: "Прораб",
-                weather: "Без осадков",
-                workers: 18,
-                engineers: 2,
-                equipment: "Кран, самосвалы",
-                completedWorks: "Заполните выполненные объемы",
-                materialsReceived: "",
-                materialsConsumed: "",
-                downtime: "",
-                issues: "",
-                status: "draft"
-              });
-              setReports((current) => [saved, ...current]);
-            }}
-          >
-            <Plus size={18} />
-            Создать рапорт
-          </button>
-          <ReportTable items={reports} />
         </Panel>
       )}
 
@@ -1408,6 +1392,7 @@ export function ProjectWorkspace({ initialBundle, createdFromOnboarding = false 
             intelligence={intelligence}
             importHistory={importHistory}
             aiLoading={aiScenarioLoading === "risk-review" || aiScenarioLoading === "executive-report"}
+            aiInsight={aiResults["executive-report"] ?? null}
             onNavigate={setActiveTab}
             onRunExecutiveAi={() => void runAiCommandScenario("executive-report")}
           />
@@ -3139,25 +3124,6 @@ function PaymentTable({ items }: { items: Payment[] }) {
   );
 }
 
-function ReportTable({ items }: { items: DailyReport[] }) {
-  return (
-    <DataTable
-      headers={["Дата", "Автор", "Погода", "Люди", "Техника", "Выполнено", "Проблемы", "Статус"]}
-      emptyMessage="Рапортов пока нет."
-      rows={items.map((item) => [
-        item.date,
-        item.author,
-        item.weather,
-        `${item.workers} раб. / ${item.engineers} ИТР`,
-        item.equipment,
-        item.completedWorks,
-        item.issues,
-        <StatusBadge key="status" tone={statusTone(item.status)}>{readableStatus(item.status)}</StatusBadge>
-      ])}
-    />
-  );
-}
-
 function RiskTable({ items }: { items: Risk[] }) {
   return (
     <DataTable
@@ -3584,23 +3550,6 @@ function RiskMatrix({ items }: { items: Risk[] }) {
           </div>
         );
       })}
-    </div>
-  );
-}
-
-function ReportCards({ items }: { items: DailyReport[] }) {
-  return (
-    <div className="report-card-grid">
-      {items.slice(0, 3).map((item) => (
-        <div className="report-card" key={item.id}>
-          <div>
-            <strong>{formatDate(item.date)}</strong>
-            <StatusBadge tone={statusTone(item.status)}>{readableStatus(item.status)}</StatusBadge>
-          </div>
-          <p>{item.completedWorks}</p>
-          <span>{item.workers} рабочих · {item.engineers} ИТР · {item.weather || "Погода не указана"}</span>
-        </div>
-      ))}
     </div>
   );
 }

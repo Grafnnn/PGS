@@ -1,6 +1,9 @@
 import { Plus } from "lucide-react";
+import { redirect } from "next/navigation";
 import { money } from "@/lib/calculations";
 import { loadProjectsForPage } from "@/lib/project-page-data";
+import { listProjectsFromDb } from "@/lib/project-data";
+import { getCurrentUser } from "@/lib/auth/session";
 import { ProjectsIndex } from "@/components/projects-index";
 
 export const dynamic = "force-dynamic";
@@ -13,7 +16,9 @@ function compactMoney(value: number) {
 }
 
 export default async function ProjectsPage() {
-  const { projects } = await loadProjectsForPage();
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  const { projects } = await loadProjectsForPage(() => listProjectsFromDb(user));
 
   return (
     <main className="page">

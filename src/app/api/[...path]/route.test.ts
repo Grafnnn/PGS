@@ -3,6 +3,7 @@ import type { AppUser } from "@/lib/auth/permissions";
 
 const getCurrentUserMock = vi.fn();
 const canProjectMock = vi.fn();
+const getEffectiveProjectRoleMock = vi.fn();
 const askProjectAssistantMock = vi.fn();
 const buildProjectContextMock = vi.fn();
 const localAiFallbackMock = vi.fn();
@@ -27,7 +28,8 @@ vi.mock("@/lib/auth/session", () => ({
 }));
 
 vi.mock("@/lib/auth/project-permissions", () => ({
-  canProject: canProjectMock
+  canProject: canProjectMock,
+  getEffectiveProjectRole: getEffectiveProjectRoleMock
 }));
 
 vi.mock("@/lib/ai", () => ({
@@ -84,6 +86,7 @@ describe("catch-all AI routes", () => {
   beforeEach(() => {
     getCurrentUserMock.mockReset();
     canProjectMock.mockReset();
+    getEffectiveProjectRoleMock.mockReset();
     askProjectAssistantMock.mockReset();
     buildProjectContextMock.mockReset();
     localAiFallbackMock.mockReset();

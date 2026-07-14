@@ -11,6 +11,7 @@ import {
   type RiskItem,
   type RiskSeverity
 } from "@/lib/risk-executive-intelligence";
+import type { AiInsightResponse } from "@/lib/project-intelligence-drilldown";
 import type { DocumentChecklistItem, PipelineAction, PipelineReadiness } from "@/lib/project-pipeline";
 import type { BudgetItem, DailyReport, Material, Payment, ProcurementRequest, Project, ProjectDocument, Risk, ScheduleItem } from "@/lib/types";
 
@@ -37,6 +38,7 @@ type RiskExecutiveWorkspaceProps = {
   onNavigate: (tab: string) => void;
   onRunExecutiveAi?: () => void;
   aiLoading?: boolean;
+  aiInsight?: AiInsightResponse | null;
 };
 
 function severityClass(severity: RiskSeverity) {
@@ -227,7 +229,8 @@ export function RiskExecutiveWorkspace({
   importHistory,
   onNavigate,
   onRunExecutiveAi,
-  aiLoading = false
+  aiLoading = false,
+  aiInsight = null
 }: RiskExecutiveWorkspaceProps) {
   const model = buildRiskExecutiveIntelligence({
     project,
@@ -314,6 +317,35 @@ export function RiskExecutiveWorkspace({
             </div>
             <pre>{report.copyText}</pre>
           </div>
+          {aiInsight && (
+            <div className="executive-ai-polish" aria-live="polite">
+              <div className="section-title">
+                <ShieldAlert size={16} />
+                <h4>AI executive polish result</h4>
+              </div>
+              <strong>{aiInsight.subject || aiInsight.title}</strong>
+              <p>{aiInsight.summary}</p>
+              {!!aiInsight.findings.length && (
+                <ul>
+                  {aiInsight.findings.slice(0, 5).map((finding, index) => (
+                    <li key={`${finding.title}-${index}`}>
+                      <strong>{finding.title}</strong>
+                      <span>{finding.description}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {!!aiInsight.recommendedActions.length && (
+                <div className="executive-ai-actions">
+                  <small>Рекомендуемые действия</small>
+                  {aiInsight.recommendedActions.slice(0, 5).map((action, index) => (
+                    <span key={`${action.title}-${index}`}>{action.title}</span>
+                  ))}
+                </div>
+              )}
+              <small>Источник: {aiInsight.provider}. Результат получен только после явного запуска.</small>
+            </div>
+          )}
         </article>
       </div>
     </section>

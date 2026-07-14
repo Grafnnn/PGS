@@ -5,8 +5,9 @@ import { askProjectAssistant, buildProjectContext, localAiFallback } from "@/lib
 import { writeAudit } from "@/lib/audit";
 import { getCurrentUser } from "@/lib/auth/session";
 import { canDeleteDocument, canDeleteProject, canEditProject, canViewAudit, canViewProject, type AppUser } from "@/lib/auth/permissions";
-import { canProject, type ProjectAction } from "@/lib/auth/project-permissions";
+import { canProject, getEffectiveProjectRole, type ProjectAction } from "@/lib/auth/project-permissions";
 import { budgetTotals, deriveAutoRisks, financeTotals, materialTotals, workTotals } from "@/lib/calculations";
+import { canTransitionDailyReport } from "@/lib/daily-reports";
 import { demoState } from "@/lib/demo-data";
 import { getDemoContext, getProjectBundleFromDb, listProjectsFromDb } from "@/lib/project-data";
 import { deleteProjectWithConfirmation, ProjectDeleteError } from "@/lib/project-delete";
@@ -422,8 +423,21 @@ async function createProjectResource(projectId: string, resource: string | undef
 
   if (resource === "daily-reports") {
     const data = dailyReportSchema.parse(body);
-    const item = await prisma.dailyReport.create({
-      data: { ...data, organizationId: project.organizationId, projectId, createdBy: userId }
+    const item = await prisma.$transaction(async (tx) => {
+      const created = await tx.dailyReport.create({
+        data: { ...data, status: "draft", organizationId: project.organizationId, projectId, createdBy: userId }
+      });
+      await writeAudit(tx, {
+        organizationId: project.organizationId,
+        projectId,
+        ...actor,
+        entity: "daily_report",
+        entityId: created.id,
+        action: "create",
+        summary: `Создан ежедневный рапорт: ${created.date.toISOString().slice(0, 10)}`,
+        after: serializeDailyReport(created)
+      });
+      return created;
     });
     return json({ item: serializeDailyReport(item) }, 201);
   }
@@ -551,7 +565,34 @@ async function updateResource(resource: string, id: string, body: unknown) {
   }
   if (resource === "daily-reports") {
     const data = partial(dailyReportSchema).parse(body);
-    const item = await prisma.dailyReport.update({ where: { id }, data });
+    const before = await prisma.dailyReport.findUniqueOrThrow({ where: { id } });
+    if (!Object.keys(data).length || (data.status === before.status && Object.keys(data).length === 1)) {
+      return json({ error: "No daily report changes requested" }, 409);
+    }
+    if (data.status) {
+      const role = await getEffectiveProjectRole(user, before.projectId);
+      if (!canTransitionDailyReport(before.status, data.status, role)) {
+        return json({ error: "Invalid daily report status transition" }, 409);
+      }
+    }
+    if (before.status !== "draft" && Object.keys(data).some((key) => key !== "status")) {
+      return json({ error: "Only draft reports can be edited" }, 409);
+    }
+    const item = await prisma.$transaction(async (tx) => {
+      const updated = await tx.dailyReport.update({ where: { id }, data });
+      await writeAudit(tx, {
+        organizationId: before.organizationId,
+        projectId: before.projectId,
+        ...auditActor(user),
+        entity: "daily_report",
+        entityId: id,
+        action: data.status === "approved" ? "accept" : "update",
+        summary: data.status ? `Статус рапорта изменен: ${before.status} → ${data.status}` : `Обновлен ежедневный рапорт: ${updated.date.toISOString().slice(0, 10)}`,
+        before: serializeDailyReport(before),
+        after: serializeDailyReport(updated)
+      });
+      return updated;
+    });
     return json({ item: serializeDailyReport(item) });
   }
   if (resource === "risks") {
@@ -595,7 +636,23 @@ async function deleteResource(resource: string, id: string) {
   else if (resource === "materials") await deleteWithAudit("material", id, "material", serializeMaterial, actor);
   else if (resource === "procurement") await prisma.procurementRequest.delete({ where: { id } });
   else if (resource === "finance" || resource === "payments") await deleteWithAudit("payment", id, "payment", serializePayment, actor);
-  else if (resource === "daily-reports") await prisma.dailyReport.delete({ where: { id } });
+  else if (resource === "daily-reports") {
+    const before = await prisma.dailyReport.findUniqueOrThrow({ where: { id } });
+    if (before.status !== "draft") return json({ error: "Only draft reports can be deleted" }, 409);
+    await prisma.$transaction(async (tx) => {
+      await tx.dailyReport.delete({ where: { id } });
+      await writeAudit(tx, {
+        organizationId: before.organizationId,
+        projectId: before.projectId,
+        ...actor,
+        entity: "daily_report",
+        entityId: id,
+        action: "delete",
+        summary: `Удален черновик ежедневного рапорта: ${before.date.toISOString().slice(0, 10)}`,
+        before: serializeDailyReport(before)
+      });
+    });
+  }
   else if (resource === "risks") await deleteWithAudit("risk", id, "risk", serializeRisk, actor);
   else if (resource === "documents") await prisma.document.delete({ where: { id } });
   else return json({ error: "Endpoint not found", resource }, 404);
