@@ -1,5 +1,48 @@
 # PGS Project Log
 
+## 2026-07-14 - RFI & Submittals v1 online/core GO
+
+Status: RFI & Submittals v1 is shipped on Render after PR #112. Projects now have formal, numbered registers for information requests and document/material submissions with controlled decisions and complete audit history.
+
+- Online URL: https://pgs-frankfurt.onrender.com
+- Online commit: `4e6f57f83d90cea16cd4d489d042d67c8aa6396f`
+- Render deploy: `dep-d9b9scmrnols73e836gg`
+- PR: #112
+- Decision: ONLINE/CORE GO
+- Git SHA source: `RENDER_GIT_COMMIT`
+
+Implemented:
+
+- sequential `RFI-###` and `SUB-###` registers with draft-only editing and deletion;
+- guarded RFI lifecycle: draft, open, answered, closed and controlled reopen;
+- guarded submittal lifecycle: draft, submitted, approved/rejected/revise-required, resubmission revision and closed;
+- required assignee/reviewer and due date before formal send/submit;
+- persisted response/review history and transactional audit entries for every mutation;
+- exact linked document-version snapshots with download of the submitted file version;
+- overdue indicators, filters and explicit Action Center escalation without silent writes;
+- responsive project workspace for desktop and mobile.
+
+Online verification:
+
+- `/api/health`: HTTP 200 / `ok`; DB: `ok`; migrations: `ok`, count `9`;
+- deployed SHA matched the expected main commit and Render marked the deploy `live`;
+- unauthenticated `/dashboard`, `/projects` and `/projects/project-smoke` redirect to `/login`;
+- unauthenticated `/api/auth/me`: 401;
+- unauthenticated RFI and submittal collection APIs: 403.
+
+Validation and safety:
+
+- GitHub Actions CI #229 passed;
+- Vitest: 338/338 passed; ESLint, TypeScript, Prisma validate/generate, production build and `git diff --check` passed;
+- desktop 1440px and mobile 390px browser checks passed without horizontal overflow or page errors;
+- no authenticated online RFI/submittal mutation, live AI, project/import/delete/upload mutation or real client file was used;
+- no Render env/secrets, auth/session model or provider/deploy configuration changes were made;
+- the additive database migration was applied successfully; no secrets were printed.
+
+Remaining controlled follow-up:
+
+- authenticated disposable workflow smoke for RFI create/send/answer/close and submittal create/submit/review/resubmit/close remains optional. It is not claimed by this core gate.
+
 ## 2026-07-14 - Reports Workflow v2 online/core GO
 
 Status: Reports Workflow v2 is shipped on Render after PR #110. Daily reports now follow an audited workflow, and executive weekly reports are persisted as immutable, versioned records with controlled publication and TXT export.
