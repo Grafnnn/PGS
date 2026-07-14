@@ -147,4 +147,42 @@ describe("RiskExecutiveWorkspace", () => {
     expect(html).toContain("Недостаточно");
     expect(html).not.toContain("Проект без рисков");
   });
+
+  it("shows an explicitly requested AI polish result without triggering another request", () => {
+    const onRunExecutiveAi = vi.fn();
+    const html = renderToStaticMarkup(
+      createElement(RiskExecutiveWorkspace, {
+        project: { id: "project-smoke", name: "Smoke project" },
+        budgetItems,
+        scheduleItems,
+        materials,
+        procurementRequests: [],
+        payments: [],
+        dailyReports: [],
+        risks: [],
+        readiness: null,
+        documentChecklist: [],
+        intelligence: null,
+        importHistory,
+        onNavigate: vi.fn(),
+        onRunExecutiveAi,
+        aiInsight: {
+          title: "Отчет руководителю",
+          scenario: "executive-report",
+          summary: "Проверьте отставание графика и дефицит материалов.",
+          findings: [{ severity: "high", title: "График", description: "Монолит отстает." }],
+          recommendedActions: [{ priority: "high", title: "Назначить владельца", description: "Закрепить ответственного." }],
+          dataUsed: ["График", "Материалы"],
+          dataLimitations: [],
+          generatedAt: "2026-07-14T10:00:00.000Z",
+          provider: "deterministic"
+        }
+      })
+    );
+
+    expect(html).toContain("AI executive polish result");
+    expect(html).toContain("Проверьте отставание графика");
+    expect(html).toContain("Назначить владельца");
+    expect(onRunExecutiveAi).not.toHaveBeenCalled();
+  });
 });
