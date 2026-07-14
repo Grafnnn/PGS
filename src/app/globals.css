@@ -2761,6 +2761,141 @@ tr:last-child td {
   margin: 2px 0 0;
 }
 
+.project-creation-mode {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.project-creation-mode-option {
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  cursor: pointer;
+  display: grid;
+  gap: 11px;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  min-height: 86px;
+  padding: 14px;
+  text-align: left;
+}
+
+.project-creation-mode-option:hover,
+.project-creation-mode-option.active {
+  border-color: #16845b;
+  box-shadow: inset 3px 0 #16845b;
+}
+
+.project-creation-mode-option > svg {
+  color: #166534;
+}
+
+.project-creation-mode-option > span {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.project-creation-mode-option small {
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.project-creation-mode-option b {
+  background: #e7f4ec;
+  border-radius: var(--radius-sm);
+  color: #166534;
+  font-size: 11px;
+  padding: 5px 7px;
+  white-space: nowrap;
+}
+
+.project-excel-entry {
+  background: var(--panel-muted);
+  border: 1px solid var(--line);
+  border-left: 4px solid #16845b;
+  border-radius: var(--radius-sm);
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+}
+
+.project-excel-entry-heading,
+.project-workbook-autofill-head {
+  align-items: flex-start;
+  display: flex;
+  gap: 18px;
+  justify-content: space-between;
+}
+
+.project-excel-entry-heading h3,
+.project-excel-entry-heading p,
+.project-workbook-autofill-head h3,
+.project-workbook-autofill-head p {
+  margin: 0;
+}
+
+.project-excel-entry-heading p,
+.project-workbook-autofill-head p {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+  margin-top: 4px;
+}
+
+.project-workbook-autofill {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  display: grid;
+  gap: 11px;
+  padding: 12px;
+}
+
+.project-workbook-autofill-grid {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.project-workbook-autofill-field {
+  background: var(--panel-muted);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  padding: 9px;
+}
+
+.project-workbook-autofill-field span,
+.project-workbook-autofill-field small,
+.project-workbook-autofill-field em,
+.project-workbook-autofill-footer span {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.project-workbook-autofill-field strong {
+  overflow-wrap: anywhere;
+}
+
+.project-workbook-autofill-field em {
+  border-top: 1px solid var(--line);
+  font-style: normal;
+  margin-top: 3px;
+  padding-top: 4px;
+}
+
+.project-workbook-autofill-footer {
+  display: grid;
+  gap: 4px;
+}
+
 .project-workbook-card {
   background: #f7faf8;
   border: 1px solid #b9d4c5;
@@ -6467,6 +6602,7 @@ input[type="checkbox"] {
   .template-selector-grid,
   .baseline-preview-grid,
   .project-baseline-mini-grid,
+  .project-workbook-autofill-grid,
   .project-workbook-module-grid,
   .project-workbook-result {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -6491,6 +6627,7 @@ input[type="checkbox"] {
   }
 
   .module-setup-grid,
+  .project-creation-mode,
   .project-create-review,
   .pending-document-row,
   .contract-suggestion-row,
@@ -6499,6 +6636,7 @@ input[type="checkbox"] {
   .baseline-preview-grid,
   .project-baseline-mini-grid,
   .project-workbook-module-grid,
+  .project-workbook-autofill-grid,
   .project-workbook-result {
     grid-template-columns: 1fr;
   }
@@ -6506,6 +6644,21 @@ input[type="checkbox"] {
   .project-workbook-card-head {
     align-items: flex-start;
     grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .project-creation-mode-option {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .project-creation-mode-option b {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+
+  .project-excel-entry-heading,
+  .project-workbook-autofill-head {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .project-workbook-card-head .button {

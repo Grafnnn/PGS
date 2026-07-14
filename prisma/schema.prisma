@@ -112,14 +112,23 @@ model Project {
   id              String        @id @default(cuid())
   organizationId  String        @map("organization_id")
   name            String
+  code            String?
   customer        String
   object          String
+  objectType      String?       @map("object_type")
   address         String
+  description     String?
   contractAmount  Decimal       @map("contract_amount") @db.Decimal(14, 2)
   vatMode         String        @default("vat") @map("vat_mode")
+  vatPercent      Decimal?      @map("vat_percent") @db.Decimal(5, 2)
   startsAt        DateTime      @map("starts_at")
   endsAt          DateTime      @map("ends_at")
   manager         String
+  tenderSource    String?       @map("tender_source")
+  paymentNotes    String?       @map("payment_notes")
+  volumeChangeMode String?      @map("volume_change_mode")
+  templateId      String?       @map("template_id")
+  selectedModules Json?         @map("selected_modules")
   status          ProjectStatus @default(planning)
   isSmokeProject  Boolean       @default(false) @map("is_smoke_project")
   createdAt       DateTime      @default(now()) @map("created_at")

@@ -175,11 +175,14 @@ export async function POST(request: NextRequest, { params }: { params: { path?: 
       const body = await readBody();
       const data = projectSchema.parse(body);
       const { organizationId } = await getDemoContext();
+      const { contractAmount, vatPercent, selectedModules, ...projectData } = data;
       const project = await prisma.project.create({
         data: {
           organizationId,
-          ...data,
-          contractAmount: new Prisma.Decimal(data.contractAmount)
+          ...projectData,
+          contractAmount: new Prisma.Decimal(contractAmount),
+          vatPercent: vatPercent === undefined || vatPercent === null ? null : new Prisma.Decimal(vatPercent),
+          selectedModules: selectedModules ?? undefined
         }
       });
       return json({ project: serializeProject(project) }, 201);
@@ -230,11 +233,14 @@ export async function PATCH(request: NextRequest, { params }: { params: { path?:
       const user = await getCurrentUser();
       if (!(await canProject(user, path[1], "edit"))) return json({ error: "Forbidden" }, 403);
       const data = partial(projectSchema).parse(body);
+      const { contractAmount, vatPercent, selectedModules, ...projectData } = data;
       const project = await prisma.project.update({
         where: { id: path[1] },
         data: {
-          ...data,
-          contractAmount: data.contractAmount === undefined ? undefined : new Prisma.Decimal(data.contractAmount)
+          ...projectData,
+          contractAmount: contractAmount === undefined ? undefined : new Prisma.Decimal(contractAmount),
+          vatPercent: vatPercent === undefined ? undefined : vatPercent === null ? null : new Prisma.Decimal(vatPercent),
+          selectedModules: selectedModules === undefined ? undefined : selectedModules === null ? Prisma.JsonNull : selectedModules
         }
       });
       return json({ project: serializeProject(project) });

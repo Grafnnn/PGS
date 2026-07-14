@@ -2,14 +2,23 @@ import { z } from "zod";
 
 export const projectSchema = z.object({
   name: z.string().min(2),
+  code: z.string().trim().max(80).optional().nullable(),
   customer: z.string().min(2),
   object: z.string().min(2),
+  objectType: z.enum(["residential", "commercial", "social", "engineering", "reconstruction", "roofing_facade", "interior", "other"]).optional().nullable(),
   address: z.string().min(2),
+  description: z.string().trim().max(4000).optional().nullable(),
   contractAmount: z.coerce.number().nonnegative(),
   vatMode: z.enum(["vat", "no_vat"]).default("vat"),
+  vatPercent: z.coerce.number().min(0).max(100).optional().nullable(),
   startsAt: z.coerce.date(),
   endsAt: z.coerce.date(),
   manager: z.string().min(2),
+  tenderSource: z.enum(["contract", "tender", "commercial_offer", "draft", "unknown"]).optional().nullable(),
+  paymentNotes: z.string().trim().max(4000).optional().nullable(),
+  volumeChangeMode: z.enum(["fixed_scope", "fact_based", "can_change", "unknown"]).optional().nullable(),
+  templateId: z.enum(["general_construction", "engineering_networks", "fit_out", "roofing", "concrete", "facade", "tender", "empty"]).optional().nullable(),
+  selectedModules: z.array(z.enum(["vor", "documents", "schedule", "materials", "acceptance", "risks", "contract", "reports"])).max(8).optional().nullable(),
   status: z.enum(["draft", "planning", "active", "paused", "completed", "archived"]).default("planning")
 });
 

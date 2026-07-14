@@ -25,6 +25,7 @@ import {
 import { buildProjectBaselineFromTemplate, getProjectTemplateById, getProjectTemplates, type ProjectTemplateId } from "@/lib/project-templates";
 import type {
   ProjectWorkbookAnalysis,
+  ProjectWorkbookSuggestionField,
   ProjectWorkbookSheetOverride,
   ProjectWorkbookSheetOverrides,
   ProjectWorkbookSheetRole
@@ -155,6 +156,26 @@ const moduleOptions: Array<{ id: OnboardingModuleId; label: string; detail: stri
 ];
 
 const wizardSteps = ["Проект", "Договор", "Контур", "Чеклист", "Создание"];
+const workbookSuggestionLabels: Partial<Record<ProjectWorkbookSuggestionField, string>> = {
+  name: "Название проекта",
+  code: "Код проекта",
+  customer: "Заказчик",
+  object: "Объект",
+  objectType: "Тип объекта",
+  address: "Адрес",
+  description: "Описание / состав работ",
+  contractAmount: "Договорная сумма",
+  vatMode: "Режим НДС",
+  vatPercent: "Ставка НДС",
+  startsAt: "Дата начала",
+  endsAt: "Дата завершения",
+  manager: "Руководитель проекта",
+  tenderSource: "Источник проекта",
+  paymentNotes: "Условия оплаты",
+  volumeChangeMode: "Изменение объемов",
+  templateId: "Шаблон проекта"
+};
+const workbookSuggestionFields = Object.keys(workbookSuggestionLabels) as ProjectWorkbookSuggestionField[];
 const projectTemplates = getProjectTemplates();
 const documentCategoryOptions = [
   { value: "договор", label: "Договор" },
@@ -216,6 +237,39 @@ function makeInitialDraft(): ProjectCreationDraft {
     volumeChangeMode: "unknown",
     selectedModules: defaultOnboardingModules
   };
+}
+
+export function applyProjectWorkbookSuggestions(
+  draft: ProjectCreationDraft,
+  suggestions: ProjectWorkbookAnalysis["suggestions"],
+  manualFields: Set<keyof ProjectCreationDraft>
+) {
+  const next = { ...draft };
+  const apply = <K extends keyof ProjectCreationDraft>(field: K, value: ProjectCreationDraft[K] | undefined) => {
+    if (value === undefined || value === "" || manualFields.has(field)) return;
+    next[field] = value;
+  };
+  apply("name", suggestions.name);
+  apply("code", suggestions.code);
+  apply("customer", suggestions.customer);
+  apply("object", suggestions.object);
+  apply("objectType", suggestions.objectType);
+  apply("address", suggestions.address);
+  apply("description", suggestions.description);
+  apply("contractAmount", suggestions.contractAmount === undefined ? undefined : String(Math.round(suggestions.contractAmount)));
+  apply("vatMode", suggestions.vatMode);
+  apply("vatPercent", suggestions.vatPercent === undefined ? undefined : String(suggestions.vatPercent));
+  apply("startsAt", suggestions.startsAt);
+  apply("endsAt", suggestions.endsAt);
+  apply("manager", suggestions.manager);
+  apply("tenderSource", suggestions.tenderSource);
+  apply("paymentNotes", suggestions.paymentNotes);
+  apply("volumeChangeMode", suggestions.volumeChangeMode);
+  apply("templateId", suggestions.templateId);
+  if (!manualFields.has("selectedModules")) {
+    next.selectedModules = Array.from(new Set([...(draft.selectedModules ?? []), ...suggestions.selectedModules]));
+  }
+  return next;
 }
 
 export function ProjectsIndex({ projects }: { projects: Project[] }) {
@@ -338,6 +392,7 @@ export function ProjectsIndex({ projects }: { projects: Project[] }) {
 
 export function ProjectCreationWizard() {
   const router = useRouter();
+  const [creationMode, setCreationMode] = useState<"excel" | "manual">("excel");
   const [step, setStep] = useState(0);
   const [draft, setDraft] = useState<ProjectCreationDraft>(() => makeInitialDraft());
   const [creating, setCreating] = useState(false);
@@ -359,6 +414,16 @@ export function ProjectCreationWizard() {
   });
   const canMoveNext = step < 4 && currentStepIssues.length === 0;
 
+  const selectCreationMode = (mode: "excel" | "manual") => {
+    setCreationMode(mode);
+    setStep(0);
+    setCreateError("");
+    if (mode === "manual") {
+      setProjectWorkbook({ status: "idle" });
+      setPendingDocuments((current) => current.filter((item) => item.source !== "project-workbook"));
+    }
+  };
+
   const updateDraft = <K extends keyof ProjectCreationDraft>(key: K, value: ProjectCreationDraft[K]) => {
     setManualFields((current) => new Set(current).add(key));
     setDraft((current) => ({ ...current, [key]: value }));
@@ -367,6 +432,7 @@ export function ProjectCreationWizard() {
     setDraft(patch);
   };
   const toggleModule = (moduleId: OnboardingModuleId) => {
+    setManualFields((current) => new Set(current).add("selectedModules"));
     setDraft((current) => {
       const selected = new Set(current.selectedModules ?? defaultOnboardingModules);
       if (selected.has(moduleId)) selected.delete(moduleId);
@@ -388,6 +454,7 @@ export function ProjectCreationWizard() {
               : templateId === "empty"
                 ? "other"
                 : "commercial";
+    setManualFields((current) => new Set(current).add("templateId").add("objectType").add("selectedModules"));
     setDraft((current) => ({
       ...current,
       templateId,
@@ -397,6 +464,7 @@ export function ProjectCreationWizard() {
   };
   const reset = () => {
     setDraft(makeInitialDraft());
+    setCreationMode("excel");
     setStep(0);
     setCreateError("");
     setCreatedProjectPath("");
@@ -514,18 +582,7 @@ export function ProjectCreationWizard() {
         qualityDecisions: {}
       });
       if (options.applySuggestions) {
-        setDraft((current) => {
-          const next = { ...current };
-          if (analysis.suggestions.contractAmount && !manualFields.has("contractAmount")) next.contractAmount = String(Math.round(analysis.suggestions.contractAmount));
-          if (analysis.suggestions.vatPercent && !manualFields.has("vatPercent")) next.vatPercent = String(analysis.suggestions.vatPercent);
-          if (analysis.suggestions.durationMonths && current.startsAt && !manualFields.has("endsAt")) {
-            const finish = new Date(`${current.startsAt}T00:00:00Z`);
-            finish.setUTCMonth(finish.getUTCMonth() + analysis.suggestions.durationMonths);
-            next.endsAt = finish.toISOString().slice(0, 10);
-          }
-          next.selectedModules = Array.from(new Set([...(current.selectedModules ?? []), ...analysis.suggestions.selectedModules]));
-          return next;
-        });
+        setDraft((current) => applyProjectWorkbookSuggestions(current, analysis.suggestions, manualFields));
       }
     } catch (error) {
       setProjectWorkbook({ status: "failed", file, message: error instanceof Error ? error.message : "Не удалось проанализировать Excel." });
@@ -533,6 +590,7 @@ export function ProjectCreationWizard() {
   };
   const handleProjectWorkbookFile = async (file: File | undefined) => {
     if (!file) return;
+    setCreationMode("excel");
     setWorkbookAsPendingDocument(file);
     await analyzeProjectWorkbook(file, {}, { applySuggestions: true });
   };
@@ -657,13 +715,53 @@ export function ProjectCreationWizard() {
         <div>
           <div className="eyebrow">Project Creation & Onboarding</div>
           <h2>Создать проект и запустить baseline</h2>
-          <p className="muted">Загрузите единый Excel проекта: система разберет листы, покажет план распределения и после создания заполнит ВОР, материалы, график, ФОТ и технику.</p>
+          <p className="muted">Начните с полной Excel-книги проекта или заполните карточку вручную. Система извлечет реквизиты, проверит листы и подготовит данные для рабочих модулей.</p>
         </div>
         <div className={`onboarding-score tone-${plan.status === "ready_to_create" ? "good" : "warn"}`}>
           <strong>{plan.score}%</strong>
           <span>{plan.status === "ready_to_create" ? "готов к созданию" : "нужно заполнить"}</span>
         </div>
       </div>
+
+      <div className="project-creation-mode" aria-label="Способ создания проекта">
+        <button className={`project-creation-mode-option ${creationMode === "excel" ? "active" : ""}`} type="button" onClick={() => selectCreationMode("excel")}>
+          <FileSpreadsheet size={22} />
+          <span>
+            <strong>Создать проект из Excel</strong>
+            <small>Рекомендуется для полной книги: ВОР, ССР, материалы, график, ФОТ, техника и служебные листы.</small>
+          </span>
+          <b>Автозаполнение</b>
+        </button>
+        <button className={`project-creation-mode-option ${creationMode === "manual" ? "active" : ""}`} type="button" onClick={() => selectCreationMode("manual")}>
+          <Plus size={22} />
+          <span>
+            <strong>Создать вручную</strong>
+            <small>Подходит, если исходной книги пока нет: реквизиты и стартовый контур заполняются шаг за шагом.</small>
+          </span>
+        </button>
+      </div>
+
+      {creationMode === "excel" && (
+        <div className="project-excel-entry">
+          <div className="project-excel-entry-heading">
+            <div>
+              <div className="eyebrow">Отдельный сценарий импорта</div>
+              <h3>Загрузить Excel проекта</h3>
+              <p>Система прочитает всю книгу, определит назначение листов, заполнит известные реквизиты и покажет точный план переноса до создания проекта.</p>
+            </div>
+            <span className="badge blue">без записи до подтверждения</span>
+          </div>
+          <ProjectWorkbookCard
+            state={projectWorkbook}
+            onFile={handleProjectWorkbookFile}
+            onClear={() => {
+              setProjectWorkbook({ status: "idle" });
+              setPendingDocuments((current) => current.filter((item) => item.source !== "project-workbook"));
+            }}
+          />
+          {projectWorkbook.status === "ready" && <ProjectWorkbookAutofill analysis={projectWorkbook.analysis} manualFields={manualFields} />}
+        </div>
+      )}
 
       <div className="wizard-steps onboarding-steps" aria-label="Шаги создания проекта">
         {wizardSteps.map((label, index) => (
@@ -707,14 +805,6 @@ export function ProjectCreationWizard() {
                 onClear={() => {
                   setContractPrefill({ status: "idle" });
                   setPendingDocuments((current) => current.filter((item) => item.source !== "contract-prefill"));
-                }}
-              />
-              <ProjectWorkbookCard
-                state={projectWorkbook}
-                onFile={handleProjectWorkbookFile}
-                onClear={() => {
-                  setProjectWorkbook({ status: "idle" });
-                  setPendingDocuments((current) => current.filter((item) => item.source !== "project-workbook"));
                 }}
               />
               <label>
@@ -1029,6 +1119,64 @@ function suggestionValue(value: string | number | undefined) {
   return typeof value === "number" ? value.toLocaleString("ru-RU") : String(value);
 }
 
+function workbookSuggestionValue(field: ProjectWorkbookSuggestionField, value: string | number | undefined) {
+  if (value === undefined || value === "") return "";
+  if (field === "contractAmount") return compactMoney(Number(value));
+  if (field === "objectType") return objectTypeOptions.find((option) => option.value === value)?.label ?? String(value);
+  if (field === "tenderSource") return tenderSourceOptions.find((option) => option.value === value)?.label ?? String(value);
+  if (field === "vatMode") return vatModeOptions.find((option) => option.value === value)?.label ?? String(value);
+  if (field === "volumeChangeMode") return volumeModeOptions.find((option) => option.value === value)?.label ?? String(value);
+  if (field === "templateId") return getProjectTemplateById(value).title;
+  return suggestionValue(value);
+}
+
+function ProjectWorkbookAutofill({
+  analysis,
+  manualFields
+}: {
+  analysis: ProjectWorkbookAnalysis;
+  manualFields: Set<keyof ProjectCreationDraft>;
+}) {
+  const fields = workbookSuggestionFields.flatMap((field) => {
+    const value = analysis.suggestions[field] as string | number | undefined;
+    return value === undefined || value === "" ? [] : [{ field, value }];
+  });
+  return (
+    <div className="project-workbook-autofill">
+      <div className="project-workbook-autofill-head">
+        <div>
+          <div className="eyebrow">Автозаполнение карточки</div>
+          <h3>{fields.length} полей найдено в книге</h3>
+          <p>Значения уже перенесены в форму. Поля, которые вы меняли вручную, система не перезаписывает.</p>
+        </div>
+        <span className={`badge ${analysis.suggestions.missingFields.length ? "yellow" : "green"}`}>
+          {analysis.suggestions.missingFields.length ? `${analysis.suggestions.missingFields.length} полей дополнить` : "реквизиты заполнены"}
+        </span>
+      </div>
+      {fields.length > 0 && (
+        <div className="project-workbook-autofill-grid">
+          {fields.map(({ field, value }) => {
+            const confidence = analysis.suggestions.confidenceByField[field] ?? "medium";
+            const isManual = manualFields.has(field as keyof ProjectCreationDraft);
+            return (
+              <div className="project-workbook-autofill-field" key={field}>
+                <span>{workbookSuggestionLabels[field]}</span>
+                <strong>{workbookSuggestionValue(field, value)}</strong>
+                <small>{isManual ? "сохранено ручное значение" : confidence === "high" ? "высокая уверенность" : confidence === "medium" ? "нужно быстро проверить" : "предположение"}</small>
+                {analysis.suggestions.evidenceByField[field] && <em>{analysis.suggestions.evidenceByField[field]}</em>}
+              </div>
+            );
+          })}
+        </div>
+      )}
+      <div className="project-workbook-autofill-footer">
+        <span><strong>Модули:</strong> {analysis.suggestions.selectedModules.map((id) => moduleOptions.find((item) => item.id === id)?.label ?? id).join(" · ")}</span>
+        {analysis.suggestions.missingFields.length > 0 && <span><strong>Заполнить вручную:</strong> {analysis.suggestions.missingFields.join(", ")}</span>}
+      </div>
+    </div>
+  );
+}
+
 function ProjectWorkbookCard({
   state,
   onFile,
@@ -1130,10 +1278,10 @@ function ProjectWorkbookDistribution({
       </div>
       <div className="project-workbook-module-grid">
         {analysis.modules.map((module) => (
-          <div className={`project-workbook-module tone-${module.status === "ready" ? "good" : module.status === "reference" ? "info" : "neutral"}`} key={module.id}>
+          <div className={`project-workbook-module tone-${module.status === "ready" ? "good" : module.status === "derived" || module.status === "reference" ? "info" : "neutral"}`} key={module.id}>
             <div>
               <strong>{module.label}</strong>
-              <span>{module.rows ? `${module.rows} строк` : module.status === "reference" ? `${module.sheets.length} листов` : "не найдено"}</span>
+              <span>{module.status === "derived" ? "рассчитается" : module.rows ? `${module.rows} строк` : module.status === "reference" ? `${module.sheets.length} листов` : "не найдено"}</span>
             </div>
             {module.amount > 0 && <b>{compactMoney(module.amount)}</b>}
             <p>{module.detail}</p>
