@@ -1,5 +1,49 @@
 # PGS Project Log
 
+## 2026-07-14 - Reports Workflow v2 online/core GO
+
+Status: Reports Workflow v2 is shipped on Render after PR #110. Daily reports now follow an audited workflow, and executive weekly reports are persisted as immutable, versioned records with controlled publication and TXT export.
+
+- Online URL: https://pgs-frankfurt.onrender.com
+- Online commit: `63499a30c0f89c2069a442ca34e75d5d36de8d85`
+- PR: #110
+- Decision: ONLINE/CORE GO
+- Git SHA source: `RENDER_GIT_COMMIT`
+
+Implemented:
+
+- explicit daily-report draft creation, editing and draft-only deletion;
+- role-aware transitions: draft, submitted, checked and approved;
+- transactional audit entries for daily-report and executive-report mutations;
+- persisted Executive Weekly Report versions with source-count snapshots;
+- controlled draft, published and archived lifecycle; published versions are immutable;
+- explicit confirmation before publishing reports with blocked or missing source data;
+- TXT export, version history, copy action and click-triggered AI polish result;
+- server-side authentication and project access checks before dashboard/project data loading;
+- responsive reports workspace without desktop or mobile horizontal overflow.
+
+Online verification:
+
+- `/api/health`: HTTP 200 / `ok`; DB: `ok`; migrations: `ok`, count `8`;
+- deployed SHA matched the expected main commit;
+- unauthenticated `/dashboard`, `/projects` and the project Reports workspace redirect to `/login` before project data is loaded;
+- unauthenticated `/api/auth/me`: 401;
+- unauthenticated executive-report list and TXT export: 403;
+- unauthenticated daily-report API: 403.
+
+Validation and safety:
+
+- Prisma validate/generate, TypeScript, ESLint and production build passed;
+- Vitest: 322/322 passed;
+- desktop 1440px and mobile 390px checks passed without horizontal overflow or browser errors;
+- no live AI, authenticated online report mutation, project/import/delete/upload mutation or real client file was used;
+- no Render env/secrets, auth/session model or provider/deploy configuration changes were made;
+- the additive database migration was applied successfully; no secrets were printed.
+
+Remaining controlled follow-up:
+
+- authenticated disposable report smoke for daily report create/submit/check/approve and executive report generate/publish/export/archive remains optional. It requires a safe authenticated operator or staging-smoke path and is not claimed by this core gate.
+
 ## 2026-07-14 - Project Action Center v1 online/core GO
 
 Status: Project Action Center v1 is shipped on Render after PR #107 and the browser-found auth-message fix in PR #108. PGS now has a persistent cross-module workflow register instead of only read-only recommendations.
