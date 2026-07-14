@@ -159,6 +159,27 @@ export interface AuditEvent {
   createdAt: string;
 }
 
+export type ProjectActionStatus = "open" | "in_progress" | "waiting_approval" | "blocked" | "done";
+
+export interface ProjectActionItem {
+  id: string;
+  projectId: string;
+  title: string;
+  description?: string | null;
+  sourceModule: string;
+  targetTab?: string | null;
+  priority: RiskPriority;
+  status: ProjectActionStatus;
+  assignee?: string | null;
+  dueAt?: string | null;
+  completedAt?: string | null;
+  requiresApproval: boolean;
+  approvedAt?: string | null;
+  approvedBy?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface ProjectDocument {
   id: string;
   projectId: string;
