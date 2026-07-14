@@ -1,5 +1,46 @@
 # PGS Project Log
 
+## 2026-07-14 - Project Action Center v1 online/core GO
+
+Status: Project Action Center v1 is shipped on Render after PR #107 and the browser-found auth-message fix in PR #108. PGS now has a persistent cross-module workflow register instead of only read-only recommendations.
+
+- Online URL: https://pgs-frankfurt.onrender.com
+- Online feature commit: `3b52691a43d5cce671f07795653eceebcaedea0f`
+- Online final commit: `0e1e9446a74f07f0c61b36b6551e13e8433c64da`
+- PRs: #107, #108
+- Decision: ONLINE/CORE GO
+- Git SHA source: `RENDER_GIT_COMMIT`
+
+Implemented:
+
+- persistent actions with source module, target workspace, priority, responsible person/role and due date;
+- workflow states: open, in progress, waiting approval, blocked and done;
+- mandatory OWNER/ADMIN approval when configured, with approval reset after reopening;
+- transactional audit entries for create, update, approval and delete;
+- explicit preparation of deterministic pipeline recommendations; no silent write from analytics or AI;
+- viewer read-only UI, responsive layout and project cascade cleanup;
+- product gap audit and prioritized roadmap in `docs/product_gap_audit_2026_07.md`.
+
+Online verification:
+
+- `/api/health`: 200 / `ok`; DB: `ok`; migrations: `ok`, count `7`;
+- `/dashboard`: 200; `/projects`: 200; `/projects/project-smoke`: 200; `/projects/project-demo`: 404;
+- unauthenticated `/api/projects/project-smoke/actions`: 403;
+- Action Center and `Действия` markers are present;
+- desktop 1440px and mobile 390px: no horizontal overflow, no page errors;
+- raw `Forbidden` text was found during browser smoke, fixed in PR #108, and replaced online with a clear login-required message.
+
+Validation and safety:
+
+- Vitest: 295/295 passed before merge; focused regression tests, ESLint, TypeScript, Prisma generate/validate, production build and `git diff --check` passed;
+- no live AI, online action mutation, project/import/delete/upload mutation or real client file was used;
+- no Render env/secrets or auth/session model changes were made by the Action Center train;
+- the additive database migration was applied successfully; no secrets were printed.
+
+Remaining controlled follow-up:
+
+- authenticated disposable browser path for workbook upload → exception resolution → project creation → populated module checks → project deletion remains blocked by the staging smoke secret not matching the rotated operator value. It is not claimed as completed by this entry.
+
 ## 2026-07-14 - Workbook Import Exception Resolution v1 online/core GO
 
 Status: Workbook Import Exception Resolution v1 reached ONLINE/CORE GO on Render after PR #104. Workbook warnings now produce a deterministic resolution plan with required source corrections, individual user decisions, blockers, informational notes, progress, and a final create/no-create decision.
