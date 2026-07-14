@@ -357,6 +357,14 @@ Next.js routes имеют префикс `/api`.
 - `PATCH /api/projects/:id/executive-reports/:reportId`
 - `DELETE /api/projects/:id/executive-reports/:reportId`
 - `GET /api/projects/:id/executive-reports/:reportId/export`
+- `GET /api/projects/:id/rfis`
+- `POST /api/projects/:id/rfis`
+- `PATCH /api/projects/:id/rfis/:rfiId`
+- `DELETE /api/projects/:id/rfis/:rfiId`
+- `GET /api/projects/:id/submittals`
+- `POST /api/projects/:id/submittals`
+- `PATCH /api/projects/:id/submittals/:submittalId`
+- `DELETE /api/projects/:id/submittals/:submittalId`
 - `GET /api/projects/:id/risks`
 - `POST /api/projects/:id/risks`
 - `PATCH /api/projects/:id/risks/:riskId`

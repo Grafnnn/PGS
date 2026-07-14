@@ -145,6 +145,8 @@ model Project {
   importBatches   ImportBatch[]
   actionItems     ProjectActionItem[]
   executiveReports ExecutiveReport[]
+  rfis            ProjectRfi[]
+  submittals      ProjectSubmittal[]
 
   @@map("projects")
 }
@@ -439,6 +441,8 @@ model Document {
   updatedAt   DateTime @updatedAt @map("updated_at")
   project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
   versions    DocumentVersion[]
+  rfiLinks    ProjectRfi[]
+  submittalLinks ProjectSubmittal[]
 
   @@map("documents")
 }
@@ -457,6 +461,8 @@ model DocumentVersion {
   createdAt      DateTime @default(now()) @map("created_at")
   document       Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
   uploadedBy     User?    @relation(fields: [uploadedById], references: [id])
+  rfiLinks       ProjectRfi[]
+  submittalLinks ProjectSubmittal[]
 
   @@unique([documentId, versionNumber])
   @@map("document_versions")
@@ -611,4 +617,95 @@ model ExecutiveReport {
   @@unique([projectId, version])
   @@index([projectId, status, createdAt])
   @@map("executive_reports")
+}
+
+model ProjectRfi {
+  id               String   @id @default(cuid())
+  organizationId   String   @map("organization_id")
+  projectId        String   @map("project_id")
+  sequence         Int
+  subject          String
+  question         String
+  discipline       String?
+  location         String?
+  priority         String   @default("medium")
+  status           String   @default("draft")
+  assignee         String?
+  dueAt            DateTime? @map("due_at")
+  sentAt           DateTime? @map("sent_at")
+  answeredAt       DateTime? @map("answered_at")
+  closedAt         DateTime? @map("closed_at")
+  linkedDocumentId String?  @map("linked_document_id")
+  linkedDocumentVersion Int? @map("linked_document_version")
+  linkedDocumentVersionId String? @map("linked_document_version_id")
+  createdBy        String?  @map("created_by")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+  project          Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  linkedDocument   Document? @relation(fields: [linkedDocumentId], references: [id], onDelete: SetNull)
+  linkedDocumentVersionRef DocumentVersion? @relation(fields: [linkedDocumentVersionId], references: [id], onDelete: SetNull)
+  responses        RfiResponse[]
+
+  @@unique([projectId, sequence])
+  @@index([projectId, status, dueAt])
+  @@map("project_rfis")
+}
+
+model RfiResponse {
+  id          String   @id @default(cuid())
+  rfiId       String   @map("rfi_id")
+  body        String
+  createdBy   String?  @map("created_by")
+  createdByName String? @map("created_by_name")
+  createdAt   DateTime @default(now()) @map("created_at")
+  rfi         ProjectRfi @relation(fields: [rfiId], references: [id], onDelete: Cascade)
+
+  @@index([rfiId, createdAt])
+  @@map("rfi_responses")
+}
+
+model ProjectSubmittal {
+  id               String   @id @default(cuid())
+  organizationId   String   @map("organization_id")
+  projectId        String   @map("project_id")
+  sequence         Int
+  title            String
+  category         String
+  specSection      String?  @map("spec_section")
+  revision         Int      @default(0)
+  status           String   @default("draft")
+  reviewer         String?
+  dueAt            DateTime? @map("due_at")
+  submittedAt      DateTime? @map("submitted_at")
+  reviewedAt       DateTime? @map("reviewed_at")
+  closedAt         DateTime? @map("closed_at")
+  linkedDocumentId String?  @map("linked_document_id")
+  linkedDocumentVersion Int? @map("linked_document_version")
+  linkedDocumentVersionId String? @map("linked_document_version_id")
+  createdBy        String?  @map("created_by")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+  project          Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  linkedDocument   Document? @relation(fields: [linkedDocumentId], references: [id], onDelete: SetNull)
+  linkedDocumentVersionRef DocumentVersion? @relation(fields: [linkedDocumentVersionId], references: [id], onDelete: SetNull)
+  reviews          SubmittalReview[]
+
+  @@unique([projectId, sequence])
+  @@index([projectId, status, dueAt])
+  @@map("project_submittals")
+}
+
+model SubmittalReview {
+  id          String   @id @default(cuid())
+  submittalId String   @map("submittal_id")
+  revision    Int
+  decision    String
+  comment     String?
+  createdBy   String?  @map("created_by")
+  createdByName String? @map("created_by_name")
+  createdAt   DateTime @default(now()) @map("created_at")
+  submittal   ProjectSubmittal @relation(fields: [submittalId], references: [id], onDelete: Cascade)
+
+  @@index([submittalId, createdAt])
+  @@map("submittal_reviews")
 }

@@ -210,6 +210,57 @@ export interface ProjectDocumentVersion {
   createdAt: string;
 }
 
+export type RfiStatus = "draft" | "open" | "answered" | "closed";
+
+export interface ProjectRfi {
+  id: string;
+  projectId: string;
+  number: string;
+  sequence: number;
+  subject: string;
+  question: string;
+  discipline?: string | null;
+  location?: string | null;
+  priority: RiskPriority;
+  status: RfiStatus;
+  assignee?: string | null;
+  dueAt?: string | null;
+  sentAt?: string | null;
+  answeredAt?: string | null;
+  closedAt?: string | null;
+  linkedDocumentId?: string | null;
+  linkedDocumentVersion?: number | null;
+  linkedDocumentVersionId?: string | null;
+  responses: Array<{ id: string; body: string; createdByName?: string | null; createdAt: string }>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type SubmittalStatus = "draft" | "submitted" | "approved" | "rejected" | "revise_required" | "closed";
+
+export interface ProjectSubmittal {
+  id: string;
+  projectId: string;
+  number: string;
+  sequence: number;
+  title: string;
+  category: string;
+  specSection?: string | null;
+  revision: number;
+  status: SubmittalStatus;
+  reviewer?: string | null;
+  dueAt?: string | null;
+  submittedAt?: string | null;
+  reviewedAt?: string | null;
+  closedAt?: string | null;
+  linkedDocumentId?: string | null;
+  linkedDocumentVersion?: number | null;
+  linkedDocumentVersionId?: string | null;
+  reviews: Array<{ id: string; revision: number; decision: string; comment?: string | null; createdByName?: string | null; createdAt: string }>;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface ProjectMember {
   id: string;
   role: "OWNER" | "ADMIN" | "MANAGER" | "VIEWER";
