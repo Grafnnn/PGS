@@ -14,7 +14,7 @@ This is a directional product audit based on public vendor materials, not a feat
 | --- | --- | --- | --- |
 | Connected cost/schedule/material intelligence | Strong project-level baseline | Oracle connects cost, contract, cashflow, change and schedule controls | Maintain |
 | Persistent actions and approvals | Added in Action Center v1 | Oracle emphasizes configurable workflows, approval cycles and next required actions | Highest |
-| RFI / submittal workflow | Partial through documents, claims and risks | Autodesk exposes dedicated RFI, issue and form workflows | High |
+| RFI / submittal workflow | Added in RFI & Submittals v1 | Autodesk exposes dedicated RFI, issue and form workflows | Maintain |
 | Field mobile/offline operation | Read-oriented web contour; no offline app | Autodesk supports field reports, issues, forms and RFIs on mobile/offline | High |
 | Document review/version/approval | Versions exist; formal transmittal/approval is limited | PlanRadar markets version control, approvals and audit trail | High |
 | ERP/accounting integration | Connector readiness only | Procore and Oracle connect commitments, changes, invoices and ERP flows | High for commercial rollout |
@@ -35,11 +35,10 @@ This is a directional product audit based on public vendor materials, not a feat
 
 ## Recommended next trains
 
-1. **RFI & Submittals v1** — numbered registers, formal send/review/respond cycles, due dates, document links and overdue escalation.
-2. **Document Transmittals & Approval v1** — controlled packages, reviewers, revision status, approval history and distribution log.
-3. **Field Mobile / Offline v1** — installable PWA, queued daily reports/photos/issues, sync status and conflict handling.
-4. **ERP & Accounting Bridge v1** — export/import contracts, commitments, invoices, payments and reconciliation with explicit dry-run.
-5. **Portfolio Control Center v1** — cross-project cashflow, risk, workload and milestone comparison.
+1. **Document Transmittals & Approval v1** — controlled packages, reviewers, revision status, approval history and distribution log.
+2. **Field Mobile / Offline v1** — installable PWA, queued daily reports/photos/issues, sync status and conflict handling.
+3. **ERP & Accounting Bridge v1** — export/import contracts, commitments, invoices, payments and reconciliation with explicit dry-run.
+4. **Portfolio Control Center v1** — cross-project cashflow, risk, workload and milestone comparison.
 
 ## Product guardrails
 

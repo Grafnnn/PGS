@@ -8,7 +8,7 @@ type ActionSummary = { total: number; open: number; blocked: number; waitingAppr
 export type ProjectActionSuggestion = { id: string; title: string; description: string; sourceModule: string; targetTab: string; priority: RiskPriority; assignee?: string | null; dueAt?: string | null };
 
 const modules = ["manual", "ВОР / Бюджет", "График", "Материалы", "Снабжение", "Финансы", "Документы", "Риски", "КС", "Исполнение", "Площадка"];
-const targetTabs = ["Обзор", "Бюджет / ВОР", "График", "Материалы", "Заявки", "Финансы", "КС", "Исполнение", "Рапорты", "Риски", "Документы", "Аналитика"];
+const targetTabs = ["Обзор", "Бюджет / ВОР", "График", "Материалы", "Заявки", "Финансы", "КС", "Исполнение", "Рапорты", "Риски", "Документы", "RFI / Согласования", "Аналитика"];
 const statusLabels: Record<ProjectActionStatus, string> = {
   open: "Открыто",
   in_progress: "В работе",

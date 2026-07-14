@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { AlertTriangle, BarChart3, Bot, ClipboardList, FileText, Landmark, LayoutList, ListChecks, Package, Pencil, Plus, ReceiptText, Search, Send, Table2, TimerReset, Trash2, Truck, Users } from "lucide-react";
+import { AlertTriangle, BarChart3, Bot, ClipboardList, FileText, Landmark, LayoutList, ListChecks, MessageSquareText, Package, Pencil, Plus, ReceiptText, Search, Send, Table2, TimerReset, Trash2, Truck, Users } from "lucide-react";
 import { AcceptanceBillingWorkspace } from "@/components/acceptance-billing-workspace";
 import { CommercialProposalWorkspace } from "@/components/commercial-proposal-workspace";
 import { ChangeOrdersWorkspace } from "@/components/change-orders-workspace";
@@ -19,6 +19,7 @@ import { ProcurementIntelligenceWorkspace } from "@/components/procurement-intel
 import { QualityIssuesWorkspace } from "@/components/quality-issues-workspace";
 import { ResourcesEquipmentWorkspace } from "@/components/resources-equipment-workspace";
 import { ReportsWorkflow } from "@/components/reports-workflow";
+import { RfiSubmittalsWorkspace } from "@/components/rfi-submittals-workspace";
 import { RiskExecutiveWorkspace } from "@/components/risk-executive-workspace";
 import { ScheduleCashflowWorkspace } from "@/components/schedule-cashflow-workspace";
 import { SubcontractorExecutionWorkspace } from "@/components/subcontractor-execution-workspace";
@@ -79,6 +80,7 @@ const tabs = [
   "Рапорты",
   "Риски",
   "Документы",
+  "RFI / Согласования",
   "Действия",
   "Аналитика",
   "Участники",
@@ -101,11 +103,12 @@ const tabMeta: Record<string, { code: string; icon: React.ReactNode; hint: strin
   Рапорты: { code: "10", icon: <ClipboardList size={16} />, hint: "Площадка" },
   Риски: { code: "11", icon: <AlertTriangle size={16} />, hint: "Контроль" },
   Документы: { code: "12", icon: <FileText size={16} />, hint: "Файлы" },
-  Действия: { code: "13", icon: <ListChecks size={16} />, hint: "Workflow" },
-  Аналитика: { code: "14", icon: <BarChart3 size={16} />, hint: "Готовность" },
-  Участники: { code: "15", icon: <Users size={16} />, hint: "Доступ" },
-  История: { code: "16", icon: <ClipboardList size={16} />, hint: "Аудит" },
-  Настройки: { code: "17", icon: <Trash2 size={16} />, hint: "Админ" },
+  "RFI / Согласования": { code: "13", icon: <MessageSquareText size={16} />, hint: "Review" },
+  Действия: { code: "14", icon: <ListChecks size={16} />, hint: "Workflow" },
+  Аналитика: { code: "15", icon: <BarChart3 size={16} />, hint: "Готовность" },
+  Участники: { code: "16", icon: <Users size={16} />, hint: "Доступ" },
+  История: { code: "17", icon: <ClipboardList size={16} />, hint: "Аудит" },
+  Настройки: { code: "18", icon: <Trash2 size={16} />, hint: "Админ" },
   "AI-помощник": { code: "AI", icon: <Bot size={16} />, hint: "Анализ" }
 };
 
@@ -1511,6 +1514,15 @@ export function ProjectWorkspace({ initialBundle, createdFromOnboarding = false 
         </Panel>
       )}
 
+      {activeTab === "RFI / Согласования" && (
+        <RfiSubmittalsWorkspace
+          projectId={initialBundle.project.id}
+          documents={documents}
+          canEdit={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN" || currentUser?.role === "MANAGER"}
+          canDelete={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN"}
+        />
+      )}
+
       {activeTab === "Аналитика" && (
         <Panel title="Project Intelligence" icon={<BarChart3 size={18} />}>
           <ProjectIntelligencePanel readiness={readiness} intelligence={intelligence} actions={postImportActions} onNavigate={setActiveTab} />
@@ -1699,6 +1711,8 @@ function tabForAction(action: PipelineAction) {
     billing: "КС",
     ks: "КС",
     documents: "Документы",
+    rfi: "RFI / Согласования",
+    submittals: "RFI / Согласования",
     risks: "Риски",
     import: "Бюджет / ВОР",
     ai: "Аналитика"
