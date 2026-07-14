@@ -54,6 +54,8 @@ const icons = {
   cash: <Landmark size={18} />
 };
 
+const featuredKpiKeys = new Set(["baseline", "budget", "costToComplete", "schedule", "risks", "cash"]);
+
 function toneLabel(tone: CommandTone) {
   if (tone === "good") return "Норма";
   if (tone === "warn") return "Внимание";
@@ -139,6 +141,8 @@ export function ProjectCommandCenter({
     intelligence,
     aiInsight
   });
+  const featuredKpis = model.kpis.filter((kpi) => featuredKpiKeys.has(kpi.key));
+  const secondaryKpis = model.kpis.filter((kpi) => !featuredKpiKeys.has(kpi.key));
   const openTabOrDrilldown = (tab: string) => {
     const section = drilldownForTab(tab);
     if (section && onDrilldown) onDrilldown(section);
@@ -175,8 +179,8 @@ export function ProjectCommandCenter({
         </div>
       </div>
 
-      <div className="command-kpi-grid">
-        {model.kpis.map((kpi) => (
+      <div className="command-kpi-grid command-kpi-grid-primary">
+        {featuredKpis.map((kpi) => (
           <button className={`command-kpi tone-${kpi.tone}`} key={kpi.key} type="button" onClick={() => openKpi(kpi.key)}>
             <span className="command-kpi-icon">{icons[kpi.key as keyof typeof icons] ?? <CheckCircle2 size={18} />}</span>
             <span className="command-kpi-copy">
@@ -187,6 +191,22 @@ export function ProjectCommandCenter({
           </button>
         ))}
       </div>
+
+      <details className="panel compact-details command-secondary-kpis">
+        <summary>Остальные показатели <span>{secondaryKpis.length}</span></summary>
+        <div className="command-kpi-grid">
+          {secondaryKpis.map((kpi) => (
+            <button className={`command-kpi tone-${kpi.tone}`} key={kpi.key} type="button" onClick={() => openKpi(kpi.key)}>
+              <span className="command-kpi-icon">{icons[kpi.key as keyof typeof icons] ?? <CheckCircle2 size={18} />}</span>
+              <span className="command-kpi-copy">
+                <small>{kpi.label}</small>
+                <strong>{kpi.value}</strong>
+                <em>{kpi.hint}</em>
+              </span>
+            </button>
+          ))}
+        </div>
+      </details>
 
       <div className="command-layout">
         <article className="panel command-ai-card">
@@ -199,7 +219,7 @@ export function ProjectCommandCenter({
             {model.aiSummary.empty && <span className="badge gray">без автозапроса</span>}
           </div>
           <div className="command-ai-bullets">
-            {model.aiSummary.bullets.map((item, index) => (
+            {model.aiSummary.bullets.slice(0, 4).map((item, index) => (
               <div className="command-ai-bullet" key={`${item}-${index}`}>
                 <span>{index + 1}</span>
                 <p>{item}</p>
@@ -207,7 +227,7 @@ export function ProjectCommandCenter({
             ))}
           </div>
           <div className="command-apps">
-            {model.aiSummary.recommendedApps.map((app) => (
+            {model.aiSummary.recommendedApps.slice(0, 6).map((app) => (
               <button className="app-chip" key={app} type="button" onClick={() => openTabOrDrilldown(tabForRecommendedApp(app))}>
                 {app}
               </button>
@@ -246,12 +266,9 @@ export function ProjectCommandCenter({
         </article>
       </div>
 
-      <div className="command-lower-grid">
-        <article className="panel command-status-board">
-          <div className="section-title">
-            <ClipboardList size={18} />
-            <h3>Статус борд</h3>
-          </div>
+      <div className="command-lower-grid command-secondary-grid">
+        <details className="panel compact-details command-status-board">
+          <summary>Статус по модулям <span>{model.statusBoard.length}</span></summary>
           <div className="status-board-grid">
             {model.statusBoard.map((item) => (
               <button className="status-board-item" key={item.key} type="button" onClick={() => openTabOrDrilldown(item.tab)}>
@@ -264,13 +281,10 @@ export function ProjectCommandCenter({
               </button>
             ))}
           </div>
-        </article>
+        </details>
 
-        <article className="panel command-action-center">
-          <div className="section-title">
-            <FileText size={18} />
-            <h3>Action center</h3>
-          </div>
+        <details className="panel compact-details command-action-center">
+          <summary>Action center <span>{model.nextActions.length}</span></summary>
           <div className="action-center-list">
             {model.nextActions.map((action, index) => (
               <button className={`action-center-item tone-${action.tone}`} key={action.key} type="button" onClick={() => openTabOrDrilldown(action.tab)}>
@@ -280,7 +294,7 @@ export function ProjectCommandCenter({
               </button>
             ))}
           </div>
-        </article>
+        </details>
       </div>
     </section>
   );
