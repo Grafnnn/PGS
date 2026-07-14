@@ -1,9 +1,13 @@
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { ProjectActionCenter } from "@/components/project-action-center";
+import { ProjectActionCenter, projectActionLoadError } from "@/components/project-action-center";
 
 describe("ProjectActionCenter", () => {
+  it("turns authorization failures into a user-facing login message", () => {
+    expect(projectActionLoadError(403, "Forbidden")).toBe("Войдите в систему, чтобы открыть реестр действий проекта.");
+    expect(projectActionLoadError(500, "Service failed")).toBe("Service failed");
+  });
   it("renders the persistent workflow surface and edit form for managers", () => {
     const html = renderToStaticMarkup(React.createElement(ProjectActionCenter, { projectId: "project-1", canEdit: true, onNavigate: () => undefined }));
     expect(html).toContain("Центр действий");

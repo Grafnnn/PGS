@@ -18,6 +18,11 @@ const statusLabels: Record<ProjectActionStatus, string> = {
 };
 const priorityLabels: Record<RiskPriority, string> = { low: "Низкий", medium: "Средний", high: "Высокий", critical: "Критический" };
 
+export function projectActionLoadError(status: number, fallback?: string) {
+  if (status === 401 || status === 403) return "Войдите в систему, чтобы открыть реестр действий проекта.";
+  return fallback || "Не удалось загрузить действия.";
+}
+
 function formatDate(value?: string | null) {
   if (!value) return "Без срока";
   return new Intl.DateTimeFormat("ru-RU", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(value));
@@ -37,7 +42,7 @@ export function ProjectActionCenter({ projectId, canEdit, canApprove = false, on
     try {
       const response = await fetch(`/api/projects/${projectId}/actions`);
       const data = (await response.json()) as { items?: ProjectActionItem[]; summary?: ActionSummary; error?: string };
-      if (!response.ok) throw new Error(data.error ?? "Не удалось загрузить действия.");
+      if (!response.ok) throw new Error(projectActionLoadError(response.status, data.error));
       setItems(data.items ?? []);
       if (data.summary) setSummary(data.summary);
       setError("");
