@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { AlertTriangle, BarChart3, Bot, ClipboardList, FileText, Landmark, LayoutList, Package, Pencil, Plus, ReceiptText, Search, Send, Table2, TimerReset, Trash2, Truck, Users } from "lucide-react";
+import { AlertTriangle, BarChart3, Bot, ClipboardList, FileText, Landmark, LayoutList, ListChecks, Package, Pencil, Plus, ReceiptText, Search, Send, Table2, TimerReset, Trash2, Truck, Users } from "lucide-react";
 import { AcceptanceBillingWorkspace } from "@/components/acceptance-billing-workspace";
 import { CommercialProposalWorkspace } from "@/components/commercial-proposal-workspace";
 import { ChangeOrdersWorkspace } from "@/components/change-orders-workspace";
@@ -11,6 +11,7 @@ import { CostToCompleteWorkspace } from "@/components/cost-to-complete-workspace
 import { FieldOperationsWorkspace } from "@/components/field-operations-workspace";
 import { HseSafetyPermitWorkspace } from "@/components/hse-safety-permit-workspace";
 import { ProjectCommandCenter } from "@/components/project-command-center";
+import { ProjectActionCenter, type ProjectActionSuggestion } from "@/components/project-action-center";
 import { DocumentComplianceWorkspace } from "@/components/document-compliance-workspace";
 import { PhotoEvidenceWorkspace } from "@/components/photo-evidence-workspace";
 import { ProjectIntelligenceDrilldown } from "@/components/project-intelligence-drilldown";
@@ -77,6 +78,7 @@ const tabs = [
   "Рапорты",
   "Риски",
   "Документы",
+  "Действия",
   "Аналитика",
   "Участники",
   "История",
@@ -98,10 +100,11 @@ const tabMeta: Record<string, { code: string; icon: React.ReactNode; hint: strin
   Рапорты: { code: "10", icon: <ClipboardList size={16} />, hint: "Площадка" },
   Риски: { code: "11", icon: <AlertTriangle size={16} />, hint: "Контроль" },
   Документы: { code: "12", icon: <FileText size={16} />, hint: "Файлы" },
-  Аналитика: { code: "13", icon: <BarChart3 size={16} />, hint: "Готовность" },
-  Участники: { code: "14", icon: <Users size={16} />, hint: "Доступ" },
-  История: { code: "15", icon: <ClipboardList size={16} />, hint: "Аудит" },
-  Настройки: { code: "16", icon: <Trash2 size={16} />, hint: "Админ" },
+  Действия: { code: "13", icon: <ListChecks size={16} />, hint: "Workflow" },
+  Аналитика: { code: "14", icon: <BarChart3 size={16} />, hint: "Готовность" },
+  Участники: { code: "15", icon: <Users size={16} />, hint: "Доступ" },
+  История: { code: "16", icon: <ClipboardList size={16} />, hint: "Аудит" },
+  Настройки: { code: "17", icon: <Trash2 size={16} />, hint: "Админ" },
   "AI-помощник": { code: "AI", icon: <Bot size={16} />, hint: "Анализ" }
 };
 
@@ -246,6 +249,29 @@ export function ProjectWorkspace({ initialBundle, createdFromOnboarding = false 
     !risks.length;
   const onboardingPlan = useMemo(() => buildInitialProjectReadiness(initialBundle.project), [initialBundle.project]);
   const showOnboardingPanel = createdFromOnboarding || emptyOperationalBaseline;
+  const actionSuggestions = useMemo<ProjectActionSuggestion[]>(() => {
+    const targetByCategory: Record<PipelineAction["category"], string> = {
+      budget: "Бюджет / ВОР",
+      materials: "Материалы",
+      procurement: "Заявки",
+      schedule: "График",
+      finance: "Финансы",
+      documents: "Документы",
+      risks: "Риски",
+      import: "Бюджет / ВОР",
+      ai: "AI-помощник"
+    };
+    return postImportActions.filter((action) => action.enabled !== false).map((action) => ({
+      id: action.id,
+      title: action.title,
+      description: [action.description, action.suggestedNextStep].filter(Boolean).join(" "),
+      sourceModule: action.category,
+      targetTab: targetByCategory[action.category],
+      priority: action.priority,
+      assignee: action.ownerRole,
+      dueAt: action.dueDate
+    }));
+  }, [postImportActions]);
 
   useEffect(() => {
     let active = true;
@@ -348,7 +374,7 @@ export function ProjectWorkspace({ initialBundle, createdFromOnboarding = false 
   }, [initialBundle.project.id]);
 
   useEffect(() => {
-    if (!["Обзор", "Бюджет / ВОР", "Материалы", "Заявки", "График", "Финансы", "Договор / Тендер", "КП / Подача", "КС", "Исполнение", "Документы", "Аналитика", "AI-помощник"].includes(activeTab)) return;
+    if (!["Обзор", "Бюджет / ВОР", "Материалы", "Заявки", "График", "Финансы", "Договор / Тендер", "КП / Подача", "КС", "Исполнение", "Документы", "Действия", "Аналитика", "AI-помощник"].includes(activeTab)) return;
     void loadPipeline();
   }, [activeTab, loadPipeline]);
 
@@ -1504,6 +1530,16 @@ export function ProjectWorkspace({ initialBundle, createdFromOnboarding = false 
         <Panel title="Project Intelligence" icon={<BarChart3 size={18} />}>
           <ProjectIntelligencePanel readiness={readiness} intelligence={intelligence} actions={postImportActions} onNavigate={setActiveTab} />
         </Panel>
+      )}
+
+      {activeTab === "Действия" && (
+        <ProjectActionCenter
+          projectId={initialBundle.project.id}
+          canEdit={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN" || currentUser?.role === "MANAGER"}
+          canApprove={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN"}
+          onNavigate={setActiveTab}
+          suggestions={actionSuggestions}
+        />
       )}
 
       {activeTab === "Участники" && (

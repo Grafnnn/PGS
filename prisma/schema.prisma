@@ -143,6 +143,7 @@ model Project {
   aiMessages      AiMessage[]
   auditLogs       AuditLog[]
   importBatches   ImportBatch[]
+  actionItems     ProjectActionItem[]
 
   @@map("projects")
 }
@@ -561,4 +562,30 @@ model AuditLog {
 
   @@index([projectId, createdAt])
   @@map("audit_log")
+}
+
+model ProjectActionItem {
+  id               String   @id @default(cuid())
+  organizationId   String   @map("organization_id")
+  projectId        String   @map("project_id")
+  createdBy        String?  @map("created_by")
+  title            String
+  description      String?
+  sourceModule     String   @default("manual") @map("source_module")
+  targetTab        String?  @map("target_tab")
+  priority         String   @default("medium")
+  status           String   @default("open")
+  assignee         String?
+  dueAt            DateTime? @map("due_at")
+  completedAt      DateTime? @map("completed_at")
+  requiresApproval Boolean  @default(false) @map("requires_approval")
+  approvedAt       DateTime? @map("approved_at")
+  approvedBy       String?  @map("approved_by")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+  project          Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, status, dueAt])
+  @@index([projectId, assignee])
+  @@map("project_action_items")
 }

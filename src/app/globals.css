@@ -6447,6 +6447,273 @@ input[type="checkbox"] {
   min-width: 0;
 }
 
+.project-action-center {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.project-action-header,
+.project-action-form,
+.project-action-item,
+.project-action-metrics article {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.project-action-header {
+  align-items: flex-start;
+  display: grid;
+  gap: 18px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: 18px;
+}
+
+.project-action-header h3 {
+  margin: 4px 0 8px;
+}
+
+.project-action-header p {
+  color: var(--muted);
+  margin: 0;
+  max-width: 780px;
+}
+
+.project-action-health,
+.project-action-tags,
+.project-action-toolbar {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.project-action-health span,
+.project-action-tags span {
+  align-items: center;
+  background: var(--panel-muted);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  display: inline-flex;
+  gap: 5px;
+  padding: 6px 8px;
+}
+
+.project-action-health .bad,
+.project-action-tags .overdue,
+.project-action-tags .priority-critical {
+  background: var(--red-soft);
+  color: var(--red);
+}
+
+.project-action-health .warn,
+.project-action-tags .priority-high {
+  background: var(--yellow-soft);
+  color: var(--yellow);
+}
+
+.project-action-metrics {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.project-action-metrics article {
+  display: grid;
+  gap: 5px;
+  padding: 14px;
+}
+
+.project-action-metrics small,
+.project-action-metrics span,
+.project-action-item p,
+.project-action-item-title span {
+  color: var(--muted);
+}
+
+.project-action-metrics strong {
+  font-size: 1.5rem;
+}
+
+.project-action-form {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+}
+
+.project-action-suggestions {
+  background: var(--panel-muted);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+}
+
+.project-action-suggestions > div:first-child {
+  display: grid;
+  gap: 3px;
+}
+
+.project-action-suggestions > div:first-child span,
+.project-action-suggestion-list small {
+  color: var(--muted);
+}
+
+.project-action-suggestion-list {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.project-action-suggestion-list button {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  cursor: pointer;
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  padding: 10px;
+  text-align: left;
+}
+
+.project-action-suggestion-list button:hover {
+  border-color: var(--accent);
+}
+
+.project-action-suggestion-list button span {
+  color: var(--muted);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+}
+
+.project-action-form-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.project-action-form-grid .field {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.project-action-form-grid .field-wide,
+.project-action-check {
+  grid-column: span 3;
+}
+
+.project-action-check {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.project-action-toolbar button {
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 7px 10px;
+}
+
+.project-action-toolbar button.active {
+  background: var(--red-soft);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.project-action-list {
+  display: grid;
+  gap: 10px;
+}
+
+.project-action-item {
+  align-items: flex-start;
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: 14px;
+}
+
+.project-action-item.priority-critical {
+  border-left: 4px solid var(--red);
+}
+
+.project-action-item.priority-high,
+.project-action-item.status-blocked {
+  border-left: 4px solid var(--yellow);
+}
+
+.project-action-item.status-done {
+  opacity: 0.78;
+}
+
+.project-action-item-main,
+.project-action-item-title > div {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.project-action-item-title {
+  align-items: flex-start;
+  display: flex;
+  gap: 9px;
+}
+
+.project-action-item p {
+  margin: 8px 0;
+  overflow-wrap: anywhere;
+}
+
+.project-action-item-controls {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+  max-width: 440px;
+}
+
+@media (max-width: 900px) {
+  .project-action-form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .project-action-suggestion-list {
+    grid-template-columns: 1fr;
+  }
+
+  .project-action-form-grid .field-wide,
+  .project-action-check {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 680px) {
+  .project-action-header,
+  .project-action-item,
+  .project-action-metrics,
+  .project-action-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .project-action-form-grid .field-wide,
+  .project-action-check {
+    grid-column: auto;
+  }
+
+  .project-action-item-controls {
+    justify-content: flex-start;
+    max-width: none;
+  }
+}
+
 .quality-issues-header {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
