@@ -31,4 +31,14 @@ describe("executive report export", () => {
     expect(response.status).toBe(403);
     expect(prisma.executiveReport.findUnique).not.toHaveBeenCalled();
   });
+
+  it("returns a controlled error for an invalid stored report payload", async () => {
+    vi.mocked(prisma.executiveReport.findUnique).mockResolvedValue({
+      id: "report-1", projectId: "project-1", version: 3, reportDate: new Date("2026-07-14T12:00:00Z"), content: {}
+    } as never);
+    const { GET } = await import("./route");
+    const response = await GET(new Request("https://pgs.local"), { params: { projectId: "project-1", reportId: "report-1" } });
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toEqual({ error: "Executive report content is unavailable" });
+  });
 });

@@ -242,9 +242,13 @@ export function ReportsWorkflow({ projectId, reports, currentUser, currentUserLo
 
   async function copyExecutiveReport() {
     if (!selectedExecutive) return;
-    await navigator.clipboard.writeText(selectedExecutive.content.copyText);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1600);
+    try {
+      await navigator.clipboard.writeText(selectedExecutive.content.copyText);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1600);
+    } catch {
+      setError("Не удалось скопировать отчет. Используйте скачивание TXT.");
+    }
   }
 
   return (
