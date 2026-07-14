@@ -1,6 +1,6 @@
 import * as XLSX from "xlsx";
 import { parseExcelBuffer, readWorkbook, validateExcelFile } from "./import-parser";
-import { normalizeHeader, normalizeText, parseMoney, parseQuantity } from "./import-normalizer";
+import { normalizeDate, normalizeHeader, normalizeText, parseMoney, parseQuantity } from "./import-normalizer";
 import type {
   ImportBudgetItem,
   ImportMaterial,
@@ -27,7 +27,62 @@ export type ProjectWorkbookSheetRole =
   | "control"
   | "unknown";
 
-export type ProjectWorkbookModuleId = "budget" | "materials" | "schedule" | "payroll" | "equipment" | "source_control";
+export type ProjectWorkbookModuleId =
+  | "budget"
+  | "materials"
+  | "schedule"
+  | "payroll"
+  | "equipment"
+  | "procurement"
+  | "cashflow"
+  | "intelligence"
+  | "source_control";
+
+export type ProjectWorkbookSuggestionConfidence = "low" | "medium" | "high";
+
+export type ProjectWorkbookSuggestionField =
+  | "name"
+  | "code"
+  | "customer"
+  | "object"
+  | "objectType"
+  | "address"
+  | "description"
+  | "contractAmount"
+  | "vatMode"
+  | "vatPercent"
+  | "startsAt"
+  | "endsAt"
+  | "manager"
+  | "tenderSource"
+  | "paymentNotes"
+  | "volumeChangeMode"
+  | "templateId";
+
+export interface ProjectWorkbookSuggestions {
+  name?: string;
+  code?: string;
+  customer?: string;
+  object?: string;
+  objectType?: "residential" | "commercial" | "social" | "engineering" | "reconstruction" | "roofing_facade" | "interior" | "other";
+  address?: string;
+  description?: string;
+  contractAmount?: number;
+  vatMode?: "including_vat" | "excluding_vat" | "no_vat" | "unknown";
+  vatPercent?: number;
+  startsAt?: string;
+  endsAt?: string;
+  durationMonths?: number;
+  manager?: string;
+  tenderSource?: "contract" | "tender" | "commercial_offer" | "draft" | "unknown";
+  paymentNotes?: string;
+  volumeChangeMode?: "fixed_scope" | "fact_based" | "can_change" | "unknown";
+  templateId?: "general_construction" | "engineering_networks" | "fit_out" | "roofing" | "concrete" | "facade" | "tender" | "empty";
+  selectedModules: Array<"vor" | "documents" | "schedule" | "materials" | "acceptance" | "risks" | "contract" | "reports">;
+  confidenceByField: Partial<Record<ProjectWorkbookSuggestionField, ProjectWorkbookSuggestionConfidence>>;
+  evidenceByField: Partial<Record<ProjectWorkbookSuggestionField, string>>;
+  missingFields: string[];
+}
 
 export interface ProjectWorkbookSheetAnalysis {
   sheetName: string;
@@ -50,7 +105,7 @@ export interface ProjectWorkbookModuleSummary {
   sheets: string[];
   rows: number;
   amount: number;
-  status: "ready" | "reference" | "not_found";
+  status: "ready" | "derived" | "reference" | "not_found";
   detail: string;
 }
 
@@ -79,12 +134,7 @@ export interface ProjectWorkbookAnalysis {
     payrollCost: number;
     equipmentCost: number;
   };
-  suggestions: {
-    contractAmount?: number;
-    vatPercent?: number;
-    durationMonths?: number;
-    selectedModules: Array<"vor" | "documents" | "schedule" | "materials">;
-  };
+  suggestions: ProjectWorkbookSuggestions;
   quality: ProjectWorkbookQualityGate;
   warnings: string[];
   errors: string[];
@@ -136,6 +186,9 @@ const roleLabels: Record<ProjectWorkbookModuleId, string> = {
   schedule: "Сводный график",
   payroll: "ФОТ и трудовые ресурсы",
   equipment: "Машины и механизмы",
+  procurement: "Закупки и потребность",
+  cashflow: "Cashflow и расходный план",
+  intelligence: "Project Intelligence",
   source_control: "Сверка и источники"
 };
 
@@ -203,7 +256,7 @@ function buildProjectWorkbook(buffer: Buffer, fileName: string, projectId: strin
   const mappings: ImportSheetMapping[] = [];
   const sheets: ProjectWorkbookSheetAnalysis[] = [];
   const warnings: string[] = [];
-  const startsAt = safeDate(options.startsAt) ?? new Date();
+  const startsAt = extractWorkbookStartDate(sheetData) ?? safeDate(options.startsAt) ?? new Date();
   const vatPercent = extractVatPercent(enabledSheetData) ?? 0;
 
   for (const sheet of sheetData) {
@@ -308,7 +361,7 @@ function buildProjectWorkbook(buffer: Buffer, fileName: string, projectId: strin
   const totalRows = sheetData.reduce((sum, sheet) => sum + sheet.rows.length, 0);
   const parsedRows = uniqueBudgetItems.length + scheduleItems.length;
   const estimatedDirectCost = sumCost(uniqueBudgetItems);
-  const suggestions = extractSuggestions(enabledSheetData, startsAt, scheduleItems);
+  const suggestions = extractSuggestions(enabledSheetData, startsAt, scheduleItems, uniqueBudgetItems);
   const preview: ImportPreview = {
     projectId,
     fileName,
@@ -716,6 +769,9 @@ function buildAnalysis(
     moduleSummary("schedule", moduleRows(["schedule"]), scheduleItems, "Помесячные этапы преобразованы в календарные задачи."),
     moduleSummary("payroll", moduleRows(["payroll"]), payrollItems, "ФОТ попадает в расходную часть как payroll: ставка × человеко-месяцы или объем ÷ норма."),
     moduleSummary("equipment", moduleRows(["equipment"]), equipmentItems, "Смены техники и ставки попадают в бюджет отдельным видом equipment."),
+    derivedModuleSummary("procurement", materials.length > 0, materials.length, "Материалы станут потребностью снабжения; заявки остаются отдельным подтверждаемым действием."),
+    derivedModuleSummary("cashflow", budgetItems.length > 0 || scheduleItems.length > 0, scheduleItems.length || budgetItems.length, "Расходный план строится из бюджета, ФОТ, техники и календарного распределения."),
+    derivedModuleSummary("intelligence", budgetItems.length > 0 || materials.length > 0 || scheduleItems.length > 0, budgetItems.length + materials.length + scheduleItems.length, "Command Center, риски, КС и executive-контур получат стартовый расчетный baseline."),
     {
       id: "source_control",
       label: roleLabels.source_control,
@@ -773,6 +829,172 @@ function buildAnalysis(
   };
 }
 
+function derivedModuleSummary(id: Extract<ProjectWorkbookModuleId, "procurement" | "cashflow" | "intelligence">, ready: boolean, rows: number, detail: string): ProjectWorkbookModuleSummary {
+  return {
+    id,
+    label: roleLabels[id],
+    sheets: [],
+    rows,
+    amount: 0,
+    status: ready ? "derived" : "not_found",
+    detail
+  };
+}
+
+type MetadataValues = Omit<ProjectWorkbookSuggestions, "selectedModules" | "confidenceByField" | "evidenceByField" | "missingFields" | "durationMonths">;
+
+function extractProjectMetadata(sheetData: SheetData[], budgetItems: ImportBudgetItem[]) {
+  const values: MetadataValues = {};
+  const confidenceByField: ProjectWorkbookSuggestions["confidenceByField"] = {};
+  const evidenceByField: ProjectWorkbookSuggestions["evidenceByField"] = {};
+  const metadataSheets = sheetData.filter((sheet) => ["summary", "reference", "control", "unknown"].includes(sheet.role));
+  const sourceSheets = metadataSheets.length ? metadataSheets : sheetData.slice(0, 3);
+  const assign = <K extends ProjectWorkbookSuggestionField>(
+    field: K,
+    value: MetadataValues[K] | undefined,
+    confidence: ProjectWorkbookSuggestionConfidence,
+    evidence?: string
+  ) => {
+    if (value === undefined || value === "") return;
+    values[field] = value;
+    confidenceByField[field] = confidence;
+    if (evidence) evidenceByField[field] = evidence.slice(0, 220);
+  };
+
+  const labeled = (patterns: RegExp[]) => findLabeledWorkbookValue(sourceSheets, patterns);
+  const projectName = labeled([/^наименование проекта$/, /^название проекта$/, /^проект$/]);
+  const objectName = labeled([/^наименование объекта$/, /^объект строительства$/, /^объект работ$/, /^объект$/]);
+  const title = projectName ?? objectName ?? findWorkbookTitle(sourceSheets);
+  const normalizedTitle = title ? cleanProjectTitle(title.value) : "";
+  assign("name", normalizedTitle || projectName?.value || objectName?.value, projectName || objectName ? "high" : "medium", title?.evidence);
+  assign("object", objectName?.value || normalizedTitle, objectName ? "high" : "medium", (objectName ?? title)?.evidence);
+
+  const code = labeled([/^код проекта$/, /^шифр проекта$/, /^номер проекта$/, /^№ проекта$/]);
+  assign("code", code?.value, "high", code?.evidence);
+  const customer = labeled([/^заказчик$/, /^наименование заказчика$/, /^генеральный заказчик$/]);
+  assign("customer", customer?.value, "high", customer?.evidence);
+  const address = labeled([/^адрес объекта$/, /^место выполнения работ$/, /^местонахождение объекта$/, /^адрес строительства$/]);
+  assign("address", address?.value, "high", address?.evidence);
+  const manager = labeled([/^руководитель проекта$/, /^рп$/, /^ответственный за проект$/]);
+  assign("manager", manager?.value, "medium", manager?.evidence);
+
+  const start = labeled([/^дата начала$/, /^начало работ$/, /^начало строительства$/]);
+  const finish = labeled([/^дата окончания$/, /^окончание работ$/, /^завершение работ$/, /^срок завершения$/]);
+  assign("startsAt", start ? normalizeDate(start.rawValue) ?? normalizeDate(start.value) ?? undefined : undefined, "high", start?.evidence);
+  assign("endsAt", finish ? normalizeDate(finish.rawValue) ?? normalizeDate(finish.value) ?? undefined : undefined, "high", finish?.evidence);
+
+  const payment = labeled([/^условия оплаты$/, /^порядок оплаты$/, /^оплата$/]);
+  assign("paymentNotes", payment?.value, "medium", payment?.evidence);
+
+  const corpus = sourceSheets
+    .flatMap((sheet) => sheet.rows.slice(0, 40).flatMap((row) => row.slice(0, 12).map(normalizeText)))
+    .filter(Boolean)
+    .join(" ");
+  const titleCorpus = [title?.value, ...sourceSheets.map((sheet) => sheet.name)].filter(Boolean).join(" ");
+  const inferred = inferWorkbookProjectShape(titleCorpus, corpus);
+  assign("objectType", inferred.objectType, "medium", inferred.evidence);
+  assign("templateId", inferred.templateId, "medium", inferred.evidence);
+  assign("tenderSource", inferred.tenderSource, "medium", inferred.sourceEvidence);
+  assign("volumeChangeMode", inferred.volumeChangeMode, "medium", inferred.volumeEvidence);
+
+  const sections = Array.from(new Set(budgetItems.map((item) => normalizeText(item.section)).filter((item) => item && !/сверк|нераспредел/i.test(item)))).slice(0, 6);
+  if (sections.length) assign("description", `Основные разделы из Excel: ${sections.join(", ")}.`, "medium", "Рабочие листы · распознанные разделы ВОР/затрат");
+
+  return { values, confidenceByField, evidenceByField };
+}
+
+function findLabeledWorkbookValue(sheets: SheetData[], patterns: RegExp[]) {
+  for (const sheet of sheets) {
+    for (let rowIndex = 0; rowIndex < Math.min(sheet.rows.length, 60); rowIndex += 1) {
+      const row = sheet.rows[rowIndex];
+      for (let columnIndex = 0; columnIndex < Math.min(row.length, 16); columnIndex += 1) {
+        const rawLabel = normalizeText(row[columnIndex]);
+        const normalizedLabel = normalizeHeader(rawLabel.replace(/[:：]\s*.*$/, ""));
+        if (!patterns.some((pattern) => pattern.test(normalizedLabel))) continue;
+        const inlineValue = rawLabel.includes(":") ? normalizeText(rawLabel.slice(rawLabel.indexOf(":") + 1)) : "";
+        const nextValue = row.slice(columnIndex + 1).map(normalizeText).find(Boolean) ?? "";
+        const value = inlineValue || nextValue;
+        if (!value || value.length > 300 || normalizeHeader(value) === normalizedLabel) continue;
+        const rawValue = inlineValue ? inlineValue : row[row.findIndex((cell, index) => index > columnIndex && normalizeText(cell) === nextValue)];
+        return {
+          value,
+          rawValue,
+          evidence: `${sheet.name} · строка ${rowIndex + 1}: ${rawLabel}${inlineValue ? "" : ` → ${value}`}`
+        };
+      }
+    }
+  }
+  return undefined;
+}
+
+function extractWorkbookStartDate(sheetData: SheetData[]) {
+  const metadataSheets = sheetData.filter((sheet) => ["summary", "reference", "control", "unknown"].includes(sheet.role));
+  const start = findLabeledWorkbookValue(metadataSheets.length ? metadataSheets : sheetData.slice(0, 3), [/^дата начала$/, /^начало работ$/, /^начало строительства$/]);
+  const normalized = start ? normalizeDate(start.rawValue) ?? normalizeDate(start.value) : null;
+  return normalized ? safeDate(normalized) : undefined;
+}
+
+function findWorkbookTitle(sheets: SheetData[]) {
+  const generic = /^(итог|свод|сводная стоимость проекта|сср|кп|вор|контроль|проверка|материалы|график|обновлено|принято|источник|файл содержит|примечание)/i;
+  for (const sheet of sheets) {
+    for (let rowIndex = 0; rowIndex < Math.min(sheet.rows.length, 8); rowIndex += 1) {
+      const values = sheet.rows[rowIndex].map(normalizeText).filter(Boolean);
+      const candidate = values.find((value) => value.length >= 4 && value.length <= 180 && !generic.test(value));
+      if (candidate) return { value: candidate, evidence: `${sheet.name} · строка ${rowIndex + 1}: ${candidate}` };
+    }
+  }
+  return undefined;
+}
+
+function cleanProjectTitle(value: string) {
+  return normalizeText(value)
+    .replace(/^проект\s*[:：-]?\s*/i, "")
+    .replace(/\s*[—–-]\s*(?:сср|смет|кп|цена|генподряд).*$/i, "")
+    .replace(/\s*\/\s*(?:сср|кп|генподряд).*$/i, "")
+    .trim()
+    .slice(0, 160);
+}
+
+function inferWorkbookProjectShape(titleCorpus: string, corpus: string): Pick<MetadataValues, "objectType" | "templateId" | "tenderSource" | "volumeChangeMode"> & { evidence?: string; sourceEvidence?: string; volumeEvidence?: string } {
+  const title = normalizeHeader(titleCorpus);
+  const all = normalizeHeader(corpus);
+  let objectType: MetadataValues["objectType"];
+  let templateId: MetadataValues["templateId"];
+  if (/кровл/.test(title)) {
+    objectType = "roofing_facade";
+    templateId = "roofing";
+  } else if (/фасад/.test(title)) {
+    objectType = "roofing_facade";
+    templateId = "facade";
+  } else if (/отделк|fit out|ремонт помещ/.test(title)) {
+    objectType = "interior";
+    templateId = "fit_out";
+  } else if (/инженерк|инженерн.*сет|наружн.*сет|внутренн.*сет|(?:^|\s)(?:итп|ов|вк|эом|апс|соуэ)(?:\s|$)/.test(title)) {
+    objectType = "engineering";
+    templateId = "engineering_networks";
+  } else if (/реконструк|капитальн.*ремонт|капремонт/.test(title)) {
+    objectType = "reconstruction";
+    templateId = "general_construction";
+  } else if (/монолит|железобетон|жб|фундамент/.test(title)) {
+    objectType = "commercial";
+    templateId = "concrete";
+  } else if (/жил|мкд|квартир|дом/.test(title)) {
+    objectType = "residential";
+    templateId = "general_construction";
+  }
+  const tenderSource: MetadataValues["tenderSource"] = /тендер|конкурс|закупк/.test(title) ? "tender" : /(^|\s)кп(\s|$)|коммерческ.*предлож/.test(title) ? "commercial_offer" : /договор/.test(title) ? "contract" : undefined;
+  const volumeChangeMode: MetadataValues["volumeChangeMode"] = /предварительн|объем.*уточн|может.*измен/.test(all) ? "can_change" : /фиксированн.*объем|тверд.*цен/.test(all) ? "fixed_scope" : /фактическ.*объем/.test(all) ? "fact_based" : undefined;
+  return {
+    objectType,
+    templateId,
+    tenderSource,
+    volumeChangeMode,
+    evidence: objectType ? `Название книги/листов: ${titleCorpus.slice(0, 160)}` : undefined,
+    sourceEvidence: tenderSource ? `Название книги/листов: ${titleCorpus.slice(0, 160)}` : undefined,
+    volumeEvidence: volumeChangeMode ? "Служебные строки книги · условия объема/цены" : undefined
+  };
+}
+
 function moduleSummary(
   id: Exclude<ProjectWorkbookModuleId, "source_control">,
   sheets: ProjectWorkbookSheetAnalysis[],
@@ -790,7 +1012,12 @@ function moduleSummary(
   };
 }
 
-function extractSuggestions(sheetData: SheetData[], startsAt: Date, scheduleItems: ImportScheduleItem[]): ProjectWorkbookAnalysis["suggestions"] {
+function extractSuggestions(
+  sheetData: SheetData[],
+  startsAt: Date,
+  scheduleItems: ImportScheduleItem[],
+  budgetItems: ImportBudgetItem[]
+): ProjectWorkbookAnalysis["suggestions"] {
   let contractAmount: number | undefined;
   const vatPercent = extractVatPercent(sheetData);
   for (const sheet of sheetData.filter((item) => item.role === "summary")) {
@@ -806,7 +1033,50 @@ function extractSuggestions(sheetData: SheetData[], startsAt: Date, scheduleItem
   if (sheetData.some((sheet) => ["works", "payroll", "equipment"].includes(sheet.role))) selectedModules.push("vor");
   if (sheetData.some((sheet) => sheet.role === "materials")) selectedModules.push("materials");
   if (scheduleItems.length) selectedModules.push("schedule");
-  return { contractAmount, vatPercent, durationMonths, selectedModules: Array.from(new Set(selectedModules)) };
+  if (budgetItems.length || scheduleItems.length) selectedModules.push("acceptance", "risks", "reports");
+  if (contractAmount || vatPercent) selectedModules.push("contract");
+
+  const metadata = extractProjectMetadata(sheetData, budgetItems);
+  const suggestions: ProjectWorkbookAnalysis["suggestions"] = {
+    ...metadata.values,
+    contractAmount,
+    vatPercent,
+    vatMode: vatPercent ? "including_vat" : metadata.values.vatMode,
+    durationMonths,
+    endsAt: metadata.values.endsAt ?? (lastEnd ? new Date(lastEnd).toISOString().slice(0, 10) : undefined),
+    selectedModules: Array.from(new Set(selectedModules)),
+    confidenceByField: { ...metadata.confidenceByField },
+    evidenceByField: { ...metadata.evidenceByField },
+    missingFields: []
+  };
+  if (contractAmount !== undefined) {
+    suggestions.confidenceByField.contractAmount = "high";
+    suggestions.evidenceByField.contractAmount = "Сводный лист · итоговая/договорная стоимость";
+  }
+  if (vatPercent !== undefined) {
+    suggestions.confidenceByField.vatPercent = "high";
+    suggestions.confidenceByField.vatMode = "medium";
+    suggestions.evidenceByField.vatPercent = "Сводный лист · ставка НДС";
+    suggestions.evidenceByField.vatMode = "Сводный лист · цена и ставка НДС";
+  }
+  if (!suggestions.endsAt && durationMonths) {
+    const finish = new Date(startsAt);
+    finish.setUTCMonth(finish.getUTCMonth() + durationMonths);
+    suggestions.endsAt = finish.toISOString().slice(0, 10);
+  }
+  if (suggestions.endsAt && !suggestions.evidenceByField.endsAt) {
+    suggestions.confidenceByField.endsAt = "medium";
+    suggestions.evidenceByField.endsAt = "Сводный график · последняя активная задача";
+  }
+  suggestions.missingFields = [
+    ["name", "название проекта"],
+    ["customer", "заказчик"],
+    ["object", "объект"],
+    ["address", "адрес"],
+    ["manager", "руководитель проекта"],
+    ["startsAt", "дата начала"]
+  ].filter(([field]) => !suggestions[field as ProjectWorkbookSuggestionField]).map(([, label]) => label);
+  return suggestions;
 }
 
 function extractVatPercent(sheetData: SheetData[]) {
@@ -912,7 +1182,7 @@ function failedResult(fileName: string, fileSize: number, projectId: string, err
     sheets: [],
     modules: [],
     summary: { totalSheets: 0, includedSheets: 0, referenceSheets: 0, excludedSheets: 0, reviewSheets: 0, overriddenSheets: 0, budgetItems: 0, materials: 0, scheduleItems: 0, payrollItems: 0, equipmentItems: 0, estimatedDirectCost: 0, reconciliationGap: 0, automatedCoveragePercent: 0, payrollCost: 0, equipmentCost: 0 },
-    suggestions: { selectedModules: ["documents"] },
+    suggestions: { selectedModules: ["documents"], confidenceByField: {}, evidenceByField: {}, missingFields: ["название проекта", "заказчик", "объект", "адрес", "руководитель проекта", "дата начала"] },
     quality: failedProjectWorkbookQualityGate(error),
     warnings: [],
     errors: [error]

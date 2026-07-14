@@ -1,7 +1,7 @@
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
-import { ProjectCreationWizard, WorkbookQualityGatePanel, projectWorkbookCreationBlockReason } from "@/components/projects-index";
+import { applyProjectWorkbookSuggestions, ProjectCreationWizard, WorkbookQualityGatePanel, projectWorkbookCreationBlockReason } from "@/components/projects-index";
 import { buildProjectWorkbookQualityGate } from "@/lib/excel/project-workbook-quality";
 
 vi.mock("next/navigation", () => ({
@@ -18,7 +18,9 @@ describe("ProjectCreationWizard", () => {
 
     expect(html).toContain("Project Creation &amp; Onboarding");
     expect(html).toContain("Создать проект и запустить baseline");
-    expect(html).toContain("Загрузите единый Excel проекта");
+    expect(html).toContain("Создать проект из Excel");
+    expect(html).toContain("Загрузить Excel проекта");
+    expect(html).toContain("Создать вручную");
     expect(html).toContain("Единый Excel проекта");
     expect(html).toContain("Выбрать Excel проекта");
     expect(html).toContain("ВОР, ССР, материалы, графики, машины, ФОТ");
@@ -39,6 +41,47 @@ describe("ProjectCreationWizard", () => {
     expect(html).toContain("нужно заполнить");
     expect(fetchMock).not.toHaveBeenCalled();
     fetchMock.mockRestore();
+  });
+
+  it("applies workbook metadata without overwriting fields edited by the user", () => {
+    const result = applyProjectWorkbookSuggestions(
+      {
+        name: "Ручное название",
+        customer: "",
+        object: "",
+        address: "",
+        contractAmount: "",
+        manager: "",
+        startsAt: "2026-07-01",
+        endsAt: "2026-10-01",
+        selectedModules: ["documents"]
+      },
+      {
+        name: "Проект из Excel",
+        customer: "Заказчик из Excel",
+        object: "Объект из Excel",
+        address: "Адрес из Excel",
+        contractAmount: 12500000,
+        startsAt: "2026-08-01",
+        endsAt: "2027-01-31",
+        selectedModules: ["vor", "materials", "schedule", "risks"],
+        confidenceByField: {},
+        evidenceByField: {},
+        missingFields: ["руководитель проекта"]
+      },
+      new Set(["name", "startsAt"])
+    );
+
+    expect(result).toMatchObject({
+      name: "Ручное название",
+      customer: "Заказчик из Excel",
+      object: "Объект из Excel",
+      address: "Адрес из Excel",
+      contractAmount: "12500000",
+      startsAt: "2026-07-01",
+      endsAt: "2027-01-31"
+    });
+    expect(result.selectedModules).toEqual(expect.arrayContaining(["documents", "vor", "materials", "schedule", "risks"]));
   });
 
   it("blocks creation until mapping and quality warnings are explicitly resolved", () => {

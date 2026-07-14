@@ -302,14 +302,23 @@ export function buildProjectOnboardingPlan(draft: ProjectCreationDraft, created 
 export function projectCreationPayloadFromDraft(draft: ProjectCreationDraft) {
   return {
     name: clean(draft.name),
+    code: clean(draft.code) || null,
     customer: clean(draft.customer),
     object: clean(draft.object) || objectTypeLabels[draft.objectType ?? "other"],
+    objectType: draft.objectType ?? null,
     address: clean(draft.address),
+    description: clean(draft.description) || null,
     contractAmount: numberValue(draft.contractAmount),
     vatMode: draft.vatMode === "no_vat" ? "no_vat" : "vat",
+    vatPercent: draft.vatMode === "no_vat" ? null : numberValue(draft.vatPercent),
     startsAt: draft.startsAt,
     endsAt: draft.endsAt,
     manager: clean(draft.manager),
+    tenderSource: draft.tenderSource ?? "unknown",
+    paymentNotes: clean(draft.paymentNotes) || null,
+    volumeChangeMode: draft.volumeChangeMode ?? "unknown",
+    templateId: validateProjectTemplateSelection(draft.templateId),
+    selectedModules: selectedModules(draft),
     status: draft.status ?? "planning"
   };
 }

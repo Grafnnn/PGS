@@ -95,23 +95,30 @@ describe("project onboarding intelligence", () => {
     expect(summary.templateLabel).toBe("Общестрой");
   });
 
-  it("returns only supported Project API payload fields", () => {
-    const payload = projectCreationPayloadFromDraft({ ...readyDraft, description: "Не должно уйти в API", paymentNotes: "Аванс" });
+  it("persists the complete onboarding metadata supported by the Project API", () => {
+    const payload = projectCreationPayloadFromDraft({ ...readyDraft, code: "PGS-01", description: "Стартовый scope", paymentNotes: "Аванс" });
 
     expect(payload).toEqual({
       name: "PGS smoke onboarding",
+      code: "PGS-01",
       customer: "Демо заказчик",
       object: "Административное здание",
+      objectType: "commercial",
       address: "Москва, тестовая площадка",
+      description: "Стартовый scope",
       contractAmount: 12500000,
       vatMode: "vat",
+      vatPercent: 22,
       startsAt: "2026-07-01",
       endsAt: "2026-10-01",
       manager: "Руководитель проекта",
+      tenderSource: "contract",
+      paymentNotes: "Аванс",
+      volumeChangeMode: "fact_based",
+      templateId: "general_construction",
+      selectedModules: defaultOnboardingModules,
       status: "planning"
     });
-    expect("description" in payload).toBe(false);
-    expect("paymentNotes" in payload).toBe(false);
   });
 
   it("keeps module defaults stable for onboarding smoke flow", () => {

@@ -27,14 +27,23 @@ export interface Project {
   id: string;
   organizationId: string;
   name: string;
+  code?: string;
   customer: string;
   object: string;
+  objectType?: string;
   address: string;
+  description?: string;
   contractAmount: number;
   vatMode: "vat" | "no_vat";
+  vatPercent?: number;
   startsAt: string;
   endsAt: string;
   manager: string;
+  tenderSource?: string;
+  paymentNotes?: string;
+  volumeChangeMode?: string;
+  templateId?: string;
+  selectedModules?: string[];
   status: ProjectStatus;
   isSmokeProject?: boolean;
 }

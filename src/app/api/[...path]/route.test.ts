@@ -147,14 +147,23 @@ describe("catch-all AI routes", () => {
     const response = await POST(
       postRequest({
         name: "Новый объект",
+        code: "PGS-NEW-01",
         customer: "Заказчик",
         object: "Административное здание",
+        objectType: "commercial",
         address: "Москва",
+        description: "Автоматически заполнено из Excel",
         contractAmount: 1000000,
         vatMode: "vat",
+        vatPercent: 22,
         startsAt: "2026-07-01",
         endsAt: "2026-09-01",
         manager: "РП",
+        tenderSource: "commercial_offer",
+        paymentNotes: "Оплата по КС",
+        volumeChangeMode: "can_change",
+        templateId: "general_construction",
+        selectedModules: ["vor", "documents", "schedule", "materials"],
         status: "planning",
         unsupportedOnboardingNote: "ignored by schema"
       }) as never,
@@ -168,10 +177,18 @@ describe("catch-all AI routes", () => {
       data: expect.objectContaining({
         organizationId: "org-demo",
         name: "Новый объект",
+        code: "PGS-NEW-01",
         customer: "Заказчик",
         object: "Административное здание",
+        objectType: "commercial",
         address: "Москва",
+        description: "Автоматически заполнено из Excel",
         manager: "РП",
+        tenderSource: "commercial_offer",
+        paymentNotes: "Оплата по КС",
+        volumeChangeMode: "can_change",
+        templateId: "general_construction",
+        selectedModules: ["vor", "documents", "schedule", "materials"],
         status: "planning"
       })
     });

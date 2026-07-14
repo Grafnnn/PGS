@@ -6,6 +6,14 @@ function workbookBuffer() {
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([
     ["Сводная стоимость проекта"],
+    ["Наименование проекта", "Жилой дом Северный"],
+    ["Код проекта", "PGS-NORTH-01"],
+    ["Заказчик", "ООО Северный заказчик"],
+    ["Адрес объекта", "г. Москва, Северная улица, 1"],
+    ["Руководитель проекта", "Иван Петров"],
+    ["Дата начала", "01.08.2026"],
+    ["Дата окончания", "31.10.2026"],
+    ["Условия оплаты", "Аванс 20%, оплата по КС"],
     ["Раздел", "Итого без НДС, ₽", "НДС, ₽", "Итого с НДС, ₽"],
     ["ИТОГО прямые затраты", 4200, 924, 5124],
     ["ИТОГОВАЯ ЦЕНА ГЕНПОДРЯДА", 5000],
@@ -49,7 +57,26 @@ describe("project workbook import", () => {
     const analysis = analyzeProjectWorkbookBuffer(workbookBuffer(), "project.xlsx", "preview", { startsAt: "2026-07-01" });
 
     expect(analysis.errors).toEqual([]);
-    expect(analysis.suggestions).toMatchObject({ contractAmount: 5000, vatPercent: 22, durationMonths: 2 });
+    expect(analysis.suggestions).toMatchObject({
+      name: "Жилой дом Северный",
+      code: "PGS-NORTH-01",
+      customer: "ООО Северный заказчик",
+      object: "Жилой дом Северный",
+      objectType: "residential",
+      address: "г. Москва, Северная улица, 1",
+      manager: "Иван Петров",
+      startsAt: "2026-08-01",
+      endsAt: "2026-10-31",
+      paymentNotes: "Аванс 20%, оплата по КС",
+      templateId: "general_construction",
+      contractAmount: 5000,
+      vatPercent: 22,
+      durationMonths: 2
+    });
+    expect(analysis.suggestions.selectedModules).toEqual(expect.arrayContaining(["vor", "documents", "schedule", "materials", "acceptance", "risks", "contract", "reports"]));
+    expect(analysis.suggestions.confidenceByField.customer).toBe("high");
+    expect(analysis.suggestions.evidenceByField.customer).toContain("01_ССР_КП");
+    expect(analysis.suggestions.missingFields).toEqual([]);
     expect(analysis.summary).toMatchObject({ budgetItems: 4, materials: 1, scheduleItems: 1, payrollItems: 1, equipmentItems: 1, sourceDirectCost: 4200, reconciliationGap: 0, automatedCoveragePercent: 100 });
     expect(analysis.summary.estimatedDirectCost).toBeCloseTo(4200);
     expect(analysis.quality).toMatchObject({
@@ -58,6 +85,9 @@ describe("project workbook import", () => {
       metrics: { recognizedRecords: 6, coveragePercent: 100, blockers: 0, warnings: 0 }
     });
     expect(analysis.modules.find((module) => module.id === "source_control")?.sheets).toContain("01_ССР_КП");
+    expect(analysis.modules.find((module) => module.id === "procurement")).toMatchObject({ status: "derived" });
+    expect(analysis.modules.find((module) => module.id === "cashflow")).toMatchObject({ status: "derived" });
+    expect(analysis.modules.find((module) => module.id === "intelligence")).toMatchObject({ status: "derived" });
     expect(analysis.sheets.find((sheet) => sheet.sheetName === "01_ССР_КП")).toMatchObject({ role: "summary", included: false });
   });
 
