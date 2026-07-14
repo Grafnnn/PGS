@@ -89,6 +89,9 @@ const tabs = [
   "AI-помощник"
 ];
 
+const primaryTabs = ["Обзор", "Бюджет / ВОР", "График", "Материалы", "Финансы", "Документы", "Риски", "КС", "Действия", "AI-помощник"];
+const secondaryTabs = tabs.filter((tab) => !primaryTabs.includes(tab));
+
 const tabMeta: Record<string, { code: string; icon: React.ReactNode; hint: string }> = {
   Обзор: { code: "00", icon: <LayoutList size={16} />, hint: "Сводка" },
   "Бюджет / ВОР": { code: "01", icon: <Table2 size={16} />, hint: "Деньги" },
@@ -219,7 +222,10 @@ export function ProjectWorkspace({ initialBundle, createdFromOnboarding = false 
   const [deleteProjectDone, setDeleteProjectDone] = useState(false);
   const openIntelligenceSection = useCallback((sectionId: string) => {
     const element = document.getElementById(sectionId);
-    if (element) element.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (!element) return;
+    const details = element.closest("details");
+    if (details) details.open = true;
+    window.requestAnimationFrame(() => element.scrollIntoView({ behavior: "smooth", block: "start" }));
   }, []);
 
   const budget = useMemo(() => budgetTotals(initialBundle.project.contractAmount, budgetItems), [budgetItems, initialBundle.project.contractAmount]);
@@ -234,12 +240,6 @@ export function ProjectWorkspace({ initialBundle, createdFromOnboarding = false 
   const urgentMaterial = materialStats.deficitItems[0];
   const latestReport = reports[0];
   const latestAudit = auditEvents[0];
-  const priorityActions = [
-    budgetDeviation > 0 ? `Снять перерасход: ${compactMoney(budgetDeviation)}` : "Бюджет в зеленой зоне",
-    delayedWorks[0] ? `Вернуть в график: ${delayedWorks[0].name}` : "Критичных просрочек нет",
-    urgentMaterial ? `Закрыть дефицит: ${urgentMaterial.name}` : "Дефицит материалов не выявлен",
-    activeRisks[0] ? `Разобрать риск: ${activeRisks[0].title}` : "Открытых критичных рисков нет"
-  ];
   const aiAnswerTone = aiLoading ? "loading" : aiAnswer ? (/OPENAI_API_KEY|not configured|failed|ошибка|error|Project not found/i.test(aiAnswer) ? "error" : "ready") : "empty";
   const aiDisplay = aiAnswerTone === "error" ? "AI-помощник сейчас недоступен. Проверьте подключение AI и повторите анализ позже." : aiAnswer;
   const canDeleteCurrentProject = currentUser?.role === "OWNER" || currentUser?.role === "ADMIN";
@@ -812,14 +812,6 @@ export function ProjectWorkspace({ initialBundle, createdFromOnboarding = false 
             <span>{initialBundle.project.address}</span>
             <span>РП: {initialBundle.project.manager}</span>
           </div>
-          <div className="project-state-strip">
-            <StatePill label="Готовность" value={percent(works.completionPercent)} tone="info" />
-            <StatePill label="Срок" value={`${formatDate(initialBundle.project.startsAt)} - ${formatDate(initialBundle.project.endsAt)}`} tone={delayedWorks.length ? "bad" : "neutral"} />
-            <StatePill label="Бюджет" value={compactMoney(initialBundle.project.contractAmount)} tone="neutral" />
-            <StatePill label="Отклонение" value={compactMoney(budgetDeviation)} tone={budgetDeviation > 0 ? "bad" : "good"} />
-            <StatePill label="Риски" value={String(activeRisks.length)} tone={activeRisks.length ? "warn" : "good"} />
-            <StatePill label="Заявки" value={String(activeRequests.length)} tone={activeRequests.length ? "warn" : "good"} />
-          </div>
         </div>
         <div className="page-header-actions">
           <button className="button secondary" type="button" onClick={() => setActiveTab("Бюджет / ВОР")}>
@@ -842,34 +834,24 @@ export function ProjectWorkspace({ initialBundle, createdFromOnboarding = false 
         <Kpi title="Прогнозная прибыль" value={compactMoney(budget.forecastProfit)} tone={budget.forecastProfit > 0 ? "good" : "bad"} />
         <Kpi title="Готовность" value={percent(works.completionPercent)} />
         <Kpi title="Кассовый разрыв" value={compactMoney(finance.cashGap)} tone={finance.cashGap < 0 ? "bad" : "good"} />
-        <Kpi title="Факт / прогноз" value={compactMoney(budget.totalForecastCost)} tone={budgetDeviation > 0 ? "bad" : "good"} />
-        <Kpi title="Остаток бюджета" value={compactMoney(Math.max(initialBundle.project.contractAmount - budget.totalForecastCost, 0))} />
-        <Kpi title="Срок проекта" value={`${formatDate(initialBundle.project.startsAt)} - ${formatDate(initialBundle.project.endsAt)}`} />
-        <Kpi title="Заявки" value={String(activeRequests.length)} tone={activeRequests.length ? "warn" : "good"} />
-      </section>
-
-      <section className="priority-ribbon" aria-label="Приоритеты проекта">
-        {priorityActions.map((action, index) => (
-          <button className="priority-chip" key={action} type="button" onClick={() => setActiveTab(index === 0 ? "Бюджет / ВОР" : index === 1 ? "График" : index === 2 ? "Материалы" : "Риски")}>
-            <span>{index + 1}</span>
-            {action}
-          </button>
-        ))}
       </section>
 
       <div className="workspace-layout" style={{ marginTop: 18 }}>
         <div>
           <div className="tabs project-tabs" aria-label="Разделы проекта">
-            {tabs.map((tab) => (
+            {primaryTabs.map((tab) => (
               <button className={`tab ${activeTab === tab ? "active" : ""}`} key={tab} onClick={() => setActiveTab(tab)}>
-                <span className="tab-code">{tabMeta[tab]?.code}</span>
                 <span className="tab-icon">{tabMeta[tab]?.icon}</span>
-                <span>
-                  <strong>{tab}</strong>
-                  <small>{tabMeta[tab]?.hint}</small>
-                </span>
+                <strong>{tab}</strong>
               </button>
             ))}
+            <label className={`project-tab-more ${secondaryTabs.includes(activeTab) ? "active" : ""}`}>
+              <span>Еще</span>
+              <select aria-label="Дополнительные разделы проекта" value={secondaryTabs.includes(activeTab) ? activeTab : ""} onChange={(event) => setActiveTab(event.target.value)}>
+                <option value="" disabled>Разделы</option>
+                {secondaryTabs.map((tab) => <option key={tab} value={tab}>{tab}</option>)}
+              </select>
+            </label>
           </div>
           {(saving || error) && (
             <div className={`panel ${error ? "delta-bad" : "muted"}`} style={{ marginBottom: 16 }}>
@@ -902,28 +884,31 @@ export function ProjectWorkspace({ initialBundle, createdFromOnboarding = false 
                   void runAiCommandScenario("summary");
                 }}
               />
-              <ProjectIntelligenceDrilldown
-                project={initialBundle.project}
-                budgetItems={budgetItems}
-                scheduleItems={scheduleItems}
-                materials={materials}
-                procurementRequests={procurementRequests}
-                payments={payments}
-                dailyReports={reports}
-                risks={risks}
-                documents={documents}
-                readiness={readiness}
-                documentChecklist={documentChecklist}
-                importHistory={importHistory}
-                intelligence={intelligence}
-                aiResults={aiResults}
-                aiErrors={aiErrors}
-                aiLoading={aiScenarioLoading}
-                onNavigate={setActiveTab}
-                onRunAiScenario={(scenario) => {
-                  void runAiCommandScenario(scenario);
-                }}
-              />
+              <details className="panel compact-details overview-intelligence-details">
+                <summary>Подробная аналитика по модулям <span>открыть drill-down</span></summary>
+                <ProjectIntelligenceDrilldown
+                  project={initialBundle.project}
+                  budgetItems={budgetItems}
+                  scheduleItems={scheduleItems}
+                  materials={materials}
+                  procurementRequests={procurementRequests}
+                  payments={payments}
+                  dailyReports={reports}
+                  risks={risks}
+                  documents={documents}
+                  readiness={readiness}
+                  documentChecklist={documentChecklist}
+                  importHistory={importHistory}
+                  intelligence={intelligence}
+                  aiResults={aiResults}
+                  aiErrors={aiErrors}
+                  aiLoading={aiScenarioLoading}
+                  onNavigate={setActiveTab}
+                  onRunAiScenario={(scenario) => {
+                    void runAiCommandScenario(scenario);
+                  }}
+                />
+              </details>
             </section>
           )}
       {activeTab === "Бюджет / ВОР" && (
@@ -2474,15 +2459,6 @@ function Kpi({ title, value, tone }: { title: string; value: string; tone?: "goo
 function StatusBadge({ tone, children }: { tone: "good" | "warn" | "bad" | "info" | "neutral"; children: React.ReactNode }) {
   const color = tone === "good" ? "green" : tone === "warn" ? "yellow" : tone === "bad" ? "red" : tone === "info" ? "blue" : "gray";
   return <span className={`badge ${color}`}>{children}</span>;
-}
-
-function StatePill({ label, value, tone }: { label: string; value: string; tone: "good" | "warn" | "bad" | "info" | "neutral" }) {
-  return (
-    <span className={`state-pill ${tone}`}>
-      <span>{label}</span>
-      <strong>{value}</strong>
-    </span>
-  );
 }
 
 function EmptyState({ text }: { text: string }) {

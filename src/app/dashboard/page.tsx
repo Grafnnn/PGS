@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { Route } from "next";
 import { redirect } from "next/navigation";
-import { AlertTriangle, Banknote, BarChart3, CalendarClock, ClipboardList, FileWarning, FolderKanban, PackageCheck, Sparkles, TrendingUp } from "lucide-react";
+import { AlertTriangle, Banknote, BarChart3, CalendarClock, FolderKanban, PackageCheck, Sparkles } from "lucide-react";
 import { budgetTotals, deriveAutoRisks, financeTotals, materialTotals, money, percent, workTotals } from "@/lib/calculations";
 import { loadDashboardData } from "@/lib/project-page-data";
 import { getCurrentUser } from "@/lib/auth/session";
@@ -44,6 +44,7 @@ export default async function DashboardPage() {
   const activeRequests = bundle.procurementRequests.filter((request) => request.status !== "closed");
   const budgetDeviation = budget.totalForecastCost - budget.totalPlannedCost;
   const totalContractAmount = projects.reduce((total, project) => total + project.contractAmount, 0);
+  const attentionCount = delayedWorks.length + activeRisks.length + materials.deficitItems.length + activeRequests.length;
   const portfolioAttention = [
     delayedWorks[0] ? `Просрочка: ${delayedWorks[0].name}` : "График без критичных просрочек",
     materials.deficitItems[0] ? `Материал: закрыть дефицит ${materials.deficitItems[0].name}` : "Дефицит материалов не выявлен",
@@ -67,9 +68,8 @@ export default async function DashboardPage() {
         <div className="page-header-main">
           <div className="eyebrow">Демо Строй</div>
           <h1>Центр управления строительными проектами</h1>
-          <p className="muted">Операционный контур: бюджет, график, факт, снабжение, финансы, рапорты, риски и AI.</p>
+          <p className="muted">Главные отклонения, деньги и сроки по портфелю.</p>
           <div className="page-header-meta">
-            <span className="badge green">Рабочая область активна</span>
             <span className="badge blue">{projects.length} проекта в реестре</span>
             <span className={`badge ${budgetDeviation > 0 ? "red" : "green"}`}>Отклонение бюджета: {money(budgetDeviation)}</span>
           </div>
@@ -79,10 +79,6 @@ export default async function DashboardPage() {
             <PackageCheck size={18} />
             Импорт ВОР
           </Link>
-          <Link className="button secondary" href={primaryProjectRoute}>
-            <ClipboardList size={18} />
-            Добавить рапорт
-          </Link>
           <Link className="button primary" href={primaryProjectRoute}>
             <FolderKanban size={18} />
             Открыть объект
@@ -90,15 +86,11 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      <section className="grid grid-4">
+      <section className="grid grid-4 dashboard-primary-kpis">
         <Kpi title="Активные проекты" value={String(projects.length)} hint={compactMoney(totalContractAmount)} icon={<FolderKanban size={18} />} />
         <Kpi title="Общий бюджет" value={compactMoney(totalContractAmount)} hint="Договорная база" icon={<Banknote size={18} />} />
-        <Kpi title="Отклонение бюджета" value={compactMoney(budgetDeviation)} hint={budgetDeviation > 0 ? "Требует решения" : "В норме"} tone={budgetDeviation > 0 ? "bad" : "good"} />
-        <Kpi title="Ближайшие просрочки" value={String(delayedWorks.length)} hint={delayedWorks[0]?.name ?? "Нет критичных"} tone={delayedWorks.length ? "bad" : "good"} icon={<CalendarClock size={18} />} />
-        <Kpi title="Открытые риски" value={String(activeRisks.length)} hint={activeRisks[0]?.title ?? "Без открытых рисков"} tone={activeRisks.length ? "bad" : "good"} icon={<AlertTriangle size={18} />} />
-        <Kpi title="Заявки в работе" value={String(activeRequests.length)} hint={activeRequests[0]?.title ?? "Нет срочных"} tone={activeRequests.length ? "warn" : "good"} icon={<ClipboardList size={18} />} />
         <Kpi title="Готовность работ" value={percent(works.completionPercent)} hint="План / факт" icon={<CalendarClock size={18} />} />
-        <Kpi title="Прогнозная прибыль" value={compactMoney(budget.forecastProfit)} hint="Маржинальность проекта" tone={budget.forecastProfit > 0 ? "good" : "bad"} />
+        <Kpi title="Требуют внимания" value={String(attentionCount)} hint="Сроки, риски, заявки, материалы" tone={attentionCount ? "bad" : "good"} icon={<AlertTriangle size={18} />} />
       </section>
 
       <section className="dashboard-command-grid">
@@ -122,110 +114,48 @@ export default async function DashboardPage() {
             <Link className="button secondary" href={primaryProjectRoute}>Подготовить письмо</Link>
           </div>
         </div>
-        <div className="panel stack">
+        <div className="panel stack portfolio-chart-panel">
           <div className="section-title">
             <BarChart3 size={18} />
             <h2>Портфельная аналитика</h2>
           </div>
-          <MiniBars title="Cash-flow" items={cashFlowSeries} />
-          <MiniBars title="Структура затрат" items={costStructure} />
-        </div>
-      </section>
-
-      <section className="grid grid-2" style={{ marginTop: 16 }}>
-        <div className="panel stack panel-accent">
-          <div className="section-title">
-            <Banknote size={18} />
-            <h2>Финансовая сводка</h2>
-          </div>
-          <div className="grid grid-3">
-            <Kpi title="Поступления" value={compactMoney(finance.incomingPayments)} tone="good" />
-            <Kpi title="Платежи" value={compactMoney(finance.outgoingPayments)} />
-            <Kpi title="Потребность" value={compactMoney(finance.financingNeed)} tone={finance.financingNeed ? "bad" : "good"} />
-          </div>
-        </div>
-        <div className="panel stack panel-accent">
-          <div className="section-title">
-            <PackageCheck size={18} />
-            <h2>Снабжение</h2>
-          </div>
-          <div className="grid grid-3">
-            <Kpi title="Дефицитные позиции" value={String(materials.deficitItems.length)} tone="bad" />
-            <Kpi title="Перерасход материалов" value={compactMoney(materials.materialOverrun)} tone={materials.materialOverrun > 0 ? "bad" : "good"} />
-            <Kpi title="Доставлено" value={`${materials.deliveredQty.toLocaleString("ru-RU")} ед.`} />
+          <div className="mini-chart-grid">
+            <MiniBars title="Cash-flow" items={cashFlowSeries} />
+            <MiniBars title="Структура затрат" items={costStructure} />
           </div>
         </div>
       </section>
 
-      <section className="panel stack" style={{ marginTop: 16 }}>
+      <details className="panel compact-details dashboard-secondary-details">
+        <summary>Дополнительные показатели <span>финансы и снабжение</span></summary>
+        <div className="grid grid-3 compact-metric-grid">
+          <Kpi title="Поступления" value={compactMoney(finance.incomingPayments)} tone="good" />
+          <Kpi title="Платежи" value={compactMoney(finance.outgoingPayments)} />
+          <Kpi title="Потребность" value={compactMoney(finance.financingNeed)} tone={finance.financingNeed ? "bad" : "good"} />
+          <Kpi title="Прогнозная прибыль" value={compactMoney(budget.forecastProfit)} tone={budget.forecastProfit > 0 ? "good" : "bad"} />
+          <Kpi title="Дефицит материалов" value={String(materials.deficitItems.length)} tone={materials.deficitItems.length ? "bad" : "good"} />
+          <Kpi title="Доставлено" value={`${materials.deliveredQty.toLocaleString("ru-RU")} ед.`} />
+        </div>
+      </details>
+
+      <section className="panel dashboard-projects" aria-label="Проекты организации">
         <div className="toolbar">
-          <div>
-            <h2>Требует внимания</h2>
-            <p className="muted">Сводка по просрочкам, рискам, заявкам и перерасходу, которые стоит разобрать первыми.</p>
-          </div>
-          <Link className="button secondary" href={primaryProjectRoute}>
-            <Sparkles size={18} />
-            Открыть AI-анализ
-          </Link>
+          <h2>Проекты</h2>
+          <Link className="button secondary" href="/projects">Весь реестр</Link>
         </div>
-        <div className="grid grid-4">
-          <Attention title="Просроченные работы" value={String(delayedWorks.length)} tone={delayedWorks.length ? "bad" : "good"} detail={delayedWorks[0]?.name ?? "Критичных просрочек нет"} />
-          <Attention title="Риски" value={String(activeRisks.length)} tone={activeRisks.length ? "bad" : "good"} detail={activeRisks[0]?.title ?? "Открытых рисков нет"} />
-          <Attention title="Заявки" value={String(activeRequests.length)} tone={activeRequests.length ? "warn" : "good"} detail={activeRequests[0]?.title ?? "Снабжение без срочных заявок"} />
-          <Attention title="Перерасход" value={compactMoney(Math.max(budgetDeviation, materials.materialOverrun, 0))} tone={budgetDeviation > 0 || materials.materialOverrun > 0 ? "bad" : "good"} detail="Бюджет и материалы" />
-        </div>
-      </section>
-
-      <section className="grid grid-3" style={{ marginTop: 16 }}>
-        <SignalCard icon={<TrendingUp size={18} />} title="План / факт" value={percent(works.completionPercent)} detail="Работы в производстве и ближайшие контрольные точки" tone="info" />
-        <SignalCard icon={<FileWarning size={18} />} title="Документы" value="3" detail="КС, ИД и график требуют проверки перед отправкой" tone="warn" />
-        <SignalCard icon={<PackageCheck size={18} />} title="Поставки" value={String(materials.deficitItems.length)} detail="Критичные материалы для ближайших работ" tone={materials.deficitItems.length ? "bad" : "good"} />
-      </section>
-
-      <section className="panel" style={{ marginTop: 16 }}>
-        <div className="toolbar">
-          <div>
-            <h2>Проекты организации</h2>
-            <p className="muted">Все цифры привязаны к проекту, разделу, периоду и источнику данных.</p>
-          </div>
-        </div>
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Проект</th>
-                <th>Заказчик</th>
-                <th>Статус</th>
-                <th className="numeric">Договор</th>
-                <th>Готовность</th>
-                <th>Менеджер</th>
-                <th>Период</th>
-              </tr>
-            </thead>
-            <tbody>
-              {projects.map((project) => (
-                <tr key={project.id}>
-                  <td data-label="Проект">
-                    <Link href={`/projects/${project.id}`}>
-                      <strong>{project.name}</strong>
-                    </Link>
-                  </td>
-                  <td data-label="Заказчик">{project.customer}</td>
-                  <td data-label="Статус">
-                    <span className="badge green">В работе</span>
-                  </td>
-                  <td className="numeric" data-label="Договор">{compactMoney(project.contractAmount)}</td>
-                  <td data-label="Готовность">
-                    <span className="badge blue">{percent(works.completionPercent)}</span>
-                  </td>
-                  <td data-label="Менеджер">{project.manager}</td>
-                  <td data-label="Период">
-                    {project.startsAt} - {project.endsAt}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="dashboard-project-list">
+          {projects.slice(0, 5).map((project) => (
+            <Link href={`/projects/${project.id}`} className="dashboard-project-row" key={project.id}>
+              <span>
+                <strong>{project.name}</strong>
+                <small>{project.customer} · {project.manager}</small>
+              </span>
+              <span className="dashboard-project-values">
+                <strong>{compactMoney(project.contractAmount)}</strong>
+                <small>{percent(works.completionPercent)} готовность</small>
+              </span>
+            </Link>
+          ))}
         </div>
       </section>
     </main>
@@ -241,23 +171,10 @@ function MiniBars({ title, items }: { title: string; items: Array<{ label: strin
         {items.map((item) => (
           <div className="mini-bar" key={item.label} title={`${item.label}: ${compactMoney(item.value)}`}>
             <span className={item.value < 0 ? "negative" : ""} style={{ height: `${Math.max(8, (Math.abs(item.value) / max) * 100)}%` }} />
-            <small>{item.label}</small>
+            <small>{item.label.length > 9 ? `${item.label.slice(0, 8)}...` : item.label}</small>
           </div>
         ))}
       </div>
-    </div>
-  );
-}
-
-function SignalCard({ icon, title, value, detail, tone }: { icon: React.ReactNode; title: string; value: string; detail: string; tone: "good" | "warn" | "bad" | "info" }) {
-  return (
-    <div className={`panel signal-card ${tone}`}>
-      <div className="section-title">
-        {icon}
-        <h3>{title}</h3>
-      </div>
-      <strong>{value}</strong>
-      <p className="muted">{detail}</p>
     </div>
   );
 }
@@ -271,16 +188,6 @@ function Kpi({ title, value, tone, icon, hint }: { title: string; value: string;
       </div>
       <div className={`kpi-value ${tone === "good" ? "delta-good" : tone === "warn" ? "delta-warn" : tone === "bad" ? "delta-bad" : ""}`}>{value}</div>
       {hint && <div className="kpi-hint">{hint}</div>}
-    </div>
-  );
-}
-
-function Attention({ title, value, detail, tone }: { title: string; value: string; detail: string; tone: "good" | "warn" | "bad" }) {
-  return (
-    <div className="kpi">
-      <div className="kpi-label">{title}</div>
-      <div className={`kpi-value ${tone === "good" ? "delta-good" : tone === "warn" ? "delta-warn" : "delta-bad"}`}>{value}</div>
-      <div className="kpi-hint">{detail}</div>
     </div>
   );
 }
