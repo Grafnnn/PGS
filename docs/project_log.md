@@ -1,5 +1,49 @@
 # PGS Project Log
 
+## 2026-07-15 - ERP & Accounting Bridge v1 online/core GO
+
+Status: ERP & Accounting Bridge v1 is shipped on Render after PR #121. Projects now have a guarded exchange workspace for accounting exports, dry-run reconciliation and explicit application of safe matches with persistent history.
+
+- Online URL: https://pgs-frankfurt.onrender.com
+- Online commit: `2aa66c73e58ac609ab46241245ed41a776b339d3`
+- Render deploy: `dep-d9bpb3u7r5hc73el0o30`
+- PR: #121
+- Decision: ONLINE/CORE GO
+- Git SHA source: `RENDER_GIT_COMMIT`
+
+Implemented:
+
+- versioned JSON export for project, contract, procurement commitments, receivables, payables and totals;
+- XLSX, XLS, CSV and JSON reconciliation preview with Russian and English headers, a 5 MB limit and RUB-only validation;
+- deterministic matching by external ID, direction, amount, date, counterparty and purpose;
+- ambiguous, conflicting and unmatched rows remain exceptions and are not silently applied;
+- explicit confirmed apply for safe matches only, with transaction, audit history and repeat-apply protection;
+- persistent sync runs and external links with project cascade cleanup;
+- responsive `ERP / Учёт` workspace and compact Finance entry without render-time mutations or provider calls.
+
+Online verification:
+
+- `/api/health`: HTTP 200 / `ok`; DB: `ok`; migrations: `ok`, count `13`;
+- deployed SHA matched the expected main commit and Render marked deploy `dep-d9bpb3u7r5hc73el0o30` live;
+- migration `20260715173000_erp_accounting_bridge_v1` applied successfully;
+- unauthenticated `/dashboard`, `/projects` and project pages redirect to `/login`;
+- unauthenticated `/api/auth/me`: 401;
+- unauthenticated accounting bridge state, export, preview and apply routes: 403;
+- deployed stylesheet contains the complete accounting bridge workspace, grid, metrics, sections and responsive rules.
+
+Validation and safety:
+
+- GitHub Actions CI #247 passed;
+- Vitest: 376/376 passed; ESLint, TypeScript, Prisma validate/generate, production build and `git diff --check` passed;
+- local desktop 1280px and mobile 390px browser checks passed without horizontal overflow or console errors;
+- no real accounting import, export journal, reconciliation apply, live AI or project/import/delete/upload mutation was run online;
+- no Render env/secrets, auth/session model or provider/deploy configuration changes were made;
+- no secrets were printed.
+
+Remaining controlled follow-up:
+
+- authenticated disposable accounting reconciliation smoke with a synthetic file and explicit cleanup remains optional. It is not claimed by this core gate.
+
 ## 2026-07-15 - Document Transmittals & Approval v1 online/core GO
 
 Status: Document Transmittals & Approval v1 is shipped on Render after PR #117. The Documents workspace now supports formal numbered issue packages with exact file-version snapshots, controlled review decisions and a complete audit trail.
