@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { AlertTriangle, BarChart3, Bot, ClipboardList, FileText, Landmark, LayoutList, ListChecks, MessageSquareText, Package, Pencil, Plus, ReceiptText, Search, Send, Table2, TimerReset, Trash2, Truck, Users } from "lucide-react";
+import { AlertTriangle, BarChart3, Bot, ClipboardList, FileText, HardHat, Landmark, LayoutList, ListChecks, MessageSquareText, Package, Pencil, Plus, ReceiptText, Search, Send, Table2, TimerReset, Trash2, Truck, Users } from "lucide-react";
 import { AcceptanceBillingWorkspace } from "@/components/acceptance-billing-workspace";
 import { CommercialProposalWorkspace } from "@/components/commercial-proposal-workspace";
 import { ChangeOrdersWorkspace } from "@/components/change-orders-workspace";
@@ -9,6 +9,7 @@ import { ClaimsNoticesWorkspace } from "@/components/claims-notices-workspace";
 import { ContractTenderWorkspace } from "@/components/contract-tender-workspace";
 import { CostToCompleteWorkspace } from "@/components/cost-to-complete-workspace";
 import { FieldOperationsWorkspace } from "@/components/field-operations-workspace";
+import { FieldMobileWorkspace } from "@/components/field-mobile-workspace";
 import { HseSafetyPermitWorkspace } from "@/components/hse-safety-permit-workspace";
 import { ProjectCommandCenter } from "@/components/project-command-center";
 import { ProjectActionCenter, type ProjectActionSuggestion } from "@/components/project-action-center";
@@ -78,6 +79,7 @@ const tabs = [
   "КП / Подача",
   "КС",
   "Исполнение",
+  "Площадка",
   "Рапорты",
   "Риски",
   "Документы",
@@ -90,7 +92,7 @@ const tabs = [
   "AI-помощник"
 ];
 
-const primaryTabs = ["Обзор", "Бюджет / ВОР", "График", "Материалы", "Финансы", "Документы", "Риски", "КС", "Действия", "AI-помощник"];
+const primaryTabs = ["Обзор", "Площадка", "Бюджет / ВОР", "График", "Материалы", "Финансы", "Документы", "Риски", "КС", "Действия", "AI-помощник"];
 const secondaryTabs = tabs.filter((tab) => !primaryTabs.includes(tab));
 
 const tabMeta: Record<string, { code: string; icon: React.ReactNode; hint: string }> = {
@@ -104,6 +106,7 @@ const tabMeta: Record<string, { code: string; icon: React.ReactNode; hint: strin
   "КП / Подача": { code: "07", icon: <Send size={16} />, hint: "КП" },
   КС: { code: "08", icon: <ReceiptText size={16} />, hint: "Закрытие" },
   Исполнение: { code: "09", icon: <Users size={16} />, hint: "Подряд" },
+  Площадка: { code: "FS", icon: <HardHat size={16} />, hint: "Offline" },
   Рапорты: { code: "10", icon: <ClipboardList size={16} />, hint: "Площадка" },
   Риски: { code: "11", icon: <AlertTriangle size={16} />, hint: "Контроль" },
   Документы: { code: "12", icon: <FileText size={16} />, hint: "Файлы" },
@@ -336,7 +339,7 @@ export function ProjectWorkspace({ initialBundle, createdFromOnboarding = false 
   }, [initialBundle.project.id]);
 
   useEffect(() => {
-    if (!["Документы", "Договор / Тендер", "КП / Подача", "КС", "Исполнение", "Риски", "Рапорты", "Аналитика"].includes(activeTab)) return;
+    if (!["Документы", "Договор / Тендер", "КП / Подача", "КС", "Исполнение", "Площадка", "Риски", "Рапорты", "Аналитика"].includes(activeTab)) return;
     void loadDocuments();
   }, [activeTab, loadDocuments]);
 
@@ -1360,6 +1363,19 @@ export function ProjectWorkspace({ initialBundle, createdFromOnboarding = false 
             aiInsight={aiResults["executive-report"] ?? null}
             onNavigate={setActiveTab}
             onRunExecutiveAi={() => void runAiCommandScenario("executive-report")}
+          />
+        </Panel>
+      )}
+
+      {activeTab === "Площадка" && (
+        <Panel title="Мобильная работа стройплощадки" icon={<HardHat size={18} />}>
+          <FieldMobileWorkspace
+            currentUser={currentUser}
+            currentUserLoaded={currentUserLoaded}
+            projectId={initialBundle.project.id}
+            projectName={initialBundle.project.name}
+            onReportSynced={(item) => setReports((items) => items.some((current) => current.id === item.id) ? items : [item, ...items])}
+            onDocumentSynced={(item) => setDocuments((items) => items.some((current) => current.id === item.id) ? items : [item, ...items])}
           />
         </Panel>
       )}

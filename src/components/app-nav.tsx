@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { type ReactNode, useCallback, useEffect, useId, useState } from "react";
 import { BrandLogo } from "@/components/brand-logo";
+import { PwaRegister } from "@/components/pwa-register";
 import { readSidebarPreference, type SidebarPreference, writeSidebarPreference } from "@/components/app-nav-state";
 
 type NavItem = {
@@ -174,6 +175,7 @@ export function AppNav({ children }: { children: ReactNode }) {
 
   return (
     <div className="app-shell" data-sidebar={shellState}>
+      <PwaRegister />
       <aside
         className={`sidebar app-sidebar ${isCollapsed ? "is-collapsed" : "is-expanded"} ${sidebarExpandedForInteraction ? "is-peek-open" : ""}`}
         id={sidebarId}
