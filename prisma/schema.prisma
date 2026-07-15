@@ -158,6 +158,8 @@ model Project {
   submittals      ProjectSubmittal[]
   documentTransmittals ProjectDocumentTransmittal[]
   fieldSyncReceipts FieldSyncReceipt[]
+  accountingSyncRuns AccountingSyncRun[]
+  accountingExternalLinks AccountingExternalLink[]
 
   @@map("projects")
 }
@@ -624,6 +626,54 @@ model FieldSyncReceipt {
   @@unique([projectId, clientMutationId])
   @@index([projectId, createdAt])
   @@map("field_sync_receipts")
+}
+
+model AccountingSyncRun {
+  id              String   @id @default(cuid())
+  organizationId  String   @map("organization_id")
+  projectId       String   @map("project_id")
+  sourceSystem    String   @map("source_system")
+  direction       String
+  fileName        String?  @map("file_name")
+  checksum        String?
+  status          String
+  rowCount        Int      @default(0) @map("row_count")
+  matchedCount    Int      @default(0) @map("matched_count")
+  unresolvedCount Int      @default(0) @map("unresolved_count")
+  summary         Json
+  payload         Json?
+  createdBy       String?  @map("created_by")
+  appliedAt       DateTime? @map("applied_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  project         Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  externalLinks   AccountingExternalLink[]
+
+  @@index([projectId, createdAt])
+  @@index([projectId, status])
+  @@map("accounting_sync_runs")
+}
+
+model AccountingExternalLink {
+  id              String   @id @default(cuid())
+  organizationId  String   @map("organization_id")
+  projectId       String   @map("project_id")
+  syncRunId       String?  @map("sync_run_id")
+  entityType      String   @map("entity_type")
+  entityId        String   @map("entity_id")
+  externalSystem  String   @map("external_system")
+  externalId      String   @map("external_id")
+  metadata        Json?
+  lastSeenAt      DateTime @default(now()) @map("last_seen_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  project         Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  syncRun         AccountingSyncRun? @relation(fields: [syncRunId], references: [id], onDelete: SetNull)
+
+  @@unique([projectId, externalSystem, entityType, externalId], map: "accounting_external_links_external_id_key")
+  @@unique([projectId, externalSystem, entityType, entityId], map: "accounting_external_links_entity_id_key")
+  @@index([projectId, entityType, entityId])
+  @@map("accounting_external_links")
 }
 
 model ExecutiveReport {

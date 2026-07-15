@@ -53,7 +53,9 @@ function projectDeleteClient(project: { id: string; organizationId: string; name
     risk: countDelegate(17),
     aiMessage: countDelegate(18),
     importBatch: countDelegate(19),
-    auditLog: countDelegate(20)
+    accountingSyncRun: countDelegate(20),
+    accountingExternalLink: countDelegate(21),
+    auditLog: countDelegate(22)
   };
   const client = {
     $transaction: vi.fn(async (callback: (transaction: typeof tx) => Promise<unknown>) => callback(tx))
@@ -129,7 +131,9 @@ describe("deleteProjectWithConfirmation", () => {
         budgetItems: 4,
         procurementRequestItems: 10,
         documentVersions: 15,
-        auditLogs: 20
+        accountingSyncRuns: 20,
+        accountingExternalLinks: 21,
+        auditLogs: 22
       }
     });
     expect(tx.procurementRequestItem.count).toHaveBeenCalledWith({ where: { request: { projectId: "project-demo" } } });

@@ -47,6 +47,8 @@ export type ProjectDeleteCounts = {
   risks: number;
   aiMessages: number;
   importBatches: number;
+  accountingSyncRuns: number;
+  accountingExternalLinks: number;
   auditLogs: number;
 };
 
@@ -86,6 +88,8 @@ async function countProjectOwnedData(client: TxClient, projectId: string): Promi
     risks,
     aiMessages,
     importBatches,
+    accountingSyncRuns,
+    accountingExternalLinks,
     auditLogs
   ] = await Promise.all([
     client.projectMember.count({ where: { projectId } }),
@@ -107,6 +111,8 @@ async function countProjectOwnedData(client: TxClient, projectId: string): Promi
     client.risk.count({ where: { projectId } }),
     client.aiMessage.count({ where: { projectId } }),
     client.importBatch.count({ where: { projectId } }),
+    client.accountingSyncRun.count({ where: { projectId } }),
+    client.accountingExternalLink.count({ where: { projectId } }),
     client.auditLog.count({ where: { projectId } })
   ]);
 
@@ -130,6 +136,8 @@ async function countProjectOwnedData(client: TxClient, projectId: string): Promi
     risks,
     aiMessages,
     importBatches,
+    accountingSyncRuns,
+    accountingExternalLinks,
     auditLogs
   };
 }
