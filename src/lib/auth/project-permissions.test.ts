@@ -13,6 +13,8 @@ describe("project-level permissions", () => {
     expect(roleAllowsProjectAction("VIEWER", "view")).toBe(true);
     expect(roleAllowsProjectAction("VIEWER", "export_project")).toBe(false);
     expect(roleAllowsProjectAction("MANAGER", "import")).toBe(true);
+    expect(roleAllowsProjectAction("MANAGER", "sync_accounting")).toBe(true);
+    expect(roleAllowsProjectAction("VIEWER", "sync_accounting")).toBe(false);
     expect(roleAllowsProjectAction("MANAGER", "delete_document")).toBe(false);
     expect(roleAllowsProjectAction("ADMIN", "manage_members")).toBe(true);
   });

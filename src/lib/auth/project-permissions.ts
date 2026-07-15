@@ -13,6 +13,7 @@ export type ProjectAction =
   | "view_audit"
   | "export_project"
   | "export_audit"
+  | "sync_accounting"
   | "manage_members";
 
 const actionRoles: Record<ProjectAction, AppRole[]> = {
@@ -25,6 +26,7 @@ const actionRoles: Record<ProjectAction, AppRole[]> = {
   view_audit: ["OWNER", "ADMIN", "MANAGER", "VIEWER"],
   export_project: ["OWNER", "ADMIN", "MANAGER"],
   export_audit: ["OWNER", "ADMIN", "MANAGER"],
+  sync_accounting: ["OWNER", "ADMIN", "MANAGER"],
   manage_members: ["OWNER", "ADMIN"]
 };
 

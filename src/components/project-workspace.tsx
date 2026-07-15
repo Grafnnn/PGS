@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { AlertTriangle, BarChart3, Bot, ClipboardList, FileText, HardHat, Landmark, LayoutList, ListChecks, MessageSquareText, Package, Pencil, Plus, ReceiptText, Search, Send, Table2, TimerReset, Trash2, Truck, Users } from "lucide-react";
+import { AlertTriangle, BarChart3, Bot, ClipboardList, DatabaseZap, FileText, HardHat, Landmark, LayoutList, ListChecks, MessageSquareText, Package, Pencil, Plus, ReceiptText, Search, Send, Table2, TimerReset, Trash2, Truck, Users } from "lucide-react";
 import { AcceptanceBillingWorkspace } from "@/components/acceptance-billing-workspace";
+import { AccountingBridgeWorkspace } from "@/components/accounting-bridge-workspace";
 import { CommercialProposalWorkspace } from "@/components/commercial-proposal-workspace";
 import { ChangeOrdersWorkspace } from "@/components/change-orders-workspace";
 import { ClaimsNoticesWorkspace } from "@/components/claims-notices-workspace";
@@ -75,6 +76,7 @@ const tabs = [
   "Материалы",
   "Заявки",
   "Финансы",
+  "ERP / Учёт",
   "Договор / Тендер",
   "КП / Подача",
   "КС",
@@ -102,6 +104,7 @@ const tabMeta: Record<string, { code: string; icon: React.ReactNode; hint: strin
   Материалы: { code: "03", icon: <Package size={16} />, hint: "Снабжение" },
   Заявки: { code: "04", icon: <Truck size={16} />, hint: "Закупки" },
   Финансы: { code: "05", icon: <Landmark size={16} />, hint: "Платежи" },
+  "ERP / Учёт": { code: "ERP", icon: <DatabaseZap size={16} />, hint: "Обмен" },
   "Договор / Тендер": { code: "06", icon: <Search size={16} />, hint: "Контракт" },
   "КП / Подача": { code: "07", icon: <Send size={16} />, hint: "КП" },
   КС: { code: "08", icon: <ReceiptText size={16} />, hint: "Закрытие" },
@@ -1125,6 +1128,10 @@ export function ProjectWorkspace({ initialBundle, createdFromOnboarding = false 
 
       {activeTab === "Финансы" && (
         <Panel title="Платежи и кассовый план" icon={<Landmark size={18} />}>
+          <div className="accounting-bridge-entry">
+            <div><DatabaseZap size={18} /><span><strong>ERP / Бухгалтерия</strong><small>Экспорт, dry-run импорт и сверка платежей</small></span></div>
+            <button className="button secondary compact-button" onClick={() => setActiveTab("ERP / Учёт")} type="button">Открыть учёт</button>
+          </div>
           <CostToCompleteWorkspace
             project={initialBundle.project}
             budgetItems={budgetItems}
@@ -1169,6 +1176,20 @@ export function ProjectWorkspace({ initialBundle, createdFromOnboarding = false 
             }}
           />
           <PaymentTable items={payments} />
+        </Panel>
+      )}
+
+      {activeTab === "ERP / Учёт" && (
+        <Panel title="ERP, бухгалтерия и сверка платежей" icon={<DatabaseZap size={18} />}>
+          <AccountingBridgeWorkspace
+            projectId={initialBundle.project.id}
+            onPaymentsChanged={async () => {
+              const response = await fetch(`/api/projects/${initialBundle.project.id}/finance`, { cache: "no-store" });
+              if (!response.ok) throw new Error("Не удалось обновить платежи после сверки.");
+              const body = await response.json() as { payments: Payment[] };
+              setPayments(body.payments);
+            }}
+          />
         </Panel>
       )}
 
