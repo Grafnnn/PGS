@@ -157,6 +157,7 @@ model Project {
   rfis            ProjectRfi[]
   submittals      ProjectSubmittal[]
   documentTransmittals ProjectDocumentTransmittal[]
+  fieldSyncReceipts FieldSyncReceipt[]
 
   @@map("projects")
 }
@@ -607,6 +608,22 @@ model ProjectActionItem {
   @@index([projectId, status, dueAt])
   @@index([projectId, assignee])
   @@map("project_action_items")
+}
+
+model FieldSyncReceipt {
+  id               String   @id @default(cuid())
+  organizationId   String   @map("organization_id")
+  projectId        String   @map("project_id")
+  clientMutationId String   @map("client_mutation_id")
+  kind             String
+  entityId         String   @map("entity_id")
+  createdBy        String?  @map("created_by")
+  createdAt        DateTime @default(now()) @map("created_at")
+  project          Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, clientMutationId])
+  @@index([projectId, createdAt])
+  @@map("field_sync_receipts")
 }
 
 model ExecutiveReport {
