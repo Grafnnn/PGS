@@ -13,6 +13,7 @@ import { HseSafetyPermitWorkspace } from "@/components/hse-safety-permit-workspa
 import { ProjectCommandCenter } from "@/components/project-command-center";
 import { ProjectActionCenter, type ProjectActionSuggestion } from "@/components/project-action-center";
 import { DocumentComplianceWorkspace } from "@/components/document-compliance-workspace";
+import { DocumentTransmittalsWorkspace } from "@/components/document-transmittals-workspace";
 import { PhotoEvidenceWorkspace } from "@/components/photo-evidence-workspace";
 import { ProjectIntelligenceDrilldown } from "@/components/project-intelligence-drilldown";
 import { ProcurementIntelligenceWorkspace } from "@/components/procurement-intelligence-workspace";
@@ -1421,6 +1422,12 @@ export function ProjectWorkspace({ initialBundle, createdFromOnboarding = false 
 
       {activeTab === "Документы" && (
         <Panel title="Документы проекта" icon={<FileText size={18} />}>
+          <DocumentTransmittalsWorkspace
+            projectId={initialBundle.project.id}
+            documents={documents}
+            canEdit={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN" || currentUser?.role === "MANAGER"}
+            canDelete={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN"}
+          />
           <DocumentComplianceWorkspace
             project={initialBundle.project}
             budgetItems={budgetItems}
