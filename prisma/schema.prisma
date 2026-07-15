@@ -156,6 +156,7 @@ model Project {
   executiveReports ExecutiveReport[]
   rfis            ProjectRfi[]
   submittals      ProjectSubmittal[]
+  documentTransmittals ProjectDocumentTransmittal[]
 
   @@map("projects")
 }
@@ -452,6 +453,7 @@ model Document {
   versions    DocumentVersion[]
   rfiLinks    ProjectRfi[]
   submittalLinks ProjectSubmittal[]
+  transmittalItems DocumentTransmittalItem[]
 
   @@map("documents")
 }
@@ -472,6 +474,7 @@ model DocumentVersion {
   uploadedBy     User?    @relation(fields: [uploadedById], references: [id])
   rfiLinks       ProjectRfi[]
   submittalLinks ProjectSubmittal[]
+  transmittalItems DocumentTransmittalItem[]
 
   @@unique([documentId, versionNumber])
   @@map("document_versions")
@@ -717,4 +720,68 @@ model SubmittalReview {
 
   @@index([submittalId, createdAt])
   @@map("submittal_reviews")
+}
+
+model ProjectDocumentTransmittal {
+  id             String   @id @default(cuid())
+  organizationId String   @map("organization_id")
+  projectId      String   @map("project_id")
+  sequence       Int
+  subject        String
+  purpose        String?
+  recipient      String?
+  ccRecipients   String?  @map("cc_recipients")
+  reviewer       String?
+  dueAt          DateTime? @map("due_at")
+  status         String   @default("draft")
+  revision       Int      @default(0)
+  issuedAt       DateTime? @map("issued_at")
+  acknowledgedAt DateTime? @map("acknowledged_at")
+  reviewedAt     DateTime? @map("reviewed_at")
+  closedAt       DateTime? @map("closed_at")
+  createdBy      String?  @map("created_by")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  project        Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  items          DocumentTransmittalItem[]
+  events         DocumentTransmittalEvent[]
+
+  @@unique([projectId, sequence])
+  @@index([projectId, status, dueAt])
+  @@map("project_document_transmittals")
+}
+
+model DocumentTransmittalItem {
+  id                 String   @id @default(cuid())
+  transmittalId      String   @map("transmittal_id")
+  documentId         String?  @map("document_id")
+  documentVersionId  String?  @map("document_version_id")
+  documentVersion    Int?     @map("document_version")
+  titleSnapshot      String   @map("title_snapshot")
+  fileNameSnapshot   String?  @map("file_name_snapshot")
+  categorySnapshot   String?  @map("category_snapshot")
+  createdAt          DateTime @default(now()) @map("created_at")
+  transmittal        ProjectDocumentTransmittal @relation(fields: [transmittalId], references: [id], onDelete: Cascade)
+  document           Document? @relation(fields: [documentId], references: [id], onDelete: SetNull)
+  documentVersionRef DocumentVersion? @relation(fields: [documentVersionId], references: [id], onDelete: SetNull)
+
+  @@index([transmittalId])
+  @@index([documentId])
+  @@map("document_transmittal_items")
+}
+
+model DocumentTransmittalEvent {
+  id            String   @id @default(cuid())
+  transmittalId String   @map("transmittal_id")
+  revision      Int
+  eventType     String   @map("event_type")
+  decision      String?
+  comment       String?
+  createdBy     String?  @map("created_by")
+  createdByName String?  @map("created_by_name")
+  createdAt     DateTime @default(now()) @map("created_at")
+  transmittal   ProjectDocumentTransmittal @relation(fields: [transmittalId], references: [id], onDelete: Cascade)
+
+  @@index([transmittalId, createdAt])
+  @@map("document_transmittal_events")
 }

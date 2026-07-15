@@ -270,6 +270,47 @@ export interface ProjectSubmittal {
   updatedAt: string;
 }
 
+export type DocumentTransmittalStatus = "draft" | "issued" | "acknowledged" | "approved" | "revise_required" | "closed";
+
+export interface ProjectDocumentTransmittal {
+  id: string;
+  projectId: string;
+  number: string;
+  sequence: number;
+  subject: string;
+  purpose?: string | null;
+  recipient?: string | null;
+  ccRecipients?: string | null;
+  reviewer?: string | null;
+  dueAt?: string | null;
+  status: DocumentTransmittalStatus;
+  revision: number;
+  issuedAt?: string | null;
+  acknowledgedAt?: string | null;
+  reviewedAt?: string | null;
+  closedAt?: string | null;
+  items: Array<{
+    id: string;
+    documentId?: string | null;
+    documentVersionId?: string | null;
+    documentVersion?: number | null;
+    titleSnapshot: string;
+    fileNameSnapshot?: string | null;
+    categorySnapshot?: string | null;
+  }>;
+  events: Array<{
+    id: string;
+    revision: number;
+    eventType: string;
+    decision?: string | null;
+    comment?: string | null;
+    createdByName?: string | null;
+    createdAt: string;
+  }>;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface ProjectMember {
   id: string;
   role: "OWNER" | "ADMIN" | "MANAGER" | "VIEWER";
