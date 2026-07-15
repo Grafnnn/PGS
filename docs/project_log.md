@@ -1,5 +1,46 @@
 # PGS Project Log
 
+## 2026-07-15 - Workflow Designer & Approval Matrix v1 online/core GO
+
+Status: Workflow Designer & Approval Matrix v1 is shipped on Render after PR #125. Projects now have configurable serial approval processes with role-aware decisions, deadlines, revisions, rejection, cancellation and a durable audit trail.
+
+- Online URL: https://pgs-frankfurt.onrender.com
+- Online commit: `e8f500b7481df461d7ac86a3f0554833d4ae5fd0`
+- Render deploy: `dep-d9br24urnols73cd0bdg`
+- PR: #125
+- Decision: ONLINE/CORE GO
+- Git SHA source: `RENDER_GIT_COMMIT`
+
+Implemented:
+
+- project-scoped workflow templates with ordered work, review and approval steps, assignee roles and due-day rules;
+- explicit workflow launch with immutable step snapshots, source-module references and target-workspace navigation;
+- ball-in-court routing for MANAGER, ADMIN and OWNER, with controlled approve, revision, reject and cancel transitions;
+- transactional audit records, history-safe template deactivation and protection against duplicate concurrent decisions;
+- responsive `Процессы` workspace with contract, КС billing and major-procurement presets;
+- project cascade cleanup and referential integrity across four new workflow tables.
+
+Online verification:
+
+- `/api/health`: HTTP 200 / `ok`; DB: `ok`; migrations: `ok`, count `14`;
+- deployed SHA matched the expected main commit and Render marked deploy `dep-d9br24urnols73cd0bdg` live;
+- migration `20260715190000_workflow_designer_approval_matrix_v1` applied successfully;
+- unauthenticated protected pages redirect to `/login`;
+- unauthenticated workflow template list/create, workflow run list/create and workflow action routes return 403.
+
+Validation and safety:
+
+- GitHub Actions CI #255 passed;
+- Vitest: 397/397 passed; ESLint, TypeScript, Prisma validate/generate, production build and `git diff --check` passed;
+- local desktop and 390 px mobile browser checks passed with zero horizontal overflow, one mobile navigation drawer and no client errors;
+- no authenticated online workflow mutation, live AI, project/import/delete/upload mutation or external connector call was run;
+- no Render env/secrets, auth/session model, health/provider or deploy configuration changes were made;
+- no secrets were printed.
+
+Remaining controlled follow-up:
+
+- authenticated disposable workflow smoke covering template create, launch, approve, revision, reject/cancel and cleanup remains optional. It is not required for this core gate.
+
 ## 2026-07-15 - Portfolio Control Center v1 online/core GO
 
 Status: Portfolio Control Center v1 is shipped on Render after PR #123. Authorized users now have one read-only management view across their available projects with comparable financial, schedule, procurement, risk and workload signals.
