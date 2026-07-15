@@ -1,5 +1,46 @@
 # PGS Project Log
 
+## 2026-07-15 - Portfolio Control Center v1 online/core GO
+
+Status: Portfolio Control Center v1 is shipped on Render after PR #123. Authorized users now have one read-only management view across their available projects with comparable financial, schedule, procurement, risk and workload signals.
+
+- Online URL: https://pgs-frankfurt.onrender.com
+- Online commit: `873f2dd412728f7e3eabee42bd276f60cc82d4a3`
+- Render deploy: `dep-d9bqa9ernols73cc60r0`
+- PR: #123
+- Decision: ONLINE/CORE GO
+- Git SHA source: `RENDER_GIT_COMMIT`
+
+Implemented:
+
+- portfolio KPIs for contract value, forecast cost and profit, margin, progress, cash exposure, risks, overdue actions, delayed works and material deficits;
+- deterministic project health, attention queue, 12-month cashflow horizon and manager workload without AI or render-time mutations;
+- project filtering and sorting with direct drill-down to existing workspaces;
+- honest `no_data` state when evidence is incomplete instead of a false green status;
+- organization-membership scope for OWNER/ADMIN and explicit project-membership scope for MANAGER/VIEWER;
+- responsive Portfolio navigation and dashboard entry points using the existing PGS Studio design system.
+
+Online verification:
+
+- `/api/health`: HTTP 200 / `ok`; DB: `ok`; migrations: `ok`, count `13`;
+- deployed SHA matched the expected main commit through `RENDER_GIT_COMMIT`;
+- unauthenticated `/portfolio`, `/dashboard` and `/projects` redirect to `/login`;
+- unauthenticated `/api/auth/me`: 401;
+- `/login`: HTTP 200.
+
+Validation and safety:
+
+- GitHub Actions CI #251 passed;
+- Vitest: 384/384 passed; ESLint, TypeScript, Prisma validate/generate, production build and `git diff --check` passed;
+- local desktop and 390 px mobile browser checks passed, including the navigation drawer, filter interaction and zero horizontal overflow;
+- no schema/migration, env/secret, auth/session, health/provider or deploy configuration changes were made;
+- no live AI, online mutation, upload, project creation/deletion or external connector call was run;
+- no secrets were printed.
+
+Remaining controlled follow-up:
+
+- authenticated portfolio smoke with multiple real staging project memberships remains optional. It is not required for this read-only core gate.
+
 ## 2026-07-15 - ERP & Accounting Bridge v1 online/core GO
 
 Status: ERP & Accounting Bridge v1 is shipped on Render after PR #121. Projects now have a guarded exchange workspace for accounting exports, dry-run reconciliation and explicit application of safe matches with persistent history.
