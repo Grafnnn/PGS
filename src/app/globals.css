@@ -1060,6 +1060,18 @@ textarea {
   margin: 14px;
 }
 
+.inline-details {
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  margin-top: 14px;
+}
+
+.inline-details > summary {
+  min-height: 40px;
+  padding: 9px 11px;
+}
+
 .compact-metric-grid .kpi {
   background: var(--panel-muted);
   border: 1px solid var(--line);
@@ -1600,6 +1612,10 @@ textarea {
 
 .workspace-layout > * {
   min-width: 0;
+}
+
+.workspace-layout-full {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .context-panel {
