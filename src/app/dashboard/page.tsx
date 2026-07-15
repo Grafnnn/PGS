@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { Route } from "next";
 import { redirect } from "next/navigation";
-import { AlertTriangle, Banknote, BarChart3, CalendarClock, FolderKanban, PackageCheck, Sparkles } from "lucide-react";
+import { AlertTriangle, Banknote, BarChart3, CalendarClock, FolderKanban, Layers3, PackageCheck, Sparkles } from "lucide-react";
 import { budgetTotals, deriveAutoRisks, financeTotals, materialTotals, money, percent, workTotals } from "@/lib/calculations";
 import { loadDashboardData } from "@/lib/project-page-data";
 import { getCurrentUser } from "@/lib/auth/session";
@@ -75,6 +75,10 @@ export default async function DashboardPage() {
           </div>
         </div>
         <div className="page-header-actions">
+          <Link className="button secondary" href={"/portfolio" as Route}>
+            <Layers3 size={18} />
+            Весь портфель
+          </Link>
           <Link className="button secondary" href={primaryProjectRoute}>
             <PackageCheck size={18} />
             Импорт ВОР
@@ -141,7 +145,7 @@ export default async function DashboardPage() {
       <section className="panel dashboard-projects" aria-label="Проекты организации">
         <div className="toolbar">
           <h2>Проекты</h2>
-          <Link className="button secondary" href="/projects">Весь реестр</Link>
+          <div className="toolbar-actions"><Link className="button secondary" href={"/portfolio" as Route}>Сравнить портфель</Link><Link className="button secondary" href="/projects">Весь реестр</Link></div>
         </div>
         <div className="dashboard-project-list">
           {projects.slice(0, 5).map((project) => (

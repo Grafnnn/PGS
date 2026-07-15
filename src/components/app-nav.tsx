@@ -10,6 +10,7 @@ import {
   FileText,
   Gauge,
   Landmark,
+  Layers3,
   Menu,
   PackageCheck,
   PanelLeftClose,
@@ -37,6 +38,7 @@ type NavItem = {
 
 const navItems: NavItem[] = [
   { code: "00", href: "/dashboard", icon: <Gauge size={17} />, label: "Dashboard", section: "Портфель", match: ["/dashboard"] },
+  { code: "P1", href: "/portfolio", icon: <Layers3 size={17} />, label: "Portfolio", section: "Все объекты", match: ["/portfolio"] },
   { code: "01", href: "/projects", icon: <BriefcaseBusiness size={17} />, label: "Projects", section: "Объекты", match: ["/projects"] },
   { code: "02", href: "/projects", icon: <PackageCheck size={17} />, label: "Procurement", section: "Снабжение" },
   { code: "03", href: "/projects", icon: <Landmark size={17} />, label: "Finance", section: "Деньги" },

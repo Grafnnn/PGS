@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { canProject } from "@/lib/auth/project-permissions";
 import { getCurrentUser } from "@/lib/auth/session";
 import { loadDashboardData, loadProjectBundleForPage, loadProjectsForPage } from "@/lib/project-page-data";
+import { loadPortfolioProjectsForPage } from "@/lib/portfolio-data";
 
 const navigation = vi.hoisted(() => ({
   redirect: vi.fn((path: string) => {
@@ -23,6 +24,9 @@ vi.mock("@/lib/project-page-data", () => ({
 vi.mock("@/lib/project-data", () => ({
   listProjectsFromDb: vi.fn()
 }));
+vi.mock("@/lib/portfolio-data", () => ({
+  loadPortfolioProjectsForPage: vi.fn()
+}));
 
 describe("server-rendered page access", () => {
   beforeEach(() => {
@@ -40,6 +44,12 @@ describe("server-rendered page access", () => {
     const { default: ProjectsPage } = await import("./projects/page");
     await expect(ProjectsPage()).rejects.toThrow("REDIRECT:/login");
     expect(loadProjectsForPage).not.toHaveBeenCalled();
+  });
+
+  it("redirects an anonymous portfolio request before loading cross-project data", async () => {
+    const { default: PortfolioPage } = await import("./portfolio/page");
+    await expect(PortfolioPage()).rejects.toThrow("REDIRECT:/login");
+    expect(loadPortfolioProjectsForPage).not.toHaveBeenCalled();
   });
 
   it("hides a project page when the signed-in user has no project access", async () => {
