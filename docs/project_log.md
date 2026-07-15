@@ -1,5 +1,47 @@
 # PGS Project Log
 
+## 2026-07-15 - Document Transmittals & Approval v1 online/core GO
+
+Status: Document Transmittals & Approval v1 is shipped on Render after PR #117. The Documents workspace now supports formal numbered issue packages with exact file-version snapshots, controlled review decisions and a complete audit trail.
+
+- Online URL: https://pgs-frankfurt.onrender.com
+- Online commit: `1de177528e1278bcb2cde0fe57642fb06ba86853`
+- Render deploy: `dep-d9bmpifaqgkc73fh1bn0`
+- PR: #117
+- Decision: ONLINE/CORE GO
+- Git SHA source: `RENDER_GIT_COMMIT`
+
+Implemented:
+
+- sequential `TR-###` document packages with draft, issue, acknowledgement, approval/revision, reissue and close states;
+- exact current document-version snapshots on issue and reissue, with version downloads and a TXT issue manifest;
+- recipient, copy list, reviewer, decision due date, package purpose and formal decision comments;
+- immutable workflow events and transactional project audit records for create, update, transitions and draft deletion;
+- draft/revision-only editing, draft-only deletion and complete-package validation before issue;
+- overdue indicators, filters and explicit escalation to the existing Action Center;
+- compact responsive workspace in the project Documents tab with no render-time mutations or AI/provider calls.
+
+Online verification:
+
+- `/api/health`: HTTP 200 / `ok`; DB: `ok`; migrations: `ok`, count `11`;
+- deployed SHA matched the expected main commit and Render marked the deploy `live`;
+- unauthenticated `/dashboard` and `/projects` redirect to login;
+- unauthenticated `/api/auth/me`: 401;
+- unauthenticated transmittal collection and manifest routes: 403.
+
+Validation and safety:
+
+- GitHub Actions CI #239 passed;
+- Vitest: 350/350 passed; ESLint, TypeScript, Prisma validate/generate, production build and `git diff --check` passed;
+- local desktop DOM smoke confirmed the form opens and the page has no horizontal overflow;
+- no authenticated online transmittal mutation, live AI, project/import/delete/upload mutation or real client file was used;
+- no Render env/secrets, auth/session model or provider/deploy configuration changes were made;
+- the additive database migration was applied successfully; no secrets were printed.
+
+Remaining controlled follow-up:
+
+- authenticated disposable workflow smoke for draft creation, issue, acknowledgement, approve/revise, reissue, manifest and close remains optional. It is not claimed by this core gate.
+
 ## 2026-07-14 - RFI & Submittals v1 online/core GO
 
 Status: RFI & Submittals v1 is shipped on Render after PR #112. Projects now have formal, numbered registers for information requests and document/material submissions with controlled decisions and complete audit history.
