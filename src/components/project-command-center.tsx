@@ -55,6 +55,7 @@ const icons = {
 };
 
 const featuredKpiKeys = new Set(["baseline", "budget", "costToComplete", "schedule", "risks", "cash"]);
+const featuredProgressKeys = new Set(["baseline", "acceptance", "schedule", "materials", "finance"]);
 
 function toneLabel(tone: CommandTone) {
   if (tone === "good") return "Норма";
@@ -143,6 +144,8 @@ export function ProjectCommandCenter({
   });
   const featuredKpis = model.kpis.filter((kpi) => featuredKpiKeys.has(kpi.key));
   const secondaryKpis = model.kpis.filter((kpi) => !featuredKpiKeys.has(kpi.key));
+  const featuredProgress = model.progress.filter((item) => featuredProgressKeys.has(item.key));
+  const secondaryProgress = model.progress.filter((item) => !featuredProgressKeys.has(item.key));
   const openTabOrDrilldown = (tab: string) => {
     const section = drilldownForTab(tab);
     if (section && onDrilldown) onDrilldown(section);
@@ -250,7 +253,7 @@ export function ProjectCommandCenter({
             <h3>Операционный прогресс</h3>
           </div>
           <div className="progress-stack">
-            {model.progress.map((item) => (
+            {featuredProgress.map((item) => (
               <div className="progress-row" key={item.key}>
                 <div>
                   <strong>{item.label}</strong>
@@ -263,6 +266,25 @@ export function ProjectCommandCenter({
               </div>
             ))}
           </div>
+          {secondaryProgress.length > 0 && (
+            <details className="compact-details inline-details command-secondary-progress">
+              <summary>Готовность данных <span>{secondaryProgress.length}</span></summary>
+              <div className="progress-stack">
+                {secondaryProgress.map((item) => (
+                  <div className="progress-row" key={item.key}>
+                    <div>
+                      <strong>{item.label}</strong>
+                      <span>{item.detail}</span>
+                    </div>
+                    <div className="progress-meter" aria-label={`${item.label}: ${item.value}%`}>
+                      <span className={`tone-${item.tone}`} style={{ width: `${item.value}%` }} />
+                    </div>
+                    <b>{item.value}%</b>
+                  </div>
+                ))}
+              </div>
+            </details>
+          )}
         </article>
       </div>
 

@@ -836,7 +836,7 @@ export function ProjectWorkspace({ initialBundle, createdFromOnboarding = false 
         <Kpi title="Кассовый разрыв" value={compactMoney(finance.cashGap)} tone={finance.cashGap < 0 ? "bad" : "good"} />
       </section>
 
-      <div className="workspace-layout" style={{ marginTop: 18 }}>
+      <div className={`workspace-layout ${activeTab === "Обзор" ? "workspace-layout-full" : ""}`} style={{ marginTop: 18 }}>
         <div>
           <div className="tabs project-tabs" aria-label="Разделы проекта">
             {primaryTabs.map((tab) => (
@@ -1623,7 +1623,7 @@ export function ProjectWorkspace({ initialBundle, createdFromOnboarding = false 
       )}
         </div>
 
-        <aside className="panel stack context-panel">
+        {activeTab !== "Обзор" && <aside className="panel stack context-panel">
           <div>
             <div className="eyebrow">Контекст проекта</div>
             <h2>Что проверить</h2>
@@ -1679,7 +1679,7 @@ export function ProjectWorkspace({ initialBundle, createdFromOnboarding = false 
               Подготовить записку
             </button>
           </div>
-        </aside>
+        </aside>}
       </div>
     </main>
   );

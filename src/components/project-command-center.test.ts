@@ -30,6 +30,7 @@ describe("ProjectCommandCenter", () => {
     expect(html).toContain("Project command center");
     expect(html).toContain("Что требует внимания по объекту");
     expect(html).toContain("Остальные показатели");
+    expect(html).toContain("Готовность данных");
     expect(html).toContain("Статус по модулям");
     expect(html).toContain("Action center");
     expect((html.match(/class="command-ai-bullet"/g) ?? [])).toHaveLength(4);
