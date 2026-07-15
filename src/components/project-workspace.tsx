@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { AlertTriangle, BarChart3, Bot, ClipboardList, DatabaseZap, FileText, HardHat, Landmark, LayoutList, ListChecks, MessageSquareText, Package, Pencil, Plus, ReceiptText, Search, Send, Table2, TimerReset, Trash2, Truck, Users } from "lucide-react";
+import { AlertTriangle, BarChart3, Bot, ClipboardList, DatabaseZap, FileText, HardHat, Landmark, LayoutList, ListChecks, MessageSquareText, Package, Pencil, Plus, ReceiptText, Search, Send, Table2, TimerReset, Trash2, Truck, Users, Workflow } from "lucide-react";
 import { AcceptanceBillingWorkspace } from "@/components/acceptance-billing-workspace";
 import { AccountingBridgeWorkspace } from "@/components/accounting-bridge-workspace";
 import { CommercialProposalWorkspace } from "@/components/commercial-proposal-workspace";
@@ -26,6 +26,7 @@ import { RfiSubmittalsWorkspace } from "@/components/rfi-submittals-workspace";
 import { RiskExecutiveWorkspace } from "@/components/risk-executive-workspace";
 import { ScheduleCashflowWorkspace } from "@/components/schedule-cashflow-workspace";
 import { SubcontractorExecutionWorkspace } from "@/components/subcontractor-execution-workspace";
+import { WorkflowDesignerWorkspace } from "@/components/workflow-designer-workspace";
 import { budgetTotals, deriveAutoRisks, financeTotals, materialTotals, money, percent, workTotals } from "@/lib/calculations";
 import type { ImportExplanation, ImportMode, ImportPreview, ImportSheetMapping } from "@/lib/excel/import-types";
 import { drilldownAiScenarios, type AiInsightResponse, type AiScenario } from "@/lib/project-intelligence-drilldown";
@@ -87,6 +88,7 @@ const tabs = [
   "Документы",
   "RFI / Согласования",
   "Действия",
+  "Процессы",
   "Аналитика",
   "Участники",
   "История",
@@ -94,7 +96,7 @@ const tabs = [
   "AI-помощник"
 ];
 
-const primaryTabs = ["Обзор", "Площадка", "Бюджет / ВОР", "График", "Материалы", "Финансы", "Документы", "Риски", "КС", "Действия", "AI-помощник"];
+const primaryTabs = ["Обзор", "Площадка", "Бюджет / ВОР", "График", "Материалы", "Финансы", "Документы", "Риски", "КС", "Действия", "Процессы", "AI-помощник"];
 const secondaryTabs = tabs.filter((tab) => !primaryTabs.includes(tab));
 
 const tabMeta: Record<string, { code: string; icon: React.ReactNode; hint: string }> = {
@@ -115,6 +117,7 @@ const tabMeta: Record<string, { code: string; icon: React.ReactNode; hint: strin
   Документы: { code: "12", icon: <FileText size={16} />, hint: "Файлы" },
   "RFI / Согласования": { code: "13", icon: <MessageSquareText size={16} />, hint: "Review" },
   Действия: { code: "14", icon: <ListChecks size={16} />, hint: "Workflow" },
+  Процессы: { code: "WF", icon: <Workflow size={16} />, hint: "Approval" },
   Аналитика: { code: "15", icon: <BarChart3 size={16} />, hint: "Готовность" },
   Участники: { code: "16", icon: <Users size={16} />, hint: "Доступ" },
   История: { code: "17", icon: <ClipboardList size={16} />, hint: "Аудит" },
@@ -1566,6 +1569,10 @@ export function ProjectWorkspace({ initialBundle, createdFromOnboarding = false 
           onNavigate={setActiveTab}
           suggestions={actionSuggestions}
         />
+      )}
+
+      {activeTab === "Процессы" && (
+        <WorkflowDesignerWorkspace projectId={initialBundle.project.id} role={currentUser?.role} onNavigate={setActiveTab} />
       )}
 
       {activeTab === "Участники" && (

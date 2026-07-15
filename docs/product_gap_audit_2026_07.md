@@ -19,7 +19,7 @@ This is a directional product audit based on public vendor materials, not a feat
 | Document review/version/approval | Versions exist; formal transmittal/approval is limited | PlanRadar markets version control, approvals and audit trail | High |
 | ERP/accounting integration | Connector readiness only | Procore and Oracle connect commitments, changes, invoices and ERP flows | High for commercial rollout |
 | Portfolio/program controls | Project-centered | Oracle supports project, cross-project and portfolio controls | Medium |
-| Configurable workflow builder | Fixed product workflows | Oracle provides no-code/low-code business-process configuration | Medium/long term |
+| Configurable workflow builder | Added in Workflow Designer & Approval Matrix v1 | Oracle provides configurable business-process routes and approval steps | Maintain |
 
 ## Implemented now: Project Action Center v1
 
@@ -32,6 +32,15 @@ This is a directional product audit based on public vendor materials, not a feat
 - Project permissions and transactional audit records.
 - Read-only viewer mode and responsive UI.
 - Automatic cascade cleanup with disposable project deletion.
+
+## Implemented now: Workflow Designer & Approval Matrix v1
+
+- Project-level reusable serial workflow templates.
+- Work, review and approval steps with responsible project roles and due-day targets.
+- Snapshot steps on launch so template lifecycle changes do not rewrite history.
+- Ball-in-court control, revision return, rejection, cancellation and terminal approval.
+- OWNER/ADMIN template administration and role-aware decisions.
+- Transactional workflow state and project audit history.
 
 ## Recommended next trains
 

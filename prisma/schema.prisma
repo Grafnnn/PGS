@@ -160,6 +160,8 @@ model Project {
   fieldSyncReceipts FieldSyncReceipt[]
   accountingSyncRuns AccountingSyncRun[]
   accountingExternalLinks AccountingExternalLink[]
+  workflowTemplates ProjectWorkflowTemplate[]
+  workflowRuns      ProjectWorkflowRun[]
 
   @@map("projects")
 }
@@ -610,6 +612,99 @@ model ProjectActionItem {
   @@index([projectId, status, dueAt])
   @@index([projectId, assignee])
   @@map("project_action_items")
+}
+
+model ProjectWorkflowTemplate {
+  id             String   @id @default(cuid())
+  organizationId String   @map("organization_id")
+  projectId      String   @map("project_id")
+  name           String
+  description    String?
+  category       String   @default("general")
+  status         String   @default("active")
+  createdBy      String?  @map("created_by")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  project        Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  steps          ProjectWorkflowTemplateStep[]
+  runs           ProjectWorkflowRun[]
+
+  @@unique([projectId, name])
+  @@index([projectId, status])
+  @@map("project_workflow_templates")
+}
+
+model ProjectWorkflowTemplateStep {
+  id             String   @id @default(cuid())
+  templateId     String   @map("template_id")
+  sequence       Int
+  name           String
+  description    String?
+  stepType       String   @default("review") @map("step_type")
+  assigneeRole   String   @default("MANAGER") @map("assignee_role")
+  dueDays        Int      @default(3) @map("due_days")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  template       ProjectWorkflowTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  runSteps       ProjectWorkflowRunStep[]
+
+  @@unique([templateId, sequence])
+  @@index([templateId])
+  @@map("project_workflow_template_steps")
+}
+
+model ProjectWorkflowRun {
+  id             String   @id @default(cuid())
+  organizationId String   @map("organization_id")
+  projectId      String   @map("project_id")
+  templateId     String?  @map("template_id")
+  title          String
+  description    String?
+  sourceModule   String   @default("manual") @map("source_module")
+  targetTab      String?  @map("target_tab")
+  referenceType  String?  @map("reference_type")
+  referenceId    String?  @map("reference_id")
+  status         String   @default("active")
+  currentStep    Int      @default(1) @map("current_step")
+  startedBy      String?  @map("started_by")
+  startedAt      DateTime @default(now()) @map("started_at")
+  completedAt    DateTime? @map("completed_at")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  project        Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  template       ProjectWorkflowTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  steps          ProjectWorkflowRunStep[]
+
+  @@index([projectId, status, updatedAt])
+  @@index([templateId])
+  @@map("project_workflow_runs")
+}
+
+model ProjectWorkflowRunStep {
+  id             String   @id @default(cuid())
+  runId          String   @map("run_id")
+  templateStepId String?  @map("template_step_id")
+  sequence       Int
+  name           String
+  description    String?
+  stepType       String   @default("review") @map("step_type")
+  assigneeRole   String   @default("MANAGER") @map("assignee_role")
+  dueDays        Int      @default(3) @map("due_days")
+  status         String   @default("pending")
+  dueAt          DateTime? @map("due_at")
+  decisionComment String? @map("decision_comment")
+  actedBy        String?  @map("acted_by")
+  actedByName    String?  @map("acted_by_name")
+  actedAt        DateTime? @map("acted_at")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  run            ProjectWorkflowRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  templateStep   ProjectWorkflowTemplateStep? @relation(fields: [templateStepId], references: [id], onDelete: SetNull)
+
+  @@unique([runId, sequence])
+  @@index([runId, status, dueAt])
+  @@index([templateStepId])
+  @@map("project_workflow_run_steps")
 }
 
 model FieldSyncReceipt {
