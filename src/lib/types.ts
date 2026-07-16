@@ -189,6 +189,57 @@ export interface ProjectActionItem {
   updatedAt: string;
 }
 
+export type ChangeOrderStatus = "draft" | "open" | "submitted" | "revision_required" | "approved" | "executed" | "rejected" | "void";
+
+export interface ProjectChangeOrder {
+  id: string;
+  projectId: string;
+  sequence: number;
+  number: string;
+  kind: "potential" | "request" | "owner" | "subcontract" | "directive";
+  scope: "in_scope" | "budget_only" | "out_of_scope" | "contingency";
+  title: string;
+  description?: string | null;
+  reason?: string | null;
+  sourceType?: string | null;
+  sourceRef?: string | null;
+  counterparty?: string | null;
+  status: ChangeOrderStatus;
+  currency: string;
+  scheduleImpactDays: number;
+  estimatedAmount: number;
+  proposedAmount: number;
+  submittedAmount: number;
+  approvedAmount: number;
+  committedAmount: number;
+  linkedDocumentId?: string | null;
+  linkedDocumentVersion?: number | null;
+  approvalWorkflowRunId?: string | null;
+  decisionComment?: string | null;
+  dueAt?: string | null;
+  submittedAt?: string | null;
+  approvedAt?: string | null;
+  executedAt?: string | null;
+  linkedDocument?: { title: string; fileName?: string | null } | null;
+  approvalWorkflowRun?: { id: string; title: string; status: string } | null;
+  items: Array<{
+    id: string;
+    budgetItemId?: string | null;
+    sequence: number;
+    code?: string | null;
+    description: string;
+    quantity: number;
+    unit: string;
+    estimatedUnitPrice: number;
+    proposedUnitPrice: number;
+    submittedUnitPrice: number;
+    approvedUnitPrice: number;
+    committedUnitPrice: number;
+  }>;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface ProjectDocument {
   id: string;
   projectId: string;

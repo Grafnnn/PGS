@@ -162,6 +162,7 @@ model Project {
   accountingExternalLinks AccountingExternalLink[]
   workflowTemplates ProjectWorkflowTemplate[]
   workflowRuns      ProjectWorkflowRun[]
+  changeOrders      ProjectChangeOrder[]
 
   @@map("projects")
 }
@@ -234,6 +235,7 @@ model BudgetItem {
   createdAt       DateTime   @default(now()) @map("created_at")
   updatedAt       DateTime   @updatedAt @map("updated_at")
   project         Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  changeOrderItems ProjectChangeOrderItem[]
 
   @@map("budget_items")
 }
@@ -459,6 +461,7 @@ model Document {
   rfiLinks    ProjectRfi[]
   submittalLinks ProjectSubmittal[]
   transmittalItems DocumentTransmittalItem[]
+  changeOrderLinks ProjectChangeOrder[]
 
   @@map("documents")
 }
@@ -480,6 +483,7 @@ model DocumentVersion {
   rfiLinks       ProjectRfi[]
   submittalLinks ProjectSubmittal[]
   transmittalItems DocumentTransmittalItem[]
+  changeOrderLinks ProjectChangeOrder[]
 
   @@unique([documentId, versionNumber])
   @@map("document_versions")
@@ -614,6 +618,80 @@ model ProjectActionItem {
   @@map("project_action_items")
 }
 
+model ProjectChangeOrder {
+  id                    String   @id @default(cuid())
+  organizationId        String   @map("organization_id")
+  projectId             String   @map("project_id")
+  sequence              Int
+  number                String
+  kind                  String   @default("potential")
+  scope                 String   @default("out_of_scope")
+  title                 String
+  description           String?
+  reason                String?
+  sourceType            String?  @map("source_type")
+  sourceRef             String?  @map("source_ref")
+  counterparty          String?
+  status                String   @default("draft")
+  currency              String   @default("RUB")
+  scheduleImpactDays    Int      @default(0) @map("schedule_impact_days")
+  estimatedAmount       Decimal  @default(0) @map("estimated_amount") @db.Decimal(14, 2)
+  proposedAmount        Decimal  @default(0) @map("proposed_amount") @db.Decimal(14, 2)
+  submittedAmount       Decimal  @default(0) @map("submitted_amount") @db.Decimal(14, 2)
+  approvedAmount        Decimal  @default(0) @map("approved_amount") @db.Decimal(14, 2)
+  committedAmount       Decimal  @default(0) @map("committed_amount") @db.Decimal(14, 2)
+  linkedDocumentId      String?  @map("linked_document_id")
+  linkedDocumentVersion Int?     @map("linked_document_version")
+  linkedDocumentVersionId String? @map("linked_document_version_id")
+  approvalWorkflowRunId String?  @unique @map("approval_workflow_run_id")
+  decisionComment       String?  @map("decision_comment")
+  dueAt                 DateTime? @map("due_at")
+  submittedAt           DateTime? @map("submitted_at")
+  approvedAt            DateTime? @map("approved_at")
+  executedAt            DateTime? @map("executed_at")
+  rejectedAt            DateTime? @map("rejected_at")
+  voidedAt              DateTime? @map("voided_at")
+  createdBy             String?  @map("created_by")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+  project               Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  linkedDocument        Document? @relation(fields: [linkedDocumentId], references: [id], onDelete: SetNull)
+  linkedDocumentVersionRef DocumentVersion? @relation(fields: [linkedDocumentVersionId], references: [id], onDelete: SetNull)
+  approvalWorkflowRun   ProjectWorkflowRun? @relation(fields: [approvalWorkflowRunId], references: [id], onDelete: SetNull)
+  items                 ProjectChangeOrderItem[]
+
+  @@unique([projectId, sequence])
+  @@unique([projectId, number])
+  @@index([projectId, status, updatedAt])
+  @@index([linkedDocumentId])
+  @@index([linkedDocumentVersionId])
+  @@map("project_change_orders")
+}
+
+model ProjectChangeOrderItem {
+  id                   String   @id @default(cuid())
+  changeOrderId        String   @map("change_order_id")
+  budgetItemId         String?  @map("budget_item_id")
+  sequence             Int
+  code                 String?
+  description          String
+  quantity             Decimal  @default(1) @db.Decimal(14, 3)
+  unit                 String   @default("компл.")
+  estimatedUnitPrice   Decimal  @default(0) @map("estimated_unit_price") @db.Decimal(14, 2)
+  proposedUnitPrice    Decimal  @default(0) @map("proposed_unit_price") @db.Decimal(14, 2)
+  submittedUnitPrice   Decimal  @default(0) @map("submitted_unit_price") @db.Decimal(14, 2)
+  approvedUnitPrice    Decimal  @default(0) @map("approved_unit_price") @db.Decimal(14, 2)
+  committedUnitPrice   Decimal  @default(0) @map("committed_unit_price") @db.Decimal(14, 2)
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+  changeOrder          ProjectChangeOrder @relation(fields: [changeOrderId], references: [id], onDelete: Cascade)
+  budgetItem           BudgetItem? @relation(fields: [budgetItemId], references: [id], onDelete: SetNull)
+
+  @@unique([changeOrderId, sequence])
+  @@index([budgetItemId])
+  @@map("project_change_order_items")
+}
+
 model ProjectWorkflowTemplate {
   id             String   @id @default(cuid())
   organizationId String   @map("organization_id")
@@ -674,6 +752,7 @@ model ProjectWorkflowRun {
   project        Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
   template       ProjectWorkflowTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
   steps          ProjectWorkflowRunStep[]
+  changeOrder    ProjectChangeOrder?
 
   @@index([projectId, status, updatedAt])
   @@index([templateId])
