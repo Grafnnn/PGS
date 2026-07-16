@@ -4423,6 +4423,7 @@ input[type="checkbox"] {
 .stack {
   display: grid;
   gap: 14px;
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .panel-title {
@@ -4759,6 +4760,8 @@ input[type="checkbox"] {
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
   display: inline-flex;
+  max-width: 100%;
+  overflow-x: auto;
   padding: 3px;
 }
 
@@ -9728,4 +9731,69 @@ input[type="checkbox"] {
   .workflow-designer-header { padding: 13px; }
   .workflow-decision > div { display: grid; }
   .workflow-decision .button { justify-content: center; width: 100%; }
+}
+
+/* Change Order Management v2 */
+.change-management { display: grid; gap: 16px; margin: 18px 0 22px; min-width: 0; max-width: 100%; width: 100%; overflow: hidden; }
+.change-management > *, .change-order-form-grid > *, .change-order-lines > *, .change-order-card > * { min-width: 0; max-width: 100%; }
+.change-order-form input, .change-order-form select, .change-order-form textarea { min-width: 0; max-width: 100%; }
+.change-management-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; padding: 18px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.change-management-header h3 { margin: 4px 0 6px; font-size: 22px; }
+.change-management-header p { max-width: 820px; margin: 0; color: var(--muted); }
+.change-management-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.change-management-metrics article { display: grid; gap: 4px; padding: 14px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); min-width: 0; }
+.change-management-metrics small, .change-management-metrics span { color: var(--muted); }
+.change-management-metrics strong { font-size: 20px; overflow-wrap: anywhere; }
+.change-candidates, .change-order-form { padding: 16px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); }
+.change-candidate-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(230px, 100%), 1fr)); gap: 8px; }
+.change-candidate-list button { display: grid; gap: 4px; min-width: 0; padding: 11px; text-align: left; color: inherit; border: 1px solid var(--line); border-radius: 5px; background: var(--surface); cursor: pointer; }
+.change-candidate-list button:hover { border-color: var(--accent); }
+.change-candidate-list span, .change-candidate-list small { color: var(--muted); }
+.change-candidate-list strong { overflow-wrap: anywhere; }
+.change-order-form-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.change-order-form-grid .field-wide { grid-column: span 2; }
+.change-order-lines { display: grid; gap: 8px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
+.change-order-lines-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.change-order-line { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(120px, 100%), 1fr)); gap: 8px; align-items: end; min-width: 0; }
+.change-order-line .wide { grid-column: span 2; }
+.change-order-line label { display: grid; gap: 5px; min-width: 0; }
+.change-order-line label span { color: var(--muted); font-size: 12px; }
+.change-order-line input, .change-order-line select { width: 100%; min-width: 0; }
+.change-order-form-actions { display: flex; gap: 8px; margin-top: 14px; }
+.change-order-register { display: grid; gap: 10px; }
+.change-order-card { display: grid; gap: 12px; padding: 15px; border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: 6px; background: var(--panel); min-width: 0; }
+.change-order-card.status-executed { border-left-color: var(--success); }
+.change-order-card.status-rejected, .change-order-card.status-void { border-left-color: var(--danger); }
+.change-order-card.status-submitted, .change-order-card.status-revision_required { border-left-color: var(--warning); }
+.change-order-card > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.change-order-card > header > div { display: grid; gap: 4px; min-width: 0; }
+.change-order-card > header span, .change-order-card > header small { color: var(--muted); }
+.change-order-card > header strong { font-size: 17px; overflow-wrap: anywhere; }
+.change-order-values { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.change-order-values span { display: grid; gap: 3px; min-width: 0; padding: 9px; background: var(--surface); border: 1px solid var(--line); border-radius: 5px; color: var(--muted); font-size: 12px; }
+.change-order-values strong { color: var(--text); font-size: 14px; overflow-wrap: anywhere; }
+.change-order-meta { display: flex; flex-wrap: wrap; gap: 8px 14px; color: var(--muted); font-size: 13px; }
+.change-order-meta span, .change-order-meta button { display: inline-flex; align-items: center; gap: 5px; }
+.change-order-meta button { padding: 0; color: var(--accent); border: 0; background: transparent; cursor: pointer; }
+.change-order-card textarea { width: 100%; min-height: 64px; }
+.change-order-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.change-order-controls select { min-width: min(230px, 100%); }
+.change-order-controls .danger { color: var(--danger); }
+
+@media (max-width: 1120px) {
+  .change-management-metrics, .change-order-values { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .change-order-form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .change-order-line { grid-template-columns: repeat(4, minmax(0, 1fr)); padding: 10px; border: 1px solid var(--line); border-radius: 5px; }
+  .change-order-line .wide { grid-column: span 2; }
+}
+
+@media (max-width: 680px) {
+  .metric-strip { grid-template-columns: 1fr; }
+  .change-management-header { display: grid; }
+  .change-management-metrics, .change-order-values, .change-order-form-grid { grid-template-columns: 1fr; }
+  .change-order-form-grid .field-wide, .change-order-line .wide { grid-column: auto; }
+  .change-order-line { grid-template-columns: 1fr; }
+  .change-order-lines-head, .change-order-card > header { align-items: stretch; flex-direction: column; }
+  .change-order-form-actions, .change-order-controls { align-items: stretch; flex-direction: column; }
+  .change-order-controls select, .change-order-controls .button, .change-order-form-actions .button { width: 100%; }
 }

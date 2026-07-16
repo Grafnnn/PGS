@@ -4,7 +4,7 @@
 
 PGS already has a strong project-level construction operating contour: Excel/VOR ingestion, budget, materials, procurement, schedule, cashflow, documents, risks, claims, acceptance/billing, field intelligence, executive reporting, AI scenarios, audit and guarded staging smoke.
 
-The main gap is no longer another analytical dashboard. The system needs a persistent workflow layer that turns findings into accountable work: owner, due date, state, blocker, approval and audit trail. `Project Action Center v1` is the first implementation of that layer.
+The main gap is no longer another analytical dashboard. PGS is moving from advisory intelligence to controlled operational records: accountable actions, configurable approvals, formal document issue, accounting exchange and persistent commercial change management.
 
 ## Market comparison
 
@@ -20,6 +20,7 @@ This is a directional product audit based on public vendor materials, not a feat
 | ERP/accounting integration | Connector readiness only | Procore and Oracle connect commitments, changes, invoices and ERP flows | High for commercial rollout |
 | Portfolio/program controls | Project-centered | Oracle supports project, cross-project and portfolio controls | Medium |
 | Configurable workflow builder | Added in Workflow Designer & Approval Matrix v1 | Oracle provides configurable business-process routes and approval steps | Maintain |
+| Change orders / variations | Added in Change Order Management v2 | Autodesk and Oracle connect potential changes, cost items, approvals, evidence and executed commitments | Maintain |
 
 ## Implemented now: Project Action Center v1
 
@@ -42,12 +43,20 @@ This is a directional product audit based on public vendor materials, not a feat
 - OWNER/ADMIN template administration and role-aware decisions.
 - Transactional workflow state and project audit history.
 
+## Implemented now: Change Order Management v2
+
+- Persistent `CHG-###` register replacing the previous advisory-only handoff.
+- Cost lines linked to VOR rows with estimated, proposed, submitted, approved and committed values.
+- Evidence document/version snapshot, source reference, counterparty and schedule impact.
+- Explicit draft, submission, revision, approval, rejection, execution and void lifecycle.
+- Optional Workflow Designer approval run and OWNER/ADMIN decision gates.
+- No silent writes into VOR, contract, cashflow, KS, payments or procurement.
+
 ## Recommended next trains
 
-1. **Document Transmittals & Approval v1** — controlled packages, reviewers, revision status, approval history and distribution log.
-2. **Field Mobile / Offline v1** — installable PWA, queued daily reports/photos/issues, sync status and conflict handling.
-3. **ERP & Accounting Bridge v1** — export/import contracts, commitments, invoices, payments and reconciliation with explicit dry-run.
-4. **Portfolio Control Center v1** — cross-project cashflow, risk, workload and milestone comparison.
+1. **Cost Codes / CBS-WBS v1** — common cost-code hierarchy across VOR, procurement, changes, schedule and accounting.
+2. **Contract Commitments v1** — persistent owner and subcontract commitments, SOV and payment application linkage.
+3. **External Collaboration v1** — controlled owner/designer/supplier responses without broad project access.
 
 ## Product guardrails
 

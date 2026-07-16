@@ -5,7 +5,7 @@ import { AlertTriangle, BarChart3, Bot, ClipboardList, DatabaseZap, FileText, Ha
 import { AcceptanceBillingWorkspace } from "@/components/acceptance-billing-workspace";
 import { AccountingBridgeWorkspace } from "@/components/accounting-bridge-workspace";
 import { CommercialProposalWorkspace } from "@/components/commercial-proposal-workspace";
-import { ChangeOrdersWorkspace } from "@/components/change-orders-workspace";
+import { ChangeOrderManagementWorkspace } from "@/components/change-order-management-workspace";
 import { ClaimsNoticesWorkspace } from "@/components/claims-notices-workspace";
 import { ContractTenderWorkspace } from "@/components/contract-tender-workspace";
 import { CostToCompleteWorkspace } from "@/components/cost-to-complete-workspace";
@@ -924,7 +924,8 @@ export function ProjectWorkspace({ initialBundle, createdFromOnboarding = false 
       {activeTab === "Бюджет / ВОР" && (
         <Panel title="Бюджет, ВОР и классификация затрат" icon={<Table2 size={18} />}>
           <BudgetAnalytics items={budgetItems} contractAmount={initialBundle.project.contractAmount} paid={finance.incomingPayments} forecastProfit={budget.forecastProfit} />
-          <ChangeOrdersWorkspace
+          <ChangeOrderManagementWorkspace
+            projectId={initialBundle.project.id}
             project={initialBundle.project}
             budgetItems={budgetItems}
             scheduleItems={scheduleItems}
@@ -932,6 +933,9 @@ export function ProjectWorkspace({ initialBundle, createdFromOnboarding = false 
             procurementRequests={procurementRequests}
             payments={payments}
             risks={risks}
+            documents={documents}
+            canEdit={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN" || currentUser?.role === "MANAGER"}
+            canApprove={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN"}
             onNavigate={setActiveTab}
           />
           <ImportPanel
