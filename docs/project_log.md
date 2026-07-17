@@ -1,5 +1,48 @@
 # PGS Project Log
 
+## 2026-07-17 - Change Order Management v2 deploy GO
+
+Status: Change Order Management v2 is shipped on Render after PR #127. Projects now have a persistent commercial change register with VOR-linked cost lines, evidence snapshots, explicit lifecycle decisions and optional Workflow Designer approval runs.
+
+- Online URL: https://pgs-frankfurt.onrender.com
+- Online commit: `c30d042b5f87282168442ef8ddd259ffb66ab9cf`
+- Render deploy: `dep-d9ckq0beo5us73avstb0`
+- PR: #127
+- Decision: DEPLOY GO / HTTP CORE FOLLOW-UP
+- Git SHA source: `RENDER_GIT_COMMIT`
+
+Implemented:
+
+- persistent project `CHG-###` register for potential, request, owner, subcontract and directive changes;
+- commercial scope classification, source references, counterparty, schedule impact, due date and exact document/version evidence snapshot;
+- VOR-linked cost lines with estimated, proposed, submitted, approved and committed values;
+- explicit draft, open, submitted, revision, approved, executed, rejected and void lifecycle;
+- optional approval workflow snapshot with protection against bypassing active workflow decisions;
+- transactional audit history, optimistic duplicate-action protection and project cascade cleanup;
+- responsive Change Order workspace integrated into the Budget/VOR area.
+
+Online verification:
+
+- Render marked deploy `dep-d9ckq0beo5us73avstb0` live on the exact expected commit;
+- migration `20260716090000_change_order_management_v2` applied successfully;
+- Prisma reported 15 migrations and `All migrations have been successfully applied`;
+- the Next.js service started successfully and Render reported the primary URL live;
+- external `/api/health` and unauthenticated route checks were blocked in this verification environment by the public Render/client transport, so HTTP CORE GO is not claimed.
+
+Validation and safety:
+
+- GitHub Actions CI #259 passed;
+- Vitest: 408/408 passed; ESLint, TypeScript, Prisma validate/generate, production build and `git diff --check` passed;
+- local desktop and 390 px mobile browser checks passed, including candidate-to-form interaction, one mobile drawer, no horizontal page overflow and no client errors;
+- no authenticated online change-order mutation, live AI, project/import/delete/upload mutation or external connector call was run;
+- no Render env/secrets, auth/session model, health/provider or deploy configuration changes were made;
+- no secrets were printed.
+
+Remaining controlled follow-up:
+
+- retry public `/api/health` and unauthenticated Change Order API guard checks when the external Render route is reachable;
+- authenticated disposable lifecycle smoke covering create, submit, workflow decision, approve/execute and cleanup remains optional.
+
 ## 2026-07-15 - Workflow Designer & Approval Matrix v1 online/core GO
 
 Status: Workflow Designer & Approval Matrix v1 is shipped on Render after PR #125. Projects now have configurable serial approval processes with role-aware decisions, deadlines, revisions, rejection, cancellation and a durable audit trail.
