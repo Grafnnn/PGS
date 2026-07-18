@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { LogIn, LogOut } from "lucide-react";
 import { BrandLogo } from "@/components/brand-logo";
+import { LOGIN_INITIAL_CREDENTIALS } from "@/lib/login-form";
 
 type CurrentUser = {
   id: string;
@@ -17,8 +18,8 @@ function readError(data: { error?: string | { message?: string } }) {
 }
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("demo@pgs.local");
-  const [password, setPassword] = useState("demo-password-change-me");
+  const [email, setEmail] = useState<string>(LOGIN_INITIAL_CREDENTIALS.email);
+  const [password, setPassword] = useState<string>(LOGIN_INITIAL_CREDENTIALS.password);
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -85,11 +86,24 @@ export default function LoginPage() {
         )}
         <label>
           Email
-          <input value={email} onChange={(event) => setEmail(event.target.value)} />
+          <input
+            autoComplete="username"
+            inputMode="email"
+            required
+            type="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+          />
         </label>
         <label>
           Пароль
-          <input value={password} type="password" onChange={(event) => setPassword(event.target.value)} />
+          <input
+            autoComplete="current-password"
+            required
+            type="password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+          />
         </label>
         {error && <p className="error-text">{error}</p>}
         <button className="button primary" disabled={loading} type="submit">
