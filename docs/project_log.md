@@ -1,5 +1,49 @@
 # PGS Project Log
 
+## 2026-07-19 - Quality Management v2 online/core GO
+
+Status: Quality Management v2 is shipped on Render after PR #134. The existing `Исполнение` workspace now includes controlled inspections, NCR, Punch List and defect management without adding or duplicating the left navigation.
+
+- Online URL: https://pgs-frankfurt.onrender.com
+- Feature commit: `272b8a552a863afc4d1bce76e57b4cd656a73ead`
+- Online commit: `6e65b51fd1bd94ae84a463401bcdb80ced7b33b1`
+- Feature PR: #134
+- Login hardening PR: #135
+- Decision: ONLINE/CORE GO
+- Git SHA source: `RENDER_GIT_COMMIT`
+
+Implemented:
+
+- numbered inspections with fixed checklists and automatic NCR creation for failed checks;
+- managed Observation, Punch, NCR and Defect lifecycle with responsible party, due date and cost/schedule/acceptance impact;
+- exact document-version evidence, root cause, corrective action, verification and optional approval workflow;
+- links to schedule items, Cost Codes, daily reports and project documents;
+- immutable issue events, project audit records, optimistic action claims and restricted deletion;
+- responsive desktop/mobile workspace inside the existing execution area.
+
+Online verification:
+
+- `/api/health`: HTTP 200 / `ok`; DB: `ok`; migrations: `ok`, count `18`;
+- deployed SHA matched `6e65b51fd1bd94ae84a463401bcdb80ced7b33b1`;
+- migration `20260719090000_quality_management_v2` applied successfully;
+- protected dashboard, project list and project pages redirect unauthenticated users to login;
+- unauthenticated `/api/auth/me`: 401;
+- unauthenticated inspection and quality-issue list/create routes: 403 before request-body parsing;
+- online login form contains no prefilled credential values, keeps standard browser autofill hints, shows one visible navigation and has no horizontal overflow.
+
+Validation and safety:
+
+- PR #134 GitHub Actions CI #273 passed; PR #135 GitHub Actions CI #275 passed;
+- Vitest: 453/453 passed; ESLint, TypeScript, Prisma validate/generate, production build and `git diff --check` passed;
+- local desktop and 390 px mobile Quality Management checks passed with one visible navigation, responsive forms, no horizontal overflow and no browser console errors;
+- no authenticated online quality mutation, live AI, project/import/delete/upload mutation or external connector call was run;
+- no Render env/secrets, auth/session model, provider configuration or database credentials were changed;
+- no secrets were printed.
+
+Remaining controlled follow-up:
+
+- authenticated disposable lifecycle smoke covering inspection failure, automatic NCR, corrective evidence, verification, close/reopen and cleanup remains optional.
+
 ## 2026-07-18 - Contract Commitments v1 online/core GO
 
 Status: Contract Commitments v1 is shipped on Render after PR #132. PGS now has an auditable register for owner contracts, subcontracts, purchase orders and service orders, with Schedule of Values, approval, retention, change-order links and payment applications.
