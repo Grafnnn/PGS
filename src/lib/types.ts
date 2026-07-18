@@ -347,6 +347,93 @@ export interface ProjectCommitment {
   updatedAt: string;
 }
 
+export type QualityInspectionType = "incoming" | "work" | "hold_point" | "final";
+export type QualityInspectionStatus = "planned" | "in_progress" | "passed" | "failed" | "closed" | "void";
+export type QualityCheckResult = "pending" | "pass" | "fail" | "na";
+export type QualityIssueType = "observation" | "punch" | "ncr" | "defect";
+export type QualityIssueStatus = "open" | "in_progress" | "ready_for_verification" | "verified" | "closed" | "void";
+
+export interface ProjectQualityInspection {
+  id: string;
+  projectId: string;
+  sequence: number;
+  number: string;
+  type: QualityInspectionType;
+  title: string;
+  location?: string | null;
+  inspector?: string | null;
+  responsibleParty?: string | null;
+  status: QualityInspectionStatus;
+  scheduledAt?: string | null;
+  decisionComment?: string | null;
+  linkedScheduleItemId?: string | null;
+  costCodeId?: string | null;
+  linkedDocumentId?: string | null;
+  linkedDocumentVersion?: number | null;
+  linkedScheduleItem?: { id: string; name: string; status: string } | null;
+  costCode?: { id: string; code: string; name: string } | null;
+  linkedDocument?: { id: string; title: string; fileName?: string | null } | null;
+  checks: Array<{ id: string; sequence: number; title: string; requirement?: string | null; result: QualityCheckResult; comment?: string | null }>;
+  issues: Array<{ id: string; number: string; title: string; status: QualityIssueStatus; severity: RiskPriority; acceptanceBlocker: boolean }>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ProjectQualityIssue {
+  id: string;
+  projectId: string;
+  inspectionId?: string | null;
+  sequence: number;
+  number: string;
+  type: QualityIssueType;
+  title: string;
+  description: string;
+  location?: string | null;
+  severity: RiskPriority;
+  status: QualityIssueStatus;
+  responsibleParty?: string | null;
+  dueAt?: string | null;
+  rootCause?: string | null;
+  correctiveAction?: string | null;
+  decisionComment?: string | null;
+  acceptanceBlocker: boolean;
+  costImpact: number;
+  scheduleImpactDays: number;
+  linkedScheduleItemId?: string | null;
+  costCodeId?: string | null;
+  sourceDailyReportId?: string | null;
+  linkedDocumentId?: string | null;
+  linkedDocumentVersion?: number | null;
+  verificationWorkflowRunId?: string | null;
+  inspection?: { id: string; number: string; title: string; status: string } | null;
+  linkedScheduleItem?: { id: string; name: string; status: string } | null;
+  costCode?: { id: string; code: string; name: string } | null;
+  linkedDocument?: { id: string; title: string; fileName?: string | null } | null;
+  verificationWorkflowRun?: { id: string; title: string; status: string } | null;
+  evidence: Array<{
+    id: string;
+    phase: "opening" | "corrective" | "closure";
+    documentId?: string | null;
+    documentVersionId?: string | null;
+    documentVersion?: number | null;
+    titleSnapshot: string;
+    fileNameSnapshot?: string | null;
+    note?: string | null;
+    createdAt: string;
+  }>;
+  events: Array<{
+    id: string;
+    eventType: string;
+    statusBefore?: string | null;
+    statusAfter?: string | null;
+    comment?: string | null;
+    createdByName?: string | null;
+    createdAt: string;
+  }>;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface ProjectDocument {
   id: string;
   projectId: string;

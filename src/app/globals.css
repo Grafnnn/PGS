@@ -10001,6 +10001,419 @@ input[type="checkbox"] {
   .payment-application-controls { grid-column: 1 / -1; justify-content: flex-start; }
 }
 
+.quality-management-workspace {
+  container-name: quality-management;
+  container-type: inline-size;
+  display: grid;
+  gap: 16px;
+  margin-bottom: 22px;
+  min-width: 0;
+}
+
+.quality-management-header {
+  align-items: flex-start;
+  background: #f7f9fb;
+  border: 1px solid #d9e0e7;
+  border-left: 4px solid #205a46;
+  border-radius: 6px;
+  display: flex;
+  gap: 20px;
+  justify-content: space-between;
+  padding: 18px 20px;
+}
+
+.quality-management-header h3 {
+  font-size: 20px;
+  margin: 3px 0 6px;
+}
+
+.quality-management-header p {
+  color: #5a6672;
+  margin: 0;
+  max-width: 760px;
+}
+
+.quality-management-header-actions,
+.quality-management-toolbar,
+.quality-management-form-actions,
+.quality-record-controls,
+.quality-issue-statuses {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.quality-management-header-actions {
+  flex: 0 0 auto;
+}
+
+.quality-management-metrics {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.quality-management-metrics article {
+  border: 1px solid #dfe5eb;
+  border-radius: 6px;
+  display: grid;
+  gap: 4px;
+  min-height: 108px;
+  padding: 14px;
+}
+
+.quality-management-metrics article.tone-good { border-top: 3px solid #2e7d5b; }
+.quality-management-metrics article.tone-warn { border-top: 3px solid #b7791f; }
+.quality-management-metrics article.tone-bad { border-top: 3px solid #b94a48; }
+.quality-management-metrics article.tone-info { border-top: 3px solid #356f9f; }
+.quality-management-metrics article.tone-neutral { border-top: 3px solid #7b8794; }
+
+.quality-management-metrics small {
+  color: #65717d;
+  font-size: 12px;
+}
+
+.quality-management-metrics strong {
+  font-size: 20px;
+}
+
+.quality-management-metrics span {
+  color: #65717d;
+  font-size: 12px;
+}
+
+.quality-management-toolbar {
+  justify-content: space-between;
+}
+
+.quality-management-form {
+  border: 1px solid #cfd8e1;
+  border-radius: 6px;
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+}
+
+.quality-management-section-title {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+}
+
+.quality-management-section-title h4 {
+  font-size: 16px;
+  margin: 0;
+}
+
+.quality-management-section-title span {
+  color: #65717d;
+  font-size: 12px;
+}
+
+.quality-management-form-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.quality-management-form-grid .field-wide {
+  grid-column: span 2;
+}
+
+.quality-management-form-grid .checkbox-field {
+  align-items: center;
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  min-height: 42px;
+}
+
+.quality-management-form-grid .checkbox-field input {
+  height: 16px;
+  width: 16px;
+}
+
+.quality-check-editor {
+  display: grid;
+  gap: 8px;
+}
+
+.quality-check-editor > div:first-child {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+
+.quality-check-edit-row {
+  align-items: center;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(180px, 0.9fr) minmax(240px, 1.4fr) 36px;
+  min-width: 0;
+}
+
+.quality-inspection-register,
+.quality-issue-register {
+  display: grid;
+  gap: 10px;
+}
+
+.quality-inspection-row,
+.quality-managed-issue {
+  border: 1px solid #d9e0e7;
+  border-left: 4px solid #7b8794;
+  border-radius: 6px;
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding: 16px;
+}
+
+.quality-inspection-row.status-failed,
+.quality-managed-issue.severity-critical {
+  border-left-color: #b94a48;
+}
+
+.quality-managed-issue.severity-high,
+.quality-inspection-row.status-in_progress {
+  border-left-color: #b7791f;
+}
+
+.quality-inspection-row.status-passed,
+.quality-inspection-row.status-closed,
+.quality-managed-issue.status-verified,
+.quality-managed-issue.status-closed {
+  border-left-color: #2e7d5b;
+}
+
+.quality-inspection-row > header,
+.quality-managed-issue > header {
+  align-items: flex-start;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+}
+
+.quality-inspection-row > header > div:first-child,
+.quality-managed-issue > header > div:first-child {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.quality-inspection-row > header span:first-child,
+.quality-managed-issue > header span:first-child {
+  color: #65717d;
+  font-size: 12px;
+}
+
+.quality-inspection-row > header strong,
+.quality-managed-issue > header strong {
+  font-size: 16px;
+}
+
+.quality-inspection-row > header small,
+.quality-managed-issue > header small,
+.quality-managed-issue > p {
+  color: #5e6975;
+  margin: 0;
+}
+
+.quality-record-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+}
+
+.quality-record-meta > span {
+  align-items: center;
+  color: #53606c;
+  display: inline-flex;
+  font-size: 12px;
+  gap: 5px;
+}
+
+.quality-record-meta .quality-blocker {
+  color: #9b2f2c;
+  font-weight: 700;
+}
+
+.quality-inspection-row details,
+.quality-evidence-panel {
+  border-top: 1px solid #e2e7ec;
+  padding-top: 10px;
+}
+
+.quality-inspection-row summary,
+.quality-evidence-panel summary {
+  align-items: center;
+  cursor: pointer;
+  display: flex;
+  font-size: 13px;
+  font-weight: 700;
+  gap: 6px;
+}
+
+.quality-inspection-checks {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.quality-inspection-check {
+  align-items: center;
+  background: #f8fafb;
+  border: 1px solid #e0e6eb;
+  border-radius: 5px;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 34px minmax(180px, 1fr) minmax(130px, 0.35fr) minmax(180px, 0.65fr);
+  min-width: 0;
+  padding: 8px;
+}
+
+.quality-inspection-check.result-pass { background: #f2faf6; border-color: #bfdccb; }
+.quality-inspection-check.result-fail { background: #fff6f5; border-color: #e5c0bd; }
+
+.quality-inspection-check > div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.quality-inspection-check small {
+  color: #65717d;
+}
+
+.quality-linked-issues {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.quality-linked-issues button,
+.quality-workflow-link {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: #245f8f;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 12px;
+  gap: 5px;
+  padding: 0;
+}
+
+.quality-evidence-list,
+.quality-event-list {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.quality-evidence-list > div,
+.quality-event-list > div {
+  align-items: center;
+  border-bottom: 1px solid #e5eaee;
+  display: grid;
+  gap: 4px;
+  grid-template-columns: auto minmax(180px, 1fr) minmax(180px, 0.8fr);
+  padding: 7px 0;
+}
+
+.quality-event-list > div {
+  grid-template-columns: minmax(100px, 0.3fr) minmax(180px, 0.6fr) minmax(180px, 1fr);
+}
+
+.quality-evidence-list small,
+.quality-event-list span,
+.quality-event-list small {
+  color: #65717d;
+  font-size: 12px;
+}
+
+.quality-evidence-form {
+  align-items: center;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(120px, 0.35fr) minmax(190px, 0.9fr) minmax(190px, 1fr) auto;
+  margin-top: 10px;
+}
+
+.quality-corrective-form {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.quality-corrective-form input,
+.quality-corrective-form select {
+  grid-column: span 1;
+}
+
+@container quality-management (max-width: 820px) {
+  .quality-management-header,
+  .quality-inspection-row > header,
+  .quality-managed-issue > header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .quality-management-header-actions {
+    justify-content: flex-start;
+  }
+
+  .quality-management-metrics,
+  .quality-management-form-grid,
+  .quality-corrective-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .quality-inspection-check,
+  .quality-evidence-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .quality-inspection-check > span:first-child {
+    display: none;
+  }
+}
+
+@container quality-management (max-width: 520px) {
+  .quality-management-metrics,
+  .quality-management-form-grid,
+  .quality-corrective-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .quality-management-form-grid .field-wide,
+  .quality-corrective-form input,
+  .quality-corrective-form select {
+    grid-column: span 1;
+  }
+
+  .quality-management-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .quality-management-toolbar .segmented-control {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .quality-check-edit-row,
+  .quality-evidence-list > div,
+  .quality-event-list > div {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .quality-check-edit-row .icon-button {
+    justify-self: end;
+  }
+}
+
 @media (max-width: 1180px) {
   .commitment-form-grid,
   .commitment-metrics,

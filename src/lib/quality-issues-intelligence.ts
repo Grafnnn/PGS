@@ -196,7 +196,7 @@ export function buildQualityIssuesIntelligence(input: QualityIssuesInput): Quali
     actions,
     handoff: { title: "Quality handoff", copyText },
     limitations: [
-      "v1 объединяет уже доступные рапорты, риски, график и документы; отдельные NCR/Punch записи не создаются.",
+      "Этот intelligence-срез объединяет рапорты, риски, график и документы; управляемые NCR/Punch записи ведутся в разделе «Исполнение».",
       "Фото и документы учитываются по категории и метаданным; OCR и Computer Vision не выполняются.",
       "Статусы, исполнители и сроки устранения требуют подтверждения пользователем в рабочих разделах."
     ]

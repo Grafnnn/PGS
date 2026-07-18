@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, ClipboardCheck, FileText, ReceiptText, ShieldAlert } from "lucide-react";
+import { AlertTriangle, ClipboardCheck, FileText, ListChecks, ReceiptText, ShieldAlert } from "lucide-react";
 import React from "react";
 import { buildQualityIssuesIntelligence, type QualityTone } from "@/lib/quality-issues-intelligence";
 import type { DocumentChecklistItem } from "@/lib/project-pipeline";
@@ -55,6 +55,10 @@ export function QualityIssuesWorkspace(props: QualityIssuesWorkspaceProps) {
           </div>
         </div>
         <div className="quality-issues-actions">
+          <button className="button primary compact-button" type="button" onClick={() => props.onNavigate("Исполнение")}>
+            <ListChecks size={16} />
+            Реестр NCR / Punch
+          </button>
           <button className="button secondary compact-button" type="button" onClick={() => props.onNavigate("Рапорты")}>
             <ClipboardCheck size={16} />
             Рапорты
