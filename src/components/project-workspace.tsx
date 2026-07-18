@@ -22,6 +22,7 @@ import { PhotoEvidenceWorkspace } from "@/components/photo-evidence-workspace";
 import { ProjectIntelligenceDrilldown } from "@/components/project-intelligence-drilldown";
 import { ProcurementIntelligenceWorkspace } from "@/components/procurement-intelligence-workspace";
 import { QualityIssuesWorkspace } from "@/components/quality-issues-workspace";
+import { QualityManagementWorkspace } from "@/components/quality-management-workspace";
 import { ResourcesEquipmentWorkspace } from "@/components/resources-equipment-workspace";
 import { ReportsWorkflow } from "@/components/reports-workflow";
 import { RfiSubmittalsWorkspace } from "@/components/rfi-submittals-workspace";
@@ -1312,6 +1313,15 @@ export function ProjectWorkspace({ initialBundle, createdFromOnboarding = false 
 
       {activeTab === "Исполнение" && (
         <Panel title="Подрядчики, фронты и контроль исполнения" icon={<Users size={18} />}>
+          <QualityManagementWorkspace
+            projectId={initialBundle.project.id}
+            scheduleItems={scheduleItems}
+            dailyReports={reports}
+            documents={documents}
+            canEdit={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN" || currentUser?.role === "MANAGER"}
+            canApprove={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN"}
+            onNavigate={setActiveTab}
+          />
           <SubcontractorExecutionWorkspace
             project={initialBundle.project}
             budgetItems={budgetItems}

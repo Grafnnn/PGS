@@ -59,36 +59,36 @@ model Organization {
 }
 
 model User {
-  id          String       @id @default(cuid())
-  name        String
-  email       String       @unique
-  passwordHash String?     @map("password_hash")
-  appRole     String       @default("OWNER") @map("app_role")
-  isActive    Boolean      @default(true) @map("is_active")
-  lastLoginAt DateTime?    @map("last_login_at")
-  createdAt   DateTime     @default(now()) @map("created_at")
-  updatedAt   DateTime     @updatedAt @map("updated_at")
-  memberships Membership[]
-  projectMembers ProjectMember[]
-  sessions    Session[]
-  createdInvites UserInvite[] @relation("InviteCreator")
+  id                  String               @id @default(cuid())
+  name                String
+  email               String               @unique
+  passwordHash        String?              @map("password_hash")
+  appRole             String               @default("OWNER") @map("app_role")
+  isActive            Boolean              @default(true) @map("is_active")
+  lastLoginAt         DateTime?            @map("last_login_at")
+  createdAt           DateTime             @default(now()) @map("created_at")
+  updatedAt           DateTime             @updatedAt @map("updated_at")
+  memberships         Membership[]
+  projectMembers      ProjectMember[]
+  sessions            Session[]
+  createdInvites      UserInvite[]         @relation("InviteCreator")
   passwordResetTokens PasswordResetToken[]
-  documentVersions DocumentVersion[]
-  aiMessages  AiMessage[]
+  documentVersions    DocumentVersion[]
+  aiMessages          AiMessage[]
 
   @@map("users")
 }
 
 model Session {
-  id          String    @id @default(cuid())
-  userId      String    @map("user_id")
-  tokenHash   String    @unique @map("token_hash")
-  expiresAt   DateTime  @map("expires_at")
-  revokedAt   DateTime? @map("revoked_at")
-  userAgent   String?   @map("user_agent")
-  ipAddress   String?   @map("ip_address")
-  createdAt   DateTime  @default(now()) @map("created_at")
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id        String    @id @default(cuid())
+  userId    String    @map("user_id")
+  tokenHash String    @unique @map("token_hash")
+  expiresAt DateTime  @map("expires_at")
+  revokedAt DateTime? @map("revoked_at")
+  userAgent String?   @map("user_agent")
+  ipAddress String?   @map("ip_address")
+  createdAt DateTime  @default(now()) @map("created_at")
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, expiresAt])
   @@map("sessions")
@@ -109,63 +109,65 @@ model Membership {
 }
 
 model Project {
-  id              String        @id @default(cuid())
-  organizationId  String        @map("organization_id")
-  name            String
-  code            String?
-  customer        String
-  object          String
-  objectType      String?       @map("object_type")
-  address         String
-  description     String?
-  contractAmount  Decimal       @map("contract_amount") @db.Decimal(14, 2)
-  vatMode         String        @default("vat") @map("vat_mode")
-  vatPercent      Decimal?      @map("vat_percent") @db.Decimal(5, 2)
-  startsAt        DateTime      @map("starts_at")
-  endsAt          DateTime      @map("ends_at")
-  manager         String
-  tenderSource    String?       @map("tender_source")
-  paymentNotes    String?       @map("payment_notes")
-  volumeChangeMode String?      @map("volume_change_mode")
-  templateId      String?       @map("template_id")
-  selectedModules Json?         @map("selected_modules")
-  status          ProjectStatus @default(planning)
-  isSmokeProject  Boolean       @default(false) @map("is_smoke_project")
-  createdAt       DateTime      @default(now()) @map("created_at")
-  updatedAt       DateTime      @updatedAt @map("updated_at")
-  organization    Organization  @relation(fields: [organizationId], references: [id])
-  members         ProjectMember[]
-  userInvites     UserInvite[]
-  budgetSections  BudgetSection[]
-  budgetItems     BudgetItem[]
-  scheduleItems   ScheduleItem[]
-  workProgressEntries WorkProgressEntry[]
-  materials       Material[]
-  materialNeeds   MaterialNeed[]
-  procurementRequests ProcurementRequest[]
-  supplierQuotes  SupplierQuote[]
-  payments        Payment[]
-  cashflowPeriods CashflowPeriod[]
-  documents       Document[]
-  dailyReports    DailyReport[]
-  risks           Risk[]
-  aiMessages      AiMessage[]
-  auditLogs       AuditLog[]
-  importBatches   ImportBatch[]
-  actionItems     ProjectActionItem[]
-  executiveReports ExecutiveReport[]
-  rfis            ProjectRfi[]
-  submittals      ProjectSubmittal[]
-  documentTransmittals ProjectDocumentTransmittal[]
-  fieldSyncReceipts FieldSyncReceipt[]
-  accountingSyncRuns AccountingSyncRun[]
+  id                      String                       @id @default(cuid())
+  organizationId          String                       @map("organization_id")
+  name                    String
+  code                    String?
+  customer                String
+  object                  String
+  objectType              String?                      @map("object_type")
+  address                 String
+  description             String?
+  contractAmount          Decimal                      @map("contract_amount") @db.Decimal(14, 2)
+  vatMode                 String                       @default("vat") @map("vat_mode")
+  vatPercent              Decimal?                     @map("vat_percent") @db.Decimal(5, 2)
+  startsAt                DateTime                     @map("starts_at")
+  endsAt                  DateTime                     @map("ends_at")
+  manager                 String
+  tenderSource            String?                      @map("tender_source")
+  paymentNotes            String?                      @map("payment_notes")
+  volumeChangeMode        String?                      @map("volume_change_mode")
+  templateId              String?                      @map("template_id")
+  selectedModules         Json?                        @map("selected_modules")
+  status                  ProjectStatus                @default(planning)
+  isSmokeProject          Boolean                      @default(false) @map("is_smoke_project")
+  createdAt               DateTime                     @default(now()) @map("created_at")
+  updatedAt               DateTime                     @updatedAt @map("updated_at")
+  organization            Organization                 @relation(fields: [organizationId], references: [id])
+  members                 ProjectMember[]
+  userInvites             UserInvite[]
+  budgetSections          BudgetSection[]
+  budgetItems             BudgetItem[]
+  scheduleItems           ScheduleItem[]
+  workProgressEntries     WorkProgressEntry[]
+  materials               Material[]
+  materialNeeds           MaterialNeed[]
+  procurementRequests     ProcurementRequest[]
+  supplierQuotes          SupplierQuote[]
+  payments                Payment[]
+  cashflowPeriods         CashflowPeriod[]
+  documents               Document[]
+  dailyReports            DailyReport[]
+  risks                   Risk[]
+  aiMessages              AiMessage[]
+  auditLogs               AuditLog[]
+  importBatches           ImportBatch[]
+  actionItems             ProjectActionItem[]
+  executiveReports        ExecutiveReport[]
+  rfis                    ProjectRfi[]
+  submittals              ProjectSubmittal[]
+  documentTransmittals    ProjectDocumentTransmittal[]
+  fieldSyncReceipts       FieldSyncReceipt[]
+  accountingSyncRuns      AccountingSyncRun[]
   accountingExternalLinks AccountingExternalLink[]
-  workflowTemplates ProjectWorkflowTemplate[]
-  workflowRuns      ProjectWorkflowRun[]
-  changeOrders      ProjectChangeOrder[]
-  costCodes         ProjectCostCode[]
+  workflowTemplates       ProjectWorkflowTemplate[]
+  workflowRuns            ProjectWorkflowRun[]
+  changeOrders            ProjectChangeOrder[]
+  costCodes               ProjectCostCode[]
   commitments             ProjectCommitment[]
   paymentApplications     ProjectPaymentApplication[]
+  qualityInspections      ProjectQualityInspection[]
+  qualityIssues           ProjectQualityIssue[]
 
   @@map("projects")
 }
@@ -219,28 +221,28 @@ model PasswordResetToken {
 }
 
 model BudgetItem {
-  id              String     @id @default(cuid())
-  organizationId  String     @map("organization_id")
-  projectId       String     @map("project_id")
-  costCodeId      String?    @map("cost_code_id")
-  section         String
-  subsection      String?
-  code            String
-  name            String
-  unit            String
-  qty             Decimal    @db.Decimal(14, 3)
-  plannedUnitPrice Decimal   @map("planned_unit_price") @db.Decimal(14, 2)
-  actualUnitPrice  Decimal   @map("actual_unit_price") @db.Decimal(14, 2)
-  forecastUnitPrice Decimal  @map("forecast_unit_price") @db.Decimal(14, 2)
-  kind            BudgetKind
-  source          String
-  comment         String?
-  createdBy       String?    @map("created_by")
-  createdAt       DateTime   @default(now()) @map("created_at")
-  updatedAt       DateTime   @updatedAt @map("updated_at")
-  project         Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  costCode        ProjectCostCode? @relation(fields: [costCodeId], references: [id], onDelete: SetNull)
-  changeOrderItems ProjectChangeOrderItem[]
+  id                String                   @id @default(cuid())
+  organizationId    String                   @map("organization_id")
+  projectId         String                   @map("project_id")
+  costCodeId        String?                  @map("cost_code_id")
+  section           String
+  subsection        String?
+  code              String
+  name              String
+  unit              String
+  qty               Decimal                  @db.Decimal(14, 3)
+  plannedUnitPrice  Decimal                  @map("planned_unit_price") @db.Decimal(14, 2)
+  actualUnitPrice   Decimal                  @map("actual_unit_price") @db.Decimal(14, 2)
+  forecastUnitPrice Decimal                  @map("forecast_unit_price") @db.Decimal(14, 2)
+  kind              BudgetKind
+  source            String
+  comment           String?
+  createdBy         String?                  @map("created_by")
+  createdAt         DateTime                 @default(now()) @map("created_at")
+  updatedAt         DateTime                 @updatedAt @map("updated_at")
+  project           Project                  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  costCode          ProjectCostCode?         @relation(fields: [costCodeId], references: [id], onDelete: SetNull)
+  changeOrderItems  ProjectChangeOrderItem[]
   commitmentLines   ProjectCommitmentLine[]
 
   @@index([costCodeId])
@@ -264,121 +266,123 @@ model BudgetSection {
 }
 
 model ScheduleItem {
-  id          String   @id @default(cuid())
-  organizationId String @map("organization_id")
-  projectId   String   @map("project_id")
-  costCodeId  String?  @map("cost_code_id")
-  budgetItemId String?  @map("budget_item_id")
-  name        String
-  owner       String
-  startsAt    DateTime @map("starts_at")
-  endsAt      DateTime @map("ends_at")
-  plannedQty  Decimal  @map("planned_qty") @db.Decimal(14, 3)
-  actualQty      Decimal          @default(0) @map("actual_qty") @db.Decimal(14, 3)
-  status      String
-  dependency  String?
-  createdBy   String?  @map("created_by")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  costCode    ProjectCostCode? @relation(fields: [costCodeId], references: [id], onDelete: SetNull)
+  id                 String                     @id @default(cuid())
+  organizationId     String                     @map("organization_id")
+  projectId          String                     @map("project_id")
+  costCodeId         String?                    @map("cost_code_id")
+  budgetItemId       String?                    @map("budget_item_id")
+  name               String
+  owner              String
+  startsAt           DateTime                   @map("starts_at")
+  endsAt             DateTime                   @map("ends_at")
+  plannedQty         Decimal                    @map("planned_qty") @db.Decimal(14, 3)
+  actualQty          Decimal                    @default(0) @map("actual_qty") @db.Decimal(14, 3)
+  status             String
+  dependency         String?
+  createdBy          String?                    @map("created_by")
+  createdAt          DateTime                   @default(now()) @map("created_at")
+  updatedAt          DateTime                   @updatedAt @map("updated_at")
+  project            Project                    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  costCode           ProjectCostCode?           @relation(fields: [costCodeId], references: [id], onDelete: SetNull)
+  qualityInspections ProjectQualityInspection[]
+  qualityIssues      ProjectQualityIssue[]
 
   @@index([costCodeId])
   @@map("schedule_items")
 }
 
 model WorkProgressEntry {
-  id          String   @id @default(cuid())
-  organizationId String @map("organization_id")
-  projectId   String   @map("project_id")
-  scheduleItemId String? @map("schedule_item_id")
-  date        DateTime
-  qty         Decimal  @db.Decimal(14, 3)
-  performer   String
-  documentId  String?  @map("document_id")
-  comment     String?
-  status      String   @default("draft")
-  createdBy   String?  @map("created_by")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  id             String   @id @default(cuid())
+  organizationId String   @map("organization_id")
+  projectId      String   @map("project_id")
+  scheduleItemId String?  @map("schedule_item_id")
+  date           DateTime
+  qty            Decimal  @db.Decimal(14, 3)
+  performer      String
+  documentId     String?  @map("document_id")
+  comment        String?
+  status         String   @default("draft")
+  createdBy      String?  @map("created_by")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  project        Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@map("work_progress_entries")
 }
 
 model Material {
-  id          String   @id @default(cuid())
-  organizationId String @map("organization_id")
-  projectId   String   @map("project_id")
-  costCodeId  String?  @map("cost_code_id")
-  name        String
-  unit        String
-  requiredQty Decimal  @map("required_qty") @db.Decimal(14, 3)
-  orderedQty  Decimal  @map("ordered_qty") @db.Decimal(14, 3)
-  deliveredQty Decimal @map("delivered_qty") @db.Decimal(14, 3)
-  consumedQty Decimal  @map("consumed_qty") @db.Decimal(14, 3)
-  plannedUnitPrice Decimal @map("planned_unit_price") @db.Decimal(14, 2)
-  actualUnitPrice Decimal  @map("actual_unit_price") @db.Decimal(14, 2)
-  supplier    String?
-  neededAt    DateTime @map("needed_at")
-  status      String
-  createdBy   String?  @map("created_by")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  costCode    ProjectCostCode? @relation(fields: [costCodeId], references: [id], onDelete: SetNull)
+  id               String           @id @default(cuid())
+  organizationId   String           @map("organization_id")
+  projectId        String           @map("project_id")
+  costCodeId       String?          @map("cost_code_id")
+  name             String
+  unit             String
+  requiredQty      Decimal          @map("required_qty") @db.Decimal(14, 3)
+  orderedQty       Decimal          @map("ordered_qty") @db.Decimal(14, 3)
+  deliveredQty     Decimal          @map("delivered_qty") @db.Decimal(14, 3)
+  consumedQty      Decimal          @map("consumed_qty") @db.Decimal(14, 3)
+  plannedUnitPrice Decimal          @map("planned_unit_price") @db.Decimal(14, 2)
+  actualUnitPrice  Decimal          @map("actual_unit_price") @db.Decimal(14, 2)
+  supplier         String?
+  neededAt         DateTime         @map("needed_at")
+  status           String
+  createdBy        String?          @map("created_by")
+  createdAt        DateTime         @default(now()) @map("created_at")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
+  project          Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  costCode         ProjectCostCode? @relation(fields: [costCodeId], references: [id], onDelete: SetNull)
 
   @@index([costCodeId])
   @@map("materials")
 }
 
 model MaterialNeed {
-  id          String   @id @default(cuid())
-  organizationId String @map("organization_id")
-  projectId   String   @map("project_id")
-  materialId  String?  @map("material_id")
-  requiredAt  DateTime @map("required_at")
-  qty         Decimal  @db.Decimal(14, 3)
-  reason      String
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  id             String   @id @default(cuid())
+  organizationId String   @map("organization_id")
+  projectId      String   @map("project_id")
+  materialId     String?  @map("material_id")
+  requiredAt     DateTime @map("required_at")
+  qty            Decimal  @db.Decimal(14, 3)
+  reason         String
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  project        Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@map("material_needs")
 }
 
 model ProcurementRequest {
-  id          String   @id @default(cuid())
-  organizationId String @map("organization_id")
-  projectId   String   @map("project_id")
-  title       String
-  initiator   String
-  neededAt    DateTime @map("needed_at")
-  priority    RiskPriority
-  status      String
-  createdBy   String?  @map("created_by")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  items       ProcurementRequestItem[]
+  id             String                   @id @default(cuid())
+  organizationId String                   @map("organization_id")
+  projectId      String                   @map("project_id")
+  title          String
+  initiator      String
+  neededAt       DateTime                 @map("needed_at")
+  priority       RiskPriority
+  status         String
+  createdBy      String?                  @map("created_by")
+  createdAt      DateTime                 @default(now()) @map("created_at")
+  updatedAt      DateTime                 @updatedAt @map("updated_at")
+  project        Project                  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  items          ProcurementRequestItem[]
   commitments    ProjectCommitment[]
 
   @@map("procurement_requests")
 }
 
 model ProcurementRequestItem {
-  id          String   @id @default(cuid())
-  requestId   String   @map("request_id")
-  costCodeId  String?  @map("cost_code_id")
-  materialId  String?  @map("material_id")
-  name        String
-  qty         Decimal  @db.Decimal(14, 3)
-  unit        String
-  comment     String?
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-  request     ProcurementRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
-  costCode    ProjectCostCode? @relation(fields: [costCodeId], references: [id], onDelete: SetNull)
+  id              String                  @id @default(cuid())
+  requestId       String                  @map("request_id")
+  costCodeId      String?                 @map("cost_code_id")
+  materialId      String?                 @map("material_id")
+  name            String
+  qty             Decimal                 @db.Decimal(14, 3)
+  unit            String
+  comment         String?
+  createdAt       DateTime                @default(now()) @map("created_at")
+  updatedAt       DateTime                @updatedAt @map("updated_at")
+  request         ProcurementRequest      @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  costCode        ProjectCostCode?        @relation(fields: [costCodeId], references: [id], onDelete: SetNull)
   commitmentLines ProjectCommitmentLine[]
 
   @@index([costCodeId])
@@ -386,56 +390,56 @@ model ProcurementRequestItem {
 }
 
 model Supplier {
-  id          String   @id @default(cuid())
-  organizationId String @map("organization_id")
-  name        String
-  phone       String?
-  email       String?
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-  quotes      SupplierQuote[]
+  id             String          @id @default(cuid())
+  organizationId String          @map("organization_id")
+  name           String
+  phone          String?
+  email          String?
+  createdAt      DateTime        @default(now()) @map("created_at")
+  updatedAt      DateTime        @updatedAt @map("updated_at")
+  quotes         SupplierQuote[]
 
   @@map("suppliers")
 }
 
 model SupplierQuote {
-  id          String   @id @default(cuid())
-  organizationId String @map("organization_id")
-  projectId   String   @map("project_id")
-  supplierId  String   @map("supplier_id")
-  material    String
-  price       Decimal  @db.Decimal(14, 2)
-  deliveryDays Int     @map("delivery_days")
-  paymentTerms String  @map("payment_terms")
-  vatIncluded Boolean  @map("vat_included")
-  filePath    String?  @map("file_path")
-  comment     String?
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  supplier    Supplier @relation(fields: [supplierId], references: [id])
+  id             String   @id @default(cuid())
+  organizationId String   @map("organization_id")
+  projectId      String   @map("project_id")
+  supplierId     String   @map("supplier_id")
+  material       String
+  price          Decimal  @db.Decimal(14, 2)
+  deliveryDays   Int      @map("delivery_days")
+  paymentTerms   String   @map("payment_terms")
+  vatIncluded    Boolean  @map("vat_included")
+  filePath       String?  @map("file_path")
+  comment        String?
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  project        Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  supplier       Supplier @relation(fields: [supplierId], references: [id])
 
   @@map("supplier_quotes")
 }
 
 model Payment {
-  id          String   @id @default(cuid())
-  organizationId String @map("organization_id")
-  projectId   String   @map("project_id")
-  costCodeId  String?  @map("cost_code_id")
-  title       String
-  counterparty String
-  direction   String
-  plannedAt   DateTime @map("planned_at")
-  paidAt      DateTime? @map("paid_at")
-  amount      Decimal  @db.Decimal(14, 2)
-  status      String
-  category    String
-  createdBy   String?  @map("created_by")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  costCode    ProjectCostCode? @relation(fields: [costCodeId], references: [id], onDelete: SetNull)
+  id                 String                     @id @default(cuid())
+  organizationId     String                     @map("organization_id")
+  projectId          String                     @map("project_id")
+  costCodeId         String?                    @map("cost_code_id")
+  title              String
+  counterparty       String
+  direction          String
+  plannedAt          DateTime                   @map("planned_at")
+  paidAt             DateTime?                  @map("paid_at")
+  amount             Decimal                    @db.Decimal(14, 2)
+  status             String
+  category           String
+  createdBy          String?                    @map("created_by")
+  createdAt          DateTime                   @default(now()) @map("created_at")
+  updatedAt          DateTime                   @updatedAt @map("updated_at")
+  project            Project                    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  costCode           ProjectCostCode?           @relation(fields: [costCodeId], references: [id], onDelete: SetNull)
   paymentApplication ProjectPaymentApplication?
 
   @@index([costCodeId])
@@ -443,199 +447,206 @@ model Payment {
 }
 
 model CashflowPeriod {
-  id          String   @id @default(cuid())
-  organizationId String @map("organization_id")
-  projectId   String   @map("project_id")
-  periodStart DateTime @map("period_start")
-  periodEnd   DateTime @map("period_end")
-  openingBalance Decimal @map("opening_balance") @db.Decimal(14, 2)
-  incoming    Decimal  @db.Decimal(14, 2)
-  outgoing    Decimal  @db.Decimal(14, 2)
-  closingBalance Decimal @map("closing_balance") @db.Decimal(14, 2)
-  cashGap     Decimal  @map("cash_gap") @db.Decimal(14, 2)
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  id             String   @id @default(cuid())
+  organizationId String   @map("organization_id")
+  projectId      String   @map("project_id")
+  periodStart    DateTime @map("period_start")
+  periodEnd      DateTime @map("period_end")
+  openingBalance Decimal  @map("opening_balance") @db.Decimal(14, 2)
+  incoming       Decimal  @db.Decimal(14, 2)
+  outgoing       Decimal  @db.Decimal(14, 2)
+  closingBalance Decimal  @map("closing_balance") @db.Decimal(14, 2)
+  cashGap        Decimal  @map("cash_gap") @db.Decimal(14, 2)
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  project        Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@map("cashflow_periods")
 }
 
 model Document {
-  id          String   @id @default(cuid())
-  organizationId String @map("organization_id")
-  projectId   String   @map("project_id")
-  category    String
-  title       String
-  filePath    String   @map("file_path")
-  fileName    String?  @map("file_name")
-  mimeType    String?  @map("mime_type")
-  sizeBytes   Int?     @map("size_bytes")
-  storageKey  String?  @map("storage_key")
-  uploadedAt  DateTime @default(now()) @map("uploaded_at")
-  version     Int      @default(1)
-  author      String
-  comment     String?
-  createdBy   String?  @map("created_by")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  versions    DocumentVersion[]
-  rfiLinks    ProjectRfi[]
-  submittalLinks ProjectSubmittal[]
-  transmittalItems DocumentTransmittalItem[]
-  changeOrderLinks ProjectChangeOrder[]
-  commitmentLinks  ProjectCommitment[]
+  id                     String                     @id @default(cuid())
+  organizationId         String                     @map("organization_id")
+  projectId              String                     @map("project_id")
+  category               String
+  title                  String
+  filePath               String                     @map("file_path")
+  fileName               String?                    @map("file_name")
+  mimeType               String?                    @map("mime_type")
+  sizeBytes              Int?                       @map("size_bytes")
+  storageKey             String?                    @map("storage_key")
+  uploadedAt             DateTime                   @default(now()) @map("uploaded_at")
+  version                Int                        @default(1)
+  author                 String
+  comment                String?
+  createdBy              String?                    @map("created_by")
+  createdAt              DateTime                   @default(now()) @map("created_at")
+  updatedAt              DateTime                   @updatedAt @map("updated_at")
+  project                Project                    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  versions               DocumentVersion[]
+  rfiLinks               ProjectRfi[]
+  submittalLinks         ProjectSubmittal[]
+  transmittalItems       DocumentTransmittalItem[]
+  changeOrderLinks       ProjectChangeOrder[]
+  commitmentLinks        ProjectCommitment[]
+  qualityInspectionLinks ProjectQualityInspection[]
+  qualityIssueLinks      ProjectQualityIssue[]
+  qualityEvidenceLinks   ProjectQualityEvidence[]
 
   @@map("documents")
 }
 
 model DocumentVersion {
-  id             String   @id @default(cuid())
-  documentId     String   @map("document_id")
-  versionNumber  Int      @map("version_number")
-  fileName       String   @map("file_name")
-  mimeType       String?  @map("mime_type")
-  sizeBytes      Int      @map("size_bytes")
-  storageKey     String   @map("storage_key")
-  uploadedById   String?  @map("uploaded_by_id")
-  uploadedByName String?  @map("uploaded_by_name")
-  previewAvailable Boolean @default(false) @map("preview_available")
-  createdAt      DateTime @default(now()) @map("created_at")
-  document       Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
-  uploadedBy     User?    @relation(fields: [uploadedById], references: [id])
-  rfiLinks       ProjectRfi[]
-  submittalLinks ProjectSubmittal[]
-  transmittalItems DocumentTransmittalItem[]
-  changeOrderLinks ProjectChangeOrder[]
-  commitmentLinks  ProjectCommitment[]
+  id                     String                     @id @default(cuid())
+  documentId             String                     @map("document_id")
+  versionNumber          Int                        @map("version_number")
+  fileName               String                     @map("file_name")
+  mimeType               String?                    @map("mime_type")
+  sizeBytes              Int                        @map("size_bytes")
+  storageKey             String                     @map("storage_key")
+  uploadedById           String?                    @map("uploaded_by_id")
+  uploadedByName         String?                    @map("uploaded_by_name")
+  previewAvailable       Boolean                    @default(false) @map("preview_available")
+  createdAt              DateTime                   @default(now()) @map("created_at")
+  document               Document                   @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  uploadedBy             User?                      @relation(fields: [uploadedById], references: [id])
+  rfiLinks               ProjectRfi[]
+  submittalLinks         ProjectSubmittal[]
+  transmittalItems       DocumentTransmittalItem[]
+  changeOrderLinks       ProjectChangeOrder[]
+  commitmentLinks        ProjectCommitment[]
+  qualityInspectionLinks ProjectQualityInspection[]
+  qualityIssueLinks      ProjectQualityIssue[]
+  qualityEvidenceLinks   ProjectQualityEvidence[]
 
   @@unique([documentId, versionNumber])
   @@map("document_versions")
 }
 
 model DailyReport {
-  id          String   @id @default(cuid())
-  organizationId String @map("organization_id")
-  projectId   String   @map("project_id")
-  date        DateTime
-  author      String
-  weather     String
-  workers     Int
-  engineers   Int
-  equipment   String
-  completedWorks String @map("completed_works")
-  materialsReceived String @map("materials_received")
-  materialsConsumed String @map("materials_consumed")
-  downtime    String
-  issues      String
-  status      String
-  createdBy   String?  @map("created_by")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  id                String                @id @default(cuid())
+  organizationId    String                @map("organization_id")
+  projectId         String                @map("project_id")
+  date              DateTime
+  author            String
+  weather           String
+  workers           Int
+  engineers         Int
+  equipment         String
+  completedWorks    String                @map("completed_works")
+  materialsReceived String                @map("materials_received")
+  materialsConsumed String                @map("materials_consumed")
+  downtime          String
+  issues            String
+  status            String
+  createdBy         String?               @map("created_by")
+  createdAt         DateTime              @default(now()) @map("created_at")
+  updatedAt         DateTime              @updatedAt @map("updated_at")
+  project           Project               @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  qualityIssues     ProjectQualityIssue[]
 
   @@map("daily_reports")
 }
 
 model Risk {
-  id          String   @id @default(cuid())
-  organizationId String @map("organization_id")
-  projectId   String   @map("project_id")
-  title       String
-  reason      String
-  priority    RiskPriority
-  owner       String
-  dueAt       DateTime @map("due_at")
-  status      String
-  createdBy   String?  @map("created_by")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  id             String       @id @default(cuid())
+  organizationId String       @map("organization_id")
+  projectId      String       @map("project_id")
+  title          String
+  reason         String
+  priority       RiskPriority
+  owner          String
+  dueAt          DateTime     @map("due_at")
+  status         String
+  createdBy      String?      @map("created_by")
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+  project        Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@map("risks")
 }
 
 model AiMessage {
-  id          String   @id @default(cuid())
-  organizationId String @map("organization_id")
-  projectId   String   @map("project_id")
-  userId      String   @map("user_id")
-  prompt      String
-  response    String
-  createdAt   DateTime @default(now()) @map("created_at")
-  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  user        User     @relation(fields: [userId], references: [id])
+  id             String   @id @default(cuid())
+  organizationId String   @map("organization_id")
+  projectId      String   @map("project_id")
+  userId         String   @map("user_id")
+  prompt         String
+  response       String
+  createdAt      DateTime @default(now()) @map("created_at")
+  project        Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user           User     @relation(fields: [userId], references: [id])
 
   @@map("ai_messages")
 }
 
 model ImportBatch {
-  id             String   @id @default(cuid())
-  organizationId String   @map("organization_id")
-  projectId      String   @map("project_id")
-  createdBy      String?  @map("created_by")
-  fileName       String   @map("file_name")
-  fileSize       Int?     @map("file_size")
-  parserVersion  String   @map("parser_version")
-  status         String   @default("previewed")
+  id             String    @id @default(cuid())
+  organizationId String    @map("organization_id")
+  projectId      String    @map("project_id")
+  createdBy      String?   @map("created_by")
+  fileName       String    @map("file_name")
+  fileSize       Int?      @map("file_size")
+  parserVersion  String    @map("parser_version")
+  status         String    @default("previewed")
   mode           String?
   sheets         Json?
   mapping        Json?
   summary        Json
-  previewJson    Json     @map("preview_json")
+  previewJson    Json      @map("preview_json")
   warnings       Json?
   errors         Json?
   committedAt    DateTime? @map("committed_at")
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
-  project        Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  project        Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@index([projectId, createdAt])
   @@map("import_batches")
 }
 
 model AuditLog {
-  id          String   @id @default(cuid())
-  organizationId String @map("organization_id")
-  projectId   String?  @map("project_id")
-  actorId     String?  @map("actor_id")
-  actorName   String?  @map("actor_name")
-  actorEmail  String?  @map("actor_email")
-  entity      String
-  entityId    String   @map("entity_id")
-  action      String
-  summary     String?
-  beforeJson  Json?    @map("before_json")
-  afterJson   Json?    @map("after_json")
-  payload     Json?
-  createdAt   DateTime @default(now()) @map("created_at")
-  organization Organization @relation(fields: [organizationId], references: [id])
-  project     Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  id             String       @id @default(cuid())
+  organizationId String       @map("organization_id")
+  projectId      String?      @map("project_id")
+  actorId        String?      @map("actor_id")
+  actorName      String?      @map("actor_name")
+  actorEmail     String?      @map("actor_email")
+  entity         String
+  entityId       String       @map("entity_id")
+  action         String
+  summary        String?
+  beforeJson     Json?        @map("before_json")
+  afterJson      Json?        @map("after_json")
+  payload        Json?
+  createdAt      DateTime     @default(now()) @map("created_at")
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  project        Project?     @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@index([projectId, createdAt])
   @@map("audit_log")
 }
 
 model ProjectActionItem {
-  id               String   @id @default(cuid())
-  organizationId   String   @map("organization_id")
-  projectId        String   @map("project_id")
-  createdBy        String?  @map("created_by")
+  id               String    @id @default(cuid())
+  organizationId   String    @map("organization_id")
+  projectId        String    @map("project_id")
+  createdBy        String?   @map("created_by")
   title            String
   description      String?
-  sourceModule     String   @default("manual") @map("source_module")
-  targetTab        String?  @map("target_tab")
-  priority         String   @default("medium")
-  status           String   @default("open")
+  sourceModule     String    @default("manual") @map("source_module")
+  targetTab        String?   @map("target_tab")
+  priority         String    @default("medium")
+  status           String    @default("open")
   assignee         String?
   dueAt            DateTime? @map("due_at")
   completedAt      DateTime? @map("completed_at")
-  requiresApproval Boolean  @default(false) @map("requires_approval")
+  requiresApproval Boolean   @default(false) @map("requires_approval")
   approvedAt       DateTime? @map("approved_at")
-  approvedBy       String?  @map("approved_by")
-  createdAt        DateTime @default(now()) @map("created_at")
-  updatedAt        DateTime @updatedAt @map("updated_at")
-  project          Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  approvedBy       String?   @map("approved_by")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+  project          Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@index([projectId, status, dueAt])
   @@index([projectId, assignee])
@@ -643,31 +654,33 @@ model ProjectActionItem {
 }
 
 model ProjectCostCode {
-  id                     String   @id @default(cuid())
-  organizationId         String   @map("organization_id")
-  projectId              String   @map("project_id")
-  parentId               String?  @map("parent_id")
-  code                   String
-  name                   String
-  description            String?
-  segment                String   @default("cost")
-  costType               String   @default("expense") @map("cost_type")
-  status                 String   @default("active")
-  source                 String   @default("manual")
-  sortOrder              Int      @default(0) @map("sort_order")
-  createdBy              String?  @map("created_by")
-  createdAt              DateTime @default(now()) @map("created_at")
-  updatedAt              DateTime @updatedAt @map("updated_at")
-  project                Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  parent                 ProjectCostCode? @relation("ProjectCostCodeTree", fields: [parentId], references: [id], onDelete: Restrict)
-  children               ProjectCostCode[] @relation("ProjectCostCodeTree")
-  budgetItems            BudgetItem[]
-  scheduleItems          ScheduleItem[]
-  materials              Material[]
+  id                      String                     @id @default(cuid())
+  organizationId          String                     @map("organization_id")
+  projectId               String                     @map("project_id")
+  parentId                String?                    @map("parent_id")
+  code                    String
+  name                    String
+  description             String?
+  segment                 String                     @default("cost")
+  costType                String                     @default("expense") @map("cost_type")
+  status                  String                     @default("active")
+  source                  String                     @default("manual")
+  sortOrder               Int                        @default(0) @map("sort_order")
+  createdBy               String?                    @map("created_by")
+  createdAt               DateTime                   @default(now()) @map("created_at")
+  updatedAt               DateTime                   @updatedAt @map("updated_at")
+  project                 Project                    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  parent                  ProjectCostCode?           @relation("ProjectCostCodeTree", fields: [parentId], references: [id], onDelete: Restrict)
+  children                ProjectCostCode[]          @relation("ProjectCostCodeTree")
+  budgetItems             BudgetItem[]
+  scheduleItems           ScheduleItem[]
+  materials               Material[]
   procurementRequestItems ProcurementRequestItem[]
-  payments               Payment[]
-  changeOrderItems       ProjectChangeOrderItem[]
+  payments                Payment[]
+  changeOrderItems        ProjectChangeOrderItem[]
   commitmentLines         ProjectCommitmentLine[]
+  qualityInspections      ProjectQualityInspection[]
+  qualityIssues           ProjectQualityIssue[]
 
   @@unique([projectId, code])
   @@index([projectId, parentId, sortOrder])
@@ -676,48 +689,48 @@ model ProjectCostCode {
 }
 
 model ProjectChangeOrder {
-  id                    String   @id @default(cuid())
-  organizationId        String   @map("organization_id")
-  projectId             String   @map("project_id")
+  id                       String                   @id @default(cuid())
+  organizationId           String                   @map("organization_id")
+  projectId                String                   @map("project_id")
   commitmentId             String?                  @map("commitment_id")
-  sequence              Int
-  number                String
-  kind                  String   @default("potential")
-  scope                 String   @default("out_of_scope")
-  title                 String
-  description           String?
-  reason                String?
-  sourceType            String?  @map("source_type")
-  sourceRef             String?  @map("source_ref")
-  counterparty          String?
-  status                String   @default("draft")
-  currency              String   @default("RUB")
-  scheduleImpactDays    Int      @default(0) @map("schedule_impact_days")
-  estimatedAmount       Decimal  @default(0) @map("estimated_amount") @db.Decimal(14, 2)
-  proposedAmount        Decimal  @default(0) @map("proposed_amount") @db.Decimal(14, 2)
-  submittedAmount       Decimal  @default(0) @map("submitted_amount") @db.Decimal(14, 2)
-  approvedAmount        Decimal  @default(0) @map("approved_amount") @db.Decimal(14, 2)
-  committedAmount       Decimal  @default(0) @map("committed_amount") @db.Decimal(14, 2)
-  linkedDocumentId      String?  @map("linked_document_id")
-  linkedDocumentVersion Int?     @map("linked_document_version")
-  linkedDocumentVersionId String? @map("linked_document_version_id")
-  approvalWorkflowRunId String?  @unique @map("approval_workflow_run_id")
-  decisionComment       String?  @map("decision_comment")
-  dueAt                 DateTime? @map("due_at")
-  submittedAt           DateTime? @map("submitted_at")
-  approvedAt            DateTime? @map("approved_at")
-  executedAt            DateTime? @map("executed_at")
-  rejectedAt            DateTime? @map("rejected_at")
-  voidedAt              DateTime? @map("voided_at")
-  createdBy             String?  @map("created_by")
-  createdAt             DateTime @default(now()) @map("created_at")
-  updatedAt             DateTime @updatedAt @map("updated_at")
-  project               Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  linkedDocument        Document? @relation(fields: [linkedDocumentId], references: [id], onDelete: SetNull)
-  linkedDocumentVersionRef DocumentVersion? @relation(fields: [linkedDocumentVersionId], references: [id], onDelete: SetNull)
-  approvalWorkflowRun   ProjectWorkflowRun? @relation(fields: [approvalWorkflowRunId], references: [id], onDelete: SetNull)
+  sequence                 Int
+  number                   String
+  kind                     String                   @default("potential")
+  scope                    String                   @default("out_of_scope")
+  title                    String
+  description              String?
+  reason                   String?
+  sourceType               String?                  @map("source_type")
+  sourceRef                String?                  @map("source_ref")
+  counterparty             String?
+  status                   String                   @default("draft")
+  currency                 String                   @default("RUB")
+  scheduleImpactDays       Int                      @default(0) @map("schedule_impact_days")
+  estimatedAmount          Decimal                  @default(0) @map("estimated_amount") @db.Decimal(14, 2)
+  proposedAmount           Decimal                  @default(0) @map("proposed_amount") @db.Decimal(14, 2)
+  submittedAmount          Decimal                  @default(0) @map("submitted_amount") @db.Decimal(14, 2)
+  approvedAmount           Decimal                  @default(0) @map("approved_amount") @db.Decimal(14, 2)
+  committedAmount          Decimal                  @default(0) @map("committed_amount") @db.Decimal(14, 2)
+  linkedDocumentId         String?                  @map("linked_document_id")
+  linkedDocumentVersion    Int?                     @map("linked_document_version")
+  linkedDocumentVersionId  String?                  @map("linked_document_version_id")
+  approvalWorkflowRunId    String?                  @unique @map("approval_workflow_run_id")
+  decisionComment          String?                  @map("decision_comment")
+  dueAt                    DateTime?                @map("due_at")
+  submittedAt              DateTime?                @map("submitted_at")
+  approvedAt               DateTime?                @map("approved_at")
+  executedAt               DateTime?                @map("executed_at")
+  rejectedAt               DateTime?                @map("rejected_at")
+  voidedAt                 DateTime?                @map("voided_at")
+  createdBy                String?                  @map("created_by")
+  createdAt                DateTime                 @default(now()) @map("created_at")
+  updatedAt                DateTime                 @updatedAt @map("updated_at")
+  project                  Project                  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  linkedDocument           Document?                @relation(fields: [linkedDocumentId], references: [id], onDelete: SetNull)
+  linkedDocumentVersionRef DocumentVersion?         @relation(fields: [linkedDocumentVersionId], references: [id], onDelete: SetNull)
+  approvalWorkflowRun      ProjectWorkflowRun?      @relation(fields: [approvalWorkflowRunId], references: [id], onDelete: SetNull)
   commitment               ProjectCommitment?       @relation(fields: [commitmentId], references: [id], onDelete: SetNull)
-  items                 ProjectChangeOrderItem[]
+  items                    ProjectChangeOrderItem[]
 
   @@unique([projectId, sequence])
   @@unique([projectId, number])
@@ -729,25 +742,25 @@ model ProjectChangeOrder {
 }
 
 model ProjectChangeOrderItem {
-  id                   String   @id @default(cuid())
-  changeOrderId        String   @map("change_order_id")
-  budgetItemId         String?  @map("budget_item_id")
-  costCodeId           String?  @map("cost_code_id")
-  sequence             Int
-  code                 String?
-  description          String
-  quantity             Decimal  @default(1) @db.Decimal(14, 3)
-  unit                 String   @default("компл.")
-  estimatedUnitPrice   Decimal  @default(0) @map("estimated_unit_price") @db.Decimal(14, 2)
-  proposedUnitPrice    Decimal  @default(0) @map("proposed_unit_price") @db.Decimal(14, 2)
-  submittedUnitPrice   Decimal  @default(0) @map("submitted_unit_price") @db.Decimal(14, 2)
-  approvedUnitPrice    Decimal  @default(0) @map("approved_unit_price") @db.Decimal(14, 2)
-  committedUnitPrice   Decimal  @default(0) @map("committed_unit_price") @db.Decimal(14, 2)
-  createdAt            DateTime @default(now()) @map("created_at")
-  updatedAt            DateTime @updatedAt @map("updated_at")
-  changeOrder          ProjectChangeOrder @relation(fields: [changeOrderId], references: [id], onDelete: Cascade)
-  budgetItem           BudgetItem? @relation(fields: [budgetItemId], references: [id], onDelete: SetNull)
-  costCode             ProjectCostCode? @relation(fields: [costCodeId], references: [id], onDelete: SetNull)
+  id                 String             @id @default(cuid())
+  changeOrderId      String             @map("change_order_id")
+  budgetItemId       String?            @map("budget_item_id")
+  costCodeId         String?            @map("cost_code_id")
+  sequence           Int
+  code               String?
+  description        String
+  quantity           Decimal            @default(1) @db.Decimal(14, 3)
+  unit               String             @default("компл.")
+  estimatedUnitPrice Decimal            @default(0) @map("estimated_unit_price") @db.Decimal(14, 2)
+  proposedUnitPrice  Decimal            @default(0) @map("proposed_unit_price") @db.Decimal(14, 2)
+  submittedUnitPrice Decimal            @default(0) @map("submitted_unit_price") @db.Decimal(14, 2)
+  approvedUnitPrice  Decimal            @default(0) @map("approved_unit_price") @db.Decimal(14, 2)
+  committedUnitPrice Decimal            @default(0) @map("committed_unit_price") @db.Decimal(14, 2)
+  createdAt          DateTime           @default(now()) @map("created_at")
+  updatedAt          DateTime           @updatedAt @map("updated_at")
+  changeOrder        ProjectChangeOrder @relation(fields: [changeOrderId], references: [id], onDelete: Cascade)
+  budgetItem         BudgetItem?        @relation(fields: [budgetItemId], references: [id], onDelete: SetNull)
+  costCode           ProjectCostCode?   @relation(fields: [costCodeId], references: [id], onDelete: SetNull)
 
   @@unique([changeOrderId, sequence])
   @@index([budgetItemId])
@@ -887,18 +900,180 @@ model ProjectPaymentApplicationLine {
   @@map("project_payment_application_lines")
 }
 
+model ProjectQualityInspection {
+  id                       String                          @id @default(cuid())
+  organizationId           String                          @map("organization_id")
+  projectId                String                          @map("project_id")
+  sequence                 Int
+  number                   String
+  type                     String                          @default("work")
+  title                    String
+  location                 String?
+  inspector                String?
+  responsibleParty         String?                         @map("responsible_party")
+  status                   String                          @default("planned")
+  scheduledAt              DateTime?                       @map("scheduled_at")
+  startedAt                DateTime?                       @map("started_at")
+  completedAt              DateTime?                       @map("completed_at")
+  closedAt                 DateTime?                       @map("closed_at")
+  voidedAt                 DateTime?                       @map("voided_at")
+  decisionComment          String?                         @map("decision_comment")
+  linkedScheduleItemId     String?                         @map("linked_schedule_item_id")
+  costCodeId               String?                         @map("cost_code_id")
+  linkedDocumentId         String?                         @map("linked_document_id")
+  linkedDocumentVersion    Int?                            @map("linked_document_version")
+  linkedDocumentVersionId  String?                         @map("linked_document_version_id")
+  createdBy                String?                         @map("created_by")
+  createdAt                DateTime                        @default(now()) @map("created_at")
+  updatedAt                DateTime                        @updatedAt @map("updated_at")
+  project                  Project                         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  linkedScheduleItem       ScheduleItem?                   @relation(fields: [linkedScheduleItemId], references: [id], onDelete: SetNull)
+  costCode                 ProjectCostCode?                @relation(fields: [costCodeId], references: [id], onDelete: SetNull)
+  linkedDocument           Document?                       @relation(fields: [linkedDocumentId], references: [id], onDelete: SetNull)
+  linkedDocumentVersionRef DocumentVersion?                @relation(fields: [linkedDocumentVersionId], references: [id], onDelete: SetNull)
+  checks                   ProjectQualityInspectionCheck[]
+  issues                   ProjectQualityIssue[]
+
+  @@unique([projectId, sequence])
+  @@unique([projectId, number])
+  @@index([projectId, status, scheduledAt])
+  @@index([linkedScheduleItemId])
+  @@index([costCodeId])
+  @@index([linkedDocumentId])
+  @@index([linkedDocumentVersionId])
+  @@map("project_quality_inspections")
+}
+
+model ProjectQualityInspectionCheck {
+  id           String                   @id @default(cuid())
+  inspectionId String                   @map("inspection_id")
+  sequence     Int
+  title        String
+  requirement  String?
+  result       String                   @default("pending")
+  comment      String?
+  createdAt    DateTime                 @default(now()) @map("created_at")
+  updatedAt    DateTime                 @updatedAt @map("updated_at")
+  inspection   ProjectQualityInspection @relation(fields: [inspectionId], references: [id], onDelete: Cascade)
+  issue        ProjectQualityIssue?
+
+  @@unique([inspectionId, sequence])
+  @@index([inspectionId, result])
+  @@map("project_quality_inspection_checks")
+}
+
+model ProjectQualityIssue {
+  id                        String                         @id @default(cuid())
+  organizationId            String                         @map("organization_id")
+  projectId                 String                         @map("project_id")
+  inspectionId              String?                        @map("inspection_id")
+  inspectionCheckId         String?                        @unique @map("inspection_check_id")
+  sequence                  Int
+  number                    String
+  type                      String                         @default("punch")
+  title                     String
+  description               String
+  location                  String?
+  severity                  String                         @default("medium")
+  status                    String                         @default("open")
+  responsibleParty          String?                        @map("responsible_party")
+  dueAt                     DateTime?                      @map("due_at")
+  rootCause                 String?                        @map("root_cause")
+  correctiveAction          String?                        @map("corrective_action")
+  decisionComment           String?                        @map("decision_comment")
+  acceptanceBlocker         Boolean                        @default(false) @map("acceptance_blocker")
+  costImpact                Decimal                        @default(0) @map("cost_impact") @db.Decimal(14, 2)
+  scheduleImpactDays        Int                            @default(0) @map("schedule_impact_days")
+  linkedScheduleItemId      String?                        @map("linked_schedule_item_id")
+  costCodeId                String?                        @map("cost_code_id")
+  sourceDailyReportId       String?                        @map("source_daily_report_id")
+  linkedDocumentId          String?                        @map("linked_document_id")
+  linkedDocumentVersion     Int?                           @map("linked_document_version")
+  linkedDocumentVersionId   String?                        @map("linked_document_version_id")
+  verificationWorkflowRunId String?                        @unique @map("verification_workflow_run_id")
+  openedAt                  DateTime                       @default(now()) @map("opened_at")
+  startedAt                 DateTime?                      @map("started_at")
+  submittedAt               DateTime?                      @map("submitted_at")
+  verifiedAt                DateTime?                      @map("verified_at")
+  closedAt                  DateTime?                      @map("closed_at")
+  voidedAt                  DateTime?                      @map("voided_at")
+  createdBy                 String?                        @map("created_by")
+  createdAt                 DateTime                       @default(now()) @map("created_at")
+  updatedAt                 DateTime                       @updatedAt @map("updated_at")
+  project                   Project                        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  inspection                ProjectQualityInspection?      @relation(fields: [inspectionId], references: [id], onDelete: SetNull)
+  inspectionCheck           ProjectQualityInspectionCheck? @relation(fields: [inspectionCheckId], references: [id], onDelete: SetNull)
+  linkedScheduleItem        ScheduleItem?                  @relation(fields: [linkedScheduleItemId], references: [id], onDelete: SetNull)
+  costCode                  ProjectCostCode?               @relation(fields: [costCodeId], references: [id], onDelete: SetNull)
+  sourceDailyReport         DailyReport?                   @relation(fields: [sourceDailyReportId], references: [id], onDelete: SetNull)
+  linkedDocument            Document?                      @relation(fields: [linkedDocumentId], references: [id], onDelete: SetNull)
+  linkedDocumentVersionRef  DocumentVersion?               @relation(fields: [linkedDocumentVersionId], references: [id], onDelete: SetNull)
+  verificationWorkflowRun   ProjectWorkflowRun?            @relation(fields: [verificationWorkflowRunId], references: [id], onDelete: SetNull)
+  evidence                  ProjectQualityEvidence[]
+  events                    ProjectQualityIssueEvent[]
+
+  @@unique([projectId, sequence])
+  @@unique([projectId, number])
+  @@index([projectId, status, dueAt])
+  @@index([inspectionId])
+  @@index([linkedScheduleItemId])
+  @@index([costCodeId])
+  @@index([sourceDailyReportId])
+  @@index([linkedDocumentId])
+  @@index([linkedDocumentVersionId])
+  @@map("project_quality_issues")
+}
+
+model ProjectQualityEvidence {
+  id                 String              @id @default(cuid())
+  issueId            String              @map("issue_id")
+  phase              String              @default("opening")
+  documentId         String?             @map("document_id")
+  documentVersionId  String?             @map("document_version_id")
+  documentVersion    Int?                @map("document_version")
+  titleSnapshot      String              @map("title_snapshot")
+  fileNameSnapshot   String?             @map("file_name_snapshot")
+  note               String?
+  createdBy          String?             @map("created_by")
+  createdAt          DateTime            @default(now()) @map("created_at")
+  issue              ProjectQualityIssue @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  document           Document?           @relation(fields: [documentId], references: [id], onDelete: SetNull)
+  documentVersionRef DocumentVersion?    @relation(fields: [documentVersionId], references: [id], onDelete: SetNull)
+
+  @@index([issueId, phase, createdAt])
+  @@index([documentId])
+  @@index([documentVersionId])
+  @@map("project_quality_evidence")
+}
+
+model ProjectQualityIssueEvent {
+  id            String              @id @default(cuid())
+  issueId       String              @map("issue_id")
+  eventType     String              @map("event_type")
+  statusBefore  String?             @map("status_before")
+  statusAfter   String?             @map("status_after")
+  comment       String?
+  createdBy     String?             @map("created_by")
+  createdByName String?             @map("created_by_name")
+  createdAt     DateTime            @default(now()) @map("created_at")
+  issue         ProjectQualityIssue @relation(fields: [issueId], references: [id], onDelete: Cascade)
+
+  @@index([issueId, createdAt])
+  @@map("project_quality_issue_events")
+}
+
 model ProjectWorkflowTemplate {
-  id             String   @id @default(cuid())
-  organizationId String   @map("organization_id")
-  projectId      String   @map("project_id")
+  id             String                        @id @default(cuid())
+  organizationId String                        @map("organization_id")
+  projectId      String                        @map("project_id")
   name           String
   description    String?
-  category       String   @default("general")
-  status         String   @default("active")
-  createdBy      String?  @map("created_by")
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
-  project        Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  category       String                        @default("general")
+  status         String                        @default("active")
+  createdBy      String?                       @map("created_by")
+  createdAt      DateTime                      @default(now()) @map("created_at")
+  updatedAt      DateTime                      @updatedAt @map("updated_at")
+  project        Project                       @relation(fields: [projectId], references: [id], onDelete: Cascade)
   steps          ProjectWorkflowTemplateStep[]
   runs           ProjectWorkflowRun[]
 
@@ -908,18 +1083,18 @@ model ProjectWorkflowTemplate {
 }
 
 model ProjectWorkflowTemplateStep {
-  id             String   @id @default(cuid())
-  templateId     String   @map("template_id")
-  sequence       Int
-  name           String
-  description    String?
-  stepType       String   @default("review") @map("step_type")
-  assigneeRole   String   @default("MANAGER") @map("assignee_role")
-  dueDays        Int      @default(3) @map("due_days")
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
-  template       ProjectWorkflowTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
-  runSteps       ProjectWorkflowRunStep[]
+  id           String                   @id @default(cuid())
+  templateId   String                   @map("template_id")
+  sequence     Int
+  name         String
+  description  String?
+  stepType     String                   @default("review") @map("step_type")
+  assigneeRole String                   @default("MANAGER") @map("assignee_role")
+  dueDays      Int                      @default(3) @map("due_days")
+  createdAt    DateTime                 @default(now()) @map("created_at")
+  updatedAt    DateTime                 @updatedAt @map("updated_at")
+  template     ProjectWorkflowTemplate  @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  runSteps     ProjectWorkflowRunStep[]
 
   @@unique([templateId, sequence])
   @@index([templateId])
@@ -927,28 +1102,29 @@ model ProjectWorkflowTemplateStep {
 }
 
 model ProjectWorkflowRun {
-  id             String   @id @default(cuid())
-  organizationId String   @map("organization_id")
-  projectId      String   @map("project_id")
-  templateId     String?  @map("template_id")
+  id             String                   @id @default(cuid())
+  organizationId String                   @map("organization_id")
+  projectId      String                   @map("project_id")
+  templateId     String?                  @map("template_id")
   title          String
   description    String?
-  sourceModule   String   @default("manual") @map("source_module")
-  targetTab      String?  @map("target_tab")
-  referenceType  String?  @map("reference_type")
-  referenceId    String?  @map("reference_id")
-  status         String   @default("active")
-  currentStep    Int      @default(1) @map("current_step")
-  startedBy      String?  @map("started_by")
-  startedAt      DateTime @default(now()) @map("started_at")
-  completedAt    DateTime? @map("completed_at")
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
-  project        Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  sourceModule   String                   @default("manual") @map("source_module")
+  targetTab      String?                  @map("target_tab")
+  referenceType  String?                  @map("reference_type")
+  referenceId    String?                  @map("reference_id")
+  status         String                   @default("active")
+  currentStep    Int                      @default(1) @map("current_step")
+  startedBy      String?                  @map("started_by")
+  startedAt      DateTime                 @default(now()) @map("started_at")
+  completedAt    DateTime?                @map("completed_at")
+  createdAt      DateTime                 @default(now()) @map("created_at")
+  updatedAt      DateTime                 @updatedAt @map("updated_at")
+  project        Project                  @relation(fields: [projectId], references: [id], onDelete: Cascade)
   template       ProjectWorkflowTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
   steps          ProjectWorkflowRunStep[]
   changeOrder    ProjectChangeOrder?
   commitment     ProjectCommitment?
+  qualityIssue   ProjectQualityIssue?
 
   @@index([projectId, status, updatedAt])
   @@index([templateId])
@@ -956,25 +1132,25 @@ model ProjectWorkflowRun {
 }
 
 model ProjectWorkflowRunStep {
-  id             String   @id @default(cuid())
-  runId          String   @map("run_id")
-  templateStepId String?  @map("template_step_id")
-  sequence       Int
-  name           String
-  description    String?
-  stepType       String   @default("review") @map("step_type")
-  assigneeRole   String   @default("MANAGER") @map("assignee_role")
-  dueDays        Int      @default(3) @map("due_days")
-  status         String   @default("pending")
-  dueAt          DateTime? @map("due_at")
-  decisionComment String? @map("decision_comment")
-  actedBy        String?  @map("acted_by")
-  actedByName    String?  @map("acted_by_name")
-  actedAt        DateTime? @map("acted_at")
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
-  run            ProjectWorkflowRun @relation(fields: [runId], references: [id], onDelete: Cascade)
-  templateStep   ProjectWorkflowTemplateStep? @relation(fields: [templateStepId], references: [id], onDelete: SetNull)
+  id              String                       @id @default(cuid())
+  runId           String                       @map("run_id")
+  templateStepId  String?                      @map("template_step_id")
+  sequence        Int
+  name            String
+  description     String?
+  stepType        String                       @default("review") @map("step_type")
+  assigneeRole    String                       @default("MANAGER") @map("assignee_role")
+  dueDays         Int                          @default(3) @map("due_days")
+  status          String                       @default("pending")
+  dueAt           DateTime?                    @map("due_at")
+  decisionComment String?                      @map("decision_comment")
+  actedBy         String?                      @map("acted_by")
+  actedByName     String?                      @map("acted_by_name")
+  actedAt         DateTime?                    @map("acted_at")
+  createdAt       DateTime                     @default(now()) @map("created_at")
+  updatedAt       DateTime                     @updatedAt @map("updated_at")
+  run             ProjectWorkflowRun           @relation(fields: [runId], references: [id], onDelete: Cascade)
+  templateStep    ProjectWorkflowTemplateStep? @relation(fields: [templateStepId], references: [id], onDelete: SetNull)
 
   @@unique([runId, sequence])
   @@index([runId, status, dueAt])
@@ -999,24 +1175,24 @@ model FieldSyncReceipt {
 }
 
 model AccountingSyncRun {
-  id              String   @id @default(cuid())
-  organizationId  String   @map("organization_id")
-  projectId       String   @map("project_id")
-  sourceSystem    String   @map("source_system")
+  id              String                   @id @default(cuid())
+  organizationId  String                   @map("organization_id")
+  projectId       String                   @map("project_id")
+  sourceSystem    String                   @map("source_system")
   direction       String
-  fileName        String?  @map("file_name")
+  fileName        String?                  @map("file_name")
   checksum        String?
   status          String
-  rowCount        Int      @default(0) @map("row_count")
-  matchedCount    Int      @default(0) @map("matched_count")
-  unresolvedCount Int      @default(0) @map("unresolved_count")
+  rowCount        Int                      @default(0) @map("row_count")
+  matchedCount    Int                      @default(0) @map("matched_count")
+  unresolvedCount Int                      @default(0) @map("unresolved_count")
   summary         Json
   payload         Json?
-  createdBy       String?  @map("created_by")
-  appliedAt       DateTime? @map("applied_at")
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
-  project         Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdBy       String?                  @map("created_by")
+  appliedAt       DateTime?                @map("applied_at")
+  createdAt       DateTime                 @default(now()) @map("created_at")
+  updatedAt       DateTime                 @updatedAt @map("updated_at")
+  project         Project                  @relation(fields: [projectId], references: [id], onDelete: Cascade)
   externalLinks   AccountingExternalLink[]
 
   @@index([projectId, createdAt])
@@ -1025,20 +1201,20 @@ model AccountingSyncRun {
 }
 
 model AccountingExternalLink {
-  id              String   @id @default(cuid())
-  organizationId  String   @map("organization_id")
-  projectId       String   @map("project_id")
-  syncRunId       String?  @map("sync_run_id")
-  entityType      String   @map("entity_type")
-  entityId        String   @map("entity_id")
-  externalSystem  String   @map("external_system")
-  externalId      String   @map("external_id")
-  metadata        Json?
-  lastSeenAt      DateTime @default(now()) @map("last_seen_at")
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
-  project         Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  syncRun         AccountingSyncRun? @relation(fields: [syncRunId], references: [id], onDelete: SetNull)
+  id             String             @id @default(cuid())
+  organizationId String             @map("organization_id")
+  projectId      String             @map("project_id")
+  syncRunId      String?            @map("sync_run_id")
+  entityType     String             @map("entity_type")
+  entityId       String             @map("entity_id")
+  externalSystem String             @map("external_system")
+  externalId     String             @map("external_id")
+  metadata       Json?
+  lastSeenAt     DateTime           @default(now()) @map("last_seen_at")
+  createdAt      DateTime           @default(now()) @map("created_at")
+  updatedAt      DateTime           @updatedAt @map("updated_at")
+  project        Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  syncRun        AccountingSyncRun? @relation(fields: [syncRunId], references: [id], onDelete: SetNull)
 
   @@unique([projectId, externalSystem, entityType, externalId], map: "accounting_external_links_external_id_key")
   @@unique([projectId, externalSystem, entityType, entityId], map: "accounting_external_links_entity_id_key")
@@ -1047,21 +1223,21 @@ model AccountingExternalLink {
 }
 
 model ExecutiveReport {
-  id               String   @id @default(cuid())
-  organizationId   String   @map("organization_id")
-  projectId        String   @map("project_id")
-  version          Int
-  title            String
-  reportDate       DateTime @map("report_date")
-  status           String   @default("draft")
-  content          Json
-  sourceSnapshot   Json?    @map("source_snapshot")
-  createdBy        String?  @map("created_by")
-  publishedAt      DateTime? @map("published_at")
-  publishedBy      String?  @map("published_by")
-  createdAt        DateTime @default(now()) @map("created_at")
-  updatedAt        DateTime @updatedAt @map("updated_at")
-  project          Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  id             String    @id @default(cuid())
+  organizationId String    @map("organization_id")
+  projectId      String    @map("project_id")
+  version        Int
+  title          String
+  reportDate     DateTime  @map("report_date")
+  status         String    @default("draft")
+  content        Json
+  sourceSnapshot Json?     @map("source_snapshot")
+  createdBy      String?   @map("created_by")
+  publishedAt    DateTime? @map("published_at")
+  publishedBy    String?   @map("published_by")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  project        Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@unique([projectId, version])
   @@index([projectId, status, createdAt])
@@ -1069,31 +1245,31 @@ model ExecutiveReport {
 }
 
 model ProjectRfi {
-  id               String   @id @default(cuid())
-  organizationId   String   @map("organization_id")
-  projectId        String   @map("project_id")
-  sequence         Int
-  subject          String
-  question         String
-  discipline       String?
-  location         String?
-  priority         String   @default("medium")
-  status           String   @default("draft")
-  assignee         String?
-  dueAt            DateTime? @map("due_at")
-  sentAt           DateTime? @map("sent_at")
-  answeredAt       DateTime? @map("answered_at")
-  closedAt         DateTime? @map("closed_at")
-  linkedDocumentId String?  @map("linked_document_id")
-  linkedDocumentVersion Int? @map("linked_document_version")
-  linkedDocumentVersionId String? @map("linked_document_version_id")
-  createdBy        String?  @map("created_by")
-  createdAt        DateTime @default(now()) @map("created_at")
-  updatedAt        DateTime @updatedAt @map("updated_at")
-  project          Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  linkedDocument   Document? @relation(fields: [linkedDocumentId], references: [id], onDelete: SetNull)
+  id                       String           @id @default(cuid())
+  organizationId           String           @map("organization_id")
+  projectId                String           @map("project_id")
+  sequence                 Int
+  subject                  String
+  question                 String
+  discipline               String?
+  location                 String?
+  priority                 String           @default("medium")
+  status                   String           @default("draft")
+  assignee                 String?
+  dueAt                    DateTime?        @map("due_at")
+  sentAt                   DateTime?        @map("sent_at")
+  answeredAt               DateTime?        @map("answered_at")
+  closedAt                 DateTime?        @map("closed_at")
+  linkedDocumentId         String?          @map("linked_document_id")
+  linkedDocumentVersion    Int?             @map("linked_document_version")
+  linkedDocumentVersionId  String?          @map("linked_document_version_id")
+  createdBy                String?          @map("created_by")
+  createdAt                DateTime         @default(now()) @map("created_at")
+  updatedAt                DateTime         @updatedAt @map("updated_at")
+  project                  Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  linkedDocument           Document?        @relation(fields: [linkedDocumentId], references: [id], onDelete: SetNull)
   linkedDocumentVersionRef DocumentVersion? @relation(fields: [linkedDocumentVersionId], references: [id], onDelete: SetNull)
-  responses        RfiResponse[]
+  responses                RfiResponse[]
 
   @@unique([projectId, sequence])
   @@index([projectId, status, dueAt])
@@ -1101,43 +1277,43 @@ model ProjectRfi {
 }
 
 model RfiResponse {
-  id          String   @id @default(cuid())
-  rfiId       String   @map("rfi_id")
-  body        String
-  createdBy   String?  @map("created_by")
-  createdByName String? @map("created_by_name")
-  createdAt   DateTime @default(now()) @map("created_at")
-  rfi         ProjectRfi @relation(fields: [rfiId], references: [id], onDelete: Cascade)
+  id            String     @id @default(cuid())
+  rfiId         String     @map("rfi_id")
+  body          String
+  createdBy     String?    @map("created_by")
+  createdByName String?    @map("created_by_name")
+  createdAt     DateTime   @default(now()) @map("created_at")
+  rfi           ProjectRfi @relation(fields: [rfiId], references: [id], onDelete: Cascade)
 
   @@index([rfiId, createdAt])
   @@map("rfi_responses")
 }
 
 model ProjectSubmittal {
-  id               String   @id @default(cuid())
-  organizationId   String   @map("organization_id")
-  projectId        String   @map("project_id")
-  sequence         Int
-  title            String
-  category         String
-  specSection      String?  @map("spec_section")
-  revision         Int      @default(0)
-  status           String   @default("draft")
-  reviewer         String?
-  dueAt            DateTime? @map("due_at")
-  submittedAt      DateTime? @map("submitted_at")
-  reviewedAt       DateTime? @map("reviewed_at")
-  closedAt         DateTime? @map("closed_at")
-  linkedDocumentId String?  @map("linked_document_id")
-  linkedDocumentVersion Int? @map("linked_document_version")
-  linkedDocumentVersionId String? @map("linked_document_version_id")
-  createdBy        String?  @map("created_by")
-  createdAt        DateTime @default(now()) @map("created_at")
-  updatedAt        DateTime @updatedAt @map("updated_at")
-  project          Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  linkedDocument   Document? @relation(fields: [linkedDocumentId], references: [id], onDelete: SetNull)
-  linkedDocumentVersionRef DocumentVersion? @relation(fields: [linkedDocumentVersionId], references: [id], onDelete: SetNull)
-  reviews          SubmittalReview[]
+  id                       String            @id @default(cuid())
+  organizationId           String            @map("organization_id")
+  projectId                String            @map("project_id")
+  sequence                 Int
+  title                    String
+  category                 String
+  specSection              String?           @map("spec_section")
+  revision                 Int               @default(0)
+  status                   String            @default("draft")
+  reviewer                 String?
+  dueAt                    DateTime?         @map("due_at")
+  submittedAt              DateTime?         @map("submitted_at")
+  reviewedAt               DateTime?         @map("reviewed_at")
+  closedAt                 DateTime?         @map("closed_at")
+  linkedDocumentId         String?           @map("linked_document_id")
+  linkedDocumentVersion    Int?              @map("linked_document_version")
+  linkedDocumentVersionId  String?           @map("linked_document_version_id")
+  createdBy                String?           @map("created_by")
+  createdAt                DateTime          @default(now()) @map("created_at")
+  updatedAt                DateTime          @updatedAt @map("updated_at")
+  project                  Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  linkedDocument           Document?         @relation(fields: [linkedDocumentId], references: [id], onDelete: SetNull)
+  linkedDocumentVersionRef DocumentVersion?  @relation(fields: [linkedDocumentVersionId], references: [id], onDelete: SetNull)
+  reviews                  SubmittalReview[]
 
   @@unique([projectId, sequence])
   @@index([projectId, status, dueAt])
@@ -1145,41 +1321,41 @@ model ProjectSubmittal {
 }
 
 model SubmittalReview {
-  id          String   @id @default(cuid())
-  submittalId String   @map("submittal_id")
-  revision    Int
-  decision    String
-  comment     String?
-  createdBy   String?  @map("created_by")
-  createdByName String? @map("created_by_name")
-  createdAt   DateTime @default(now()) @map("created_at")
-  submittal   ProjectSubmittal @relation(fields: [submittalId], references: [id], onDelete: Cascade)
+  id            String           @id @default(cuid())
+  submittalId   String           @map("submittal_id")
+  revision      Int
+  decision      String
+  comment       String?
+  createdBy     String?          @map("created_by")
+  createdByName String?          @map("created_by_name")
+  createdAt     DateTime         @default(now()) @map("created_at")
+  submittal     ProjectSubmittal @relation(fields: [submittalId], references: [id], onDelete: Cascade)
 
   @@index([submittalId, createdAt])
   @@map("submittal_reviews")
 }
 
 model ProjectDocumentTransmittal {
-  id             String   @id @default(cuid())
-  organizationId String   @map("organization_id")
-  projectId      String   @map("project_id")
+  id             String                     @id @default(cuid())
+  organizationId String                     @map("organization_id")
+  projectId      String                     @map("project_id")
   sequence       Int
   subject        String
   purpose        String?
   recipient      String?
-  ccRecipients   String?  @map("cc_recipients")
+  ccRecipients   String?                    @map("cc_recipients")
   reviewer       String?
-  dueAt          DateTime? @map("due_at")
-  status         String   @default("draft")
-  revision       Int      @default(0)
-  issuedAt       DateTime? @map("issued_at")
-  acknowledgedAt DateTime? @map("acknowledged_at")
-  reviewedAt     DateTime? @map("reviewed_at")
-  closedAt       DateTime? @map("closed_at")
-  createdBy      String?  @map("created_by")
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
-  project        Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  dueAt          DateTime?                  @map("due_at")
+  status         String                     @default("draft")
+  revision       Int                        @default(0)
+  issuedAt       DateTime?                  @map("issued_at")
+  acknowledgedAt DateTime?                  @map("acknowledged_at")
+  reviewedAt     DateTime?                  @map("reviewed_at")
+  closedAt       DateTime?                  @map("closed_at")
+  createdBy      String?                    @map("created_by")
+  createdAt      DateTime                   @default(now()) @map("created_at")
+  updatedAt      DateTime                   @updatedAt @map("updated_at")
+  project        Project                    @relation(fields: [projectId], references: [id], onDelete: Cascade)
   items          DocumentTransmittalItem[]
   events         DocumentTransmittalEvent[]
 
@@ -1189,18 +1365,18 @@ model ProjectDocumentTransmittal {
 }
 
 model DocumentTransmittalItem {
-  id                 String   @id @default(cuid())
-  transmittalId      String   @map("transmittal_id")
-  documentId         String?  @map("document_id")
-  documentVersionId  String?  @map("document_version_id")
-  documentVersion    Int?     @map("document_version")
-  titleSnapshot      String   @map("title_snapshot")
-  fileNameSnapshot   String?  @map("file_name_snapshot")
-  categorySnapshot   String?  @map("category_snapshot")
-  createdAt          DateTime @default(now()) @map("created_at")
+  id                 String                     @id @default(cuid())
+  transmittalId      String                     @map("transmittal_id")
+  documentId         String?                    @map("document_id")
+  documentVersionId  String?                    @map("document_version_id")
+  documentVersion    Int?                       @map("document_version")
+  titleSnapshot      String                     @map("title_snapshot")
+  fileNameSnapshot   String?                    @map("file_name_snapshot")
+  categorySnapshot   String?                    @map("category_snapshot")
+  createdAt          DateTime                   @default(now()) @map("created_at")
   transmittal        ProjectDocumentTransmittal @relation(fields: [transmittalId], references: [id], onDelete: Cascade)
-  document           Document? @relation(fields: [documentId], references: [id], onDelete: SetNull)
-  documentVersionRef DocumentVersion? @relation(fields: [documentVersionId], references: [id], onDelete: SetNull)
+  document           Document?                  @relation(fields: [documentId], references: [id], onDelete: SetNull)
+  documentVersionRef DocumentVersion?           @relation(fields: [documentVersionId], references: [id], onDelete: SetNull)
 
   @@index([transmittalId])
   @@index([documentId])
@@ -1208,15 +1384,15 @@ model DocumentTransmittalItem {
 }
 
 model DocumentTransmittalEvent {
-  id            String   @id @default(cuid())
-  transmittalId String   @map("transmittal_id")
+  id            String                     @id @default(cuid())
+  transmittalId String                     @map("transmittal_id")
   revision      Int
-  eventType     String   @map("event_type")
+  eventType     String                     @map("event_type")
   decision      String?
   comment       String?
-  createdBy     String?  @map("created_by")
-  createdByName String?  @map("created_by_name")
-  createdAt     DateTime @default(now()) @map("created_at")
+  createdBy     String?                    @map("created_by")
+  createdByName String?                    @map("created_by_name")
+  createdAt     DateTime                   @default(now()) @map("created_at")
   transmittal   ProjectDocumentTransmittal @relation(fields: [transmittalId], references: [id], onDelete: Cascade)
 
   @@index([transmittalId, createdAt])
