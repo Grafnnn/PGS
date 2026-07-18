@@ -214,6 +214,7 @@ export type ChangeOrderStatus = "draft" | "open" | "submitted" | "revision_requi
 export interface ProjectChangeOrder {
   id: string;
   projectId: string;
+  commitmentId?: string | null;
   sequence: number;
   number: string;
   kind: "potential" | "request" | "owner" | "subcontract" | "directive";
@@ -257,6 +258,91 @@ export interface ProjectChangeOrder {
     approvedUnitPrice: number;
     committedUnitPrice: number;
   }>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type ProjectCommitmentType = "owner_contract" | "subcontract" | "purchase_order" | "service_order";
+export type ProjectCommitmentStatus = "draft" | "submitted" | "revision_required" | "approved" | "active" | "completed" | "terminated" | "rejected" | "void";
+export type ProjectPaymentApplicationStatus = "draft" | "submitted" | "approved" | "rejected" | "paid" | "void";
+
+export interface ProjectPaymentApplication {
+  id: string;
+  projectId: string;
+  commitmentId: string;
+  paymentId?: string | null;
+  sequence: number;
+  number: string;
+  periodStart: string;
+  periodEnd: string;
+  status: ProjectPaymentApplicationStatus;
+  currentAmount: number;
+  materialsStored: number;
+  retentionAmount: number;
+  netAmount: number;
+  notes?: string | null;
+  decisionComment?: string | null;
+  payment?: { id: string; title: string; status: string; amount: number; direction: string } | null;
+  lines: Array<{
+    id: string;
+    commitmentLineId: string;
+    previousAmount: number;
+    currentAmount: number;
+    materialsStored: number;
+    retentionAmount: number;
+  }>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ProjectCommitment {
+  id: string;
+  projectId: string;
+  sequence: number;
+  number: string;
+  type: ProjectCommitmentType;
+  title: string;
+  counterparty: string;
+  externalNumber?: string | null;
+  status: ProjectCommitmentStatus;
+  currency: string;
+  retentionPercent: number;
+  paymentTerms?: string | null;
+  startsAt?: string | null;
+  endsAt?: string | null;
+  sourceProcurementRequestId?: string | null;
+  linkedDocumentId?: string | null;
+  linkedDocumentVersion?: number | null;
+  approvalWorkflowRunId?: string | null;
+  decisionComment?: string | null;
+  linkedDocument?: { title: string; fileName?: string | null } | null;
+  sourceProcurementRequest?: { id: string; title: string } | null;
+  approvalWorkflowRun?: { id: string; title: string; status: string } | null;
+  lines: Array<{
+    id: string;
+    budgetItemId?: string | null;
+    costCodeId?: string | null;
+    sourceProcurementRequestItemId?: string | null;
+    sequence: number;
+    code?: string | null;
+    description: string;
+    quantity: number;
+    unit: string;
+    unitPrice: number;
+    scheduledValue: number;
+    costCode?: { code: string; name: string } | null;
+  }>;
+  changeOrders: Array<{ id: string; number: string; title: string; status: string; approvedAmount: number; committedAmount: number }>;
+  paymentApplications: ProjectPaymentApplication[];
+  values: {
+    original: number;
+    approvedChanges: number;
+    revised: number;
+    approvedApplications: number;
+    paid: number;
+    retentionHeld: number;
+    remaining: number;
+  };
   createdAt: string;
   updatedAt: string;
 }

@@ -7,6 +7,7 @@ import { AccountingBridgeWorkspace } from "@/components/accounting-bridge-worksp
 import { CommercialProposalWorkspace } from "@/components/commercial-proposal-workspace";
 import { ChangeOrderManagementWorkspace } from "@/components/change-order-management-workspace";
 import { ClaimsNoticesWorkspace } from "@/components/claims-notices-workspace";
+import { ContractCommitmentsWorkspace } from "@/components/contract-commitments-workspace";
 import { ContractTenderWorkspace } from "@/components/contract-tender-workspace";
 import { CostCodeWorkspace } from "@/components/cost-code-workspace";
 import { CostToCompleteWorkspace } from "@/components/cost-to-complete-workspace";
@@ -1218,6 +1219,16 @@ export function ProjectWorkspace({ initialBundle, createdFromOnboarding = false 
             risks={risks}
             documents={documents}
             documentChecklist={documentChecklist}
+            onNavigate={setActiveTab}
+          />
+          <ContractCommitmentsWorkspace
+            projectId={initialBundle.project.id}
+            budgetItems={budgetItems}
+            procurementRequests={procurementRequests}
+            payments={payments}
+            documents={documents}
+            canEdit={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN" || currentUser?.role === "MANAGER"}
+            canApprove={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN"}
             onNavigate={setActiveTab}
           />
           <ClaimsNoticesWorkspace

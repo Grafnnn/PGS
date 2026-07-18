@@ -164,6 +164,8 @@ model Project {
   workflowRuns      ProjectWorkflowRun[]
   changeOrders      ProjectChangeOrder[]
   costCodes         ProjectCostCode[]
+  commitments             ProjectCommitment[]
+  paymentApplications     ProjectPaymentApplication[]
 
   @@map("projects")
 }
@@ -239,6 +241,7 @@ model BudgetItem {
   project         Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
   costCode        ProjectCostCode? @relation(fields: [costCodeId], references: [id], onDelete: SetNull)
   changeOrderItems ProjectChangeOrderItem[]
+  commitmentLines   ProjectCommitmentLine[]
 
   @@index([costCodeId])
   @@map("budget_items")
@@ -271,7 +274,7 @@ model ScheduleItem {
   startsAt    DateTime @map("starts_at")
   endsAt      DateTime @map("ends_at")
   plannedQty  Decimal  @map("planned_qty") @db.Decimal(14, 3)
-  actualQty   Decimal  @map("actual_qty") @default(0) @db.Decimal(14, 3)
+  actualQty      Decimal          @default(0) @map("actual_qty") @db.Decimal(14, 3)
   status      String
   dependency  String?
   createdBy   String?  @map("created_by")
@@ -358,6 +361,7 @@ model ProcurementRequest {
   updatedAt   DateTime @updatedAt @map("updated_at")
   project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
   items       ProcurementRequestItem[]
+  commitments    ProjectCommitment[]
 
   @@map("procurement_requests")
 }
@@ -375,6 +379,7 @@ model ProcurementRequestItem {
   updatedAt   DateTime @updatedAt @map("updated_at")
   request     ProcurementRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
   costCode    ProjectCostCode? @relation(fields: [costCodeId], references: [id], onDelete: SetNull)
+  commitmentLines ProjectCommitmentLine[]
 
   @@index([costCodeId])
   @@map("procurement_request_items")
@@ -431,6 +436,7 @@ model Payment {
   updatedAt   DateTime @updatedAt @map("updated_at")
   project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
   costCode    ProjectCostCode? @relation(fields: [costCodeId], references: [id], onDelete: SetNull)
+  paymentApplication ProjectPaymentApplication?
 
   @@index([costCodeId])
   @@map("payments")
@@ -478,6 +484,7 @@ model Document {
   submittalLinks ProjectSubmittal[]
   transmittalItems DocumentTransmittalItem[]
   changeOrderLinks ProjectChangeOrder[]
+  commitmentLinks  ProjectCommitment[]
 
   @@map("documents")
 }
@@ -500,6 +507,7 @@ model DocumentVersion {
   submittalLinks ProjectSubmittal[]
   transmittalItems DocumentTransmittalItem[]
   changeOrderLinks ProjectChangeOrder[]
+  commitmentLinks  ProjectCommitment[]
 
   @@unique([documentId, versionNumber])
   @@map("document_versions")
@@ -659,6 +667,7 @@ model ProjectCostCode {
   procurementRequestItems ProcurementRequestItem[]
   payments               Payment[]
   changeOrderItems       ProjectChangeOrderItem[]
+  commitmentLines         ProjectCommitmentLine[]
 
   @@unique([projectId, code])
   @@index([projectId, parentId, sortOrder])
@@ -670,6 +679,7 @@ model ProjectChangeOrder {
   id                    String   @id @default(cuid())
   organizationId        String   @map("organization_id")
   projectId             String   @map("project_id")
+  commitmentId             String?                  @map("commitment_id")
   sequence              Int
   number                String
   kind                  String   @default("potential")
@@ -706,6 +716,7 @@ model ProjectChangeOrder {
   linkedDocument        Document? @relation(fields: [linkedDocumentId], references: [id], onDelete: SetNull)
   linkedDocumentVersionRef DocumentVersion? @relation(fields: [linkedDocumentVersionId], references: [id], onDelete: SetNull)
   approvalWorkflowRun   ProjectWorkflowRun? @relation(fields: [approvalWorkflowRunId], references: [id], onDelete: SetNull)
+  commitment               ProjectCommitment?       @relation(fields: [commitmentId], references: [id], onDelete: SetNull)
   items                 ProjectChangeOrderItem[]
 
   @@unique([projectId, sequence])
@@ -713,6 +724,7 @@ model ProjectChangeOrder {
   @@index([projectId, status, updatedAt])
   @@index([linkedDocumentId])
   @@index([linkedDocumentVersionId])
+  @@index([commitmentId])
   @@map("project_change_orders")
 }
 
@@ -741,6 +753,138 @@ model ProjectChangeOrderItem {
   @@index([budgetItemId])
   @@index([costCodeId])
   @@map("project_change_order_items")
+}
+
+model ProjectCommitment {
+  id                         String                      @id @default(cuid())
+  organizationId             String                      @map("organization_id")
+  projectId                  String                      @map("project_id")
+  sequence                   Int
+  number                     String
+  type                       String                      @default("subcontract")
+  title                      String
+  counterparty               String
+  externalNumber             String?                     @map("external_number")
+  status                     String                      @default("draft")
+  currency                   String                      @default("RUB")
+  retentionPercent           Decimal                     @default(0) @map("retention_percent") @db.Decimal(5, 2)
+  paymentTerms               String?                     @map("payment_terms")
+  startsAt                   DateTime?                   @map("starts_at")
+  endsAt                     DateTime?                   @map("ends_at")
+  sourceProcurementRequestId String?                     @map("source_procurement_request_id")
+  linkedDocumentId           String?                     @map("linked_document_id")
+  linkedDocumentVersion      Int?                        @map("linked_document_version")
+  linkedDocumentVersionId    String?                     @map("linked_document_version_id")
+  approvalWorkflowRunId      String?                     @unique @map("approval_workflow_run_id")
+  decisionComment            String?                     @map("decision_comment")
+  submittedAt                DateTime?                   @map("submitted_at")
+  approvedAt                 DateTime?                   @map("approved_at")
+  activatedAt                DateTime?                   @map("activated_at")
+  completedAt                DateTime?                   @map("completed_at")
+  terminatedAt               DateTime?                   @map("terminated_at")
+  rejectedAt                 DateTime?                   @map("rejected_at")
+  voidedAt                   DateTime?                   @map("voided_at")
+  createdBy                  String?                     @map("created_by")
+  createdAt                  DateTime                    @default(now()) @map("created_at")
+  updatedAt                  DateTime                    @updatedAt @map("updated_at")
+  project                    Project                     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  sourceProcurementRequest   ProcurementRequest?         @relation(fields: [sourceProcurementRequestId], references: [id], onDelete: SetNull)
+  linkedDocument             Document?                   @relation(fields: [linkedDocumentId], references: [id], onDelete: SetNull)
+  linkedDocumentVersionRef   DocumentVersion?            @relation(fields: [linkedDocumentVersionId], references: [id], onDelete: SetNull)
+  approvalWorkflowRun        ProjectWorkflowRun?         @relation(fields: [approvalWorkflowRunId], references: [id], onDelete: SetNull)
+  lines                      ProjectCommitmentLine[]
+  paymentApplications        ProjectPaymentApplication[]
+  changeOrders               ProjectChangeOrder[]
+
+  @@unique([projectId, sequence])
+  @@unique([projectId, number])
+  @@index([projectId, status, updatedAt])
+  @@index([sourceProcurementRequestId])
+  @@index([linkedDocumentId])
+  @@index([linkedDocumentVersionId])
+  @@map("project_commitments")
+}
+
+model ProjectCommitmentLine {
+  id                             String                          @id @default(cuid())
+  commitmentId                   String                          @map("commitment_id")
+  budgetItemId                   String?                         @map("budget_item_id")
+  costCodeId                     String?                         @map("cost_code_id")
+  sourceProcurementRequestItemId String?                         @map("source_procurement_request_item_id")
+  sequence                       Int
+  code                           String?
+  description                    String
+  quantity                       Decimal                         @default(1) @db.Decimal(14, 3)
+  unit                           String                          @default("компл.")
+  unitPrice                      Decimal                         @default(0) @map("unit_price") @db.Decimal(14, 2)
+  scheduledValue                 Decimal                         @default(0) @map("scheduled_value") @db.Decimal(14, 2)
+  createdAt                      DateTime                        @default(now()) @map("created_at")
+  updatedAt                      DateTime                        @updatedAt @map("updated_at")
+  commitment                     ProjectCommitment               @relation(fields: [commitmentId], references: [id], onDelete: Cascade)
+  budgetItem                     BudgetItem?                     @relation(fields: [budgetItemId], references: [id], onDelete: SetNull)
+  costCode                       ProjectCostCode?                @relation(fields: [costCodeId], references: [id], onDelete: SetNull)
+  sourceProcurementRequestItem   ProcurementRequestItem?         @relation(fields: [sourceProcurementRequestItemId], references: [id], onDelete: SetNull)
+  paymentApplicationLines        ProjectPaymentApplicationLine[]
+
+  @@unique([commitmentId, sequence])
+  @@index([budgetItemId])
+  @@index([costCodeId])
+  @@index([sourceProcurementRequestItemId])
+  @@map("project_commitment_lines")
+}
+
+model ProjectPaymentApplication {
+  id              String                          @id @default(cuid())
+  organizationId  String                          @map("organization_id")
+  projectId       String                          @map("project_id")
+  commitmentId    String                          @map("commitment_id")
+  paymentId       String?                         @unique @map("payment_id")
+  sequence        Int
+  number          String
+  periodStart     DateTime                        @map("period_start")
+  periodEnd       DateTime                        @map("period_end")
+  status          String                          @default("draft")
+  currentAmount   Decimal                         @default(0) @map("current_amount") @db.Decimal(14, 2)
+  materialsStored Decimal                         @default(0) @map("materials_stored") @db.Decimal(14, 2)
+  retentionAmount Decimal                         @default(0) @map("retention_amount") @db.Decimal(14, 2)
+  netAmount       Decimal                         @default(0) @map("net_amount") @db.Decimal(14, 2)
+  notes           String?
+  decisionComment String?                         @map("decision_comment")
+  submittedAt     DateTime?                       @map("submitted_at")
+  approvedAt      DateTime?                       @map("approved_at")
+  rejectedAt      DateTime?                       @map("rejected_at")
+  paidAt          DateTime?                       @map("paid_at")
+  voidedAt        DateTime?                       @map("voided_at")
+  createdBy       String?                         @map("created_by")
+  createdAt       DateTime                        @default(now()) @map("created_at")
+  updatedAt       DateTime                        @updatedAt @map("updated_at")
+  project         Project                         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  commitment      ProjectCommitment               @relation(fields: [commitmentId], references: [id], onDelete: Cascade)
+  payment         Payment?                        @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  lines           ProjectPaymentApplicationLine[]
+
+  @@unique([commitmentId, sequence])
+  @@unique([commitmentId, number])
+  @@index([projectId, status, updatedAt])
+  @@map("project_payment_applications")
+}
+
+model ProjectPaymentApplicationLine {
+  id               String                    @id @default(cuid())
+  applicationId    String                    @map("application_id")
+  commitmentLineId String                    @map("commitment_line_id")
+  previousAmount   Decimal                   @default(0) @map("previous_amount") @db.Decimal(14, 2)
+  currentAmount    Decimal                   @default(0) @map("current_amount") @db.Decimal(14, 2)
+  materialsStored  Decimal                   @default(0) @map("materials_stored") @db.Decimal(14, 2)
+  retentionAmount  Decimal                   @default(0) @map("retention_amount") @db.Decimal(14, 2)
+  createdAt        DateTime                  @default(now()) @map("created_at")
+  updatedAt        DateTime                  @updatedAt @map("updated_at")
+  application      ProjectPaymentApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  commitmentLine   ProjectCommitmentLine     @relation(fields: [commitmentLineId], references: [id], onDelete: Restrict)
+
+  @@unique([applicationId, commitmentLineId])
+  @@index([commitmentLineId])
+  @@map("project_payment_application_lines")
 }
 
 model ProjectWorkflowTemplate {
@@ -804,6 +948,7 @@ model ProjectWorkflowRun {
   template       ProjectWorkflowTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
   steps          ProjectWorkflowRunStep[]
   changeOrder    ProjectChangeOrder?
+  commitment     ProjectCommitment?
 
   @@index([projectId, status, updatedAt])
   @@index([templateId])

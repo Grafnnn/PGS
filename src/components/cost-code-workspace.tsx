@@ -4,8 +4,8 @@ import { AlertTriangle, CheckCircle2, GitBranch, Link2, Plus, RefreshCw, ShieldC
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import type { ProjectCostCode } from "@/lib/types";
 
-type CategoryKey = "budget" | "schedule" | "materials" | "procurement" | "payments" | "changes";
-type EntityType = "budget_item" | "schedule_item" | "material" | "procurement_item" | "payment" | "change_order_item";
+type CategoryKey = "budget" | "schedule" | "materials" | "procurement" | "payments" | "changes" | "commitments";
+type EntityType = "budget_item" | "schedule_item" | "material" | "procurement_item" | "payment" | "change_order_item" | "commitment_line";
 type AssignableEntity = { id: string; label: string; detail: string; costCodeId: string | null };
 type CoverageItem = { total: number; linked: number };
 type CostCodeState = {
@@ -33,7 +33,8 @@ const categories: Array<{ key: CategoryKey; entityType: EntityType; label: strin
   { key: "materials", entityType: "material", label: "Материалы" },
   { key: "procurement", entityType: "procurement_item", label: "Закупки" },
   { key: "payments", entityType: "payment", label: "Платежи" },
-  { key: "changes", entityType: "change_order_item", label: "Изменения" }
+  { key: "changes", entityType: "change_order_item", label: "Изменения" },
+  { key: "commitments", entityType: "commitment_line", label: "Договоры" }
 ];
 
 type CostCodeForm = { parentId: string; code: string; name: string; segment: "wbs" | "cost"; costType: "capital" | "expense" };

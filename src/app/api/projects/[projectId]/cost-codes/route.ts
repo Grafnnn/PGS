@@ -10,25 +10,27 @@ export async function GET(_request: Request, { params }: { params: { projectId: 
   const user = await getCurrentUser();
   if (!(await canProject(user, params.projectId, "view"))) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   try {
-    const [codes, budgetItems, scheduleItems, materials, procurementItems, payments, changeOrderItems] = await Promise.all([
+    const [codes, budgetItems, scheduleItems, materials, procurementItems, payments, changeOrderItems, commitmentLines] = await Promise.all([
       prisma.projectCostCode.findMany({ where: { projectId: params.projectId }, orderBy: [{ sortOrder: "asc" }, { code: "asc" }] }),
       prisma.budgetItem.findMany({ where: { projectId: params.projectId }, select: { id: true, code: true, name: true, section: true, costCodeId: true } }),
       prisma.scheduleItem.findMany({ where: { projectId: params.projectId }, select: { id: true, name: true, budgetItemId: true, costCodeId: true } }),
       prisma.material.findMany({ where: { projectId: params.projectId }, select: { id: true, name: true, costCodeId: true } }),
       prisma.procurementRequestItem.findMany({ where: { request: { projectId: params.projectId } }, select: { id: true, name: true, costCodeId: true, request: { select: { title: true } } } }),
       prisma.payment.findMany({ where: { projectId: params.projectId }, select: { id: true, title: true, direction: true, costCodeId: true } }),
-      prisma.projectChangeOrderItem.findMany({ where: { changeOrder: { projectId: params.projectId } }, select: { id: true, description: true, budgetItemId: true, costCodeId: true, changeOrder: { select: { number: true } } } })
+      prisma.projectChangeOrderItem.findMany({ where: { changeOrder: { projectId: params.projectId } }, select: { id: true, description: true, budgetItemId: true, costCodeId: true, changeOrder: { select: { number: true } } } }),
+      prisma.projectCommitmentLine.findMany({ where: { commitment: { projectId: params.projectId } }, select: { id: true, description: true, budgetItemId: true, costCodeId: true, commitment: { select: { number: true } } } })
     ]);
     return NextResponse.json({
       items: codes.map(serializeCostCode),
-      coverage: costCodeCoverage({ codes, budgetItems, scheduleItems, materials, procurementItems, payments, changeOrderItems }),
+      coverage: costCodeCoverage({ codes, budgetItems, scheduleItems, materials, procurementItems, payments, changeOrderItems, commitmentLines }),
       entities: {
         budget: budgetItems.map((item) => ({ id: item.id, label: `${item.code} · ${item.name}`, detail: item.section, costCodeId: item.costCodeId })),
         schedule: scheduleItems.map((item) => ({ id: item.id, label: item.name, detail: "График", costCodeId: item.costCodeId })),
         materials: materials.map((item) => ({ id: item.id, label: item.name, detail: "Материал", costCodeId: item.costCodeId })),
         procurement: procurementItems.map((item) => ({ id: item.id, label: item.name, detail: item.request.title, costCodeId: item.costCodeId })),
         payments: payments.map((item) => ({ id: item.id, label: item.title, detail: item.direction === "incoming" ? "Поступление" : "Расход", costCodeId: item.costCodeId })),
-        changes: changeOrderItems.map((item) => ({ id: item.id, label: `${item.changeOrder.number} · ${item.description}`, detail: "Изменение", costCodeId: item.costCodeId }))
+        changes: changeOrderItems.map((item) => ({ id: item.id, label: `${item.changeOrder.number} · ${item.description}`, detail: "Изменение", costCodeId: item.costCodeId })),
+        commitments: commitmentLines.map((item) => ({ id: item.id, label: `${item.commitment.number} · ${item.description}`, detail: "Обязательство", costCodeId: item.costCodeId }))
       }
     });
   } catch (error) {

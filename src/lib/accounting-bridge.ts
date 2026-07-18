@@ -309,19 +309,72 @@ export function buildAccountingExport(input: {
   materials: Material[];
   procurementRequests: ProcurementRequest[];
   payments: Payment[];
+  commitments?: Array<{
+    id: string;
+    number: string;
+    type: string;
+    title: string;
+    counterparty: string;
+    externalNumber?: string | null;
+    status: string;
+    currency: string;
+    retentionPercent: unknown;
+    lines: Array<{ id: string; costCodeId?: string | null; code?: string | null; description: string; quantity: unknown; unit: string; unitPrice: unknown; scheduledValue: unknown }>;
+    changeOrders: Array<{ status: string; approvedAmount: unknown; committedAmount: unknown }>;
+    paymentApplications: Array<{ status: string; currentAmount: unknown; materialsStored: unknown; retentionAmount: unknown; netAmount: unknown }>;
+  }>;
   generatedAt?: string;
 }) {
   const costCodeById = new Map((input.costCodes ?? []).map((item) => [item.id, { code: item.code, name: item.name }]));
   const costCode = (costCodeId?: string | null) => costCodeId ? costCodeById.get(costCodeId) ?? null : null;
   const materialPriceById = new Map(input.materials.map((material) => [material.id, material.plannedUnitPrice]));
   const materialPriceByName = new Map(input.materials.map((material) => [normalizedKey(material.name), material.plannedUnitPrice]));
-  const commitments = input.procurementRequests.map((request) => {
+  const procurementEstimates = input.procurementRequests.map((request) => {
     const lines = request.items.map((item) => {
       const unitPrice = materialPriceById.get(item.materialId) ?? materialPriceByName.get(normalizedKey(item.name)) ?? 0;
       return { materialId: item.materialId || null, costCode: costCode(item.costCodeId), name: item.name, qty: item.qty, unit: item.unit, unitPrice, amount: item.qty * unitPrice, estimateStatus: unitPrice ? "estimated" : "missing_price" };
     });
     return { id: request.id, title: request.title, status: request.status, neededAt: request.neededAt, priority: request.priority, amount: lines.reduce((sum, line) => sum + line.amount, 0), lines };
   });
+  const commitments = input.commitments === undefined
+    ? procurementEstimates
+    : input.commitments.filter((item) => ["approved", "active", "completed"].includes(item.status)).map((item) => {
+      const originalAmount = item.lines.reduce((total, line) => total + Number(line.scheduledValue), 0);
+      const approvedChanges = item.changeOrders
+        .filter((change) => change.status === "approved" || change.status === "executed")
+        .reduce((total, change) => total + Number(change.status === "executed" ? Number(change.committedAmount) || Number(change.approvedAmount) : change.approvedAmount), 0);
+      const applications = item.paymentApplications.filter((application) => application.status === "approved" || application.status === "paid");
+      return {
+        id: item.id,
+        number: item.number,
+        type: item.type,
+        title: item.title,
+        counterparty: item.counterparty,
+        externalNumber: item.externalNumber ?? null,
+        status: item.status,
+        currency: item.currency,
+        retentionPercent: Number(item.retentionPercent),
+        source: "commitment_register",
+        originalAmount,
+        approvedChanges,
+        amount: originalAmount + approvedChanges,
+        approvedApplications: applications.reduce((total, application) => total + Number(application.currentAmount) + Number(application.materialsStored), 0),
+        paid: item.paymentApplications.filter((application) => application.status === "paid").reduce((total, application) => total + Number(application.netAmount), 0),
+        retentionHeld: applications.reduce((total, application) => total + Number(application.retentionAmount), 0),
+        lines: item.lines.map((line) => ({
+          id: line.id,
+          materialId: null,
+          code: line.code ?? null,
+          costCode: costCode(line.costCodeId),
+          name: line.description,
+          qty: Number(line.quantity),
+          unit: line.unit,
+          unitPrice: Number(line.unitPrice),
+          amount: Number(line.scheduledValue),
+          estimateStatus: "contracted"
+        }))
+      };
+    });
   const receivables = input.payments.filter((payment) => payment.direction === "incoming");
   const payables = input.payments.filter((payment) => payment.direction === "outgoing");
   const accountingPayment = (payment: Payment) => ({ ...payment, costCode: costCode(payment.costCodeId) });
@@ -343,6 +396,7 @@ export function buildAccountingExport(input: {
       endsAt: input.project.endsAt
     },
     commitments,
+    procurementEstimates,
     receivables: receivables.map(accountingPayment),
     payables: payables.map(accountingPayment),
     totals: {
@@ -354,7 +408,9 @@ export function buildAccountingExport(input: {
       paidOutgoing: sum(payables.filter((payment) => payment.status === "paid"))
     },
     limitations: [
-      "Обязательства по закупкам оценены по плановым ценам материалов.",
+      input.commitments === undefined
+        ? "Обязательства по закупкам оценены по плановым ценам материалов."
+        : "Сумма обязательств берется из согласованного реестра Contract Commitments; черновики и отклоненные записи исключены.",
       "Входящие платежи используются как контур начислений/оплат; отдельный реестр счетов появится в следующей версии.",
       "Пакет не создает проводки во внешней системе автоматически."
     ]

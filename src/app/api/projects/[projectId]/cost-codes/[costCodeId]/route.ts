@@ -59,16 +59,17 @@ export async function DELETE(_request: Request, { params }: { params: Params }) 
   try {
     const current = await prisma.projectCostCode.findFirst({ where: { id: params.costCodeId, projectId: params.projectId } });
     if (!current) return NextResponse.json({ error: "Cost code not found" }, { status: 404 });
-    const [children, budget, schedule, materials, procurement, payments, changes] = await Promise.all([
+    const [children, budget, schedule, materials, procurement, payments, changes, commitments] = await Promise.all([
       prisma.projectCostCode.count({ where: { parentId: current.id } }),
       prisma.budgetItem.count({ where: { costCodeId: current.id } }),
       prisma.scheduleItem.count({ where: { costCodeId: current.id } }),
       prisma.material.count({ where: { costCodeId: current.id } }),
       prisma.procurementRequestItem.count({ where: { costCodeId: current.id } }),
       prisma.payment.count({ where: { costCodeId: current.id } }),
-      prisma.projectChangeOrderItem.count({ where: { costCodeId: current.id } })
+      prisma.projectChangeOrderItem.count({ where: { costCodeId: current.id } }),
+      prisma.projectCommitmentLine.count({ where: { costCodeId: current.id } })
     ]);
-    if (children || budget || schedule || materials || procurement || payments || changes) return NextResponse.json({ error: "Deactivate or unlink the cost code before deletion" }, { status: 409 });
+    if (children || budget || schedule || materials || procurement || payments || changes || commitments) return NextResponse.json({ error: "Deactivate or unlink the cost code before deletion" }, { status: 409 });
     await prisma.$transaction(async (tx) => {
       await tx.projectCostCode.delete({ where: { id: current.id } });
       await writeAudit(tx, {
