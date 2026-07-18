@@ -1,5 +1,49 @@
 # PGS Project Log
 
+## 2026-07-18 - Contract Commitments v1 online/core GO
+
+Status: Contract Commitments v1 is shipped on Render after PR #132. PGS now has an auditable register for owner contracts, subcontracts, purchase orders and service orders, with Schedule of Values, approval, retention, change-order links and payment applications.
+
+- Online URL: https://pgs-frankfurt.onrender.com
+- Online commit: `0f7ad087c6244f34570ce37dbdf30feb03b3792b`
+- Render deploy: `dep-d9du87e8bjmc73b4l1ng`
+- Feature PR: #132
+- Decision: ONLINE/CORE GO
+- Git SHA source: `RENDER_GIT_COMMIT`
+
+Implemented:
+
+- controlled commitment lifecycle with optional Workflow Designer approval and project audit entries;
+- Schedule of Values linked to VOR, Cost Codes, procurement requests and exact document versions;
+- retention, payment terms, approved change orders and revised commitment value;
+- payment application lifecycle with approval/rejection, paid-payment reconciliation, delete/void controls and overbilling protection;
+- real commitment values in Accounting Bridge without automatic payment creation or accounting postings;
+- responsive workspace inside the existing `Договор / Тендер` section without a duplicate navigation item.
+
+Online verification:
+
+- `/api/health`: HTTP 200 / `ok`; DB: `ok`; migrations: `ok`, count `17`;
+- deployed SHA matched `0f7ad087c6244f34570ce37dbdf30feb03b3792b`;
+- migration `20260718110000_contract_commitments_v1` applied successfully;
+- Render marked deploy `dep-d9du87e8bjmc73b4l1ng` live;
+- protected `/dashboard`, `/projects` and project pages redirect unauthenticated users to login;
+- unauthenticated `/api/auth/me`: 401;
+- unauthenticated commitment list/create and payment action routes: 403 before invalid request bodies are parsed;
+- deployed CSS contains the commitments workspace, payment application and container-responsive layout markers.
+
+Validation and safety:
+
+- GitHub Actions CI #269 passed;
+- Vitest: 435/435 passed; ESLint, TypeScript, Prisma validate/generate, production build and `git diff --check` passed;
+- local desktop and 390 px mobile browser checks passed with no page/workspace overflow, one-column mobile forms and no client errors;
+- no authenticated online commitment/payment mutation, live AI, project/import/delete/upload mutation or external connector call was run;
+- no Render env/secrets, auth/session model, health/provider or deploy configuration changes were made;
+- no secrets were printed.
+
+Remaining controlled follow-up:
+
+- authenticated disposable lifecycle smoke covering commitment create, submit/approve/activate, payment application approval, paid-payment link and cleanup remains optional.
+
 ## 2026-07-18 - Cost Codes / CBS-WBS v1 online/core GO
 
 Status: Cost Codes / CBS-WBS v1 is shipped on Render after PR #129. Projects now have a controlled cost-code hierarchy that connects VOR, schedule, materials, procurement, payments and change orders to one project-owned CBS-WBS structure.
