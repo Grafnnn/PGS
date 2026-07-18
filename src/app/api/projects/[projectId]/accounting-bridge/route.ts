@@ -43,7 +43,8 @@ export async function GET(_request: NextRequest, { params }: { params: { project
       include: {
         materials: { orderBy: { neededAt: "asc" } },
         procurementRequests: { include: { items: true }, orderBy: { neededAt: "asc" } },
-        payments: { orderBy: { plannedAt: "asc" } }
+        payments: { orderBy: { plannedAt: "asc" } },
+        commitments: { include: { lines: true, changeOrders: true, paymentApplications: true }, orderBy: { sequence: "asc" } }
       }
     }),
     prisma.accountingSyncRun.findMany({ where: { projectId: params.projectId }, orderBy: { createdAt: "desc" }, take: 20 })
@@ -54,14 +55,15 @@ export async function GET(_request: NextRequest, { params }: { params: { project
     project: serializeProject(project),
     materials: project.materials.map(serializeMaterial),
     procurementRequests: project.procurementRequests.map(serializeProcurementRequest),
-    payments: project.payments.map(serializePayment)
+    payments: project.payments.map(serializePayment),
+    commitments: project.commitments
   });
   const canSync = await canProject(user, params.projectId, "sync_accounting");
   const missingData = [
     !project.code ? "Код проекта" : null,
     !project.customer ? "Заказчик" : null,
     !project.payments.length ? "Платежи" : null,
-    !project.procurementRequests.length ? "Обязательства по закупкам" : null
+    !project.commitments.length ? "Согласованные договорные обязательства" : null
   ].filter(Boolean);
 
   return NextResponse.json({
@@ -72,7 +74,7 @@ export async function GET(_request: NextRequest, { params }: { params: { project
       receivablesAmount: exportBundle.totals.receivables,
       payablesAmount: exportBundle.totals.payables,
       paymentCount: project.payments.length,
-      commitmentCount: project.procurementRequests.length,
+      commitmentCount: project.commitments.length,
       missingData
     },
     runs: runs.map(serializeRun)

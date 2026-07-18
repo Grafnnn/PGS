@@ -33,9 +33,12 @@ export async function POST(request: NextRequest, { params }: { params: { project
       } else if (data.entityType === "payment") {
         const item = await tx.payment.findFirst({ where: { id: data.entityId, projectId: params.projectId }, select: { costCodeId: true, title: true } });
         if (item) { before = { costCodeId: item.costCodeId, label: item.title }; await tx.payment.update({ where: { id: data.entityId }, data: { costCodeId: costCode?.id ?? null } }); }
-      } else {
+      } else if (data.entityType === "change_order_item") {
         const item = await tx.projectChangeOrderItem.findFirst({ where: { id: data.entityId, changeOrder: { projectId: params.projectId } }, select: { costCodeId: true, description: true } });
         if (item) { before = { costCodeId: item.costCodeId, label: item.description }; await tx.projectChangeOrderItem.update({ where: { id: data.entityId }, data: { costCodeId: costCode?.id ?? null } }); }
+      } else {
+        const item = await tx.projectCommitmentLine.findFirst({ where: { id: data.entityId, commitment: { projectId: params.projectId } }, select: { costCodeId: true, description: true } });
+        if (item) { before = { costCodeId: item.costCodeId, label: item.description }; await tx.projectCommitmentLine.update({ where: { id: data.entityId }, data: { costCodeId: costCode?.id ?? null } }); }
       }
       if (!before) throw new Error("Assignable entity not found");
       await writeAudit(tx, {

@@ -52,4 +52,24 @@ describe("accounting bridge", () => {
     expect(result.commitments[0].lines[1]).toMatchObject({ unitPrice: 0, amount: 0, estimateStatus: "missing_price" });
     expect(result.generatedAt).toBe("2026-07-15T00:00:00.000Z");
   });
+
+  it("uses the approved commitment register instead of procurement estimates when available", () => {
+    const project = { id: "p1", organizationId: "o1", name: "Объект", customer: "Заказчик", object: "Корпус", address: "Адрес", contractAmount: 1_000_000, vatMode: "vat", startsAt: "2026-01-01", endsAt: "2026-12-31", manager: "РП", status: "active" } satisfies Project;
+    const result = buildAccountingExport({
+      project,
+      materials: [],
+      procurementRequests: [],
+      payments,
+      commitments: [{
+        id: "com-1", number: "COM-001", type: "subcontract", title: "Монолит", counterparty: "ООО Монолит", status: "active", currency: "RUB", retentionPercent: 5,
+        lines: [{ id: "line-1", costCodeId: "cc-1", code: "01.01", description: "Работы", quantity: 1, unit: "компл.", unitPrice: 100_000, scheduledValue: 100_000 }],
+        changeOrders: [{ status: "approved", approvedAmount: 20_000, committedAmount: 0 }],
+        paymentApplications: [{ status: "approved", currentAmount: 30_000, materialsStored: 0, retentionAmount: 1_500, netAmount: 28_500 }]
+      }],
+      costCodes: [{ id: "cc-1", code: "01.01", name: "Монолит" }]
+    });
+    expect(result.totals.commitments).toBe(120_000);
+    expect(result.commitments[0]).toMatchObject({ source: "commitment_register", approvedApplications: 30_000, retentionHeld: 1_500 });
+    expect(result.commitments[0].lines[0]).toMatchObject({ estimateStatus: "contracted", costCode: { code: "01.01" } });
+  });
 });

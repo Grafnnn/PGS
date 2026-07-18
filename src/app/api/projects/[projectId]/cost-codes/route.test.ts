@@ -10,7 +10,8 @@ const mocks = vi.hoisted(() => ({
   materialFind: vi.fn(),
   procurementFind: vi.fn(),
   paymentFind: vi.fn(),
-  changesFind: vi.fn()
+  changesFind: vi.fn(),
+  commitmentsFind: vi.fn()
 }));
 
 vi.mock("@/lib/auth/session", () => ({ getCurrentUser: mocks.user }));
@@ -26,6 +27,7 @@ vi.mock("@/lib/prisma", () => ({
     procurementRequestItem: { findMany: mocks.procurementFind },
     payment: { findMany: mocks.paymentFind },
     projectChangeOrderItem: { findMany: mocks.changesFind },
+    projectCommitmentLine: { findMany: mocks.commitmentsFind },
     $transaction: vi.fn()
   }
 }));
@@ -35,7 +37,7 @@ describe("cost codes collection route", () => {
     vi.clearAllMocks();
     mocks.user.mockResolvedValue({ id: "user-1", authenticated: true });
     mocks.canProject.mockResolvedValue(true);
-    [mocks.codeFind, mocks.budgetFind, mocks.scheduleFind, mocks.materialFind, mocks.procurementFind, mocks.paymentFind, mocks.changesFind].forEach((mock) => mock.mockResolvedValue([]));
+    [mocks.codeFind, mocks.budgetFind, mocks.scheduleFind, mocks.materialFind, mocks.procurementFind, mocks.paymentFind, mocks.changesFind, mocks.commitmentsFind].forEach((mock) => mock.mockResolvedValue([]));
   });
 
   it("guards reads before querying classification data", async () => {
@@ -52,7 +54,7 @@ describe("cost codes collection route", () => {
     const body = await response.json();
     expect(response.status).toBe(200);
     expect(body.coverage).toMatchObject({ codes: 0, total: 0, linked: 0, percent: 0 });
-    expect(body.entities).toMatchObject({ budget: [], payments: [], changes: [] });
+    expect(body.entities).toMatchObject({ budget: [], payments: [], changes: [], commitments: [] });
   });
 
   it("checks edit permission before parsing a write request", async () => {

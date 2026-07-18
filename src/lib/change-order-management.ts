@@ -72,7 +72,7 @@ export function resolveChangeOrderTransition(status: string, action: ChangeOrder
 }
 
 type ChangeOrderRecord = {
-  id: string; projectId: string; sequence: number; number: string; kind: string; scope: string; title: string;
+  id: string; projectId: string; commitmentId?: string | null; sequence: number; number: string; kind: string; scope: string; title: string;
   description: string | null; reason: string | null; sourceType: string | null; sourceRef: string | null; counterparty: string | null;
   status: string; currency: string; scheduleImpactDays: number; estimatedAmount: unknown; proposedAmount: unknown; submittedAmount: unknown; approvedAmount: unknown; committedAmount: unknown;
   linkedDocumentId: string | null; linkedDocumentVersion: number | null; linkedDocumentVersionId: string | null; approvalWorkflowRunId: string | null; decisionComment: string | null;

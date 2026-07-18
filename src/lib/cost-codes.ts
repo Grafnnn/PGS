@@ -24,7 +24,7 @@ export const costCodeBaselineSchema = z.object({
 });
 
 export const costCodeAssignmentSchema = z.object({
-  entityType: z.enum(["budget_item", "schedule_item", "material", "procurement_item", "payment", "change_order_item"]),
+  entityType: z.enum(["budget_item", "schedule_item", "material", "procurement_item", "payment", "change_order_item", "commitment_line"]),
   entityId: z.string().trim().min(1),
   costCodeId: z.string().trim().min(1).nullable()
 }).strict();
@@ -165,6 +165,7 @@ export function costCodeCoverage(input: {
   procurementItems: Array<{ costCodeId?: string | null }>;
   payments: Array<{ costCodeId?: string | null }>;
   changeOrderItems: Array<{ costCodeId?: string | null; budgetItemId?: string | null }>;
+  commitmentLines?: Array<{ costCodeId?: string | null; budgetItemId?: string | null }>;
 }) {
   const count = (items: Array<{ costCodeId?: string | null }>) => ({ total: items.length, linked: items.filter((item) => Boolean(item.costCodeId)).length });
   const categories = {
@@ -173,7 +174,8 @@ export function costCodeCoverage(input: {
     materials: count(input.materials),
     procurement: count(input.procurementItems),
     payments: count(input.payments),
-    changes: count(input.changeOrderItems)
+    changes: count(input.changeOrderItems),
+    commitments: count(input.commitmentLines ?? [])
   };
   const total = Object.values(categories).reduce((sum, item) => sum + item.total, 0);
   const linked = Object.values(categories).reduce((sum, item) => sum + item.linked, 0);

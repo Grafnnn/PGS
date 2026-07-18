@@ -12,7 +12,13 @@ export async function POST(_request: NextRequest, { params }: { params: { projec
 
   const project = await prisma.project.findUnique({
     where: { id: params.projectId },
-    include: { costCodes: true, materials: true, procurementRequests: { include: { items: true } }, payments: true }
+    include: {
+      costCodes: true,
+      materials: true,
+      procurementRequests: { include: { items: true } },
+      payments: true,
+      commitments: { include: { lines: true, changeOrders: true, paymentApplications: true }, orderBy: { sequence: "asc" } }
+    }
   });
   if (!project) return NextResponse.json({ error: "Project not found" }, { status: 404 });
 
@@ -21,7 +27,8 @@ export async function POST(_request: NextRequest, { params }: { params: { projec
     costCodes: (project.costCodes ?? []).map((item) => ({ id: item.id, code: item.code, name: item.name })),
     materials: project.materials.map(serializeMaterial),
     procurementRequests: project.procurementRequests.map(serializeProcurementRequest),
-    payments: project.payments.map(serializePayment)
+    payments: project.payments.map(serializePayment),
+    commitments: project.commitments
   });
 
   await prisma.$transaction(async (tx) => {
