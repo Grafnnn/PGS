@@ -50,6 +50,7 @@ export function serializeBudgetItem(item: DbBudgetItem): BudgetItem {
   return {
     id: item.id,
     projectId: item.projectId,
+    costCodeId: item.costCodeId,
     section: item.section,
     subsection: item.subsection ?? undefined,
     code: item.code,
@@ -70,6 +71,7 @@ export function serializeScheduleItem(item: DbScheduleItem): ScheduleItem {
     id: item.id,
     projectId: item.projectId,
     budgetItemId: item.budgetItemId ?? undefined,
+    costCodeId: item.costCodeId,
     name: item.name,
     owner: item.owner,
     startsAt: dateOnly(item.startsAt),
@@ -85,6 +87,7 @@ export function serializeMaterial(item: DbMaterial): Material {
   return {
     id: item.id,
     projectId: item.projectId,
+    costCodeId: item.costCodeId,
     name: item.name,
     unit: item.unit,
     requiredQty: num(item.requiredQty),
@@ -109,7 +112,9 @@ export function serializeProcurementRequest(item: DbProcurementRequest & { items
     priority: item.priority,
     status: item.status as ProcurementRequest["status"],
     items: item.items.map((requestItem) => ({
+      id: requestItem.id,
       materialId: requestItem.materialId ?? "",
+      costCodeId: requestItem.costCodeId,
       name: requestItem.name,
       qty: num(requestItem.qty),
       unit: requestItem.unit,
@@ -122,6 +127,7 @@ export function serializePayment(item: DbPayment): Payment {
   return {
     id: item.id,
     projectId: item.projectId,
+    costCodeId: item.costCodeId,
     title: item.title,
     counterparty: item.counterparty,
     direction: item.direction as Payment["direction"],

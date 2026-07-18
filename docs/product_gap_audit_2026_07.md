@@ -21,6 +21,7 @@ This is a directional product audit based on public vendor materials, not a feat
 | Portfolio/program controls | Project-centered | Oracle supports project, cross-project and portfolio controls | Medium |
 | Configurable workflow builder | Added in Workflow Designer & Approval Matrix v1 | Oracle provides configurable business-process routes and approval steps | Maintain |
 | Change orders / variations | Added in Change Order Management v2 | Autodesk and Oracle connect potential changes, cost items, approvals, evidence and executed commitments | Maintain |
+| Cost codes / CBS-WBS | Added in Cost Codes / CBS-WBS v1 | Oracle and Autodesk use hierarchical cost structures to connect scope, cost and change records | Maintain |
 
 ## Implemented now: Project Action Center v1
 
@@ -52,11 +53,20 @@ This is a directional product audit based on public vendor materials, not a feat
 - Optional Workflow Designer approval run and OWNER/ADMIN decision gates.
 - No silent writes into VOR, contract, cashflow, KS, payments or procurement.
 
+## Implemented now: Cost Codes / CBS-WBS v1
+
+- Project-owned hierarchical WBS/CBS classifier with active/inactive lifecycle.
+- Deterministic VOR baseline preview and separately confirmed commit.
+- Explicit mappings for VOR, schedule, materials, procurement, payments and change orders.
+- Propagation from linked VOR rows to schedule and change-order lines.
+- Cost Code context in the accounting export package.
+- Role-aware mutations, deletion safeguards and transactional audit records.
+
 ## Recommended next trains
 
-1. **Cost Codes / CBS-WBS v1** — common cost-code hierarchy across VOR, procurement, changes, schedule and accounting.
-2. **Contract Commitments v1** — persistent owner and subcontract commitments, SOV and payment application linkage.
-3. **External Collaboration v1** — controlled owner/designer/supplier responses without broad project access.
+1. **Contract Commitments v1** — persistent owner and subcontract commitments, SOV and payment application linkage.
+2. **External Collaboration v1** — controlled owner/designer/supplier responses without broad project access.
+3. **Cost Forecast by Cost Code v1** — ETC/EAC roll-up and variance analysis over the shipped CBS-WBS hierarchy.
 
 ## Product guardrails
 

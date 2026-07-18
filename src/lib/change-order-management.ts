@@ -79,7 +79,7 @@ type ChangeOrderRecord = {
   dueAt: Date | null; submittedAt: Date | null; approvedAt: Date | null; executedAt: Date | null; rejectedAt: Date | null; voidedAt: Date | null; createdAt: Date; updatedAt: Date;
   linkedDocument?: { title: string; fileName: string | null } | null;
   approvalWorkflowRun?: { id: string; title: string; status: string } | null;
-  items: Array<{ id: string; budgetItemId: string | null; sequence: number; code: string | null; description: string; quantity: unknown; unit: string; estimatedUnitPrice: unknown; proposedUnitPrice: unknown; submittedUnitPrice: unknown; approvedUnitPrice: unknown; committedUnitPrice: unknown }>;
+  items: Array<{ id: string; budgetItemId: string | null; costCodeId: string | null; sequence: number; code: string | null; description: string; quantity: unknown; unit: string; estimatedUnitPrice: unknown; proposedUnitPrice: unknown; submittedUnitPrice: unknown; approvedUnitPrice: unknown; committedUnitPrice: unknown }>;
 };
 
 export function serializeChangeOrder(item: ChangeOrderRecord) {

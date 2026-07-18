@@ -9797,3 +9797,148 @@ input[type="checkbox"] {
   .change-order-form-actions, .change-order-controls { align-items: stretch; flex-direction: column; }
   .change-order-controls select, .change-order-controls .button, .change-order-form-actions .button { width: 100%; }
 }
+
+/* Cost Codes / CBS-WBS v1 */
+.cost-code-workspace {
+  display: grid;
+  gap: 16px;
+  margin: 18px 0 22px;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  width: 100%;
+}
+
+.cost-code-workspace > *,
+.cost-code-layout > *,
+.cost-code-form > *,
+.cost-code-assignment > * { max-width: 100%; min-width: 0; }
+
+.cost-code-header {
+  align-items: flex-start;
+  border-bottom: 1px solid var(--line);
+  border-top: 1px solid var(--line);
+  display: flex;
+  gap: 18px;
+  justify-content: space-between;
+  padding: 18px 0;
+}
+
+.cost-code-header h3 { font-size: 22px; margin: 4px 0 6px; }
+.cost-code-header p { color: var(--muted); margin: 0; max-width: 820px; }
+
+.cost-code-metrics {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.cost-code-metrics article {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  display: grid;
+  gap: 4px;
+  padding: 14px;
+}
+
+.cost-code-metrics small,
+.cost-code-metrics span { color: var(--muted); }
+.cost-code-metrics strong { font-size: 21px; overflow-wrap: anywhere; }
+
+.cost-code-layout {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(0, 1.4fr) minmax(300px, .6fr);
+}
+
+.cost-code-section,
+.cost-code-register,
+.cost-code-mapping {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+}
+
+.cost-code-section-title {
+  align-items: center;
+  display: flex;
+  gap: 9px;
+}
+
+.cost-code-section-title > div { display: grid; gap: 2px; }
+.cost-code-section-title h4 { font-size: 16px; margin: 0; }
+.cost-code-section-title span { color: var(--muted); font-size: 12px; }
+
+.cost-code-preview {
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 10px;
+  padding-top: 12px;
+}
+
+.cost-code-preview-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.cost-code-preview-summary span { color: var(--muted); display: grid; font-size: 12px; }
+.cost-code-preview-summary strong { color: var(--text); font-size: 18px; }
+.cost-code-preview-tree { display: grid; gap: 2px; max-height: 260px; overflow: auto; }
+.cost-code-preview-tree > div { align-items: center; display: grid; gap: 10px; grid-template-columns: 76px minmax(0, 1fr); padding-bottom: 5px; padding-top: 5px; }
+.cost-code-preview-tree code, .cost-code-register code { color: var(--accent); font-family: var(--font-mono); font-size: 12px; }
+.cost-code-conflicts { align-items: center; background: var(--red-soft); border-radius: 5px; color: var(--danger); display: flex; gap: 8px; padding: 10px; }
+.cost-code-commit { align-items: center; border-top: 1px solid var(--line); display: flex; gap: 14px; justify-content: space-between; padding-top: 12px; }
+
+.cost-code-form {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.cost-code-form .field-wide { grid-column: 1 / -1; }
+.cost-code-form .button { align-self: end; justify-content: center; }
+.cost-code-name { display: block; overflow-wrap: anywhere; }
+
+.cost-code-tabs { max-width: 100%; overflow-x: auto; }
+.cost-code-tabs button { align-items: center; flex: 1 0 110px; justify-content: space-between; min-width: 0; }
+.cost-code-tabs small { color: inherit; font-family: var(--font-mono); font-size: 10px; }
+
+.cost-code-assignment-list { display: grid; gap: 7px; }
+.cost-code-assignment {
+  align-items: center;
+  border-bottom: 1px solid var(--line);
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(180px, 1fr) minmax(230px, .8fr) auto;
+  padding: 8px 0;
+}
+
+.cost-code-assignment:last-child { border-bottom: 0; }
+.cost-code-assignment > div { display: grid; gap: 3px; }
+.cost-code-assignment strong { overflow-wrap: anywhere; }
+.cost-code-assignment span { color: var(--muted); font-size: 12px; }
+.cost-code-assignment select { min-width: 0; width: 100%; }
+
+@media (max-width: 1040px) {
+  .cost-code-layout { grid-template-columns: 1fr; }
+  .cost-code-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 680px) {
+  .cost-code-header { display: grid; }
+  .cost-code-metrics,
+  .cost-code-form { grid-template-columns: 1fr; }
+  .cost-code-form .field-wide { grid-column: auto; }
+  .cost-code-commit { align-items: stretch; flex-direction: column; }
+  .cost-code-commit .button { justify-content: center; width: 100%; }
+  .cost-code-assignment { align-items: stretch; grid-template-columns: 1fr; }
+  .cost-code-assignment .button { justify-content: center; width: 100%; }
+  .cost-code-section,
+  .cost-code-register,
+  .cost-code-mapping { padding: 13px; }
+}
