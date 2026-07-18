@@ -1,5 +1,57 @@
 # PGS Project Log
 
+## 2026-07-18 - Cost Codes / CBS-WBS v1 online/core GO
+
+Status: Cost Codes / CBS-WBS v1 is shipped on Render after PR #129. Projects now have a controlled cost-code hierarchy that connects VOR, schedule, materials, procurement, payments and change orders to one project-owned CBS-WBS structure.
+
+- Online URL: https://pgs-frankfurt.onrender.com
+- Feature commit: `1f0edfcabea366a1b0c460266d22d068fa8013f9`
+- Online commit: `51e77f6e6a8a231cb731b4e0da8e105b9f10f397`
+- Render deploy: `dep-d9dt4nt5tq5c738i6ttg`
+- Feature PR: #129
+- Runtime startup fix PR: #130
+- Decision: ONLINE/CORE GO
+- Git SHA source: `RENDER_GIT_COMMIT`
+
+Implemented:
+
+- project-owned hierarchical Cost Codes with WBS/CBS segments, capital/expense classification and active/inactive lifecycle;
+- deterministic dry-run VOR baseline and explicit confirmed commit;
+- guarded cross-module assignment for VOR, schedule, materials, procurement, payments and change orders;
+- audit records, inactive-code protection and safe deletion constraints for linked or parent codes;
+- Cost Code propagation from linked VOR rows into schedule and change-order data;
+- Cost Code context in ERP/accounting procurement and payment exports;
+- responsive Cost Codes workspace inside the existing Budget/VOR tab without adding navigation clutter.
+
+Online verification:
+
+- `/api/health`: HTTP 200 / `ok`; DB: `ok`; migrations: `ok`, count `16`;
+- deployed SHA matched `51e77f6e6a8a231cb731b4e0da8e105b9f10f397`;
+- migration `20260718090000_cost_codes_cbs_wbs_v1` applied successfully;
+- Render marked deploy `dep-d9dt4nt5tq5c738i6ttg` live and Next.js ready;
+- protected `/dashboard`, `/projects` and project pages redirect unauthenticated users to login;
+- unauthenticated `/api/auth/me`: 401;
+- unauthenticated Cost Codes collection route: 403.
+
+Deployment hardening:
+
+- the initial feature deploy was canceled after runtime `pnpm` supply-chain checks stalled on npm registry access;
+- PR #130 changed only the Docker runtime command to use binaries already baked into the image;
+- migration, seed and Next startup order remains unchanged, while startup no longer depends on registry availability.
+
+Validation and safety:
+
+- PR #129 GitHub Actions CI #263 passed; PR #130 GitHub Actions CI #265 passed;
+- Vitest: 421/421 passed; ESLint, TypeScript, Prisma validate/generate, production build and `git diff --check` passed;
+- local desktop 1280 px and mobile 390 px browser checks passed with one sidebar, zero horizontal overflow and no client errors;
+- no authenticated online Cost Code mutation, baseline commit, live AI, project/import/delete/upload mutation or external connector call was run;
+- no Render env/secrets, auth/session model, health/provider or database credentials were changed;
+- no secrets were printed.
+
+Remaining controlled follow-up:
+
+- authenticated disposable Cost Code smoke covering baseline preview/commit, cross-module assignment, ERP export context and cleanup remains optional.
+
 ## 2026-07-17 - Change Order Management v2 deploy GO
 
 Status: Change Order Management v2 is shipped on Render after PR #127. Projects now have a persistent commercial change register with VOR-linked cost lines, evidence snapshots, explicit lifecycle decisions and optional Workflow Designer approval runs.
