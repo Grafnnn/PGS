@@ -29,4 +29,5 @@ COPY --from=builder /app/public ./public
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/src ./src
 EXPOSE 3000
-CMD ["sh", "-c", "pnpm prisma migrate deploy && pnpm prisma db seed && pnpm exec next start -H 0.0.0.0 -p ${PORT:-3000}"]
+# Run the binaries already baked into the image so startup never depends on registry availability.
+CMD ["sh", "-c", "node ./node_modules/prisma/build/index.js migrate deploy && node --import tsx prisma/seed.ts && node ./node_modules/next/dist/bin/next start -H 0.0.0.0 -p ${PORT:-3000}"]
