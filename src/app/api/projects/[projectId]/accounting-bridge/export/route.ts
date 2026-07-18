@@ -12,12 +12,13 @@ export async function POST(_request: NextRequest, { params }: { params: { projec
 
   const project = await prisma.project.findUnique({
     where: { id: params.projectId },
-    include: { materials: true, procurementRequests: { include: { items: true } }, payments: true }
+    include: { costCodes: true, materials: true, procurementRequests: { include: { items: true } }, payments: true }
   });
   if (!project) return NextResponse.json({ error: "Project not found" }, { status: 404 });
 
   const bundle = buildAccountingExport({
     project: serializeProject(project),
+    costCodes: (project.costCodes ?? []).map((item) => ({ id: item.id, code: item.code, name: item.name })),
     materials: project.materials.map(serializeMaterial),
     procurementRequests: project.procurementRequests.map(serializeProcurementRequest),
     payments: project.payments.map(serializePayment)

@@ -34,9 +34,11 @@ export async function POST(request: NextRequest, { params }: { params: { project
     const linkedDocument = data.linkedDocumentId ? await prisma.document.findFirst({ where: { id: data.linkedDocumentId, projectId: params.projectId }, include: { versions: { orderBy: { versionNumber: "desc" }, take: 1 } } }) : null;
     if (data.linkedDocumentId && !linkedDocument) return NextResponse.json({ error: "Linked document not found" }, { status: 404 });
     const budgetIds = [...new Set(data.items.map((item) => item.budgetItemId).filter(Boolean))];
+    const budgetCostCodeById = new Map<string, string | null>();
     if (budgetIds.length) {
-      const validBudgetIds = await prisma.budgetItem.findMany({ where: { projectId: params.projectId, id: { in: budgetIds } }, select: { id: true } });
-      if (validBudgetIds.length !== budgetIds.length) return NextResponse.json({ error: "Budget item does not belong to project" }, { status: 409 });
+      const validBudgetItems = await prisma.budgetItem.findMany({ where: { projectId: params.projectId, id: { in: budgetIds } }, select: { id: true, costCodeId: true } });
+      if (validBudgetItems.length !== budgetIds.length) return NextResponse.json({ error: "Budget item does not belong to project" }, { status: 409 });
+      validBudgetItems.forEach((item) => budgetCostCodeById.set(item.id, item.costCodeId));
     }
     const totals = changeOrderAmounts(data.items);
     const item = await prisma.$transaction(async (tx) => {
@@ -51,7 +53,12 @@ export async function POST(request: NextRequest, { params }: { params: { project
           linkedDocumentVersionId: linkedDocument?.versions[0]?.id ?? null, dueAt: data.dueAt ? new Date(data.dueAt) : null,
           estimatedAmount: totals.estimated, proposedAmount: totals.proposed, submittedAmount: totals.submitted,
           createdBy: user?.authenticated ? user.id : null,
-          items: { create: data.items.map((line, index) => ({ sequence: index + 1, budgetItemId: line.budgetItemId || null, code: line.code || null, description: line.description, quantity: line.quantity, unit: line.unit, estimatedUnitPrice: line.estimatedUnitPrice, proposedUnitPrice: line.proposedUnitPrice, submittedUnitPrice: line.submittedUnitPrice })) }
+          items: { create: data.items.map((line, index) => ({
+            sequence: index + 1, budgetItemId: line.budgetItemId || null,
+            costCodeId: line.budgetItemId ? budgetCostCodeById.get(line.budgetItemId) ?? null : null,
+            code: line.code || null, description: line.description, quantity: line.quantity, unit: line.unit,
+            estimatedUnitPrice: line.estimatedUnitPrice, proposedUnitPrice: line.proposedUnitPrice, submittedUnitPrice: line.submittedUnitPrice
+          })) }
         },
         include
       });

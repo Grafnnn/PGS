@@ -163,6 +163,7 @@ model Project {
   workflowTemplates ProjectWorkflowTemplate[]
   workflowRuns      ProjectWorkflowRun[]
   changeOrders      ProjectChangeOrder[]
+  costCodes         ProjectCostCode[]
 
   @@map("projects")
 }
@@ -219,6 +220,7 @@ model BudgetItem {
   id              String     @id @default(cuid())
   organizationId  String     @map("organization_id")
   projectId       String     @map("project_id")
+  costCodeId      String?    @map("cost_code_id")
   section         String
   subsection      String?
   code            String
@@ -235,8 +237,10 @@ model BudgetItem {
   createdAt       DateTime   @default(now()) @map("created_at")
   updatedAt       DateTime   @updatedAt @map("updated_at")
   project         Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  costCode        ProjectCostCode? @relation(fields: [costCodeId], references: [id], onDelete: SetNull)
   changeOrderItems ProjectChangeOrderItem[]
 
+  @@index([costCodeId])
   @@map("budget_items")
 }
 
@@ -260,6 +264,7 @@ model ScheduleItem {
   id          String   @id @default(cuid())
   organizationId String @map("organization_id")
   projectId   String   @map("project_id")
+  costCodeId  String?  @map("cost_code_id")
   budgetItemId String?  @map("budget_item_id")
   name        String
   owner       String
@@ -273,7 +278,9 @@ model ScheduleItem {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
   project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  costCode    ProjectCostCode? @relation(fields: [costCodeId], references: [id], onDelete: SetNull)
 
+  @@index([costCodeId])
   @@map("schedule_items")
 }
 
@@ -300,6 +307,7 @@ model Material {
   id          String   @id @default(cuid())
   organizationId String @map("organization_id")
   projectId   String   @map("project_id")
+  costCodeId  String?  @map("cost_code_id")
   name        String
   unit        String
   requiredQty Decimal  @map("required_qty") @db.Decimal(14, 3)
@@ -315,7 +323,9 @@ model Material {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
   project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  costCode    ProjectCostCode? @relation(fields: [costCodeId], references: [id], onDelete: SetNull)
 
+  @@index([costCodeId])
   @@map("materials")
 }
 
@@ -355,6 +365,7 @@ model ProcurementRequest {
 model ProcurementRequestItem {
   id          String   @id @default(cuid())
   requestId   String   @map("request_id")
+  costCodeId  String?  @map("cost_code_id")
   materialId  String?  @map("material_id")
   name        String
   qty         Decimal  @db.Decimal(14, 3)
@@ -363,7 +374,9 @@ model ProcurementRequestItem {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
   request     ProcurementRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  costCode    ProjectCostCode? @relation(fields: [costCodeId], references: [id], onDelete: SetNull)
 
+  @@index([costCodeId])
   @@map("procurement_request_items")
 }
 
@@ -404,6 +417,7 @@ model Payment {
   id          String   @id @default(cuid())
   organizationId String @map("organization_id")
   projectId   String   @map("project_id")
+  costCodeId  String?  @map("cost_code_id")
   title       String
   counterparty String
   direction   String
@@ -416,7 +430,9 @@ model Payment {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
   project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  costCode    ProjectCostCode? @relation(fields: [costCodeId], references: [id], onDelete: SetNull)
 
+  @@index([costCodeId])
   @@map("payments")
 }
 
@@ -618,6 +634,38 @@ model ProjectActionItem {
   @@map("project_action_items")
 }
 
+model ProjectCostCode {
+  id                     String   @id @default(cuid())
+  organizationId         String   @map("organization_id")
+  projectId              String   @map("project_id")
+  parentId               String?  @map("parent_id")
+  code                   String
+  name                   String
+  description            String?
+  segment                String   @default("cost")
+  costType               String   @default("expense") @map("cost_type")
+  status                 String   @default("active")
+  source                 String   @default("manual")
+  sortOrder              Int      @default(0) @map("sort_order")
+  createdBy              String?  @map("created_by")
+  createdAt              DateTime @default(now()) @map("created_at")
+  updatedAt              DateTime @updatedAt @map("updated_at")
+  project                Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  parent                 ProjectCostCode? @relation("ProjectCostCodeTree", fields: [parentId], references: [id], onDelete: Restrict)
+  children               ProjectCostCode[] @relation("ProjectCostCodeTree")
+  budgetItems            BudgetItem[]
+  scheduleItems          ScheduleItem[]
+  materials              Material[]
+  procurementRequestItems ProcurementRequestItem[]
+  payments               Payment[]
+  changeOrderItems       ProjectChangeOrderItem[]
+
+  @@unique([projectId, code])
+  @@index([projectId, parentId, sortOrder])
+  @@index([projectId, status])
+  @@map("project_cost_codes")
+}
+
 model ProjectChangeOrder {
   id                    String   @id @default(cuid())
   organizationId        String   @map("organization_id")
@@ -672,6 +720,7 @@ model ProjectChangeOrderItem {
   id                   String   @id @default(cuid())
   changeOrderId        String   @map("change_order_id")
   budgetItemId         String?  @map("budget_item_id")
+  costCodeId           String?  @map("cost_code_id")
   sequence             Int
   code                 String?
   description          String
@@ -686,9 +735,11 @@ model ProjectChangeOrderItem {
   updatedAt            DateTime @updatedAt @map("updated_at")
   changeOrder          ProjectChangeOrder @relation(fields: [changeOrderId], references: [id], onDelete: Cascade)
   budgetItem           BudgetItem? @relation(fields: [budgetItemId], references: [id], onDelete: SetNull)
+  costCode             ProjectCostCode? @relation(fields: [costCodeId], references: [id], onDelete: SetNull)
 
   @@unique([changeOrderId, sequence])
   @@index([budgetItemId])
+  @@index([costCodeId])
   @@map("project_change_order_items")
 }
 

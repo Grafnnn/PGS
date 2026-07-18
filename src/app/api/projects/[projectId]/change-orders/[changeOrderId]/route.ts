@@ -32,9 +32,11 @@ export async function PATCH(request: NextRequest, { params }: { params: Params }
     if (data.linkedDocumentId && !linkedDocument) return NextResponse.json({ error: "Linked document not found" }, { status: 404 });
     const nextLines = data.items ?? current.items;
     const budgetIds = [...new Set(nextLines.map((line) => line.budgetItemId).filter(Boolean))] as string[];
+    const budgetCostCodeById = new Map<string, string | null>();
     if (budgetIds.length) {
-      const valid = await prisma.budgetItem.findMany({ where: { projectId: params.projectId, id: { in: budgetIds } }, select: { id: true } });
+      const valid = await prisma.budgetItem.findMany({ where: { projectId: params.projectId, id: { in: budgetIds } }, select: { id: true, costCodeId: true } });
       if (valid.length !== budgetIds.length) return NextResponse.json({ error: "Budget item does not belong to project" }, { status: 409 });
+      valid.forEach((item) => budgetCostCodeById.set(item.id, item.costCodeId));
     }
     const totals = changeOrderAmounts(nextLines);
     const updated = await prisma.$transaction(async (tx) => {
@@ -49,7 +51,12 @@ export async function PATCH(request: NextRequest, { params }: { params: Params }
           linkedDocumentVersion: data.linkedDocumentId === undefined ? undefined : linkedDocument?.version ?? null,
           linkedDocumentVersionId: data.linkedDocumentId === undefined ? undefined : linkedDocument?.versions[0]?.id ?? null,
           estimatedAmount: totals.estimated, proposedAmount: totals.proposed, submittedAmount: totals.submitted,
-          items: data.items ? { deleteMany: {}, create: data.items.map((line, index) => ({ sequence: index + 1, budgetItemId: line.budgetItemId || null, code: line.code || null, description: line.description, quantity: line.quantity, unit: line.unit, estimatedUnitPrice: line.estimatedUnitPrice, proposedUnitPrice: line.proposedUnitPrice, submittedUnitPrice: line.submittedUnitPrice })) } : undefined
+          items: data.items ? { deleteMany: {}, create: data.items.map((line, index) => ({
+            sequence: index + 1, budgetItemId: line.budgetItemId || null,
+            costCodeId: line.budgetItemId ? budgetCostCodeById.get(line.budgetItemId) ?? null : null,
+            code: line.code || null, description: line.description, quantity: line.quantity, unit: line.unit,
+            estimatedUnitPrice: line.estimatedUnitPrice, proposedUnitPrice: line.proposedUnitPrice, submittedUnitPrice: line.submittedUnitPrice
+          })) } : undefined
         },
         include
       });

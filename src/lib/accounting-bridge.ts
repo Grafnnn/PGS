@@ -305,22 +305,26 @@ export function buildAccountingImportPreview(input: {
 
 export function buildAccountingExport(input: {
   project: Project;
+  costCodes?: Array<{ id: string; code: string; name: string }>;
   materials: Material[];
   procurementRequests: ProcurementRequest[];
   payments: Payment[];
   generatedAt?: string;
 }) {
+  const costCodeById = new Map((input.costCodes ?? []).map((item) => [item.id, { code: item.code, name: item.name }]));
+  const costCode = (costCodeId?: string | null) => costCodeId ? costCodeById.get(costCodeId) ?? null : null;
   const materialPriceById = new Map(input.materials.map((material) => [material.id, material.plannedUnitPrice]));
   const materialPriceByName = new Map(input.materials.map((material) => [normalizedKey(material.name), material.plannedUnitPrice]));
   const commitments = input.procurementRequests.map((request) => {
     const lines = request.items.map((item) => {
       const unitPrice = materialPriceById.get(item.materialId) ?? materialPriceByName.get(normalizedKey(item.name)) ?? 0;
-      return { materialId: item.materialId || null, name: item.name, qty: item.qty, unit: item.unit, unitPrice, amount: item.qty * unitPrice, estimateStatus: unitPrice ? "estimated" : "missing_price" };
+      return { materialId: item.materialId || null, costCode: costCode(item.costCodeId), name: item.name, qty: item.qty, unit: item.unit, unitPrice, amount: item.qty * unitPrice, estimateStatus: unitPrice ? "estimated" : "missing_price" };
     });
     return { id: request.id, title: request.title, status: request.status, neededAt: request.neededAt, priority: request.priority, amount: lines.reduce((sum, line) => sum + line.amount, 0), lines };
   });
   const receivables = input.payments.filter((payment) => payment.direction === "incoming");
   const payables = input.payments.filter((payment) => payment.direction === "outgoing");
+  const accountingPayment = (payment: Payment) => ({ ...payment, costCode: costCode(payment.costCodeId) });
   const sum = (items: Payment[]) => items.reduce((total, payment) => total + payment.amount, 0);
 
   return {
@@ -339,8 +343,8 @@ export function buildAccountingExport(input: {
       endsAt: input.project.endsAt
     },
     commitments,
-    receivables,
-    payables,
+    receivables: receivables.map(accountingPayment),
+    payables: payables.map(accountingPayment),
     totals: {
       contractAmount: input.project.contractAmount,
       commitments: commitments.reduce((total, item) => total + item.amount, 0),

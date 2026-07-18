@@ -48,9 +48,26 @@ export interface Project {
   isSmokeProject?: boolean;
 }
 
+export interface ProjectCostCode {
+  id: string;
+  projectId: string;
+  parentId?: string | null;
+  code: string;
+  name: string;
+  description?: string | null;
+  segment: "wbs" | "cost";
+  costType: "capital" | "expense";
+  status: "active" | "inactive";
+  source: string;
+  sortOrder: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface BudgetItem {
   id: string;
   projectId: string;
+  costCodeId?: string | null;
   section: string;
   subsection?: string;
   code: string;
@@ -69,6 +86,7 @@ export interface ScheduleItem {
   id: string;
   projectId: string;
   budgetItemId?: string;
+  costCodeId?: string | null;
   name: string;
   owner: string;
   startsAt: string;
@@ -82,6 +100,7 @@ export interface ScheduleItem {
 export interface Material {
   id: string;
   projectId: string;
+  costCodeId?: string | null;
   name: string;
   unit: string;
   requiredQty: number;
@@ -103,12 +122,13 @@ export interface ProcurementRequest {
   neededAt: string;
   priority: RiskPriority;
   status: "draft" | "submitted" | "approved" | "ordered" | "closed" | "rejected";
-  items: Array<{ materialId: string; name: string; qty: number; unit: string; comment?: string }>;
+  items: Array<{ id?: string; materialId: string; costCodeId?: string | null; name: string; qty: number; unit: string; comment?: string }>;
 }
 
 export interface Payment {
   id: string;
   projectId: string;
+  costCodeId?: string | null;
   title: string;
   counterparty: string;
   direction: PaymentDirection;
@@ -225,6 +245,7 @@ export interface ProjectChangeOrder {
   items: Array<{
     id: string;
     budgetItemId?: string | null;
+    costCodeId?: string | null;
     sequence: number;
     code?: string | null;
     description: string;

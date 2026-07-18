@@ -8,6 +8,7 @@ import { CommercialProposalWorkspace } from "@/components/commercial-proposal-wo
 import { ChangeOrderManagementWorkspace } from "@/components/change-order-management-workspace";
 import { ClaimsNoticesWorkspace } from "@/components/claims-notices-workspace";
 import { ContractTenderWorkspace } from "@/components/contract-tender-workspace";
+import { CostCodeWorkspace } from "@/components/cost-code-workspace";
 import { CostToCompleteWorkspace } from "@/components/cost-to-complete-workspace";
 import { FieldOperationsWorkspace } from "@/components/field-operations-workspace";
 import { FieldMobileWorkspace } from "@/components/field-mobile-workspace";
@@ -924,6 +925,11 @@ export function ProjectWorkspace({ initialBundle, createdFromOnboarding = false 
       {activeTab === "Бюджет / ВОР" && (
         <Panel title="Бюджет, ВОР и классификация затрат" icon={<Table2 size={18} />}>
           <BudgetAnalytics items={budgetItems} contractAmount={initialBundle.project.contractAmount} paid={finance.incomingPayments} forecastProfit={budget.forecastProfit} />
+          <CostCodeWorkspace
+            projectId={initialBundle.project.id}
+            canEdit={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN" || currentUser?.role === "MANAGER"}
+            canManage={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN"}
+          />
           <ChangeOrderManagementWorkspace
             projectId={initialBundle.project.id}
             project={initialBundle.project}
