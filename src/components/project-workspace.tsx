@@ -16,6 +16,7 @@ import { FieldMobileWorkspace } from "@/components/field-mobile-workspace";
 import { HseSafetyPermitWorkspace } from "@/components/hse-safety-permit-workspace";
 import { ProjectCommandCenter } from "@/components/project-command-center";
 import { ProjectActionCenter, type ProjectActionSuggestion } from "@/components/project-action-center";
+import { ProjectControlsWorkspace } from "@/components/project-controls-workspace";
 import { DocumentComplianceWorkspace } from "@/components/document-compliance-workspace";
 import { DocumentTransmittalsWorkspace } from "@/components/document-transmittals-workspace";
 import { PhotoEvidenceWorkspace } from "@/components/photo-evidence-workspace";
@@ -121,7 +122,7 @@ const tabMeta: Record<string, { code: string; icon: React.ReactNode; hint: strin
   "RFI / Согласования": { code: "13", icon: <MessageSquareText size={16} />, hint: "Review" },
   Действия: { code: "14", icon: <ListChecks size={16} />, hint: "Workflow" },
   Процессы: { code: "WF", icon: <Workflow size={16} />, hint: "Approval" },
-  Аналитика: { code: "15", icon: <BarChart3 size={16} />, hint: "Готовность" },
+  Аналитика: { code: "15", icon: <BarChart3 size={16} />, hint: "EVM / KPI" },
   Участники: { code: "16", icon: <Users size={16} />, hint: "Доступ" },
   История: { code: "17", icon: <ClipboardList size={16} />, hint: "Аудит" },
   Настройки: { code: "18", icon: <Trash2 size={16} />, hint: "Админ" },
@@ -1587,7 +1588,8 @@ export function ProjectWorkspace({ initialBundle, createdFromOnboarding = false 
       )}
 
       {activeTab === "Аналитика" && (
-        <Panel title="Project Intelligence" icon={<BarChart3 size={18} />}>
+        <Panel title="Project Controls & Intelligence" icon={<BarChart3 size={18} />}>
+          <ProjectControlsWorkspace projectId={initialBundle.project.id} role={currentUser?.role} onNavigate={setActiveTab} />
           <ProjectIntelligencePanel readiness={readiness} intelligence={intelligence} actions={postImportActions} onNavigate={setActiveTab} />
         </Panel>
       )}

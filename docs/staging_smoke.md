@@ -156,6 +156,30 @@ Expected:
 - the project name starts with `SMOKE-`;
 - no real client files, live AI calls, arbitrary project mutations, passwords, cookies, session tokens, `DATABASE_URL`, `OPENAI_API_KEY`, or smoke secret.
 
+## Optional Project Controls + Earned Value smoke
+
+Run only after core smoke is green. This check temporarily creates one synthetic cost code, VOR line, schedule activity, approved progress entry, and paid outgoing cost on `project-smoke`. It then verifies baseline preview/activation, reporting-period preview/publication/lock, removes every synthetic record, restores the prior active baseline, and restores the smoke user's project role.
+
+```bash
+curl -sS -X POST "$APP_URL/api/internal/staging-smoke" \
+  -H "content-type: application/json" \
+  -H "authorization: Bearer $STAGING_SMOKE_SECRET" \
+  --data '{"includeProjectControlsSmoke":true}'
+```
+
+Expected:
+
+- HTTP `200`;
+- `ok: true`;
+- `projectControlsSmoke.status: pass`;
+- baseline preview and activation are `true`;
+- period preview, publication, and lock are `true`;
+- `projectControlsSmoke.cleanup: pass`;
+- `projectControlsSmoke.permissionScope: temporary-project-owner-restored`;
+- `projectControlsSmoke.previousActiveBaselineRestored: true`;
+- `liveAi.status: skip`;
+- no real project records, provider calls, passwords, cookies, session tokens, `DATABASE_URL`, `OPENAI_API_KEY`, or smoke secret.
+
 ## Browser session handoff
 
 For a controlled browser-only staging smoke, request a short-lived session without exposing a password or session token in JSON:
@@ -184,6 +208,7 @@ Delete the temporary cookie jar after cleanup. Production returns `404`; missing
 
 - The endpoint must not be used for arbitrary mutation smoke; only built-in synthetic `project-smoke` checks with cleanup are allowed.
 - The disposable project creation smoke is allowed only for generated `SMOKE-...` project names and must restore the synthetic smoke user role before returning.
+- The Project Controls smoke must use only generated `SMOKE-PC-...` source rows, restore any previously active smoke baseline, and remove its baseline, period, audit, source, and role changes before returning.
 - The synthetic user password is generated in memory and is never returned.
 - Existing smoke-user sessions are revoked during rotation.
 - The endpoint uses the deployed app's runtime `DATABASE_URL`; operators never need to expose that URL to Codex.

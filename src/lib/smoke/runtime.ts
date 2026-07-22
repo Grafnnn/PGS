@@ -61,6 +61,26 @@ export interface RuntimeProjectCreationDocumentSmokeResult extends RuntimeSmokeC
   cleanup: "pass" | "fail" | "skip";
 }
 
+export interface RuntimeProjectControlsSmokeResult extends RuntimeSmokeCheck {
+  projectId: string;
+  operations: string[];
+  baseline?: {
+    previewed: boolean;
+    activated: boolean;
+    budgetAtCompletion?: number;
+  };
+  period?: {
+    previewed: boolean;
+    published: boolean;
+    locked: boolean;
+    costPerformanceIndex?: number | null;
+    schedulePerformanceIndex?: number | null;
+  };
+  permissionScope?: "temporary-project-owner-restored" | "restore-failed";
+  previousActiveBaselineRestored?: boolean;
+  cleanup: "pass" | "fail" | "skip";
+}
+
 export interface RuntimeSmokeResult {
   ok: boolean;
   smokeUser: StagingSmokeUserReport;
@@ -119,6 +139,7 @@ export interface RuntimeSmokeResult {
     pipeline?: RuntimePipelineSmokeResult;
   };
   projectCreationDocumentsSmoke?: RuntimeProjectCreationDocumentSmokeResult;
+  projectControlsSmoke?: RuntimeProjectControlsSmokeResult;
   secretsPrinted: false;
 }
 
@@ -131,6 +152,7 @@ export interface RuntimeSmokeInput {
   includeImportSmoke?: boolean;
   includePipelineSmoke?: boolean;
   includeProjectCreationDocumentsSmoke?: boolean;
+  includeProjectControlsSmoke?: boolean;
   requestId: string;
 }
 
@@ -310,6 +332,18 @@ async function postJson(baseUrl: string, path: string, body: unknown, cookie: st
 async function deleteJson(baseUrl: string, path: string, body: unknown, cookie: string, requestId: string) {
   return await fetch(`${baseUrl}${path}`, {
     method: "DELETE",
+    headers: {
+      "content-type": "application/json",
+      "x-request-id": requestId,
+      ...(cookie ? { cookie } : {})
+    },
+    body: JSON.stringify(body)
+  });
+}
+
+async function patchJson(baseUrl: string, path: string, body: unknown, cookie: string, requestId: string) {
+  return await fetch(`${baseUrl}${path}`, {
+    method: "PATCH",
     headers: {
       "content-type": "application/json",
       "x-request-id": requestId,
@@ -734,6 +768,360 @@ async function runProjectCreationDocumentsSmoke(
   }
 }
 
+async function grantTemporaryProjectOwnerRole() {
+  const user = await prisma.user.findUnique({ where: { email: STAGING_SMOKE_EMAIL }, select: { id: true } });
+  if (!user) throw new Error("Smoke Project Controls user is missing.");
+  const membership = await prisma.projectMember.findUnique({
+    where: { projectId_userId: { projectId: SMOKE_PROJECT_ID, userId: user.id } },
+    select: { role: true }
+  });
+  if (!membership) throw new Error("Smoke Project Controls membership is missing.");
+  if (membership.role !== "OWNER") {
+    await prisma.projectMember.update({
+      where: { projectId_userId: { projectId: SMOKE_PROJECT_ID, userId: user.id } },
+      data: { role: "OWNER" }
+    });
+  }
+  return { userId: user.id, previousRole: membership.role };
+}
+
+async function restoreTemporaryProjectOwnerRole(input: { userId: string; previousRole: string }) {
+  await prisma.projectMember.update({
+    where: { projectId_userId: { projectId: SMOKE_PROJECT_ID, userId: input.userId } },
+    data: { role: input.previousRole }
+  });
+}
+
+async function prepareProjectControlsSmokeData(runKey: string, userId: string) {
+  assertSmokeMutationTarget(SMOKE_PROJECT_ID, process.env.APP_ENV ?? process.env.NODE_ENV);
+  const project = await prisma.project.findUnique({
+    where: { id: SMOKE_PROJECT_ID },
+    select: { id: true, organizationId: true, isSmokeProject: true }
+  });
+  if (!project?.isSmokeProject) throw new Error(`${SMOKE_PROJECT_ID} is missing or isSmokeProject=false`);
+  const previousActiveBaseline = await prisma.projectControlBaseline.findFirst({
+    where: { projectId: SMOKE_PROJECT_ID, status: "active" },
+    select: { id: true }
+  });
+  const dataDate = new Date();
+  dataDate.setUTCHours(0, 0, 0, 0);
+  const startsAt = new Date(dataDate.getTime() - 10 * 86_400_000);
+  const endsAt = new Date(dataDate.getTime() + 10 * 86_400_000);
+  const code = `SMOKE-PC-${runKey}`;
+
+  const source = await prisma.$transaction(async (tx) => {
+    const costCode = await tx.projectCostCode.create({
+      data: {
+        organizationId: project.organizationId,
+        projectId: SMOKE_PROJECT_ID,
+        code,
+        name: `${code} Project Controls`,
+        description: "Synthetic staging-only Project Controls source",
+        source: "runtime-smoke",
+        createdBy: userId
+      }
+    });
+    const budgetItem = await tx.budgetItem.create({
+      data: {
+        organizationId: project.organizationId,
+        projectId: SMOKE_PROJECT_ID,
+        costCodeId: costCode.id,
+        section: code,
+        code: `${code}-WORK`,
+        name: `${code} synthetic work`,
+        unit: "ед.",
+        qty: 10,
+        plannedUnitPrice: 100,
+        actualUnitPrice: 90,
+        forecastUnitPrice: 95,
+        kind: "work",
+        source: "runtime-smoke",
+        createdBy: userId
+      }
+    });
+    const scheduleItem = await tx.scheduleItem.create({
+      data: {
+        organizationId: project.organizationId,
+        projectId: SMOKE_PROJECT_ID,
+        costCodeId: costCode.id,
+        budgetItemId: budgetItem.id,
+        name: `${code} scheduled work`,
+        owner: "Smoke Runtime",
+        startsAt,
+        endsAt,
+        plannedQty: 10,
+        actualQty: 4,
+        status: "in_progress",
+        createdBy: userId
+      }
+    });
+    const progressEntry = await tx.workProgressEntry.create({
+      data: {
+        organizationId: project.organizationId,
+        projectId: SMOKE_PROJECT_ID,
+        scheduleItemId: scheduleItem.id,
+        date: dataDate,
+        qty: 4,
+        performer: "Smoke Runtime",
+        comment: `${code} approved progress`,
+        status: "approved",
+        createdBy: userId
+      }
+    });
+    const payment = await tx.payment.create({
+      data: {
+        organizationId: project.organizationId,
+        projectId: SMOKE_PROJECT_ID,
+        costCodeId: costCode.id,
+        title: `${code} paid actual cost`,
+        counterparty: "SMOKE staging contractor",
+        direction: "outgoing",
+        plannedAt: dataDate,
+        paidAt: dataDate,
+        amount: 350,
+        status: "paid",
+        category: "subcontractor",
+        createdBy: userId
+      }
+    });
+    return { costCodeId: costCode.id, budgetItemId: budgetItem.id, scheduleItemId: scheduleItem.id, progressEntryId: progressEntry.id, paymentId: payment.id };
+  });
+
+  return {
+    ...source,
+    dataDate: dataDate.toISOString().slice(0, 10),
+    previousActiveBaselineId: previousActiveBaseline?.id
+  };
+}
+
+async function cleanupProjectControlsSmoke(input: {
+  source?: Awaited<ReturnType<typeof prepareProjectControlsSmokeData>>;
+  baselineId?: string;
+  baselineName?: string;
+  periodId?: string;
+  activeBaselineChanged: boolean;
+}) {
+  if (!input.source) return { cleanup: "skip" as const, previousActiveBaselineRestored: false };
+  const source = input.source;
+  const result = await prisma.$transaction(async (tx) => {
+    const createdBaseline = input.baselineId
+      ? await tx.projectControlBaseline.findFirst({
+          where: { id: input.baselineId, projectId: SMOKE_PROJECT_ID },
+          select: { id: true, status: true }
+        })
+      : input.baselineName
+        ? await tx.projectControlBaseline.findFirst({
+            where: { projectId: SMOKE_PROJECT_ID, name: input.baselineName },
+            orderBy: { createdAt: "desc" },
+            select: { id: true, status: true }
+          })
+        : null;
+    const resolvedBaselineId = createdBaseline?.id ?? input.baselineId;
+    const activeBaselineChanged = input.activeBaselineChanged || createdBaseline?.status === "active";
+    const auditEntityIds = [resolvedBaselineId, input.periodId].filter((value): value is string => Boolean(value));
+    if (auditEntityIds.length) {
+      await tx.auditLog.deleteMany({ where: { projectId: SMOKE_PROJECT_ID, entityId: { in: auditEntityIds } } });
+    }
+    const baselineDeleted = resolvedBaselineId
+      ? await tx.projectControlBaseline.deleteMany({ where: { id: resolvedBaselineId, projectId: SMOKE_PROJECT_ID } })
+      : { count: 0 };
+    const paymentDeleted = await tx.payment.deleteMany({ where: { id: source.paymentId, projectId: SMOKE_PROJECT_ID } });
+    const progressDeleted = await tx.workProgressEntry.deleteMany({ where: { id: source.progressEntryId, projectId: SMOKE_PROJECT_ID } });
+    const scheduleDeleted = await tx.scheduleItem.deleteMany({ where: { id: source.scheduleItemId, projectId: SMOKE_PROJECT_ID } });
+    const budgetDeleted = await tx.budgetItem.deleteMany({ where: { id: source.budgetItemId, projectId: SMOKE_PROJECT_ID } });
+    const costCodeDeleted = await tx.projectCostCode.deleteMany({ where: { id: source.costCodeId, projectId: SMOKE_PROJECT_ID } });
+    let previousActiveBaselineRestored = !activeBaselineChanged || !source.previousActiveBaselineId;
+    if (activeBaselineChanged && source.previousActiveBaselineId) {
+      const restored = await tx.projectControlBaseline.updateMany({
+        where: { id: source.previousActiveBaselineId, projectId: SMOKE_PROJECT_ID, status: "superseded" },
+        data: { status: "active", supersededAt: null }
+      });
+      previousActiveBaselineRestored = restored.count === 1;
+    }
+    const expectedBaselineDeleted = resolvedBaselineId ? baselineDeleted.count === 1 : true;
+    const sourceDeleted = [paymentDeleted, progressDeleted, scheduleDeleted, budgetDeleted, costCodeDeleted].every((item) => item.count === 1);
+    return { ok: expectedBaselineDeleted && sourceDeleted && previousActiveBaselineRestored, previousActiveBaselineRestored };
+  });
+  return { cleanup: result.ok ? "pass" as const : "fail" as const, previousActiveBaselineRestored: result.previousActiveBaselineRestored };
+}
+
+async function runProjectControlsSmoke(baseUrl: string, cookie: string, requestId: string): Promise<RuntimeProjectControlsSmokeResult> {
+  const operations: string[] = [];
+  let cleanup: RuntimeProjectControlsSmokeResult["cleanup"] = "skip";
+  let permissionScope: RuntimeProjectControlsSmokeResult["permissionScope"];
+  let previousActiveBaselineRestored = false;
+  let temporaryRole: Awaited<ReturnType<typeof grantTemporaryProjectOwnerRole>> | undefined;
+  let source: Awaited<ReturnType<typeof prepareProjectControlsSmokeData>> | undefined;
+  let baselineId: string | undefined;
+  let baselineName: string | undefined;
+  let periodId: string | undefined;
+  let activeBaselineChanged = false;
+
+  try {
+    assertSmokeMutationTarget(SMOKE_PROJECT_ID, process.env.APP_ENV ?? process.env.NODE_ENV);
+    temporaryRole = await grantTemporaryProjectOwnerRole();
+    operations.push("temporary-project-owner-role");
+    const runKey = requestId.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 18) || Date.now().toString();
+    source = await prepareProjectControlsSmokeData(runKey, temporaryRole.userId);
+    operations.push("synthetic-controls-source");
+    baselineName = `SMOKE-${runKey} Project Controls baseline`;
+
+    const baselinePreviewResponse = await postJson(
+      baseUrl,
+      `/api/projects/${SMOKE_PROJECT_ID}/project-controls/baselines`,
+      { mode: "preview", name: baselineName, dataDate: source.dataDate },
+      cookie,
+      requestId
+    );
+    operations.push("baseline-preview");
+    const baselinePreviewBody = await safeJson<{ preview?: { summary?: { canActivate?: boolean; budgetAtCompletion?: number } } }>(baselinePreviewResponse);
+
+    const baselineCreateResponse = await postJson(
+      baseUrl,
+      `/api/projects/${SMOKE_PROJECT_ID}/project-controls/baselines`,
+      { mode: "create", name: baselineName, dataDate: source.dataDate, activate: true, confirm: true },
+      cookie,
+      requestId
+    );
+    operations.push("baseline-create-active");
+    const baselineCreateBody = await safeJson<{ baseline?: { id?: string; status?: string; budgetAtCompletion?: number } }>(baselineCreateResponse);
+    baselineId = baselineCreateBody?.baseline?.id;
+    activeBaselineChanged = baselineCreateBody?.baseline?.status === "active";
+
+    const controlsResponse = await get(baseUrl, `/api/projects/${SMOKE_PROJECT_ID}/project-controls`, cookie, requestId);
+    operations.push("controls-read");
+
+    let periodPreviewResponse: Response | undefined;
+    let periodPreviewBody: { preview?: { summary?: { costPerformanceIndex?: number | null; schedulePerformanceIndex?: number | null } } } | null = null;
+    let periodPublishResponse: Response | undefined;
+    let periodCreateBody: { period?: { id?: string; status?: string; costPerformanceIndex?: number | null; schedulePerformanceIndex?: number | null } } | null = null;
+    let periodLockResponse: Response | undefined;
+    let periodLockBody: { period?: { status?: string } } | null = null;
+
+    if (baselineId) {
+      periodPreviewResponse = await postJson(
+        baseUrl,
+        `/api/projects/${SMOKE_PROJECT_ID}/project-controls/periods`,
+        { mode: "preview", baselineId, dataDate: source.dataDate },
+        cookie,
+        requestId
+      );
+      operations.push("period-preview");
+      periodPreviewBody = await safeJson(periodPreviewResponse);
+
+      periodPublishResponse = await postJson(
+        baseUrl,
+        `/api/projects/${SMOKE_PROJECT_ID}/project-controls/periods`,
+        { mode: "publish", baselineId, dataDate: source.dataDate, confirm: true },
+        cookie,
+        requestId
+      );
+      operations.push("period-publish");
+      periodCreateBody = await safeJson(periodPublishResponse);
+      periodId = periodCreateBody?.period?.id;
+    }
+
+    if (periodId) {
+      periodLockResponse = await patchJson(
+        baseUrl,
+        `/api/projects/${SMOKE_PROJECT_ID}/project-controls/periods/${periodId}`,
+        { action: "lock", confirm: true },
+        cookie,
+        requestId
+      );
+      operations.push("period-lock");
+      periodLockBody = await safeJson(periodLockResponse);
+    }
+
+    const finalReadResponse = await get(baseUrl, `/api/projects/${SMOKE_PROJECT_ID}/project-controls`, cookie, requestId);
+    operations.push("controls-final-read");
+    const finalReadBody = await safeJson<{ activeBaselineId?: string | null; periods?: Array<{ id?: string; status?: string }> }>(finalReadResponse);
+    const baselinePreviewed = baselinePreviewResponse.status === 200 && baselinePreviewBody?.preview?.summary?.canActivate === true;
+    const baselineActivated = baselineCreateResponse.status === 201 && Boolean(baselineId) && finalReadBody?.activeBaselineId === baselineId;
+    const periodPreviewed = periodPreviewResponse?.status === 200 && periodPreviewBody?.preview?.summary?.costPerformanceIndex !== undefined;
+    const periodPublished = periodPublishResponse?.status === 201 && periodCreateBody?.period?.status === "published";
+    const periodLocked = periodLockResponse?.status === 200 && periodLockBody?.period?.status === "locked" && finalReadBody?.periods?.some((item) => item.id === periodId && item.status === "locked") === true;
+
+    const cleanupResult = await cleanupProjectControlsSmoke({ source, baselineId, baselineName, periodId, activeBaselineChanged });
+    cleanup = cleanupResult.cleanup;
+    previousActiveBaselineRestored = cleanupResult.previousActiveBaselineRestored;
+    operations.push("controls-cleanup");
+    await restoreTemporaryProjectOwnerRole(temporaryRole);
+    temporaryRole = undefined;
+    permissionScope = "temporary-project-owner-restored";
+    operations.push("restore-project-role");
+
+    const status =
+      baselinePreviewed &&
+      baselineActivated &&
+      controlsResponse.status === 200 &&
+      periodPreviewed &&
+      periodPublished &&
+      periodLocked &&
+      finalReadResponse.status === 200 &&
+      cleanup === "pass" &&
+      permissionScope === "temporary-project-owner-restored"
+        ? "pass"
+        : "fail";
+
+    return {
+      name: "project controls earned value smoke",
+      status,
+      httpStatus: status === "pass" ? undefined : periodLockResponse?.status ?? periodPublishResponse?.status ?? baselineCreateResponse.status,
+      detail: status === "pass" ? undefined : "Project Controls preview/create/publish/lock/cleanup did not complete all checks.",
+      projectId: SMOKE_PROJECT_ID,
+      operations,
+      baseline: {
+        previewed: baselinePreviewed,
+        activated: baselineActivated,
+        budgetAtCompletion: baselineCreateBody?.baseline?.budgetAtCompletion
+      },
+      period: {
+        previewed: periodPreviewed,
+        published: periodPublished,
+        locked: periodLocked,
+        costPerformanceIndex: periodCreateBody?.period?.costPerformanceIndex,
+        schedulePerformanceIndex: periodCreateBody?.period?.schedulePerformanceIndex
+      },
+      permissionScope,
+      previousActiveBaselineRestored,
+      cleanup
+    };
+  } catch (error) {
+    if (source) {
+      await cleanupProjectControlsSmoke({ source, baselineId, baselineName, periodId, activeBaselineChanged })
+        .then((result) => {
+          cleanup = result.cleanup;
+          previousActiveBaselineRestored = result.previousActiveBaselineRestored;
+          operations.push("controls-cleanup");
+        })
+        .catch(() => {
+          cleanup = "fail";
+        });
+    }
+    if (temporaryRole) {
+      await restoreTemporaryProjectOwnerRole(temporaryRole)
+        .then(() => {
+          permissionScope = "temporary-project-owner-restored";
+          operations.push("restore-project-role");
+        })
+        .catch(() => {
+          permissionScope = "restore-failed";
+        });
+    }
+    return {
+      name: "project controls earned value smoke",
+      status: "fail",
+      detail: failureDetail(error),
+      projectId: SMOKE_PROJECT_ID,
+      operations,
+      permissionScope,
+      previousActiveBaselineRestored,
+      cleanup
+    };
+  }
+}
+
 async function runImportSmoke(baseUrl: string, cookie: string, requestId: string, includePipelineSmoke = false): Promise<NonNullable<RuntimeSmokeResult["importSmoke"]>> {
   const operations: string[] = [];
   let cleanup: "pass" | "fail" | "skip" = "skip";
@@ -1027,6 +1415,7 @@ export async function runStagingSmokeBootstrap(input: RuntimeSmokeInput): Promis
   let connectors: RuntimeSmokeResult["connectors"];
   let importSmoke: RuntimeSmokeResult["importSmoke"];
   let projectCreationDocumentsSmoke: RuntimeSmokeResult["projectCreationDocumentsSmoke"];
+  let projectControlsSmoke: RuntimeSmokeResult["projectControlsSmoke"];
 
   if (input.includeStorageSmoke) {
     storage = await runStorageSmoke(input.requestId);
@@ -1053,6 +1442,11 @@ export async function runStagingSmokeBootstrap(input: RuntimeSmokeInput): Promis
     optionalChecks.push(projectCreationDocumentsSmoke);
   }
 
+  if (input.includeProjectControlsSmoke) {
+    projectControlsSmoke = await runProjectControlsSmoke(input.baseUrl, sessionCookie, input.requestId);
+    optionalChecks.push(projectControlsSmoke);
+  }
+
   return {
     ok:
       checks.every((item) => item.status === "pass") &&
@@ -1066,6 +1460,7 @@ export async function runStagingSmokeBootstrap(input: RuntimeSmokeInput): Promis
     ...(connectors ? { connectors } : {}),
     ...(importSmoke ? { importSmoke } : {}),
     ...(projectCreationDocumentsSmoke ? { projectCreationDocumentsSmoke } : {}),
+    ...(projectControlsSmoke ? { projectControlsSmoke } : {}),
     secretsPrinted: false
   };
 }

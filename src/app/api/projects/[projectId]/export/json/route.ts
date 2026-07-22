@@ -4,6 +4,12 @@ import { canProject } from "@/lib/auth/project-permissions";
 import { getCurrentUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import {
+  projectControlBaselineInclude,
+  projectControlPeriodInclude,
+  serializeProjectControlBaseline,
+  serializeProjectControlPeriod
+} from "@/lib/project-controls-db";
+import {
   serializeBudgetItem,
   serializeDailyReport,
   serializeDocument,
@@ -31,7 +37,9 @@ export async function GET(_request: Request, { params }: { params: { projectId: 
         payments: { orderBy: { plannedAt: "asc" } },
         dailyReports: { orderBy: { date: "desc" } },
         risks: { orderBy: { dueAt: "asc" } },
-        documents: { include: { versions: { orderBy: { versionNumber: "desc" } } }, orderBy: { uploadedAt: "desc" } }
+        documents: { include: { versions: { orderBy: { versionNumber: "desc" } } }, orderBy: { uploadedAt: "desc" } },
+        controlBaselines: { include: projectControlBaselineInclude, orderBy: { sequence: "asc" } },
+        controlPeriods: { include: projectControlPeriodInclude, orderBy: { sequence: "asc" } }
       }
     });
     if (!project) return NextResponse.json({ error: "Project not found" }, { status: 404 });
@@ -57,7 +65,11 @@ export async function GET(_request: Request, { params }: { params: { projectId: 
           uploadedByName: version.uploadedByName,
           createdAt: version.createdAt.toISOString()
         }))
-      }))
+      })),
+      projectControls: {
+        baselines: project.controlBaselines.map(serializeProjectControlBaseline),
+        periods: project.controlPeriods.map(serializeProjectControlPeriod)
+      }
     });
   } catch (error) {
     if (error instanceof Prisma.PrismaClientInitializationError) {

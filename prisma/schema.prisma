@@ -168,6 +168,8 @@ model Project {
   paymentApplications     ProjectPaymentApplication[]
   qualityInspections      ProjectQualityInspection[]
   qualityIssues           ProjectQualityIssue[]
+  controlBaselines        ProjectControlBaseline[]
+  controlPeriods          ProjectControlPeriod[]
 
   @@map("projects")
 }
@@ -221,29 +223,30 @@ model PasswordResetToken {
 }
 
 model BudgetItem {
-  id                String                   @id @default(cuid())
-  organizationId    String                   @map("organization_id")
-  projectId         String                   @map("project_id")
-  costCodeId        String?                  @map("cost_code_id")
-  section           String
-  subsection        String?
-  code              String
-  name              String
-  unit              String
-  qty               Decimal                  @db.Decimal(14, 3)
-  plannedUnitPrice  Decimal                  @map("planned_unit_price") @db.Decimal(14, 2)
-  actualUnitPrice   Decimal                  @map("actual_unit_price") @db.Decimal(14, 2)
-  forecastUnitPrice Decimal                  @map("forecast_unit_price") @db.Decimal(14, 2)
-  kind              BudgetKind
-  source            String
-  comment           String?
-  createdBy         String?                  @map("created_by")
-  createdAt         DateTime                 @default(now()) @map("created_at")
-  updatedAt         DateTime                 @updatedAt @map("updated_at")
-  project           Project                  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  costCode          ProjectCostCode?         @relation(fields: [costCodeId], references: [id], onDelete: SetNull)
-  changeOrderItems  ProjectChangeOrderItem[]
-  commitmentLines   ProjectCommitmentLine[]
+  id                   String                       @id @default(cuid())
+  organizationId       String                       @map("organization_id")
+  projectId            String                       @map("project_id")
+  costCodeId           String?                      @map("cost_code_id")
+  section              String
+  subsection           String?
+  code                 String
+  name                 String
+  unit                 String
+  qty                  Decimal                      @db.Decimal(14, 3)
+  plannedUnitPrice     Decimal                      @map("planned_unit_price") @db.Decimal(14, 2)
+  actualUnitPrice      Decimal                      @map("actual_unit_price") @db.Decimal(14, 2)
+  forecastUnitPrice    Decimal                      @map("forecast_unit_price") @db.Decimal(14, 2)
+  kind                 BudgetKind
+  source               String
+  comment              String?
+  createdBy            String?                      @map("created_by")
+  createdAt            DateTime                     @default(now()) @map("created_at")
+  updatedAt            DateTime                     @updatedAt @map("updated_at")
+  project              Project                      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  costCode             ProjectCostCode?             @relation(fields: [costCodeId], references: [id], onDelete: SetNull)
+  changeOrderItems     ProjectChangeOrderItem[]
+  commitmentLines      ProjectCommitmentLine[]
+  controlBaselineLines ProjectControlBaselineLine[]
 
   @@index([costCodeId])
   @@map("budget_items")
@@ -266,26 +269,27 @@ model BudgetSection {
 }
 
 model ScheduleItem {
-  id                 String                     @id @default(cuid())
-  organizationId     String                     @map("organization_id")
-  projectId          String                     @map("project_id")
-  costCodeId         String?                    @map("cost_code_id")
-  budgetItemId       String?                    @map("budget_item_id")
-  name               String
-  owner              String
-  startsAt           DateTime                   @map("starts_at")
-  endsAt             DateTime                   @map("ends_at")
-  plannedQty         Decimal                    @map("planned_qty") @db.Decimal(14, 3)
-  actualQty          Decimal                    @default(0) @map("actual_qty") @db.Decimal(14, 3)
-  status             String
-  dependency         String?
-  createdBy          String?                    @map("created_by")
-  createdAt          DateTime                   @default(now()) @map("created_at")
-  updatedAt          DateTime                   @updatedAt @map("updated_at")
-  project            Project                    @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  costCode           ProjectCostCode?           @relation(fields: [costCodeId], references: [id], onDelete: SetNull)
-  qualityInspections ProjectQualityInspection[]
-  qualityIssues      ProjectQualityIssue[]
+  id                   String                       @id @default(cuid())
+  organizationId       String                       @map("organization_id")
+  projectId            String                       @map("project_id")
+  costCodeId           String?                      @map("cost_code_id")
+  budgetItemId         String?                      @map("budget_item_id")
+  name                 String
+  owner                String
+  startsAt             DateTime                     @map("starts_at")
+  endsAt               DateTime                     @map("ends_at")
+  plannedQty           Decimal                      @map("planned_qty") @db.Decimal(14, 3)
+  actualQty            Decimal                      @default(0) @map("actual_qty") @db.Decimal(14, 3)
+  status               String
+  dependency           String?
+  createdBy            String?                      @map("created_by")
+  createdAt            DateTime                     @default(now()) @map("created_at")
+  updatedAt            DateTime                     @updatedAt @map("updated_at")
+  project              Project                      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  costCode             ProjectCostCode?             @relation(fields: [costCodeId], references: [id], onDelete: SetNull)
+  qualityInspections   ProjectQualityInspection[]
+  qualityIssues        ProjectQualityIssue[]
+  controlBaselineLines ProjectControlBaselineLine[]
 
   @@index([costCodeId])
   @@map("schedule_items")
@@ -654,24 +658,24 @@ model ProjectActionItem {
 }
 
 model ProjectCostCode {
-  id                      String                     @id @default(cuid())
-  organizationId          String                     @map("organization_id")
-  projectId               String                     @map("project_id")
-  parentId                String?                    @map("parent_id")
+  id                      String                       @id @default(cuid())
+  organizationId          String                       @map("organization_id")
+  projectId               String                       @map("project_id")
+  parentId                String?                      @map("parent_id")
   code                    String
   name                    String
   description             String?
-  segment                 String                     @default("cost")
-  costType                String                     @default("expense") @map("cost_type")
-  status                  String                     @default("active")
-  source                  String                     @default("manual")
-  sortOrder               Int                        @default(0) @map("sort_order")
-  createdBy               String?                    @map("created_by")
-  createdAt               DateTime                   @default(now()) @map("created_at")
-  updatedAt               DateTime                   @updatedAt @map("updated_at")
-  project                 Project                    @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  parent                  ProjectCostCode?           @relation("ProjectCostCodeTree", fields: [parentId], references: [id], onDelete: Restrict)
-  children                ProjectCostCode[]          @relation("ProjectCostCodeTree")
+  segment                 String                       @default("cost")
+  costType                String                       @default("expense") @map("cost_type")
+  status                  String                       @default("active")
+  source                  String                       @default("manual")
+  sortOrder               Int                          @default(0) @map("sort_order")
+  createdBy               String?                      @map("created_by")
+  createdAt               DateTime                     @default(now()) @map("created_at")
+  updatedAt               DateTime                     @updatedAt @map("updated_at")
+  project                 Project                      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  parent                  ProjectCostCode?             @relation("ProjectCostCodeTree", fields: [parentId], references: [id], onDelete: Restrict)
+  children                ProjectCostCode[]            @relation("ProjectCostCodeTree")
   budgetItems             BudgetItem[]
   scheduleItems           ScheduleItem[]
   materials               Material[]
@@ -681,11 +685,144 @@ model ProjectCostCode {
   commitmentLines         ProjectCommitmentLine[]
   qualityInspections      ProjectQualityInspection[]
   qualityIssues           ProjectQualityIssue[]
+  controlBaselineLines    ProjectControlBaselineLine[]
 
   @@unique([projectId, code])
   @@index([projectId, parentId, sortOrder])
   @@index([projectId, status])
   @@map("project_cost_codes")
+}
+
+model ProjectControlBaseline {
+  id                      String                       @id @default(cuid())
+  organizationId          String                       @map("organization_id")
+  projectId               String                       @map("project_id")
+  sequence                Int
+  name                    String
+  status                  String                       @default("draft")
+  dataDate                DateTime                     @map("data_date")
+  plannedStart            DateTime                     @map("planned_start")
+  plannedFinish           DateTime                     @map("planned_finish")
+  budgetAtCompletion      Decimal                      @map("budget_at_completion") @db.Decimal(16, 2)
+  budgetItemCount         Int                          @default(0) @map("budget_item_count")
+  scheduleItemCount       Int                          @default(0) @map("schedule_item_count")
+  linkedBudgetValue       Decimal                      @default(0) @map("linked_budget_value") @db.Decimal(16, 2)
+  scheduleCoveragePercent Decimal                      @default(0) @map("schedule_coverage_percent") @db.Decimal(7, 2)
+  limitations             Json
+  notes                   String?
+  createdBy               String?                      @map("created_by")
+  activatedAt             DateTime?                    @map("activated_at")
+  supersededAt            DateTime?                    @map("superseded_at")
+  createdAt               DateTime                     @default(now()) @map("created_at")
+  updatedAt               DateTime                     @updatedAt @map("updated_at")
+  project                 Project                      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  lines                   ProjectControlBaselineLine[]
+  periods                 ProjectControlPeriod[]
+
+  @@unique([projectId, sequence])
+  @@index([projectId, status, createdAt])
+  @@map("project_control_baselines")
+}
+
+model ProjectControlBaselineLine {
+  id             String                     @id @default(cuid())
+  baselineId     String                     @map("baseline_id")
+  budgetItemId   String?                    @map("budget_item_id")
+  scheduleItemId String?                    @map("schedule_item_id")
+  costCodeId     String?                    @map("cost_code_id")
+  sequence       Int
+  code           String
+  name           String
+  unit           String
+  plannedQty     Decimal                    @map("planned_qty") @db.Decimal(14, 3)
+  budget         Decimal                    @db.Decimal(16, 2)
+  weight         Decimal                    @db.Decimal(12, 8)
+  plannedStart   DateTime                   @map("planned_start")
+  plannedFinish  DateTime                   @map("planned_finish")
+  sourceQuality  String                     @map("source_quality")
+  createdAt      DateTime                   @default(now()) @map("created_at")
+  baseline       ProjectControlBaseline     @relation(fields: [baselineId], references: [id], onDelete: Cascade)
+  budgetItem     BudgetItem?                @relation(fields: [budgetItemId], references: [id], onDelete: SetNull)
+  scheduleItem   ScheduleItem?              @relation(fields: [scheduleItemId], references: [id], onDelete: SetNull)
+  costCode       ProjectCostCode?           @relation(fields: [costCodeId], references: [id], onDelete: SetNull)
+  periodLines    ProjectControlPeriodLine[]
+
+  @@unique([baselineId, sequence])
+  @@index([budgetItemId])
+  @@index([scheduleItemId])
+  @@index([costCodeId])
+  @@map("project_control_baseline_lines")
+}
+
+model ProjectControlPeriod {
+  id                         String                     @id @default(cuid())
+  organizationId             String                     @map("organization_id")
+  projectId                  String                     @map("project_id")
+  baselineId                 String                     @map("baseline_id")
+  sequence                   Int
+  label                      String
+  dataDate                   DateTime                   @map("data_date")
+  status                     String                     @default("published")
+  budgetAtCompletion         Decimal                    @map("budget_at_completion") @db.Decimal(16, 2)
+  plannedValue               Decimal                    @map("planned_value") @db.Decimal(16, 2)
+  earnedValue                Decimal                    @map("earned_value") @db.Decimal(16, 2)
+  actualCost                 Decimal                    @map("actual_cost") @db.Decimal(16, 2)
+  costVariance               Decimal                    @map("cost_variance") @db.Decimal(16, 2)
+  scheduleVariance           Decimal                    @map("schedule_variance") @db.Decimal(16, 2)
+  costPerformanceIndex       Decimal?                   @map("cost_performance_index") @db.Decimal(12, 4)
+  schedulePerformanceIndex   Decimal?                   @map("schedule_performance_index") @db.Decimal(12, 4)
+  estimateAtCompletion       Decimal?                   @map("estimate_at_completion") @db.Decimal(16, 2)
+  estimateToComplete         Decimal?                   @map("estimate_to_complete") @db.Decimal(16, 2)
+  varianceAtCompletion       Decimal?                   @map("variance_at_completion") @db.Decimal(16, 2)
+  toCompletePerformanceIndex Decimal?                   @map("to_complete_performance_index") @db.Decimal(12, 4)
+  plannedProgressPercent     Decimal                    @map("planned_progress_percent") @db.Decimal(7, 2)
+  earnedProgressPercent      Decimal                    @map("earned_progress_percent") @db.Decimal(7, 2)
+  forecastFinish             DateTime?                  @map("forecast_finish")
+  scheduleVarianceDays       Int?                       @map("schedule_variance_days")
+  actualCostSource           String                     @default("paid_outgoing") @map("actual_cost_source")
+  actualCostAllocated        Decimal                    @default(0) @map("actual_cost_allocated") @db.Decimal(16, 2)
+  actualCostCoveragePercent  Decimal                    @default(0) @map("actual_cost_coverage_percent") @db.Decimal(7, 2)
+  coverage                   Json
+  limitations                Json
+  createdBy                  String?                    @map("created_by")
+  publishedAt                DateTime                   @default(now()) @map("published_at")
+  lockedAt                   DateTime?                  @map("locked_at")
+  voidedAt                   DateTime?                  @map("voided_at")
+  createdAt                  DateTime                   @default(now()) @map("created_at")
+  updatedAt                  DateTime                   @updatedAt @map("updated_at")
+  project                    Project                    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  baseline                   ProjectControlBaseline     @relation(fields: [baselineId], references: [id], onDelete: Cascade)
+  lines                      ProjectControlPeriodLine[]
+
+  @@unique([projectId, sequence])
+  @@unique([baselineId, dataDate])
+  @@index([projectId, status, dataDate])
+  @@map("project_control_periods")
+}
+
+model ProjectControlPeriodLine {
+  id                  String                     @id @default(cuid())
+  periodId            String                     @map("period_id")
+  baselineLineId      String                     @map("baseline_line_id")
+  sequence            Int
+  code                String
+  name                String
+  plannedValue        Decimal                    @map("planned_value") @db.Decimal(16, 2)
+  earnedValue         Decimal                    @map("earned_value") @db.Decimal(16, 2)
+  actualCost          Decimal                    @map("actual_cost") @db.Decimal(16, 2)
+  costVariance        Decimal                    @map("cost_variance") @db.Decimal(16, 2)
+  scheduleVariance    Decimal                    @map("schedule_variance") @db.Decimal(16, 2)
+  plannedProgress     Decimal                    @map("planned_progress") @db.Decimal(7, 2)
+  earnedProgress      Decimal                    @map("earned_progress") @db.Decimal(7, 2)
+  actualCostAllocated Boolean                    @default(false) @map("actual_cost_allocated")
+  status              String
+  createdAt           DateTime                   @default(now()) @map("created_at")
+  period              ProjectControlPeriod       @relation(fields: [periodId], references: [id], onDelete: Cascade)
+  baselineLine        ProjectControlBaselineLine @relation(fields: [baselineLineId], references: [id], onDelete: Cascade)
+
+  @@unique([periodId, sequence])
+  @@index([baselineLineId])
+  @@map("project_control_period_lines")
 }
 
 model ProjectChangeOrder {
