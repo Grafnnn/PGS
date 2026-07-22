@@ -10600,3 +10600,200 @@ input[type="checkbox"] {
   .cost-code-register,
   .cost-code-mapping { padding: 13px; }
 }
+
+/* Project Controls & Earned Value v1 */
+.project-controls-workspace {
+  container-name: project-controls;
+  container-type: inline-size;
+  margin-bottom: 26px;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.project-controls-workspace > * {
+  max-width: 100%;
+  min-width: 0;
+}
+
+.project-controls-setup,
+.project-controls-body {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.project-controls-step,
+.project-controls-section {
+  border-bottom: 1px solid var(--line);
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding: 16px 0;
+}
+
+.project-controls-step .section-title,
+.project-controls-section .section-title {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.project-controls-step h4,
+.project-controls-section h4 {
+  font-size: 15px;
+  margin: 0;
+}
+
+.project-controls-step .compact-form-grid {
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding: 12px;
+}
+
+.project-controls-step .compact-form-grid label {
+  min-width: 0;
+}
+
+.project-controls-step .compact-form-grid input,
+.project-controls-step .compact-form-grid select,
+.project-controls-step .compact-form-grid .button {
+  min-width: 0;
+  width: 100%;
+}
+
+.project-controls-preview,
+.project-controls-baseline-row {
+  align-items: center;
+  color: var(--muted);
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 12px;
+  gap: 8px 14px;
+}
+
+.project-controls-baseline-row {
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+}
+
+.project-controls-metrics {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.project-controls-bars {
+  display: grid;
+  gap: 11px;
+}
+
+.project-controls-bar-row {
+  align-items: center;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 32px minmax(100px, 1fr) minmax(96px, auto);
+}
+
+.project-controls-bar-row > span {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.project-controls-bar-row > strong {
+  font-size: 12px;
+  text-align: right;
+}
+
+.project-controls-bar-track {
+  background: var(--panel-muted);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  height: 12px;
+  overflow: hidden;
+}
+
+.project-controls-bar-track > span {
+  display: block;
+  height: 100%;
+  min-width: 0;
+}
+
+.project-controls-bar-track .bac { background: var(--muted); }
+.project-controls-bar-track .planned { background: var(--blue); }
+.project-controls-bar-track .earned { background: var(--green); }
+.project-controls-bar-track .actual { background: var(--yellow); }
+
+.project-controls-section .table-wrap {
+  max-height: 360px;
+}
+
+.project-controls-section table td small {
+  color: var(--muted);
+  display: block;
+  margin-top: 3px;
+  max-width: 320px;
+  overflow-wrap: anywhere;
+}
+
+.project-controls-limitations {
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  padding-top: 12px;
+}
+
+.project-controls-limitations summary {
+  color: var(--text);
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.project-controls-limitations ul {
+  display: grid;
+  gap: 6px;
+  margin: 12px 0 0;
+  padding-left: 20px;
+}
+
+.project-controls-empty {
+  min-height: 150px;
+}
+
+@container project-controls (max-width: 900px) {
+  .project-controls-setup,
+  .project-controls-body,
+  .project-controls-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@container project-controls (max-width: 620px) {
+  .project-controls-body,
+  .project-controls-step .compact-form-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .project-controls-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .project-controls-step .compact-form-grid label:last-child,
+  .project-controls-step .compact-form-grid label:nth-last-child(2) {
+    margin-top: 0;
+  }
+
+  .project-controls-bar-row {
+    grid-template-columns: 30px minmax(80px, 1fr);
+  }
+
+  .project-controls-bar-row > strong {
+    grid-column: 2;
+    text-align: left;
+  }
+}
+
+@container project-controls (max-width: 520px) {
+  .project-controls-setup,
+  .project-controls-metrics {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
