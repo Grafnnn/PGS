@@ -52,6 +52,11 @@ describe("server-rendered page access", () => {
     expect(loadPortfolioProjectsForPage).not.toHaveBeenCalled();
   });
 
+  it("redirects an anonymous inbox request before rendering the client workspace", async () => {
+    const { default: InboxPage } = await import("./inbox/page");
+    await expect(InboxPage()).rejects.toThrow("REDIRECT:/login");
+  });
+
   it("hides a project page when the signed-in user has no project access", async () => {
     vi.mocked(getCurrentUser).mockResolvedValue({ id: "viewer-1", name: "Viewer", email: "viewer@example.test", role: "VIEWER", authenticated: true });
     vi.mocked(canProject).mockResolvedValue(false);

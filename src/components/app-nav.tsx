@@ -38,6 +38,7 @@ type NavItem = {
 
 const navItems: NavItem[] = [
   { code: "00", href: "/dashboard", icon: <Gauge size={17} />, label: "Dashboard", section: "Портфель", match: ["/dashboard"] },
+  { code: "IN", href: "/inbox", icon: <Bell size={17} />, label: "Inbox", section: "Решения", match: ["/inbox"] },
   { code: "P1", href: "/portfolio", icon: <Layers3 size={17} />, label: "Portfolio", section: "Все объекты", match: ["/portfolio"] },
   { code: "01", href: "/projects", icon: <BriefcaseBusiness size={17} />, label: "Projects", section: "Объекты", match: ["/projects"] },
   { code: "02", href: "/projects", icon: <PackageCheck size={17} />, label: "Procurement", section: "Снабжение" },
@@ -95,6 +96,39 @@ function SidebarSystemCard() {
         <span>ВОР · КС · Договор · Риски</span>
       </div>
     </div>
+  );
+}
+
+function InboxBell() {
+  const [unread, setUnread] = useState(0);
+
+  useEffect(() => {
+    let active = true;
+    async function refresh() {
+      try {
+        const response = await fetch("/api/inbox?summary=1", { cache: "no-store" });
+        if (!response.ok) return;
+        const body = (await response.json()) as { summary?: { unread?: number } };
+        if (active) setUnread(Math.max(0, Number(body.summary?.unread) || 0));
+      } catch {
+        // The navigation remains usable while auth or the database is unavailable.
+      }
+    }
+    void refresh();
+    window.addEventListener("pgs:inbox-updated", refresh);
+    window.addEventListener("focus", refresh);
+    return () => {
+      active = false;
+      window.removeEventListener("pgs:inbox-updated", refresh);
+      window.removeEventListener("focus", refresh);
+    };
+  }, []);
+
+  return (
+    <Link aria-label={unread ? `Inbox: ${unread} непрочитанных` : "Inbox"} className="icon-button inbox-bell" href={"/inbox" as Route} title="Notifications & Approval Inbox">
+      <Bell size={17} />
+      {unread > 0 && <span className="inbox-bell-count">{unread > 99 ? "99+" : unread}</span>}
+    </Link>
   );
 }
 
@@ -221,9 +255,7 @@ export function AppNav({ children }: { children: ReactNode }) {
           </label>
           <div className="topbar-actions">
             <span className="topbar-context">Демо Строй · Command Center</span>
-            <button className="icon-button" type="button" aria-label="Уведомления">
-              <Bell size={17} />
-            </button>
+            <InboxBell />
             <Link className="button primary" href="/projects#create-project" title="Перейти к созданию проекта">
               <Plus size={17} />
               Создать

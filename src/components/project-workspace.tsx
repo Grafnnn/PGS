@@ -185,8 +185,16 @@ function textFromCell(cell: React.ReactNode): string {
   return "";
 }
 
-export function ProjectWorkspace({ initialBundle, createdFromOnboarding = false }: { initialBundle: Bundle; createdFromOnboarding?: boolean }) {
-  const [activeTab, setActiveTab] = useState(tabs[0]);
+export function ProjectWorkspace({
+  initialBundle,
+  createdFromOnboarding = false,
+  initialTab
+}: {
+  initialBundle: Bundle;
+  createdFromOnboarding?: boolean;
+  initialTab?: string;
+}) {
+  const [activeTab, setActiveTab] = useState(() => (initialTab && tabs.includes(initialTab) ? initialTab : tabs[0]));
   const [budgetItems, setBudgetItems] = useState(initialBundle.budgetItems);
   const [scheduleItems, setScheduleItems] = useState(initialBundle.scheduleItems);
   const [materials, setMaterials] = useState(initialBundle.materials);
