@@ -1,6 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import { demoState } from "../src/lib/demo-data";
 import { hashPassword } from "../src/lib/auth/password";
+import { ensureBootstrapAdmin } from "../src/lib/auth/bootstrap-admin";
 import { getEnv } from "../src/lib/env";
 
 const prisma = new PrismaClient();
@@ -18,23 +19,15 @@ async function main() {
   const firstAdminPassword = env.FIRST_ADMIN_PASSWORD ?? (production ? undefined : "pgs-admin-local");
   const firstAdminName = env.FIRST_ADMIN_NAME ?? "PGS Admin";
   let seedUser: { id: string } | null = null;
-  if (firstAdminEmail && firstAdminPassword) {
-    const firstAdmin = await prisma.user.upsert({
-      where: { email: firstAdminEmail.toLowerCase() },
-      update: {
-        name: firstAdminName,
-        passwordHash: await hashPassword(firstAdminPassword),
-        appRole: "OWNER",
-        isActive: true
+  if (firstAdminEmail) {
+    const { user: firstAdmin } = await ensureBootstrapAdmin(
+      {
+        findByEmail: (email) => prisma.user.findUnique({ where: { email }, select: { id: true } }),
+        create: (data) => prisma.user.create({ data, select: { id: true } })
       },
-      create: {
-        name: firstAdminName,
-        email: firstAdminEmail.toLowerCase(),
-        passwordHash: await hashPassword(firstAdminPassword),
-        appRole: "OWNER",
-        isActive: true
-      }
-    });
+      { email: firstAdminEmail, name: firstAdminName, password: firstAdminPassword },
+      hashPassword
+    );
     seedUser = firstAdmin;
     await prisma.membership.upsert({
       where: { organizationId_userId: { organizationId: org.id, userId: firstAdmin.id } },
@@ -70,7 +63,7 @@ async function main() {
   }
 
   if (!seedUser) {
-    throw new Error("FIRST_ADMIN_EMAIL and FIRST_ADMIN_PASSWORD are required when running prisma seed in production.");
+    throw new Error("FIRST_ADMIN_EMAIL is required when running prisma seed in production.");
   }
 
   const user = seedUser;

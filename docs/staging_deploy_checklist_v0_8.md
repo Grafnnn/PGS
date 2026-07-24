@@ -176,10 +176,11 @@ pnpm prisma db seed
 
 Seed behavior:
 
-- Production-like seed requires `FIRST_ADMIN_EMAIL` and `FIRST_ADMIN_PASSWORD`.
+- Production-like seed requires `FIRST_ADMIN_EMAIL`; `FIRST_ADMIN_PASSWORD` is required only when that administrator does not exist yet.
 - Non-production seed may create demo records for local work.
 - Staging should use a temporary strong `FIRST_ADMIN_PASSWORD`.
-- After first successful admin login, rotate the password and remove or replace bootstrap credentials.
+- `FIRST_ADMIN_PASSWORD` is bootstrap-only: later seed runs preserve the existing administrator password.
+- After first successful admin login, rotate access through the Admin users reset flow and remove or replace bootstrap credentials.
 - Seed should create `project-demo` and `project-smoke`; `project-smoke` is required for mutation smoke.
 
 Health check after migration/seed:
