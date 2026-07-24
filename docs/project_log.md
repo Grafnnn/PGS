@@ -1,5 +1,42 @@
 # PGS Project Log
 
+## 2026-07-24 - Project Controls & Earned Value v1 online/core GO
+
+Status: Project Controls & Earned Value v1 is shipped on Render after PR #137. PGS now has controlled project baselines, reporting periods and deterministic earned value metrics connected to the existing project data model.
+
+- Online URL: https://pgs-frankfurt.onrender.com
+- Online commit: `12a4a4497ebf4abd1a580b084c882cc1341093e5`
+- Render deploy: `dep-d9hkd637uimc73fe0n00`
+- Feature PR: #137
+- Decision: ONLINE/CORE GO
+- Git SHA source: `RENDER_GIT_COMMIT`
+
+Online verification:
+
+- `/api/health`: HTTP 200 / `ok`; DB: `ok`; migrations: `ok`, count `19`;
+- deployed SHA matched `12a4a4497ebf4abd1a580b084c882cc1341093e5`;
+- protected runtime checks for login, `/api/auth/me`, `project-smoke` read, unauthenticated AI guard and authenticated missing-project AI guard passed;
+- Project Controls smoke previewed and activated a synthetic baseline with BAC `1000`;
+- the synthetic reporting period was previewed, published and locked with CPI `1.1429` and SPI `0.8`;
+- all synthetic Cost Code, VOR, schedule, progress, payment, baseline and period records were removed;
+- the previous active baseline and the smoke user's original project role were restored;
+- cleanup: `pass`; `secretsPrinted: false`; live AI was not run.
+
+Render recovery:
+
+- the free PostgreSQL database had expired and the application failed with Prisma `P1001`;
+- the operator upgraded the existing database to `Basic-256mb`, after which the database became available with its existing project data and migrations;
+- the exact main commit was manually deployed and the service recovered without observed data loss;
+- no environment values, application secrets, schema files or database credentials were changed, and no direct database writes were performed.
+
+Validation and safety:
+
+- PR #137 GitHub Actions CI #279 passed and main CI #280 passed;
+- Vitest: 467/467 passed; ESLint, TypeScript, Prisma validate/generate, production build, browser QA and `git diff --check` passed;
+- the protected smoke used only `project-smoke` and application-owned staging APIs;
+- no production deployment, live AI, real project mutation, file upload or external connector call was run;
+- no secret value was printed or committed.
+
 ## 2026-07-19 - Quality Management v2 online/core GO
 
 Status: Quality Management v2 is shipped on Render after PR #134. The existing `Исполнение` workspace now includes controlled inspections, NCR, Punch List and defect management without adding or duplicating the left navigation.
