@@ -6,7 +6,7 @@ import { loadProjectBundleForPage } from "@/lib/project-page-data";
 
 export const dynamic = "force-dynamic";
 
-export default async function ProjectPage({ params, searchParams }: { params: { id: string }; searchParams?: { created?: string } }) {
+export default async function ProjectPage({ params, searchParams }: { params: { id: string }; searchParams?: { created?: string; tab?: string } }) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
   if (!(await canProject(user, params.id, "view"))) notFound();
@@ -17,5 +17,5 @@ export default async function ProjectPage({ params, searchParams }: { params: { 
     notFound();
   }
 
-  return <ProjectWorkspace createdFromOnboarding={searchParams?.created === "1"} initialBundle={bundle} />;
+  return <ProjectWorkspace createdFromOnboarding={searchParams?.created === "1"} initialBundle={bundle} initialTab={searchParams?.tab} />;
 }

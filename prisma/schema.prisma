@@ -75,6 +75,7 @@ model User {
   passwordResetTokens PasswordResetToken[]
   documentVersions    DocumentVersion[]
   aiMessages          AiMessage[]
+  inboxItemStates     InboxItemState[]
 
   @@map("users")
 }
@@ -629,6 +630,22 @@ model AuditLog {
 
   @@index([projectId, createdAt])
   @@map("audit_log")
+}
+
+model InboxItemState {
+  id           String    @id @default(cuid())
+  userId       String    @map("user_id")
+  itemKey      String    @map("item_key")
+  readAt       DateTime? @map("read_at")
+  snoozedUntil DateTime? @map("snoozed_until")
+  archivedAt   DateTime? @map("archived_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, itemKey])
+  @@index([userId, archivedAt, snoozedUntil])
+  @@map("inbox_item_states")
 }
 
 model ProjectActionItem {
