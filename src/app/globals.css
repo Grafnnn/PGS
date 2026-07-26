@@ -10965,7 +10965,8 @@ input[type="checkbox"] {
 }
 
 .inbox-filters select {
-  min-width: 156px;
+  min-width: 0;
+  width: 100%;
 }
 
 .inbox-search {

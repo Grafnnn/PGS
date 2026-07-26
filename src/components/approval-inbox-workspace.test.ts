@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
@@ -15,5 +16,13 @@ describe("ApprovalInboxWorkspace", () => {
     expect(html).toContain("Все проекты");
     expect(html).toContain("Все источники");
     expect(html).toContain("Собираем очередь решений");
+  });
+
+  it("allows filter selects to shrink inside the responsive toolbar", () => {
+    const styles = readFileSync(new URL("../app/globals.css", import.meta.url), "utf8");
+    const filterSelectRule = styles.match(/\.inbox-filters select\s*\{([^}]*)\}/)?.[1];
+
+    expect(filterSelectRule).toContain("min-width: 0");
+    expect(filterSelectRule).toContain("width: 100%");
   });
 });
