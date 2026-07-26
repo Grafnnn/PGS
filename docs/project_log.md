@@ -1,5 +1,34 @@
 # PGS Project Log
 
+## 2026-07-27 - PGS Studio Design v3 online/full visual GO
+
+Status: PGS Studio Design v3 is shipped on Render after PR #143. The application now uses a denser construction-operations interface with grouped navigation, a compact top bar, wider workspaces and responsive project creation.
+
+- Online URL: https://pgs-frankfurt.onrender.com
+- Online commit: `9626d25b9a1c7b42b59507a7dab19366941d39c1`
+- Feature PR: #143
+- Decision: ONLINE/FULL VISUAL GO
+- Git SHA source: `RENDER_GIT_COMMIT`
+
+Online verification:
+
+- `/api/health`: HTTP 200 / `ok`; DB: `ok`; migrations: `ok`, count `20`;
+- deployed SHA matched `9626d25b9a1c7b42b59507a7dab19366941d39c1`;
+- `/dashboard`, `/projects`, `/projects#create-project`, `/projects/project-smoke` and `/login` rendered with the v3 design;
+- desktop 1280 px and mobile 390 px checks passed with no page-level horizontal overflow;
+- exactly one navigation variant was visible at a time; desktop collapse/overlay and the 304 px mobile drawer opened and closed correctly;
+- project tabs stayed inside their own horizontal scroll area;
+- the mobile project-creation wizard fit within the viewport, and auth pages rendered without the application shell;
+- no browser console errors were observed.
+
+Validation and safety:
+
+- PR #143 GitHub Actions CI #289 passed;
+- Vitest: 487/487 passed; ESLint, TypeScript, Prisma validate/generate, production build and `git diff --check` passed;
+- no API, auth/permission, Prisma schema/migration, Render env/secret or deploy configuration changes were included;
+- no project/import/delete/upload mutation, authenticated runtime smoke, external connector call or live AI was run;
+- no secret value was printed or committed.
+
 ## 2026-07-24 - Project Controls & Earned Value v1 online/core GO
 
 Status: Project Controls & Earned Value v1 is shipped on Render after PR #137. PGS now has controlled project baselines, reporting periods and deterministic earned value metrics connected to the existing project data model.
