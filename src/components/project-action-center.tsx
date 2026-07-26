@@ -54,6 +54,11 @@ export function ProjectActionCenter({ projectId, canEdit, canApprove = false, on
   }, [projectId]);
 
   useEffect(() => void load(), [load]);
+  useEffect(() => {
+    const refresh = () => void load();
+    window.addEventListener("pgs:actions-changed", refresh);
+    return () => window.removeEventListener("pgs:actions-changed", refresh);
+  }, [load]);
 
   const visibleItems = useMemo(() => items.filter((item) => {
     if (filter === "all") return true;
