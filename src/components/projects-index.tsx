@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, CheckCircle2, ChevronLeft, ChevronRight, ClipboardList, FileSpreadsheet, FileText, Filter, Grid2X2, Landmark, List, PackageCheck, Plus, RotateCcw, Search, Sparkles, TimerReset } from "lucide-react";
@@ -277,7 +277,23 @@ export function ProjectsIndex({ projects }: { projects: Project[] }) {
   const [status, setStatus] = useState<"all" | Project["status"]>("all");
   const [sort, setSort] = useState<"amount" | "finish" | "name">("amount");
   const [view, setView] = useState<"cards" | "table">("cards");
+  const [creationOpen, setCreationOpen] = useState(false);
   const managers = Array.from(new Set(projects.map((project) => project.manager)));
+
+  useEffect(() => {
+    const syncFromHash = () => setCreationOpen(window.location.hash === "#create-project");
+    syncFromHash();
+    window.addEventListener("hashchange", syncFromHash);
+    return () => window.removeEventListener("hashchange", syncFromHash);
+  }, []);
+
+  const toggleCreation = () => {
+    const next = !creationOpen;
+    setCreationOpen(next);
+    const url = new URL(window.location.href);
+    url.hash = next ? "create-project" : "";
+    window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
+  };
 
   const filteredProjects = projects
     .filter((project) => {
@@ -292,9 +308,23 @@ export function ProjectsIndex({ projects }: { projects: Project[] }) {
 
   return (
     <div className="stack">
-      <ProjectCreationWizard />
+      <section className={`project-creation-launcher ${creationOpen ? "is-open" : ""}`} id="create-project">
+        <button aria-expanded={creationOpen} className="project-creation-launcher-button" onClick={toggleCreation} type="button">
+          <span className="project-creation-launcher-icon"><FileSpreadsheet size={20} /></span>
+          <span className="project-creation-launcher-copy">
+            <small>Новый проект</small>
+            <strong>Создать вручную или разобрать единую Excel-книгу</strong>
+            <em>Реквизиты, ВОР, материалы, график, ФОТ и стартовые документы распределятся по модулям.</em>
+          </span>
+          <span className="project-creation-launcher-action">
+            {creationOpen ? "Скрыть" : "Начать"}
+            <ChevronRight size={17} />
+          </span>
+        </button>
+        {creationOpen && <div className="project-creation-stage"><ProjectCreationWizard /></div>}
+      </section>
 
-      <section className="panel stack">
+      <section className="panel stack project-registry">
         <div className="toolbar project-filterbar">
           <label className="search-label">
             Поиск
@@ -710,7 +740,7 @@ export function ProjectCreationWizard() {
   };
 
   return (
-    <section className="panel stack create-project-panel project-onboarding-wizard" id="create-project">
+    <section className="panel stack create-project-panel project-onboarding-wizard">
       <div className="toolbar">
         <div>
           <div className="eyebrow">Project Creation & Onboarding</div>

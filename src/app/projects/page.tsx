@@ -1,4 +1,3 @@
-import { Plus } from "lucide-react";
 import { redirect } from "next/navigation";
 import { money } from "@/lib/calculations";
 import { loadProjectsForPage } from "@/lib/project-page-data";
@@ -33,10 +32,6 @@ export default async function ProjectsPage() {
             <span className="badge gray">Сумма договоров: {compactMoney(projects.reduce((total, project) => total + project.contractAmount, 0))}</span>
           </div>
         </div>
-        <a className="button primary" href="#create-project">
-          <Plus size={18} />
-          Создать проект
-        </a>
       </div>
 
       <ProjectsIndex projects={projects} />

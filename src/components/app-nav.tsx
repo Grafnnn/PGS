@@ -29,6 +29,7 @@ import { readSidebarPreference, type SidebarPreference, writeSidebarPreference }
 
 type NavItem = {
   code: string;
+  group: "Управление" | "Проектный контур" | "Система";
   href: string;
   icon: ReactNode;
   label: string;
@@ -37,17 +38,18 @@ type NavItem = {
 };
 
 const navItems: NavItem[] = [
-  { code: "00", href: "/dashboard", icon: <Gauge size={17} />, label: "Dashboard", section: "Портфель", match: ["/dashboard"] },
-  { code: "IN", href: "/inbox", icon: <Bell size={17} />, label: "Inbox", section: "Решения", match: ["/inbox"] },
-  { code: "P1", href: "/portfolio", icon: <Layers3 size={17} />, label: "Portfolio", section: "Все объекты", match: ["/portfolio"] },
-  { code: "01", href: "/projects", icon: <BriefcaseBusiness size={17} />, label: "Projects", section: "Объекты", match: ["/projects"] },
-  { code: "02", href: "/projects", icon: <PackageCheck size={17} />, label: "Procurement", section: "Снабжение" },
-  { code: "03", href: "/projects", icon: <Landmark size={17} />, label: "Finance", section: "Деньги" },
-  { code: "04", href: "/projects", icon: <FileText size={17} />, label: "Docs", section: "Документы" },
-  { code: "05", href: "/projects", icon: <ShieldAlert size={17} />, label: "Risks", section: "Контроль" },
-  { code: "AI", href: "/projects", icon: <Bot size={17} />, label: "AI Layer", section: "Анализ" },
-  { code: "99", href: "/admin/users", icon: <Users size={17} />, label: "Admin", section: "Настройки", match: ["/admin"] }
+  { code: "01", group: "Управление", href: "/dashboard", icon: <Gauge size={17} />, label: "Главная", section: "Сводка портфеля", match: ["/dashboard"] },
+  { code: "02", group: "Управление", href: "/inbox", icon: <Bell size={17} />, label: "Согласования", section: "Решения и блокеры", match: ["/inbox"] },
+  { code: "03", group: "Управление", href: "/portfolio", icon: <Layers3 size={17} />, label: "Портфель", section: "Все объекты", match: ["/portfolio"] },
+  { code: "04", group: "Управление", href: "/projects", icon: <BriefcaseBusiness size={17} />, label: "Проекты", section: "Рабочие пространства", match: ["/projects"] },
+  { code: "05", group: "Проектный контур", href: "/projects", icon: <PackageCheck size={17} />, label: "Снабжение", section: "Материалы и закупки" },
+  { code: "06", group: "Проектный контур", href: "/projects", icon: <Landmark size={17} />, label: "Финансы", section: "Бюджет и cash-flow" },
+  { code: "07", group: "Проектный контур", href: "/projects", icon: <FileText size={17} />, label: "Документы", section: "Комплектность и КС" },
+  { code: "08", group: "Проектный контур", href: "/projects", icon: <ShieldAlert size={17} />, label: "Риски", section: "Контроль отклонений" },
+  { code: "AI", group: "Система", href: "/projects", icon: <Bot size={17} />, label: "AI-помощник", section: "Сценарии и сводки" },
+  { code: "09", group: "Система", href: "/admin/users", icon: <Users size={17} />, label: "Администрирование", section: "Пользователи и связи", match: ["/admin"] }
 ];
+const navGroups: NavItem["group"][] = ["Управление", "Проектный контур", "Система"];
 
 function isItemActive(pathname: string, item: NavItem) {
   return item.match?.some((path) => pathname === path || pathname.startsWith(`${path}/`)) ?? false;
@@ -58,31 +60,38 @@ function NavigationLinks({ onNavigate }: { onNavigate?: () => void }) {
 
   return (
     <nav className="nav sidebar-nav" aria-label="Основная навигация">
-      {navItems.map((item) => {
-        const active = isItemActive(pathname, item);
-        return (
-          <Link
-            aria-current={active ? "page" : undefined}
-            className={active ? "active" : undefined}
-            data-tooltip={item.label}
-            href={item.href as Route}
-            key={`${item.label}-${item.href}`}
-            onClick={onNavigate}
-            title={item.label}
-          >
-            <span className="nav-icon" aria-hidden="true">
-              {item.icon}
-            </span>
-            <span className="nav-code" aria-hidden="true">
-              {item.code}
-            </span>
-            <span className="nav-copy">
-              <strong>{item.label}</strong>
-              <small>{item.section}</small>
-            </span>
-          </Link>
-        );
-      })}
+      {navGroups.map((group) => (
+        <div className="nav-group" key={group}>
+          <span className="nav-group-label">{group}</span>
+          <div className="nav-group-links">
+            {navItems.filter((item) => item.group === group).map((item) => {
+              const active = isItemActive(pathname, item);
+              return (
+                <Link
+                  aria-current={active ? "page" : undefined}
+                  className={active ? "active" : undefined}
+                  data-tooltip={item.label}
+                  href={item.href as Route}
+                  key={`${item.label}-${item.href}`}
+                  onClick={onNavigate}
+                  title={item.label}
+                >
+                  <span className="nav-icon" aria-hidden="true">
+                    {item.icon}
+                  </span>
+                  <span className="nav-code" aria-hidden="true">
+                    {item.code}
+                  </span>
+                  <span className="nav-copy">
+                    <strong>{item.label}</strong>
+                    <small>{item.section}</small>
+                  </span>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      ))}
     </nav>
   );
 }
@@ -90,11 +99,12 @@ function NavigationLinks({ onNavigate }: { onNavigate?: () => void }) {
 function SidebarSystemCard() {
   return (
     <div className="sidebar-system-card">
-      <SlidersHorizontal size={17} />
+      <span className="sidebar-system-icon"><SlidersHorizontal size={16} /></span>
       <div>
-        <strong>PGS v2</strong>
-        <span>ВОР · КС · Договор · Риски</span>
+        <strong>PGS Studio v3</strong>
+        <span>Единый контур управления</span>
       </div>
+      <span aria-label="Система активна" className="sidebar-system-status" role="status" title="Система активна" />
     </div>
   );
 }
@@ -167,6 +177,7 @@ function SidebarContent({
 export function AppNav({ children }: { children: ReactNode }) {
   const sidebarId = useId();
   const drawerId = useId();
+  const pathname = usePathname();
   const [preference, setPreference] = useState<SidebarPreference>("expanded");
   const [hydrated, setHydrated] = useState(false);
   const [peekOpen, setPeekOpen] = useState(false);
@@ -208,6 +219,17 @@ export function AppNav({ children }: { children: ReactNode }) {
   const shellState = hydrated ? preference : "expanded";
   const isCollapsed = shellState === "collapsed";
   const sidebarExpandedForInteraction = isCollapsed && peekOpen;
+  const activeItem = navItems.find((item) => isItemActive(pathname, item));
+  const isAuthSurface = pathname === "/login" || pathname === "/reset-password" || pathname.startsWith("/invite/");
+
+  if (isAuthSurface) {
+    return (
+      <div className="auth-shell">
+        <PwaRegister />
+        {children}
+      </div>
+    );
+  }
 
   return (
     <div className="app-shell" data-sidebar={shellState}>
@@ -249,16 +271,20 @@ export function AppNav({ children }: { children: ReactNode }) {
           >
             {isCollapsed ? <Menu size={17} /> : <PanelLeftClose size={17} />}
           </button>
+          <div className="topbar-route">
+            <span>PGS Studio</span>
+            <strong>{activeItem?.label ?? "Рабочая область"}</strong>
+          </div>
           <label className="global-search" aria-label="Поиск по PGS">
             <Search size={17} />
-            <input placeholder="Поиск по объектам, ВОР, КС, документам" />
+            <input placeholder="Поиск по проектам и данным" />
           </label>
           <div className="topbar-actions">
-            <span className="topbar-context">Демо Строй · Command Center</span>
+            <span className="topbar-context"><i /> Операционный контур</span>
             <InboxBell />
             <Link className="button primary" href="/projects#create-project" title="Перейти к созданию проекта">
               <Plus size={17} />
-              Создать
+              <span className="topbar-create-label">Создать</span>
             </Link>
           </div>
         </header>
