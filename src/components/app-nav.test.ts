@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { isStandaloneAppSurface } from "@/components/app-nav-routes";
 import { readSidebarPreference, SIDEBAR_STORAGE_KEY, writeSidebarPreference } from "@/components/app-nav-state";
 
 function createMemoryStorage(initial?: string) {
@@ -47,5 +48,20 @@ describe("sidebar preference helpers", () => {
         "expanded"
       )
     ).not.toThrow();
+  });
+});
+
+describe("app navigation surface", () => {
+  it("keeps authentication and external response pages outside the project shell", () => {
+    expect(isStandaloneAppSurface("/login")).toBe(true);
+    expect(isStandaloneAppSurface("/reset-password")).toBe(true);
+    expect(isStandaloneAppSurface("/invite/accept")).toBe(true);
+    expect(isStandaloneAppSurface("/external/respond/one-time-token")).toBe(true);
+  });
+
+  it("keeps application workspaces inside the project shell", () => {
+    expect(isStandaloneAppSurface("/dashboard")).toBe(false);
+    expect(isStandaloneAppSurface("/projects/project-1")).toBe(false);
+    expect(isStandaloneAppSurface("/external")).toBe(false);
   });
 });
