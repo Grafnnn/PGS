@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { AlertTriangle, BarChart3, Bot, ClipboardList, DatabaseZap, FileText, HardHat, Landmark, LayoutList, ListChecks, MessageSquareText, Package, Pencil, Plus, ReceiptText, Search, Send, Table2, TimerReset, Trash2, Truck, Users, Workflow } from "lucide-react";
+import { AlertTriangle, BarChart3, Bot, ClipboardList, DatabaseZap, FileText, HardHat, Landmark, Package, Pencil, Plus, ReceiptText, Search, Send, Table2, TimerReset, Trash2, Truck, Users } from "lucide-react";
 import { AcceptanceBillingWorkspace } from "@/components/acceptance-billing-workspace";
 import { AccountingBridgeWorkspace } from "@/components/accounting-bridge-workspace";
 import { CommercialProposalWorkspace } from "@/components/commercial-proposal-workspace";
@@ -17,6 +17,7 @@ import { HseSafetyPermitWorkspace } from "@/components/hse-safety-permit-workspa
 import { ProjectCommandCenter } from "@/components/project-command-center";
 import { ProjectActionCenter, type ProjectActionSuggestion } from "@/components/project-action-center";
 import { ProjectControlsWorkspace } from "@/components/project-controls-workspace";
+import { ProjectModuleMenu, projectTabs, type ProjectTab } from "@/components/project-module-menu";
 import { DocumentComplianceWorkspace } from "@/components/document-compliance-workspace";
 import { DocumentTransmittalsWorkspace } from "@/components/document-transmittals-workspace";
 import { PhotoEvidenceWorkspace } from "@/components/photo-evidence-workspace";
@@ -72,61 +73,6 @@ type ImportHistoryItem = {
   createdAt: string;
   committedAt: string | null;
   preview?: Pick<ImportPreview, "previewRows" | "unknownRows" | "summary">;
-};
-
-const tabs = [
-  "Обзор",
-  "Бюджет / ВОР",
-  "График",
-  "Материалы",
-  "Заявки",
-  "Финансы",
-  "ERP / Учёт",
-  "Договор / Тендер",
-  "КП / Подача",
-  "КС",
-  "Исполнение",
-  "Площадка",
-  "Рапорты",
-  "Риски",
-  "Документы",
-  "RFI / Согласования",
-  "Действия",
-  "Процессы",
-  "Аналитика",
-  "Участники",
-  "История",
-  "Настройки",
-  "AI-помощник"
-];
-
-const primaryTabs = ["Обзор", "Площадка", "Бюджет / ВОР", "График", "Материалы", "Финансы", "Документы", "Риски", "КС", "Действия", "Процессы", "AI-помощник"];
-const secondaryTabs = tabs.filter((tab) => !primaryTabs.includes(tab));
-
-const tabMeta: Record<string, { code: string; icon: React.ReactNode; hint: string }> = {
-  Обзор: { code: "00", icon: <LayoutList size={16} />, hint: "Сводка" },
-  "Бюджет / ВОР": { code: "01", icon: <Table2 size={16} />, hint: "Деньги" },
-  График: { code: "02", icon: <TimerReset size={16} />, hint: "Сроки" },
-  Материалы: { code: "03", icon: <Package size={16} />, hint: "Снабжение" },
-  Заявки: { code: "04", icon: <Truck size={16} />, hint: "Закупки" },
-  Финансы: { code: "05", icon: <Landmark size={16} />, hint: "Платежи" },
-  "ERP / Учёт": { code: "ERP", icon: <DatabaseZap size={16} />, hint: "Обмен" },
-  "Договор / Тендер": { code: "06", icon: <Search size={16} />, hint: "Контракт" },
-  "КП / Подача": { code: "07", icon: <Send size={16} />, hint: "КП" },
-  КС: { code: "08", icon: <ReceiptText size={16} />, hint: "Закрытие" },
-  Исполнение: { code: "09", icon: <Users size={16} />, hint: "Подряд" },
-  Площадка: { code: "FS", icon: <HardHat size={16} />, hint: "Offline" },
-  Рапорты: { code: "10", icon: <ClipboardList size={16} />, hint: "Площадка" },
-  Риски: { code: "11", icon: <AlertTriangle size={16} />, hint: "Контроль" },
-  Документы: { code: "12", icon: <FileText size={16} />, hint: "Файлы" },
-  "RFI / Согласования": { code: "13", icon: <MessageSquareText size={16} />, hint: "Review" },
-  Действия: { code: "14", icon: <ListChecks size={16} />, hint: "Workflow" },
-  Процессы: { code: "WF", icon: <Workflow size={16} />, hint: "Approval" },
-  Аналитика: { code: "15", icon: <BarChart3 size={16} />, hint: "EVM / KPI" },
-  Участники: { code: "16", icon: <Users size={16} />, hint: "Доступ" },
-  История: { code: "17", icon: <ClipboardList size={16} />, hint: "Аудит" },
-  Настройки: { code: "18", icon: <Trash2 size={16} />, hint: "Админ" },
-  "AI-помощник": { code: "AI", icon: <Bot size={16} />, hint: "Анализ" }
 };
 
 type CurrentUser = {
@@ -194,7 +140,7 @@ export function ProjectWorkspace({
   createdFromOnboarding?: boolean;
   initialTab?: string;
 }) {
-  const [activeTab, setActiveTab] = useState(() => (initialTab && tabs.includes(initialTab) ? initialTab : tabs[0]));
+  const [activeTab, setActiveTab] = useState(() => (initialTab && projectTabs.includes(initialTab as ProjectTab) ? initialTab : projectTabs[0]));
   const [budgetItems, setBudgetItems] = useState(initialBundle.budgetItems);
   const [scheduleItems, setScheduleItems] = useState(initialBundle.scheduleItems);
   const [materials, setMaterials] = useState(initialBundle.materials);
@@ -860,21 +806,7 @@ export function ProjectWorkspace({
 
       <div className={`workspace-layout ${activeTab === "Обзор" ? "workspace-layout-full" : ""}`} style={{ marginTop: 18 }}>
         <div>
-          <div className="tabs project-tabs" aria-label="Разделы проекта">
-            {primaryTabs.map((tab) => (
-              <button className={`tab ${activeTab === tab ? "active" : ""}`} key={tab} onClick={() => setActiveTab(tab)}>
-                <span className="tab-icon">{tabMeta[tab]?.icon}</span>
-                <strong>{tab}</strong>
-              </button>
-            ))}
-            <label className={`project-tab-more ${secondaryTabs.includes(activeTab) ? "active" : ""}`}>
-              <span>Еще</span>
-              <select aria-label="Дополнительные разделы проекта" value={secondaryTabs.includes(activeTab) ? activeTab : ""} onChange={(event) => setActiveTab(event.target.value)}>
-                <option value="" disabled>Разделы</option>
-                {secondaryTabs.map((tab) => <option key={tab} value={tab}>{tab}</option>)}
-              </select>
-            </label>
-          </div>
+          <ProjectModuleMenu activeTab={activeTab as ProjectTab} onSelect={setActiveTab} />
           {(saving || error) && (
             <div className={`panel ${error ? "delta-bad" : "muted"}`} style={{ marginBottom: 16 }}>
               {error || `Сохраняю: ${saving}`}
