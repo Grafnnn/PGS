@@ -1,5 +1,35 @@
 # PGS Project Log
 
+## 2026-07-27 - Project module mega-menu online/full visual GO
+
+Status: The project workspace navigation refresh from PR #145 is live on Render. The clipped horizontal tab strip was replaced with one translucent grouped menu that exposes all 23 project sections without duplicating the visible application navigation.
+
+- Online URL: https://pgs-frankfurt.onrender.com
+- Online commit: `7ce395d70c666bc0447290bcd6183146b9d23b6b`
+- Render deploy: `dep-d9j86m8k1i2s73bl8n80`
+- Feature PR: #145
+- Decision: ONLINE/FULL VISUAL GO
+- Git SHA source: `RENDER_GIT_COMMIT`
+
+Online verification:
+
+- `/api/health`: HTTP 200 / `ok`; DB: `ok`; migrations: `ok`, count `20`;
+- Render auto-deploy completed successfully and the deployed SHA matched `7ce395d70c666bc0447290bcd6183146b9d23b6b`;
+- `/dashboard`, `/projects` and `/projects/project-smoke` rendered without Next.js error overlays;
+- the menu contained all 23 sections in four groups: Management, Work scope, Commercial and Control;
+- desktop 1280x720 and mobile 390x844 checks showed all 23 items without internal menu scrolling or page-level horizontal overflow;
+- translucent background, backdrop blur, selected-section state, Escape handling, outside-click dismissal and focus return worked;
+- exactly one project-module navigation and one visible sidebar/drawer surface were present; the old `.project-tabs` strip was absent;
+- the mobile drawer opened and closed correctly without creating a second visible left menu.
+
+Validation and safety:
+
+- PR #145 GitHub Actions CI #293 passed;
+- unauthenticated `/api/auth/me` returned 401 and the AI summary route returned 403 before any provider call;
+- no code, environment, secret, database, schema or migration changes were made during the online gate;
+- no live AI, project/import/delete/upload mutation or manual deploy was run;
+- no secret value was printed or committed.
+
 ## 2026-07-27 - PGS Studio Design v3 online/full visual GO
 
 Status: PGS Studio Design v3 is shipped on Render after PR #143. The application now uses a denser construction-operations interface with grouped navigation, a compact top bar, wider workspaces and responsive project creation.
