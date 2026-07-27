@@ -45,6 +45,7 @@ export async function POST(request: NextRequest) {
     includeProjectControlsSmoke?: unknown;
     includeAiDecisionJournalSmoke?: unknown;
     includeWorkforcePayrollSmoke?: unknown;
+    includeWorkforcePayrollImportSmoke?: unknown;
   };
 
   try {
@@ -60,6 +61,7 @@ export async function POST(request: NextRequest) {
       includeProjectControlsSmoke: body.includeProjectControlsSmoke === true,
       includeAiDecisionJournalSmoke: body.includeAiDecisionJournalSmoke === true,
       includeWorkforcePayrollSmoke: body.includeWorkforcePayrollSmoke === true,
+      includeWorkforcePayrollImportSmoke: body.includeWorkforcePayrollImportSmoke === true,
       requestId
     });
 

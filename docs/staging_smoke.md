@@ -25,6 +25,7 @@ The endpoint:
 - optionally creates a disposable `SMOKE-...` project, uploads one synthetic starting document, verifies the Documents list, deletes the project, and restores the smoke user's role;
 - optionally verifies the AI decision journal lifecycle with a synthetic deterministic run, feedback, controlled action conversion, duplicate prevention, cleanup, and restoration to the smoke user's baseline `VIEWER` role;
 - optionally verifies the workforce/payroll lifecycle on `project-smoke`: synthetic employee and labor-demand creation, payroll taxes, capacity and project-margin impact, API cleanup, audit cleanup, and role restoration;
+- optionally verifies the Excel-to-ФОТ lifecycle on `project-smoke`: generated XLSX preview, explicit commit, labor demand and VOR allocation, payroll/tax economics, import cleanup, and role restoration;
 - returns only statuses and safe metadata.
 
 ## Required Render env
@@ -231,6 +232,32 @@ Expected:
 - no synthetic workforce, labor-demand, assignment, allocation, or audit rows remain;
 - no passwords, cookies, session tokens, `DATABASE_URL`, `OPENAI_API_KEY`, or smoke secret are returned.
 
+## Optional Excel-to-ФОТ import lifecycle smoke
+
+Run only after core smoke is green. This check builds a generated XLSX in memory with one synthetic ВОР row and one ФОТ row, previews it through the standard Excel import API, and commits it explicitly through the standard budget import API. It verifies the imported payroll budget, labor demand, 100% ВОР allocation, gross payroll, employer contributions, personal income tax, net payroll, and project cost calculation. It then removes the import batch, budget/schedule/labor/allocation/audit rows and any payroll policy created only for the smoke, verifies that no synthetic rows remain, and restores the prior project role.
+
+```bash
+curl -sS -X POST "$APP_URL/api/internal/staging-smoke" \
+  -H "content-type: application/json" \
+  -H "authorization: Bearer $STAGING_SMOKE_SECRET" \
+  --data '{"includeWorkforcePayrollImportSmoke":true}'
+```
+
+Expected:
+
+- HTTP `200`;
+- `ok: true`;
+- `workforcePayrollImportSmoke.status: pass`;
+- preview contains a payroll item, labor demand, and labor allocation whose shares total `100`;
+- commit persists the import batch, payroll budget, labor demand, and linked ВОР allocation;
+- workforce read model contains the imported demand while the smoke is running;
+- economics include gross payroll, employer contributions, withheld personal income tax, net payroll, total employer cost, payroll budget, and adjusted forecast cost;
+- `workforcePayrollImportSmoke.cleanup: pass`;
+- `workforcePayrollImportSmoke.permissionScope: temporary-project-manager-restored`;
+- `liveAi.status: skip`;
+- no synthetic import batch, budget section/item, schedule, labor demand/allocation, audit, or smoke-only payroll policy remains;
+- no real workbook, provider request, password, cookie, session token, `DATABASE_URL`, `OPENAI_API_KEY`, or smoke secret is used or returned.
+
 ## Browser session handoff
 
 For a controlled browser-only staging smoke, request a short-lived session without exposing a password or session token in JSON:
@@ -262,6 +289,7 @@ Delete the temporary cookie jar after cleanup. Production returns `404`; missing
 - The Project Controls smoke must use only generated `SMOKE-PC-...` source rows, restore any previously active smoke baseline, and remove its baseline, period, audit, source, and role changes before returning.
 - The AI decision journal smoke must use only its freshly created synthetic run on `project-smoke`, remove its linked action and audit rows, and restore the smoke user's baseline `VIEWER` role before returning.
 - The workforce/payroll smoke must use only generated `SMOKE-WORKFORCE-...` rows on `project-smoke`, enforce its bounded synthetic payroll limit, remove resource/demand/assignment/allocation/audit rows, and restore the prior project role.
+- The Excel-to-ФОТ smoke must use only its generated `SMOKE-FOT-IMPORT-...` workbook on `project-smoke`, commit through the normal import API, remove every synthetic import/budget/schedule/labor/allocation/audit row, and restore the prior project role.
 - The synthetic user password is generated in memory and is never returned.
 - Existing smoke-user sessions are revoked during rotation.
 - The endpoint uses the deployed app's runtime `DATABASE_URL`; operators never need to expose that URL to Codex.

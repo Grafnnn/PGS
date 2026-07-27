@@ -19,6 +19,11 @@ import {
   expectedPayrollAmounts,
   workforcePayrollSmokePassed
 } from "./workforce-payroll";
+import {
+  buildWorkforcePayrollImportSmokeWorkbook,
+  inspectWorkforcePayrollImportPreview,
+  workforcePayrollImportSmokePassed
+} from "./workforce-payroll-import";
 
 const STAGING_SMOKE_EMAIL = "smoke+staging-runtime@pgs.local";
 const AI_SMOKE_PROMPT = "Кратко проверь smoke-проект и скажи, каких данных не хватает для управленческого анализа.";
@@ -140,6 +145,38 @@ export interface RuntimeWorkforcePayrollSmokeResult extends RuntimeSmokeCheck {
   cleanup: "pass" | "fail" | "skip";
 }
 
+export interface RuntimeWorkforcePayrollImportSmokeResult extends RuntimeSmokeCheck {
+  projectId: string;
+  importBatchId?: string;
+  operations: string[];
+  preview?: {
+    payrollItems: number;
+    laborDemands: number;
+    laborAllocations: number;
+    allocationSharePercent: number;
+    personMonths: number;
+    plannedHours: number;
+  };
+  commit?: {
+    budgetItems: number;
+    laborDemands: number;
+    laborAllocations: number;
+    demandListed: boolean;
+    importBatchCommitted: boolean;
+  };
+  economics?: {
+    grossPayroll: number;
+    employerContributions: number;
+    withheldPersonalIncomeTax: number;
+    netPayroll: number;
+    totalEmployerCost: number;
+    payrollBudget: number;
+    adjustedForecastCost: number;
+  };
+  permissionScope?: "temporary-project-manager-restored" | "restore-failed";
+  cleanup: "pass" | "fail" | "skip";
+}
+
 export interface RuntimeSmokeResult {
   ok: boolean;
   smokeUser: StagingSmokeUserReport;
@@ -201,6 +238,7 @@ export interface RuntimeSmokeResult {
   projectControlsSmoke?: RuntimeProjectControlsSmokeResult;
   aiDecisionJournalSmoke?: RuntimeAiDecisionJournalSmokeResult;
   workforcePayrollSmoke?: RuntimeWorkforcePayrollSmokeResult;
+  workforcePayrollImportSmoke?: RuntimeWorkforcePayrollImportSmokeResult;
   secretsPrinted: false;
 }
 
@@ -216,6 +254,7 @@ export interface RuntimeSmokeInput {
   includeProjectControlsSmoke?: boolean;
   includeAiDecisionJournalSmoke?: boolean;
   includeWorkforcePayrollSmoke?: boolean;
+  includeWorkforcePayrollImportSmoke?: boolean;
   requestId: string;
 }
 
@@ -2006,6 +2045,511 @@ async function runWorkforcePayrollSmoke(
   }
 }
 
+async function cleanupWorkforcePayrollImportSmoke(input: {
+  marker: string;
+  importBatchId?: string;
+  budgetItemIds?: string[];
+  materialIds?: string[];
+  scheduleItemIds?: string[];
+  laborDemandIds?: string[];
+  sectionIds?: string[];
+  payrollPolicyId?: string;
+}) {
+  assertSmokeMutationTarget(SMOKE_PROJECT_ID, "staging");
+
+  const [budgetItems, materials, scheduleItems, demands, sections] = await Promise.all([
+    prisma.budgetItem.findMany({
+      where: {
+        projectId: SMOKE_PROJECT_ID,
+        OR: [
+          { name: { startsWith: input.marker } },
+          ...(input.budgetItemIds?.length ? [{ id: { in: input.budgetItemIds } }] : [])
+        ]
+      },
+      select: { id: true }
+    }),
+    prisma.material.findMany({
+      where: {
+        projectId: SMOKE_PROJECT_ID,
+        OR: [
+          { name: { startsWith: input.marker } },
+          ...(input.materialIds?.length ? [{ id: { in: input.materialIds } }] : [])
+        ]
+      },
+      select: { id: true }
+    }),
+    prisma.scheduleItem.findMany({
+      where: {
+        projectId: SMOKE_PROJECT_ID,
+        OR: [
+          { name: { startsWith: input.marker } },
+          ...(input.scheduleItemIds?.length ? [{ id: { in: input.scheduleItemIds } }] : [])
+        ]
+      },
+      select: { id: true }
+    }),
+    prisma.projectLaborDemand.findMany({
+      where: {
+        projectId: SMOKE_PROJECT_ID,
+        OR: [
+          { profession: { startsWith: input.marker } },
+          ...(input.importBatchId ? [{ importBatchId: input.importBatchId }] : []),
+          ...(input.laborDemandIds?.length ? [{ id: { in: input.laborDemandIds } }] : [])
+        ]
+      },
+      select: { id: true }
+    }),
+    prisma.budgetSection.findMany({
+      where: {
+        projectId: SMOKE_PROJECT_ID,
+        OR: [
+          { name: { startsWith: input.marker } },
+          ...(input.sectionIds?.length ? [{ id: { in: input.sectionIds } }] : [])
+        ]
+      },
+      select: { id: true }
+    })
+  ]);
+
+  const budgetItemIds = [...new Set([...budgetItems.map((item) => item.id), ...(input.budgetItemIds ?? [])])];
+  const materialIds = [...new Set([...materials.map((item) => item.id), ...(input.materialIds ?? [])])];
+  const scheduleItemIds = [...new Set([...scheduleItems.map((item) => item.id), ...(input.scheduleItemIds ?? [])])];
+  const laborDemandIds = [...new Set([...demands.map((item) => item.id), ...(input.laborDemandIds ?? [])])];
+  const sectionIds = [...new Set([...sections.map((item) => item.id), ...(input.sectionIds ?? [])])];
+
+  const removed = await prisma.$transaction(async (tx) => {
+    const allocations = laborDemandIds.length
+      ? await tx.projectLaborAllocation.deleteMany({
+        where: { projectId: SMOKE_PROJECT_ID, laborDemandId: { in: laborDemandIds } }
+      })
+      : { count: 0 };
+    const laborDemands = laborDemandIds.length
+      ? await tx.projectLaborDemand.deleteMany({
+        where: { projectId: SMOKE_PROJECT_ID, id: { in: laborDemandIds } }
+      })
+      : { count: 0 };
+    const schedules = scheduleItemIds.length
+      ? await tx.scheduleItem.deleteMany({
+        where: { projectId: SMOKE_PROJECT_ID, id: { in: scheduleItemIds } }
+      })
+      : { count: 0 };
+    const deletedMaterials = materialIds.length
+      ? await tx.material.deleteMany({
+        where: { projectId: SMOKE_PROJECT_ID, id: { in: materialIds } }
+      })
+      : { count: 0 };
+    const budget = budgetItemIds.length
+      ? await tx.budgetItem.deleteMany({
+        where: { projectId: SMOKE_PROJECT_ID, id: { in: budgetItemIds } }
+      })
+      : { count: 0 };
+    const deletedSections = sectionIds.length
+      ? await tx.budgetSection.deleteMany({
+        where: { projectId: SMOKE_PROJECT_ID, id: { in: sectionIds } }
+      })
+      : { count: 0 };
+    const audit = input.importBatchId
+      ? await tx.auditLog.deleteMany({
+        where: { projectId: SMOKE_PROJECT_ID, entityId: input.importBatchId }
+      })
+      : { count: 0 };
+    const batch = input.importBatchId
+      ? await tx.importBatch.deleteMany({
+        where: { id: input.importBatchId, projectId: SMOKE_PROJECT_ID }
+      })
+      : { count: 0 };
+    const payrollPolicy = input.payrollPolicyId
+      ? await tx.projectPayrollPolicy.deleteMany({
+        where: { id: input.payrollPolicyId, projectId: SMOKE_PROJECT_ID }
+      })
+      : { count: 0 };
+
+    return allocations.count + laborDemands.count + schedules.count + deletedMaterials.count +
+      budget.count + deletedSections.count + audit.count + batch.count + payrollPolicy.count;
+  });
+
+  const [
+    remainingBudget,
+    remainingMaterials,
+    remainingSchedules,
+    remainingDemands,
+    remainingSections,
+    remainingBatch,
+    remainingAudit,
+    remainingPolicy
+  ] = await Promise.all([
+    prisma.budgetItem.count({
+      where: {
+        projectId: SMOKE_PROJECT_ID,
+        OR: [
+          { name: { startsWith: input.marker } },
+          ...(budgetItemIds.length ? [{ id: { in: budgetItemIds } }] : [])
+        ]
+      }
+    }),
+    prisma.material.count({
+      where: {
+        projectId: SMOKE_PROJECT_ID,
+        OR: [
+          { name: { startsWith: input.marker } },
+          ...(materialIds.length ? [{ id: { in: materialIds } }] : [])
+        ]
+      }
+    }),
+    prisma.scheduleItem.count({
+      where: {
+        projectId: SMOKE_PROJECT_ID,
+        OR: [
+          { name: { startsWith: input.marker } },
+          ...(scheduleItemIds.length ? [{ id: { in: scheduleItemIds } }] : [])
+        ]
+      }
+    }),
+    prisma.projectLaborDemand.count({
+      where: {
+        projectId: SMOKE_PROJECT_ID,
+        OR: [
+          { profession: { startsWith: input.marker } },
+          ...(input.importBatchId ? [{ importBatchId: input.importBatchId }] : []),
+          ...(laborDemandIds.length ? [{ id: { in: laborDemandIds } }] : [])
+        ]
+      }
+    }),
+    prisma.budgetSection.count({
+      where: {
+        projectId: SMOKE_PROJECT_ID,
+        OR: [
+          { name: { startsWith: input.marker } },
+          ...(sectionIds.length ? [{ id: { in: sectionIds } }] : [])
+        ]
+      }
+    }),
+    input.importBatchId
+      ? prisma.importBatch.count({ where: { id: input.importBatchId, projectId: SMOKE_PROJECT_ID } })
+      : Promise.resolve(0),
+    input.importBatchId
+      ? prisma.auditLog.count({ where: { projectId: SMOKE_PROJECT_ID, entityId: input.importBatchId } })
+      : Promise.resolve(0),
+    input.payrollPolicyId
+      ? prisma.projectPayrollPolicy.count({ where: { id: input.payrollPolicyId, projectId: SMOKE_PROJECT_ID } })
+      : Promise.resolve(0)
+  ]);
+
+  return {
+    cleaned:
+      remainingBudget === 0 &&
+      remainingMaterials === 0 &&
+      remainingSchedules === 0 &&
+      remainingDemands === 0 &&
+      remainingSections === 0 &&
+      remainingBatch === 0 &&
+      remainingAudit === 0 &&
+      remainingPolicy === 0,
+    removed
+  };
+}
+
+async function runWorkforcePayrollImportSmoke(
+  baseUrl: string,
+  cookie: string,
+  requestId: string
+): Promise<RuntimeWorkforcePayrollImportSmokeResult> {
+  const operations: string[] = [];
+  let permissionScope: RuntimeWorkforcePayrollImportSmokeResult["permissionScope"];
+  let cleanup: RuntimeWorkforcePayrollImportSmokeResult["cleanup"] = "skip";
+  let temporaryRole: Awaited<ReturnType<typeof grantTemporaryImportRole>> | undefined;
+  const runKey = requestId.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 18) || Date.now().toString();
+  const fixture = buildWorkforcePayrollImportSmokeWorkbook(runKey);
+  let importBatchId: string | undefined;
+  let budgetItemIds: string[] = [];
+  let materialIds: string[] = [];
+  let scheduleItemIds: string[] = [];
+  let laborDemandIds: string[] = [];
+  let sectionIds: string[] = [];
+  let payrollPolicyId: string | undefined;
+  let payrollPolicyExisted: boolean | undefined;
+  let previewReport: RuntimeWorkforcePayrollImportSmokeResult["preview"];
+  let commitReport: RuntimeWorkforcePayrollImportSmokeResult["commit"];
+  let economicsReport: RuntimeWorkforcePayrollImportSmokeResult["economics"];
+  let lastHttpStatus: number | undefined;
+
+  try {
+    assertSmokeMutationTarget(SMOKE_PROJECT_ID, "staging");
+    if ((process.env.APP_ENV ?? process.env.NODE_ENV) === "production") {
+      throw new Error("Workforce payroll import smoke is blocked in production.");
+    }
+    const smokeProject = await prisma.project.findUnique({
+      where: { id: SMOKE_PROJECT_ID },
+      select: { id: true, isSmokeProject: true }
+    });
+    if (!smokeProject?.isSmokeProject) {
+      throw new Error(`${SMOKE_PROJECT_ID} is missing or isSmokeProject=false`);
+    }
+
+    const existingPayrollPolicy = await prisma.projectPayrollPolicy.findUnique({
+      where: { projectId: SMOKE_PROJECT_ID },
+      select: { id: true }
+    });
+    payrollPolicyExisted = Boolean(existingPayrollPolicy);
+
+    temporaryRole = await grantTemporaryImportRole();
+    operations.push("temporary-project-manager-role");
+
+    const form = new FormData();
+    form.append(
+      "file",
+      new Blob([Uint8Array.from(fixture.bytes)], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }),
+      fixture.fileName
+    );
+    const previewResponse = await postForm(
+      baseUrl,
+      `/api/projects/${SMOKE_PROJECT_ID}/imports/budget/preview`,
+      form,
+      cookie,
+      requestId
+    );
+    operations.push("excel-preview");
+    lastHttpStatus = previewResponse.status;
+    const preview = await safeJson<ImportPreview>(previewResponse);
+    importBatchId = preview?.importBatchId;
+    if (!preview || previewResponse.status !== 200 || !importBatchId) {
+      throw new Error("Synthetic FOT workbook did not produce a commit-ready preview.");
+    }
+
+    const inspectedPreview = inspectWorkforcePayrollImportPreview(preview, fixture);
+    previewReport = {
+      payrollItems: preview.budgetItems.filter((item) => item.kind === "payroll").length,
+      laborDemands: preview.laborDemands?.length ?? 0,
+      laborAllocations: preview.laborDemands?.reduce((sum, item) => sum + item.allocations.length, 0) ?? 0,
+      allocationSharePercent: inspectedPreview.allocationSharePercent,
+      personMonths: inspectedPreview.demand?.personMonths ?? 0,
+      plannedHours: inspectedPreview.demand?.plannedHours ?? 0
+    };
+    if (!inspectedPreview.recognized || preview.errors.length > 0) {
+      throw new Error("Synthetic FOT workbook preview did not recognize payroll demand and VOR allocation.");
+    }
+
+    const candidateSectionNames = [...new Set([
+      ...preview.sections.map((item) => item.name),
+      ...preview.budgetItems.map((item) => item.section)
+    ])];
+    const sectionsBeforeCommit = candidateSectionNames.length
+      ? await prisma.budgetSection.findMany({
+        where: { projectId: SMOKE_PROJECT_ID, name: { in: candidateSectionNames } },
+        select: { id: true }
+      })
+      : [];
+    const sectionIdsBeforeCommit = new Set(sectionsBeforeCommit.map((item) => item.id));
+
+    const commitResponse = await postJson(
+      baseUrl,
+      `/api/projects/${SMOKE_PROJECT_ID}/imports/budget/commit`,
+      { importBatchId, mode: "append", replaceConfirmed: false },
+      cookie,
+      requestId
+    );
+    operations.push("excel-commit");
+    lastHttpStatus = commitResponse.status;
+    const commit = await safeJson<{
+      ok?: boolean;
+      budgetItems?: BudgetItem[];
+      materials?: Array<{ id: string }>;
+      scheduleItems?: Array<{ id: string }>;
+      laborDemands?: ProjectLaborDemand[];
+    }>(commitResponse);
+    budgetItemIds = commit?.budgetItems?.map((item) => item.id) ?? [];
+    materialIds = commit?.materials?.map((item) => item.id) ?? [];
+    scheduleItemIds = commit?.scheduleItems?.map((item) => item.id) ?? [];
+    laborDemandIds = commit?.laborDemands?.map((item) => item.id) ?? [];
+    if (commitResponse.status !== 200 || commit?.ok !== true) {
+      throw new Error("Synthetic FOT workbook commit failed.");
+    }
+
+    const sectionsAfterCommit = candidateSectionNames.length
+      ? await prisma.budgetSection.findMany({
+        where: { projectId: SMOKE_PROJECT_ID, name: { in: candidateSectionNames } },
+        select: { id: true }
+      })
+      : [];
+    sectionIds = sectionsAfterCommit
+      .map((item) => item.id)
+      .filter((id) => !sectionIdsBeforeCommit.has(id));
+    if (!existingPayrollPolicy) {
+      payrollPolicyId = (await prisma.projectPayrollPolicy.findUnique({
+        where: { projectId: SMOKE_PROJECT_ID },
+        select: { id: true }
+      }))?.id;
+    }
+
+    const committedDemand = commit.laborDemands?.find(
+      (item) => item.profession === fixture.profession && item.importBatchId === importBatchId
+    );
+    const allocationSharePercent = committedDemand?.allocations.reduce((sum, item) => sum + item.sharePercent, 0) ?? 0;
+    const linkedAllocation = committedDemand?.allocations.find(
+      (item) =>
+        item.workName === fixture.workName &&
+        Boolean(item.budgetItemId) &&
+        commit.budgetItems?.some((budgetItem) => budgetItem.id === item.budgetItemId && budgetItem.name === fixture.workName)
+    );
+    const importBatchCommitted = (await prisma.importBatch.findUnique({
+      where: { id: importBatchId },
+      select: { status: true }
+    }))?.status === "committed";
+    const commitCreated =
+      Boolean(committedDemand) &&
+      commit.budgetItems?.some((item) => item.name === fixture.profession && item.kind === "payroll") === true &&
+      Math.abs(allocationSharePercent - 100) <= 0.001 &&
+      importBatchCommitted;
+    if (!commitCreated || !linkedAllocation || !committedDemand) {
+      throw new Error("Committed FOT rows or their VOR allocation were incomplete.");
+    }
+
+    const workforceResponse = await get(
+      baseUrl,
+      `/api/projects/${SMOKE_PROJECT_ID}/resources`,
+      cookie,
+      requestId
+    );
+    operations.push("workforce-read");
+    lastHttpStatus = workforceResponse.status;
+    const workforce = await safeJson<WorkforceApiResponse>(workforceResponse);
+    const listedDemand = workforce?.demands?.find((item) => item.id === committedDemand.id);
+    if (workforceResponse.status !== 200 || !workforce?.policy || !listedDemand) {
+      throw new Error("Imported FOT demand is missing from the workforce read model.");
+    }
+
+    const importedBudgetItems = commit.budgetItems ?? [];
+    const economics = buildWorkforceEconomics({
+      resources: [],
+      demands: [listedDemand],
+      policy: workforce.policy,
+      budgetItems: importedBudgetItems
+    });
+    const expected = expectedPayrollAmounts(fixture.expectedGrossPayroll, workforce.policy);
+    economicsReport = {
+      grossPayroll: economics.grossPayroll,
+      employerContributions: economics.employerContributions,
+      withheldPersonalIncomeTax: economics.withheldPersonalIncomeTax,
+      netPayroll: economics.netPayroll,
+      totalEmployerCost: economics.totalEmployerCost,
+      payrollBudget: economics.payrollBudget,
+      adjustedForecastCost: economics.adjustedForecastCost
+    };
+    const payrollCalculated =
+      closeEnough(economics.grossPayroll, expected.grossPayroll) &&
+      closeEnough(economics.payrollBudget, expected.grossPayroll);
+    const taxesCalculated =
+      closeEnough(economics.employerContributions, expected.employerContributions) &&
+      closeEnough(economics.withheldPersonalIncomeTax, expected.withheldPersonalIncomeTax) &&
+      closeEnough(economics.netPayroll, expected.netPayroll);
+    const economicsCalculated =
+      closeEnough(economics.totalEmployerCost, expected.totalEmployerCost) &&
+      closeEnough(economics.uncoveredEmployerCost, expected.employerContributions) &&
+      economics.adjustedForecastCost >= economics.totalEmployerCost;
+
+    commitReport = {
+      budgetItems: budgetItemIds.length,
+      laborDemands: laborDemandIds.length,
+      laborAllocations: committedDemand.allocations.length,
+      demandListed: Boolean(listedDemand),
+      importBatchCommitted
+    };
+
+    const cleanupResult = await cleanupWorkforcePayrollImportSmoke({
+      marker: fixture.marker,
+      importBatchId,
+      budgetItemIds,
+      materialIds,
+      scheduleItemIds,
+      laborDemandIds,
+      sectionIds,
+      payrollPolicyId
+    });
+    cleanup = cleanupResult.cleaned ? "pass" : "fail";
+    operations.push("import-cleanup");
+
+    await restoreTemporaryImportRole(temporaryRole);
+    temporaryRole = undefined;
+    permissionScope = "temporary-project-manager-restored";
+    operations.push("restore-project-role");
+
+    const status = workforcePayrollImportSmokePassed({
+      previewRecognized: inspectedPreview.recognized,
+      commitCreated,
+      demandListed: Boolean(listedDemand),
+      allocationLinked: Boolean(linkedAllocation),
+      payrollCalculated,
+      taxesCalculated,
+      economicsCalculated,
+      cleanupPassed: cleanup === "pass",
+      roleRestored: permissionScope === "temporary-project-manager-restored"
+    })
+      ? "pass"
+      : "fail";
+
+    return {
+      name: "workforce payroll Excel import smoke",
+      status,
+      httpStatus: status === "pass" ? undefined : lastHttpStatus,
+      detail: status === "pass" ? undefined : "FOT import lifecycle did not complete every preview, commit, economics, or cleanup check.",
+      projectId: SMOKE_PROJECT_ID,
+      importBatchId,
+      operations,
+      preview: previewReport,
+      commit: commitReport,
+      economics: economicsReport,
+      permissionScope,
+      cleanup
+    };
+  } catch (error) {
+    if (payrollPolicyExisted === false && !payrollPolicyId) {
+      payrollPolicyId = (await prisma.projectPayrollPolicy.findUnique({
+        where: { projectId: SMOKE_PROJECT_ID },
+        select: { id: true }
+      }).catch(() => null))?.id;
+    }
+    await cleanupWorkforcePayrollImportSmoke({
+      marker: fixture.marker,
+      importBatchId,
+      budgetItemIds,
+      materialIds,
+      scheduleItemIds,
+      laborDemandIds,
+      sectionIds,
+      payrollPolicyId
+    }).then((result) => {
+      cleanup = result.cleaned ? "pass" : "fail";
+      operations.push("import-cleanup");
+    }).catch(() => {
+      cleanup = "fail";
+    });
+    if (temporaryRole) {
+      await restoreTemporaryImportRole(temporaryRole)
+        .then(() => {
+          permissionScope = "temporary-project-manager-restored";
+          operations.push("restore-project-role");
+        })
+        .catch(() => {
+          permissionScope = "restore-failed";
+        });
+    }
+    return {
+      name: "workforce payroll Excel import smoke",
+      status: "fail",
+      httpStatus: lastHttpStatus,
+      detail: failureDetail(error),
+      projectId: SMOKE_PROJECT_ID,
+      importBatchId,
+      operations,
+      ...(previewReport ? { preview: previewReport } : {}),
+      ...(commitReport ? { commit: commitReport } : {}),
+      ...(economicsReport ? { economics: economicsReport } : {}),
+      permissionScope,
+      cleanup
+    };
+  }
+}
+
 export async function runStagingSmokeBootstrap(input: RuntimeSmokeInput): Promise<RuntimeSmokeResult> {
   const password = generateSmokePassword();
   const smokeUser = await createOrRotateStagingSmokeUser(prisma, {
@@ -2109,6 +2653,7 @@ export async function runStagingSmokeBootstrap(input: RuntimeSmokeInput): Promis
   let projectControlsSmoke: RuntimeSmokeResult["projectControlsSmoke"];
   let aiDecisionJournalSmoke: RuntimeSmokeResult["aiDecisionJournalSmoke"];
   let workforcePayrollSmoke: RuntimeSmokeResult["workforcePayrollSmoke"];
+  let workforcePayrollImportSmoke: RuntimeSmokeResult["workforcePayrollImportSmoke"];
 
   if (input.includeStorageSmoke) {
     storage = await runStorageSmoke(input.requestId);
@@ -2150,6 +2695,11 @@ export async function runStagingSmokeBootstrap(input: RuntimeSmokeInput): Promis
     optionalChecks.push(workforcePayrollSmoke);
   }
 
+  if (input.includeWorkforcePayrollImportSmoke) {
+    workforcePayrollImportSmoke = await runWorkforcePayrollImportSmoke(input.baseUrl, sessionCookie, input.requestId);
+    optionalChecks.push(workforcePayrollImportSmoke);
+  }
+
   return {
     ok:
       checks.every((item) => item.status === "pass") &&
@@ -2166,6 +2716,7 @@ export async function runStagingSmokeBootstrap(input: RuntimeSmokeInput): Promis
     ...(projectControlsSmoke ? { projectControlsSmoke } : {}),
     ...(aiDecisionJournalSmoke ? { aiDecisionJournalSmoke } : {}),
     ...(workforcePayrollSmoke ? { workforcePayrollSmoke } : {}),
+    ...(workforcePayrollImportSmoke ? { workforcePayrollImportSmoke } : {}),
     secretsPrinted: false
   };
 }
