@@ -23,6 +23,7 @@ The endpoint:
 - optionally returns connector readiness statuses without token/secret values;
 - optionally runs Project Data Pipeline smoke after a synthetic import on `project-smoke`;
 - optionally creates a disposable `SMOKE-...` project, uploads one synthetic starting document, verifies the Documents list, deletes the project, and restores the smoke user's role;
+- optionally verifies the AI decision journal lifecycle with a synthetic deterministic run, feedback, controlled action conversion, duplicate prevention, cleanup, and restoration to the smoke user's baseline `VIEWER` role;
 - returns only statuses and safe metadata.
 
 ## Required Render env
@@ -89,7 +90,7 @@ curl -sS -X POST "$APP_URL/api/internal/staging-smoke" \
   --data '{"includeLiveAi":true}'
 ```
 
-This performs exactly one authenticated AI request to `project-demo`.
+This performs exactly one authenticated AI request to `project-smoke`.
 
 ## Optional readiness smoke
 
@@ -180,6 +181,29 @@ Expected:
 - `liveAi.status: skip`;
 - no real project records, provider calls, passwords, cookies, session tokens, `DATABASE_URL`, `OPENAI_API_KEY`, or smoke secret.
 
+## Optional AI decision journal smoke
+
+Run only after core smoke is green. This check creates one deterministic synthetic AI run on `project-smoke` without calling a provider. It reads the run through the journal API, records `needs_review` feedback, converts the first recommendation into a project action through the normal API, verifies that a second conversion returns the existing action instead of creating a duplicate, removes the run/action/audit records, and restores the smoke user to its baseline `VIEWER` project role.
+
+```bash
+curl -sS -X POST "$APP_URL/api/internal/staging-smoke" \
+  -H "content-type: application/json" \
+  -H "authorization: Bearer $STAGING_SMOKE_SECRET" \
+  --data '{"includeAiDecisionJournalSmoke":true}'
+```
+
+Expected:
+
+- HTTP `200`;
+- `ok: true`;
+- `aiDecisionJournalSmoke.status: pass`;
+- the run is created, listed, and marked for review;
+- the action is created once and the duplicate request reuses it;
+- `aiDecisionJournalSmoke.cleanup: pass`;
+- `aiDecisionJournalSmoke.permissionScope: temporary-project-manager-restored`;
+- `liveAi.status: skip`;
+- no provider calls, real project actions, passwords, cookies, session tokens, `DATABASE_URL`, `OPENAI_API_KEY`, or smoke secret remain or are returned.
+
 ## Browser session handoff
 
 For a controlled browser-only staging smoke, request a short-lived session without exposing a password or session token in JSON:
@@ -209,6 +233,7 @@ Delete the temporary cookie jar after cleanup. Production returns `404`; missing
 - The endpoint must not be used for arbitrary mutation smoke; only built-in synthetic `project-smoke` checks with cleanup are allowed.
 - The disposable project creation smoke is allowed only for generated `SMOKE-...` project names and must restore the synthetic smoke user role before returning.
 - The Project Controls smoke must use only generated `SMOKE-PC-...` source rows, restore any previously active smoke baseline, and remove its baseline, period, audit, source, and role changes before returning.
+- The AI decision journal smoke must use only its freshly created synthetic run on `project-smoke`, remove its linked action and audit rows, and restore the smoke user's baseline `VIEWER` role before returning.
 - The synthetic user password is generated in memory and is never returned.
 - Existing smoke-user sessions are revoked during rotation.
 - The endpoint uses the deployed app's runtime `DATABASE_URL`; operators never need to expose that URL to Codex.

@@ -1,5 +1,7 @@
 import { randomBytes } from "crypto";
+import { Prisma } from "@prisma/client";
 import * as XLSX from "xlsx";
+import { AI_COMMAND_PROMPT_VERSION } from "@/lib/ai-run-journal";
 import { connectorSummary, getConnectorStatuses } from "@/lib/connectors/status";
 import { buildInviteEmail, getEmailProvider, getEmailProviderStatus } from "@/lib/email";
 import { getEnvStatus } from "@/lib/env";
@@ -7,6 +9,7 @@ import { buildDeterministicImportExplanation } from "@/lib/excel/ai-import-summa
 import type { ImportPreview } from "@/lib/excel/import-types";
 import { prisma } from "@/lib/prisma";
 import { getStorageProvider } from "@/lib/storage";
+import { aiDecisionJournalSmokePassed, buildAiDecisionJournalSmokeInsight } from "./ai-decision-journal";
 import { assertSmokeMutationTarget, SMOKE_PROJECT_ID } from "./cleanup";
 import { CREATE_STAGING_SMOKE_USER_CONFIRM, createOrRotateStagingSmokeUser, type StagingSmokeUserReport } from "./user";
 
@@ -81,6 +84,22 @@ export interface RuntimeProjectControlsSmokeResult extends RuntimeSmokeCheck {
   cleanup: "pass" | "fail" | "skip";
 }
 
+export interface RuntimeAiDecisionJournalSmokeResult extends RuntimeSmokeCheck {
+  projectId: string;
+  operations: string[];
+  run?: {
+    created: boolean;
+    listed: boolean;
+    feedbackRecorded: boolean;
+  };
+  action?: {
+    created: boolean;
+    duplicatePrevented: boolean;
+  };
+  permissionScope?: "temporary-project-manager-restored" | "restore-failed";
+  cleanup: "pass" | "fail" | "skip";
+}
+
 export interface RuntimeSmokeResult {
   ok: boolean;
   smokeUser: StagingSmokeUserReport;
@@ -140,6 +159,7 @@ export interface RuntimeSmokeResult {
   };
   projectCreationDocumentsSmoke?: RuntimeProjectCreationDocumentSmokeResult;
   projectControlsSmoke?: RuntimeProjectControlsSmokeResult;
+  aiDecisionJournalSmoke?: RuntimeAiDecisionJournalSmokeResult;
   secretsPrinted: false;
 }
 
@@ -153,6 +173,7 @@ export interface RuntimeSmokeInput {
   includePipelineSmoke?: boolean;
   includeProjectCreationDocumentsSmoke?: boolean;
   includeProjectControlsSmoke?: boolean;
+  includeAiDecisionJournalSmoke?: boolean;
   requestId: string;
 }
 
@@ -579,6 +600,252 @@ async function cleanupImportRole(input: Awaited<ReturnType<typeof grantTemporary
   await restoreTemporaryImportRole(input);
   operations.push("restore-import-role");
   return "temporary-project-manager-restored" as const;
+}
+
+async function grantTemporaryAiDecisionJournalRole() {
+  const user = await prisma.user.findUnique({ where: { email: STAGING_SMOKE_EMAIL }, select: { id: true } });
+  if (!user) throw new Error("Smoke AI decision journal user is missing.");
+  const membership = await prisma.projectMember.findUnique({
+    where: { projectId_userId: { projectId: SMOKE_PROJECT_ID, userId: user.id } },
+    select: { role: true }
+  });
+  if (!membership) throw new Error("Smoke AI decision journal project membership is missing.");
+  if (membership.role !== "MANAGER") {
+    await prisma.projectMember.update({
+      where: { projectId_userId: { projectId: SMOKE_PROJECT_ID, userId: user.id } },
+      data: { role: "MANAGER" }
+    });
+  }
+  return { userId: user.id };
+}
+
+async function restoreAiDecisionJournalRole(userId: string) {
+  await prisma.projectMember.update({
+    where: { projectId_userId: { projectId: SMOKE_PROJECT_ID, userId } },
+    data: { role: "VIEWER" }
+  });
+}
+
+async function cleanupAiDecisionJournalSmoke(runId: string | undefined) {
+  if (!runId) return "skip" as const;
+  const result = await prisma.$transaction(async (tx) => {
+    const links = await tx.aiRunAction.findMany({
+      where: { aiRunId: runId },
+      select: { actionItemId: true }
+    });
+    const actionItemIds = links.map((item) => item.actionItemId);
+    await tx.auditLog.deleteMany({
+      where: { projectId: SMOKE_PROJECT_ID, entity: "ai_run", entityId: runId }
+    });
+    await tx.aiRunAction.deleteMany({ where: { aiRunId: runId } });
+    const actions = actionItemIds.length
+      ? await tx.projectActionItem.deleteMany({
+          where: { projectId: SMOKE_PROJECT_ID, id: { in: actionItemIds } }
+        })
+      : { count: 0 };
+    const runs = await tx.aiRun.deleteMany({
+      where: { id: runId, projectId: SMOKE_PROJECT_ID }
+    });
+    return {
+      actionCount: actionItemIds.length,
+      deletedActions: actions.count,
+      deletedRuns: runs.count
+    };
+  });
+
+  const remainingRun = await prisma.aiRun.count({ where: { id: runId, projectId: SMOKE_PROJECT_ID } });
+  const remainingLinks = await prisma.aiRunAction.count({ where: { aiRunId: runId } });
+  return result.deletedRuns === 1 &&
+    result.deletedActions === result.actionCount &&
+    remainingRun === 0 &&
+    remainingLinks === 0
+    ? "pass" as const
+    : "fail" as const;
+}
+
+async function runAiDecisionJournalSmoke(
+  baseUrl: string,
+  cookie: string,
+  requestId: string
+): Promise<RuntimeAiDecisionJournalSmokeResult> {
+  const operations: string[] = [];
+  let cleanup: RuntimeAiDecisionJournalSmokeResult["cleanup"] = "skip";
+  let permissionScope: RuntimeAiDecisionJournalSmokeResult["permissionScope"];
+  let temporaryRole: Awaited<ReturnType<typeof grantTemporaryAiDecisionJournalRole>> | undefined;
+  let runId: string | undefined;
+  let runCreated = false;
+  let runListed = false;
+  let feedbackRecorded = false;
+  let actionCreated = false;
+  let duplicatePrevented = false;
+  let lastHttpStatus: number | undefined;
+
+  try {
+    assertSmokeMutationTarget(SMOKE_PROJECT_ID, process.env.APP_ENV ?? process.env.NODE_ENV);
+    const project = await prisma.project.findUnique({
+      where: { id: SMOKE_PROJECT_ID },
+      select: { id: true, organizationId: true, isSmokeProject: true }
+    });
+    if (!project?.isSmokeProject) throw new Error(`${SMOKE_PROJECT_ID} is missing or isSmokeProject=false`);
+
+    temporaryRole = await grantTemporaryAiDecisionJournalRole();
+    operations.push("temporary-project-manager-role");
+
+    const runKey = requestId.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 18) || Date.now().toString();
+    const insight = buildAiDecisionJournalSmokeInsight(runKey);
+    const run = await prisma.aiRun.create({
+      data: {
+        organizationId: project.organizationId,
+        projectId: SMOKE_PROJECT_ID,
+        userId: temporaryRole.userId,
+        scenario: insight.scenario,
+        promptVersion: AI_COMMAND_PROMPT_VERSION,
+        inputJson: {
+          scenario: insight.scenario,
+          source: "runtime-smoke"
+        } satisfies Prisma.InputJsonValue,
+        outputJson: insight as Prisma.InputJsonValue,
+        status: "succeeded",
+        provider: "deterministic",
+        durationMs: 0,
+        completedAt: new Date()
+      },
+      select: { id: true }
+    });
+    runId = run.id;
+    runCreated = true;
+    operations.push("synthetic-ai-run");
+
+    const historyResponse = await get(baseUrl, `/api/projects/${SMOKE_PROJECT_ID}/ai-runs?limit=50`, cookie, requestId);
+    lastHttpStatus = historyResponse.status;
+    operations.push("journal-read");
+    const historyBody = await safeJson<{ items?: Array<{ id?: string }> }>(historyResponse);
+    runListed = historyResponse.status === 200 && historyBody?.items?.some((item) => item.id === runId) === true;
+
+    const feedbackResponse = await patchJson(
+      baseUrl,
+      `/api/projects/${SMOKE_PROJECT_ID}/ai-runs/${runId}`,
+      {
+        feedback: "needs_review",
+        comment: `SMOKE-${runKey} deterministic review`
+      },
+      cookie,
+      requestId
+    );
+    lastHttpStatus = feedbackResponse.status;
+    operations.push("feedback-record");
+    const feedbackBody = await safeJson<{ item?: { id?: string; feedback?: string; feedbackComment?: string | null } }>(feedbackResponse);
+    feedbackRecorded =
+      feedbackResponse.status === 200 &&
+      feedbackBody?.item?.id === runId &&
+      feedbackBody.item.feedback === "needs_review" &&
+      feedbackBody.item.feedbackComment === `SMOKE-${runKey} deterministic review`;
+
+    const actionResponse = await postJson(
+      baseUrl,
+      `/api/projects/${SMOKE_PROJECT_ID}/ai-runs/${runId}/actions`,
+      { actionIndex: 0 },
+      cookie,
+      requestId
+    );
+    lastHttpStatus = actionResponse.status;
+    operations.push("action-create");
+    const actionBody = await safeJson<{ item?: { id?: string }; actionIndex?: number; alreadyCreated?: boolean }>(actionResponse);
+    const actionId = actionBody?.item?.id;
+    actionCreated =
+      actionResponse.status === 201 &&
+      actionBody?.actionIndex === 0 &&
+      actionBody.alreadyCreated === false &&
+      Boolean(actionId);
+
+    const duplicateResponse = await postJson(
+      baseUrl,
+      `/api/projects/${SMOKE_PROJECT_ID}/ai-runs/${runId}/actions`,
+      { actionIndex: 0 },
+      cookie,
+      requestId
+    );
+    lastHttpStatus = duplicateResponse.status;
+    operations.push("duplicate-action-check");
+    const duplicateBody = await safeJson<{ item?: { id?: string }; actionIndex?: number; alreadyCreated?: boolean }>(duplicateResponse);
+    duplicatePrevented =
+      duplicateResponse.status === 200 &&
+      duplicateBody?.actionIndex === 0 &&
+      duplicateBody.alreadyCreated === true &&
+      Boolean(actionId) &&
+      duplicateBody.item?.id === actionId;
+
+    cleanup = await cleanupAiDecisionJournalSmoke(runId);
+    operations.push("journal-cleanup");
+    await restoreAiDecisionJournalRole(temporaryRole.userId);
+    temporaryRole = undefined;
+    permissionScope = "temporary-project-manager-restored";
+    operations.push("restore-project-role");
+
+    const status = aiDecisionJournalSmokePassed({
+      runCreated,
+      runListed,
+      feedbackRecorded,
+      actionCreated,
+      duplicatePrevented,
+      cleanupPassed: cleanup === "pass",
+      roleRestored: permissionScope === "temporary-project-manager-restored"
+    })
+      ? "pass"
+      : "fail";
+
+    return {
+      name: "AI decision journal smoke",
+      status,
+      httpStatus: status === "pass" ? undefined : lastHttpStatus,
+      detail: status === "pass" ? undefined : "AI run, feedback, action conversion, duplicate prevention, or cleanup did not pass.",
+      projectId: SMOKE_PROJECT_ID,
+      operations,
+      run: {
+        created: runCreated,
+        listed: runListed,
+        feedbackRecorded
+      },
+      action: {
+        created: actionCreated,
+        duplicatePrevented
+      },
+      permissionScope,
+      cleanup
+    };
+  } catch (error) {
+    cleanup = await cleanupAiDecisionJournalSmoke(runId).catch(() => "fail" as const);
+    if (runId) operations.push("journal-cleanup");
+    if (temporaryRole) {
+      await restoreAiDecisionJournalRole(temporaryRole.userId)
+        .then(() => {
+          permissionScope = "temporary-project-manager-restored";
+          operations.push("restore-project-role");
+        })
+        .catch(() => {
+          permissionScope = "restore-failed";
+        });
+    }
+    return {
+      name: "AI decision journal smoke",
+      status: "fail",
+      httpStatus: lastHttpStatus,
+      detail: failureDetail(error),
+      projectId: SMOKE_PROJECT_ID,
+      operations,
+      run: {
+        created: runCreated,
+        listed: runListed,
+        feedbackRecorded
+      },
+      action: {
+        created: actionCreated,
+        duplicatePrevented
+      },
+      permissionScope,
+      cleanup
+    };
+  }
 }
 
 async function grantTemporaryProjectAdminRole() {
@@ -1416,6 +1683,7 @@ export async function runStagingSmokeBootstrap(input: RuntimeSmokeInput): Promis
   let importSmoke: RuntimeSmokeResult["importSmoke"];
   let projectCreationDocumentsSmoke: RuntimeSmokeResult["projectCreationDocumentsSmoke"];
   let projectControlsSmoke: RuntimeSmokeResult["projectControlsSmoke"];
+  let aiDecisionJournalSmoke: RuntimeSmokeResult["aiDecisionJournalSmoke"];
 
   if (input.includeStorageSmoke) {
     storage = await runStorageSmoke(input.requestId);
@@ -1447,6 +1715,11 @@ export async function runStagingSmokeBootstrap(input: RuntimeSmokeInput): Promis
     optionalChecks.push(projectControlsSmoke);
   }
 
+  if (input.includeAiDecisionJournalSmoke) {
+    aiDecisionJournalSmoke = await runAiDecisionJournalSmoke(input.baseUrl, sessionCookie, input.requestId);
+    optionalChecks.push(aiDecisionJournalSmoke);
+  }
+
   return {
     ok:
       checks.every((item) => item.status === "pass") &&
@@ -1461,6 +1734,7 @@ export async function runStagingSmokeBootstrap(input: RuntimeSmokeInput): Promis
     ...(importSmoke ? { importSmoke } : {}),
     ...(projectCreationDocumentsSmoke ? { projectCreationDocumentsSmoke } : {}),
     ...(projectControlsSmoke ? { projectControlsSmoke } : {}),
+    ...(aiDecisionJournalSmoke ? { aiDecisionJournalSmoke } : {}),
     secretsPrinted: false
   };
 }
