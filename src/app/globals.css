@@ -12165,6 +12165,318 @@ input[type="checkbox"] {
   overflow-wrap: anywhere;
 }
 
+.payroll-workspace {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.payroll-workspace-header {
+  align-items: flex-start;
+  background: var(--panel-muted);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--accent);
+  border-radius: 8px;
+  display: grid;
+  gap: 18px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: 18px;
+}
+
+.payroll-workspace-header.status-attention {
+  border-left-color: var(--yellow);
+}
+
+.payroll-workspace-header h3 {
+  margin: 4px 0 7px;
+}
+
+.payroll-workspace-header p {
+  color: var(--muted);
+  margin: 0;
+  max-width: 850px;
+}
+
+.payroll-mode-tabs {
+  margin: 0;
+}
+
+.payroll-mode-tabs button {
+  align-items: center;
+  display: inline-flex;
+  gap: 7px;
+}
+
+.payroll-kpi-grid {
+  display: grid;
+  gap: 1px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  overflow: hidden;
+}
+
+.payroll-kpi-grid .quality-issues-card {
+  border-radius: 0;
+}
+
+.payroll-economics-band {
+  background: var(--surface);
+  border-block: 1px solid var(--line);
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  min-width: 0;
+}
+
+.payroll-economics-band > div {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  padding: 16px;
+}
+
+.payroll-economics-band > div + div {
+  border-left: 1px solid var(--line);
+}
+
+.payroll-economics-band span {
+  align-items: center;
+  color: var(--muted);
+  display: flex;
+  font-size: 13px;
+  gap: 7px;
+}
+
+.payroll-economics-band strong {
+  font-size: clamp(20px, 2vw, 28px);
+  letter-spacing: 0;
+}
+
+.payroll-economics-band strong.negative {
+  color: var(--red);
+}
+
+.payroll-economics-band small {
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.payroll-capacity-strip {
+  align-items: center;
+  background: var(--panel-muted);
+  border: 1px solid var(--line);
+  display: grid;
+  gap: 1px;
+  grid-template-columns: repeat(4, minmax(110px, 1fr)) auto;
+  min-width: 0;
+  padding: 8px;
+}
+
+.payroll-capacity-strip > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  padding: 8px 10px;
+}
+
+.payroll-capacity-strip small {
+  color: var(--muted);
+}
+
+.payroll-readiness-note {
+  align-items: center;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--green);
+  display: grid;
+  gap: 12px;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  padding: 14px 16px;
+}
+
+.payroll-readiness-note.empty {
+  border-left-color: var(--yellow);
+}
+
+.payroll-readiness-note > svg {
+  color: var(--accent);
+}
+
+.payroll-readiness-note > div {
+  display: grid;
+  gap: 4px;
+}
+
+.payroll-readiness-note span {
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.payroll-section-heading {
+  align-items: center;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  gap: 14px;
+  justify-content: space-between;
+  padding: 4px 0 12px;
+}
+
+.payroll-section-heading > div {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  min-width: 0;
+}
+
+.payroll-section-heading > div > svg {
+  color: var(--accent);
+  flex: 0 0 auto;
+}
+
+.payroll-section-heading span {
+  display: grid;
+  gap: 3px;
+}
+
+.payroll-section-heading small {
+  color: var(--muted);
+}
+
+.labor-demand-list {
+  display: grid;
+  gap: 8px;
+}
+
+.labor-demand-row {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  min-width: 0;
+}
+
+.labor-demand-row[open] {
+  border-color: var(--line-strong);
+}
+
+.labor-demand-row > summary {
+  align-items: center;
+  cursor: pointer;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: auto minmax(220px, 1.5fr) repeat(3, minmax(110px, 0.55fr)) auto;
+  list-style: none;
+  padding: 12px 14px;
+}
+
+.labor-demand-row > summary::-webkit-details-marker {
+  display: none;
+}
+
+.labor-demand-row > summary > span:not(.resource-kind-icon, .labor-demand-title, .badge) {
+  display: grid;
+  gap: 3px;
+}
+
+.labor-demand-row > summary small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.labor-demand-title {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.labor-demand-title strong,
+.labor-demand-title small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.labor-demand-details {
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 14px;
+  padding: 14px;
+}
+
+.labor-demand-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+}
+
+.labor-demand-meta span {
+  color: var(--muted);
+  display: grid;
+  font-size: 12px;
+  gap: 3px;
+}
+
+.labor-demand-meta strong {
+  color: var(--text);
+  font-size: 13px;
+}
+
+.labor-allocation-table {
+  border-block: 1px solid var(--line);
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.labor-allocation-head,
+.labor-allocation-line {
+  align-items: center;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(250px, 1.7fr) 72px 90px 100px minmax(180px, 1fr);
+  min-width: 760px;
+  padding: 9px 6px;
+}
+
+.labor-allocation-head {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.labor-allocation-line {
+  border-top: 1px solid var(--line);
+  font-size: 13px;
+}
+
+.labor-allocation-line > span:first-child {
+  display: grid;
+  gap: 2px;
+}
+
+.labor-allocation-line > span:last-child {
+  color: var(--muted);
+}
+
+.payroll-policy-form {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  gap: 16px;
+  padding: 16px;
+}
+
+.payroll-policy-warning {
+  align-items: flex-start;
+  background: var(--panel-muted);
+  border-left: 4px solid var(--yellow);
+  display: flex;
+  gap: 10px;
+  line-height: 1.45;
+  padding: 12px 14px;
+}
+
+.payroll-policy-warning > svg {
+  color: var(--yellow);
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+
 .quality-issues-header.compact {
   margin-top: 4px;
   padding: 14px 16px;
@@ -12394,6 +12706,18 @@ input[type="checkbox"] {
   .resource-capacity-status {
     grid-column: 1 / span 2;
   }
+
+  .payroll-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .labor-demand-row > summary {
+    grid-template-columns: auto minmax(220px, 1fr) repeat(2, minmax(100px, 0.5fr)) auto;
+  }
+
+  .labor-demand-row > summary > span:nth-of-type(5) {
+    display: none;
+  }
 }
 
 @media (max-width: 900px) {
@@ -12420,6 +12744,29 @@ input[type="checkbox"] {
   .ai-control-confirm > label {
     grid-column: auto;
     grid-row: auto;
+  }
+
+  .payroll-workspace-header,
+  .payroll-economics-band,
+  .payroll-capacity-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .payroll-economics-band > div + div {
+    border-left: 0;
+    border-top: 1px solid var(--line);
+  }
+
+  .payroll-capacity-strip > .button {
+    justify-self: stretch;
+  }
+
+  .labor-demand-row > summary {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+
+  .labor-demand-row > summary > span:not(.resource-kind-icon, .labor-demand-title, .badge) {
+    display: none;
   }
 }
 
@@ -12455,5 +12802,24 @@ input[type="checkbox"] {
 
   .ai-control-proposal > .button {
     justify-self: stretch;
+  }
+
+  .payroll-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .payroll-readiness-note {
+    align-items: flex-start;
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .payroll-readiness-note > .button {
+    grid-column: 1 / -1;
+    justify-self: stretch;
+  }
+
+  .payroll-section-heading {
+    align-items: stretch;
+    flex-direction: column;
   }
 }

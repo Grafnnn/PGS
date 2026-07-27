@@ -3,6 +3,7 @@ import { parseExcelBuffer, readWorkbook, validateExcelFile } from "./import-pars
 import { normalizeDate, normalizeHeader, normalizeText, parseMoney, parseQuantity } from "./import-normalizer";
 import type {
   ImportBudgetItem,
+  ImportLaborDemand,
   ImportMaterial,
   ImportPreview,
   ImportPreviewRow,
@@ -126,6 +127,8 @@ export interface ProjectWorkbookAnalysis {
     materials: number;
     scheduleItems: number;
     payrollItems: number;
+    workforceDemandRows?: number;
+    laborAllocationRows?: number;
     equipmentItems: number;
     estimatedDirectCost: number;
     sourceDirectCost?: number;
@@ -174,6 +177,7 @@ interface BuildResult {
 
 interface ParsedSheetItems {
   budgetItems: ImportBudgetItem[];
+  laborDemands: ImportLaborDemand[];
   materials: ImportMaterial[];
   scheduleItems: ImportScheduleItem[];
   headerRow: number | null;
@@ -251,6 +255,7 @@ function buildProjectWorkbook(buffer: Buffer, fileName: string, projectId: strin
   const sheetData = workbook.SheetNames.map((name) => buildSheetData(name, workbook.Sheets[name], options.sheetOverrides?.[name]));
   const enabledSheetData = sheetData.filter((sheet) => sheet.enabled);
   const budgetItems: ImportBudgetItem[] = [];
+  const parsedLaborDemands: ImportLaborDemand[] = [];
   const materials: ImportMaterial[] = [];
   const scheduleItems: ImportScheduleItem[] = [];
   const mappings: ImportSheetMapping[] = [];
@@ -262,6 +267,7 @@ function buildProjectWorkbook(buffer: Buffer, fileName: string, projectId: strin
   for (const sheet of sheetData) {
     const parsed = sheet.enabled ? parseSheet(sheet, startsAt, vatPercent) : emptyParsedSheet();
     budgetItems.push(...parsed.budgetItems);
+    parsedLaborDemands.push(...parsed.laborDemands);
     materials.push(...parsed.materials);
     scheduleItems.push(...parsed.scheduleItems);
     const importedRows = parsed.budgetItems.length + parsed.scheduleItems.length;
@@ -313,6 +319,10 @@ function buildProjectWorkbook(buffer: Buffer, fileName: string, projectId: strin
   const selectedMaterialRows = new Set(uniqueMaterials.map((item) => rowKey(item.sheetName, item.rowNumber)));
   const selectedBudgetItems = budgetItems.filter((item) => item.kind !== "material" || selectedMaterialRows.has(rowKey(item.sheetName, item.rowNumber)));
   let uniqueBudgetItems = dedupeBudgetItems(selectedBudgetItems);
+  const laborDemands = parsedLaborDemands.map((item) => ({
+    ...item,
+    allocations: buildLaborAllocations(item, uniqueBudgetItems)
+  }));
   const duplicateRows = selectedBudgetItems.length - uniqueBudgetItems.length;
   const sourceDirectCost = extractDirectCost(enabledSheetData);
   const parsedDirectCost = sumCost(uniqueBudgetItems);
@@ -381,6 +391,8 @@ function buildProjectWorkbook(buffer: Buffer, fileName: string, projectId: strin
       budgetItems: uniqueBudgetItems.length,
       materials: uniqueMaterials.length,
       scheduleItems: scheduleItems.length,
+      laborDemands: laborDemands.length,
+      laborAllocations: laborDemands.reduce((sum, item) => sum + item.allocations.length, 0),
       workRows: uniqueBudgetItems.filter((item) => item.kind === "work").length,
       materialRows: uniqueMaterials.length,
       unknownRows: 0,
@@ -395,6 +407,7 @@ function buildProjectWorkbook(buffer: Buffer, fileName: string, projectId: strin
     budgetItems: uniqueBudgetItems,
     materials: uniqueMaterials,
     scheduleItems,
+    laborDemands,
     unknownRows: [],
     previewRows,
     warnings,
@@ -403,7 +416,7 @@ function buildProjectWorkbook(buffer: Buffer, fileName: string, projectId: strin
 
   const specializedRoles = new Set(enabledSheetData.filter((sheet) => sheet.role !== "unknown" && sheet.role !== "control" && sheet.role !== "reference").map((sheet) => sheet.role));
   const specialized = workbook.SheetNames.length >= 3 && specializedRoles.size >= 2 && parsedRows > 0;
-  const analysis = buildAnalysis(fileName, buffer.byteLength, sheets, uniqueBudgetItems, uniqueMaterials, scheduleItems, suggestions, warnings, errors, duplicateRows, sourceDirectCost, reconciliationGap);
+  const analysis = buildAnalysis(fileName, buffer.byteLength, sheets, uniqueBudgetItems, uniqueMaterials, scheduleItems, laborDemands, suggestions, warnings, errors, duplicateRows, sourceDirectCost, reconciliationGap);
   return { preview, analysis, specialized };
 }
 
@@ -461,14 +474,14 @@ function classifySheet(name: string, rows: unknown[][]): Pick<SheetData, "role" 
 function parseSheet(sheet: SheetData, startsAt: Date, vatPercent: number): ParsedSheetItems {
   if (sheet.role === "works") return parseWorks(sheet, startsAt);
   if (sheet.role === "materials") return parseMaterials(sheet, startsAt, vatPercent);
-  if (sheet.role === "payroll") return parsePayroll(sheet);
+  if (sheet.role === "payroll") return parsePayroll(sheet, startsAt);
   if (sheet.role === "equipment") return parseEquipment(sheet);
   if (sheet.role === "schedule") return parseSchedule(sheet, startsAt);
-  return { budgetItems: [], materials: [], scheduleItems: [], headerRow: null, columns: {} };
+  return { budgetItems: [], laborDemands: [], materials: [], scheduleItems: [], headerRow: null, columns: {} };
 }
 
 function emptyParsedSheet(): ParsedSheetItems {
-  return { budgetItems: [], materials: [], scheduleItems: [], headerRow: null, columns: {} };
+  return { budgetItems: [], laborDemands: [], materials: [], scheduleItems: [], headerRow: null, columns: {} };
 }
 
 function parseWorks(sheet: SheetData, startsAt: Date): ParsedSheetItems {
@@ -531,7 +544,7 @@ function parseWorks(sheet: SheetData, startsAt: Date): ParsedSheetItems {
       });
     }
   }
-  return { budgetItems, materials, scheduleItems: [], headerRow: headerIndex + 1, columns: columnMap({ nameCol, unitCol, qtyCol, priceCol, totalCol, codeCol, noteCol }) };
+  return { budgetItems, laborDemands: [], materials, scheduleItems: [], headerRow: headerIndex + 1, columns: columnMap({ nameCol, unitCol, qtyCol, priceCol, totalCol, codeCol, noteCol }) };
 }
 
 function parseMaterials(sheet: SheetData, startsAt: Date, vatPercent: number): ParsedSheetItems {
@@ -595,14 +608,15 @@ function parseMaterials(sheet: SheetData, startsAt: Date, vatPercent: number): P
       rowNumber: index + 1
     });
   }
-  return { budgetItems, materials, scheduleItems: [], headerRow: headerIndex + 1, columns: columnMap({ nameCol, unitCol, qtyCol, priceCol, totalCol, codeCol, noteCol, sectionCol }) };
+  return { budgetItems, laborDemands: [], materials, scheduleItems: [], headerRow: headerIndex + 1, columns: columnMap({ nameCol, unitCol, qtyCol, priceCol, totalCol, codeCol, noteCol, sectionCol }) };
 }
 
-function parsePayroll(sheet: SheetData): ParsedSheetItems {
+function parsePayroll(sheet: SheetData, startsAt: Date): ParsedSheetItems {
   const headerIndex = findHeader(sheet.rows, [["должность", "профессия", "бригада", "категория"], ["фот 1 ед мес", "месячная зарплата", "зарплата", "оклад", "ставка"], ["чел мес всего", "человеко месяц", "итого фот", "норма выработки"]]);
   if (headerIndex < 0) return emptyParsed();
   const headers = sheet.rows[headerIndex].map(normalizeHeader);
   const nameCol = findColumn(headers, ["должность", "профессия", "бригада", "категория"]);
+  const functionCol = findColumn(headers, ["функция", "вид работ", "назначение", "зона ответственности"]);
   const salaryCol = findColumn(headers, ["фот 1 ед мес", "месячная зарплата", "зарплата", "оклад", "ставка"]);
   const personMonthsCol = findColumn(headers, ["чел мес всего", "человеко месяцев", "человеко месяц", "чел мес"]);
   const totalCol = findColumn(headers, ["итого фот без ндс", "фот без ндс", "итого без ндс", "стоимость без ндс", "итого"]);
@@ -612,6 +626,7 @@ function parsePayroll(sheet: SheetData): ParsedSheetItems {
   const noteCol = findColumn(headers, ["примечание", "комментарий"]);
   const monthCols = headers.map((header, index) => (/^[mм]\d{1,2}$/.test(header) ? { index, label: header.toUpperCase() } : null)).filter(Boolean) as Array<{ index: number; label: string }>;
   const budgetItems: ImportBudgetItem[] = [];
+  const laborDemands: ImportLaborDemand[] = [];
   for (let index = headerIndex + 1; index < sheet.rows.length; index += 1) {
     const row = sheet.rows[index];
     if (budgetItems.length && row.some((value) => /^итого$/i.test(normalizeText(value)) || /^итого фот/i.test(normalizeText(value)))) break;
@@ -661,8 +676,48 @@ function parsePayroll(sheet: SheetData): ParsedSheetItems {
       sheetName: sheet.name,
       rowNumber: index + 1
     });
+    const positiveMonths = monthly
+      .map((item, monthIndex) => ({ month: monthIndex + 1, label: item.label, headcount: item.value }))
+      .filter((item) => item.headcount > 0);
+    const peakHeadcount = Math.max(
+      headcount ?? 0,
+      ...positiveMonths.map((item) => item.headcount),
+      personMonths > 0 ? Math.min(personMonths, 1) : 0
+    );
+    const firstMonth = positiveMonths[0]?.month ?? 1;
+    const durationMonths = positiveMonths.length
+      ? positiveMonths[positiveMonths.length - 1].month - firstMonth + 1
+      : Math.max(1, Math.ceil(personMonths / Math.max(peakHeadcount, 1)));
+    const demandStart = addMonths(startsAt, firstMonth - 1);
+    const demandEnd = endOfMonth(addMonths(demandStart, durationMonths - 1));
+    const functionText = textAt(row, functionCol);
+    laborDemands.push({
+      category: classifyLaborCategory(name, functionText, sheet.name),
+      profession: name,
+      function: functionText || undefined,
+      grossMonthlySalary: salary,
+      peakHeadcount,
+      personMonths,
+      plannedHours: personMonths * 160,
+      productivityNorm: norm ?? 0,
+      productivityUnit: norm ? inferProductivityUnit(functionText, textAt(row, noteCol)) : undefined,
+      startsAt: demandStart.toISOString(),
+      endsAt: demandEnd.toISOString(),
+      monthlyProfile: positiveMonths,
+      source: `Project workbook · ${sheet.name}`,
+      sourceSheet: sheet.name,
+      sourceRow: index + 1,
+      confidence: positiveMonths.length || directPersonMonths || total ? 0.98 : norm && volume ? 0.9 : 0.75,
+      notes: joinComment(
+        functionText,
+        norm ? `Норма выработки: ${norm}` : "",
+        volume ? `Объем для расчета: ${volume}` : "",
+        textAt(row, noteCol)
+      ),
+      allocations: []
+    });
   }
-  return { budgetItems, materials: [], scheduleItems: [], headerRow: headerIndex + 1, columns: columnMap({ nameCol, qtyCol: personMonthsCol, priceCol: salaryCol, totalCol, noteCol }) };
+  return { budgetItems, laborDemands, materials: [], scheduleItems: [], headerRow: headerIndex + 1, columns: columnMap({ nameCol, qtyCol: personMonthsCol, priceCol: salaryCol, totalCol, noteCol }) };
 }
 
 function parseEquipment(sheet: SheetData): ParsedSheetItems {
@@ -705,7 +760,7 @@ function parseEquipment(sheet: SheetData): ParsedSheetItems {
       rowNumber: index + 1
     });
   }
-  return { budgetItems, materials: [], scheduleItems: [], headerRow: headerIndex + 1, columns: columnMap({ nameCol, unitCol, qtyCol, priceCol, totalCol, noteCol }) };
+  return { budgetItems, laborDemands: [], materials: [], scheduleItems: [], headerRow: headerIndex + 1, columns: columnMap({ nameCol, unitCol, qtyCol, priceCol, totalCol, noteCol }) };
 }
 
 function parseSchedule(sheet: SheetData, startsAt: Date): ParsedSheetItems {
@@ -743,7 +798,112 @@ function parseSchedule(sheet: SheetData, startsAt: Date): ParsedSheetItems {
       rowNumber: index + 1
     });
   }
-  return { budgetItems: [], materials: [], scheduleItems, headerRow: headerIndex + 1, columns: columnMap({ nameCol, codeCol }) };
+  return { budgetItems: [], laborDemands: [], materials: [], scheduleItems, headerRow: headerIndex + 1, columns: columnMap({ nameCol, codeCol }) };
+}
+
+const laborFamilyPatterns: Array<{ id: string; pattern: RegExp }> = [
+  { id: "earth", pattern: /земл|грунт|котлован|транше|засып|песчан|щебен/i },
+  { id: "concrete", pattern: /бетон|монолит|арматур|опалуб|фундамент/i },
+  { id: "masonry", pattern: /камен|кладк|кирпич|блок|перегород/i },
+  { id: "finish", pattern: /отдел|штукатур|шпатлев|маляр|окрас|плиточ|потол/i },
+  { id: "roof", pattern: /кровл|гидроизоляц|пароизоляц|парапет/i },
+  { id: "facade", pattern: /фасад|утеплен.*стен|витраж/i },
+  { id: "engineering", pattern: /инженерн|электр|эом|ов|вк|вентил|отоплен|водоснаб|канализ|слаботоч|пнр/i },
+  { id: "welding", pattern: /свар|металлоконструк|трубопровод/i },
+  { id: "site", pattern: /благоустр|дорог|асфальт|газон|бордюр|площадк/i },
+  { id: "closeout", pattern: /сдач|исполнител|кс|пто|качест|лаборатор|геодез/i },
+  { id: "supply", pattern: /снабжен|логист|склад|тмц|материал/i }
+];
+
+function classifyLaborCategory(name: string, functionText: string, sheetName: string): ImportLaborDemand["category"] {
+  const role = normalizeHeader(`${sheetName} ${name}`);
+  const value = normalizeHeader(`${role} ${functionText}`);
+  if (/итр|руковод|началь|инженер|прораб|мастер|пто|сметчик|экономист|геодез|кладовщик|логист|снабжен|диспетчер|лаборатор/.test(role)) {
+    return "engineer";
+  }
+  if (/бригад|звено|команда/.test(role)) return "crew";
+  if (/руковод|началь|инженер|прораб|мастер|пто|сметчик|экономист|геодез|кладовщик|логист|снабжен|диспетчер|лаборатор/.test(value)) {
+    return "engineer";
+  }
+  return "worker";
+}
+
+function inferProductivityUnit(...values: string[]) {
+  const text = normalizeHeader(values.join(" "));
+  const unit = text.match(/(?:м2|м²|м3|м³|пог м|шт|т|кг|компл)[^\s,;]*/)?.[0];
+  return unit ? `${unit}/чел.-мес.` : "ед./чел.-мес.";
+}
+
+function laborStems(value: string) {
+  return Array.from(new Set(
+    normalizeHeader(value)
+      .split(/[^a-zа-я0-9]+/i)
+      .filter((token) => token.length >= 4)
+      .map((token) => token.slice(0, Math.min(token.length, 7)))
+  ));
+}
+
+function monthSpan(startsAt: string, endsAt: string) {
+  const start = new Date(startsAt);
+  const end = new Date(endsAt);
+  if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime()) || end < start) return 1;
+  return Math.max(1, (end.getUTCFullYear() - start.getUTCFullYear()) * 12 + end.getUTCMonth() - start.getUTCMonth() + 1);
+}
+
+function roundLabor(value: number, precision = 3) {
+  const factor = 10 ** precision;
+  return Math.round(value * factor) / factor;
+}
+
+function buildLaborAllocations(demand: ImportLaborDemand, budgetItems: ImportBudgetItem[]): ImportLaborDemand["allocations"] {
+  const works = budgetItems.filter((item) => item.kind === "work" && item.qty > 0);
+  if (!works.length) return [];
+  const demandText = `${demand.profession} ${demand.function ?? ""} ${demand.notes ?? ""}`;
+  const projectWideEngineer = demand.category === "engineer" && /руковод|главн.*инженер|начальник участка|пто|сметчик|экономист|охрана труд|от пб|кладовщик|снабжен|логист|качест|лаборатор|геодез/.test(normalizeHeader(demandText));
+  if (projectWideEngineer) return [];
+  const demandStems = laborStems(demandText);
+  const demandFamilies = laborFamilyPatterns.filter((item) => item.pattern.test(demandText)).map((item) => item.id);
+  const scored = works.map((item) => {
+    const workText = `${item.section} ${item.name} ${item.comment ?? ""}`;
+    const workStems = laborStems(workText);
+    const lexicalMatches = demandStems.filter((stem) => workStems.some((candidate) => candidate.startsWith(stem) || stem.startsWith(candidate))).length;
+    const workFamilies = laborFamilyPatterns.filter((family) => family.pattern.test(workText)).map((family) => family.id);
+    const familyMatches = demandFamilies.filter((family) => workFamilies.includes(family)).length;
+    const score = lexicalMatches * 4 + familyMatches * 7;
+    const amount = Math.max(1, item.qty * item.plannedUnitPrice);
+    return { item, score, amount, weight: Math.max(0, score) * Math.sqrt(amount) };
+  });
+  let selected = scored.filter((item) => item.score > 0).sort((left, right) => right.weight - left.weight).slice(0, 24);
+  let fallback = false;
+  if (!selected.length) {
+    fallback = true;
+    selected = scored.sort((left, right) => right.amount - left.amount).slice(0, 24).map((item) => ({ ...item, weight: item.amount }));
+  }
+  if (!selected.length) return [];
+  const totalWeight = selected.reduce((sum, item) => sum + item.weight, 0);
+  if (totalWeight <= 0) return [];
+  const duration = monthSpan(demand.startsAt, demand.endsAt);
+  let remainingShare = 100;
+  const allocations = selected.map(({ item, score, weight }, index) => {
+    const share = index === selected.length - 1
+      ? remainingShare
+      : Math.min(remainingShare, roundLabor(weight / totalWeight * 100));
+    remainingShare = Math.max(0, roundLabor(remainingShare - share));
+    const personMonths = demand.personMonths * share / 100;
+    return {
+      budgetCode: item.code,
+      budgetName: item.name,
+      sharePercent: roundLabor(share),
+      personMonths: roundLabor(personMonths),
+      plannedHours: roundLabor(demand.plannedHours * share / 100, 2),
+      requiredHeadcount: roundLabor(personMonths / duration),
+      confidence: roundLabor(Math.min(0.98, demand.confidence * (fallback ? 0.5 : Math.min(0.95, 0.7 + score * 0.03))), 4),
+      reason: fallback
+        ? "Распределено по стоимости работ: явная связь профессии с ВОР не найдена, требуется проверка."
+        : "Распределено по совпадению профессии/функции с разделом и наименованием ВОР."
+    };
+  });
+  return allocations.filter((item) => item.sharePercent > 0);
 }
 
 function buildAnalysis(
@@ -753,6 +913,7 @@ function buildAnalysis(
   budgetItems: ImportBudgetItem[],
   materials: ImportMaterial[],
   scheduleItems: ImportScheduleItem[],
+  laborDemands: ImportLaborDemand[],
   suggestions: ProjectWorkbookAnalysis["suggestions"],
   warnings: string[],
   errors: string[],
@@ -767,7 +928,7 @@ function buildAnalysis(
     moduleSummary("budget", moduleRows(["works"]), budgetItems.filter((item) => item.kind === "work" || item.kind === "overhead" || item.kind === "other"), "Детальные работы и явный остаток сверки без повторного импорта сводных итогов."),
     moduleSummary("materials", moduleRows(["materials"]), materials, "Потребность, плановые цены и будущий контур закупок."),
     moduleSummary("schedule", moduleRows(["schedule"]), scheduleItems, "Помесячные этапы преобразованы в календарные задачи."),
-    moduleSummary("payroll", moduleRows(["payroll"]), payrollItems, "ФОТ попадает в расходную часть как payroll: ставка × человеко-месяцы или объем ÷ норма."),
+    moduleSummary("payroll", moduleRows(["payroll"]), payrollItems, `ФОТ формирует ${laborDemands.length} строк потребности и ${laborDemands.reduce((sum, item) => sum + item.allocations.length, 0)} привязок к ВОР; налоги и полная стоимость работодателя рассчитываются по политике проекта.`),
     moduleSummary("equipment", moduleRows(["equipment"]), equipmentItems, "Смены техники и ставки попадают в бюджет отдельным видом equipment."),
     derivedModuleSummary("procurement", materials.length > 0, materials.length, "Материалы станут потребностью снабжения; заявки остаются отдельным подтверждаемым действием."),
     derivedModuleSummary("cashflow", budgetItems.length > 0 || scheduleItems.length > 0, scheduleItems.length || budgetItems.length, "Расходный план строится из бюджета, ФОТ, техники и календарного распределения."),
@@ -814,6 +975,8 @@ function buildAnalysis(
       materials: materials.length,
       scheduleItems: scheduleItems.length,
       payrollItems: payrollItems.length,
+      workforceDemandRows: laborDemands.length,
+      laborAllocationRows: laborDemands.reduce((sum, item) => sum + item.allocations.length, 0),
       equipmentItems: equipmentItems.length,
       estimatedDirectCost,
       sourceDirectCost,
@@ -1181,7 +1344,7 @@ function failedResult(fileName: string, fileSize: number, projectId: string, err
     fileSize,
     sheets: [],
     modules: [],
-    summary: { totalSheets: 0, includedSheets: 0, referenceSheets: 0, excludedSheets: 0, reviewSheets: 0, overriddenSheets: 0, budgetItems: 0, materials: 0, scheduleItems: 0, payrollItems: 0, equipmentItems: 0, estimatedDirectCost: 0, reconciliationGap: 0, automatedCoveragePercent: 0, payrollCost: 0, equipmentCost: 0 },
+    summary: { totalSheets: 0, includedSheets: 0, referenceSheets: 0, excludedSheets: 0, reviewSheets: 0, overriddenSheets: 0, budgetItems: 0, materials: 0, scheduleItems: 0, payrollItems: 0, workforceDemandRows: 0, laborAllocationRows: 0, equipmentItems: 0, estimatedDirectCost: 0, reconciliationGap: 0, automatedCoveragePercent: 0, payrollCost: 0, equipmentCost: 0 },
     suggestions: { selectedModules: ["documents"], confidenceByField: {}, evidenceByField: {}, missingFields: ["название проекта", "заказчик", "объект", "адрес", "руководитель проекта", "дата начала"] },
     quality: failedProjectWorkbookQualityGate(error),
     warnings: [],
@@ -1242,7 +1405,7 @@ function cleanColumns(columns: Record<string, number | undefined>) {
 }
 
 function emptyParsed(): ParsedSheetItems {
-  return { budgetItems: [], materials: [], scheduleItems: [], headerRow: null, columns: {} };
+  return { budgetItems: [], laborDemands: [], materials: [], scheduleItems: [], headerRow: null, columns: {} };
 }
 
 function textAt(row: unknown[], index: number | undefined) {

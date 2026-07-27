@@ -15,7 +15,7 @@ describe("ProjectModuleMenu", () => {
 
     expect(html).toContain('aria-expanded="true"');
     expect(html).toContain("Все разделы");
-    expect(html).toContain("23 рабочие зоны");
+    expect(html).toContain(`${projectTabs.length} рабочие зоны`);
     expect(html).not.toContain("<select");
     for (const tab of projectTabs) expect(html).toContain(tab);
   });

@@ -18,6 +18,8 @@ vi.mock("@/lib/prisma", () => ({
     project: { findUnique: vi.fn() },
     organizationResource: { findMany: vi.fn(), findFirst: vi.fn(), create: mocks.resourceCreate },
     projectResourceAssignment: { findMany: vi.fn(), create: mocks.assignmentCreate },
+    projectPayrollPolicy: { findUnique: vi.fn() },
+    projectLaborDemand: { findMany: vi.fn() },
     $transaction: vi.fn(async (callback: (tx: unknown) => unknown) => callback({
       organizationResource: { create: mocks.resourceCreate },
       projectResourceAssignment: { create: mocks.assignmentCreate }
@@ -69,6 +71,8 @@ describe("project workforce resources route", () => {
     vi.mocked(prisma.project.findUnique).mockResolvedValue({ id: "project-1", organizationId: "org-1" } as never);
     vi.mocked(prisma.projectResourceAssignment.findMany).mockResolvedValue([] as never);
     vi.mocked(prisma.organizationResource.findMany).mockResolvedValue([] as never);
+    vi.mocked(prisma.projectPayrollPolicy.findUnique).mockResolvedValue(null);
+    vi.mocked(prisma.projectLaborDemand.findMany).mockResolvedValue([] as never);
     mocks.resourceCreate.mockResolvedValue(resource);
     mocks.assignmentCreate.mockResolvedValue(assignment);
   });

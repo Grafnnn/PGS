@@ -221,4 +221,82 @@ describe("budget import commit route", () => {
     expect(tx.importBatch.update).toHaveBeenCalledWith({ where: { id: "batch-1" }, data: expect.objectContaining({ status: "committed", mode: "append" }) });
     expect(writeAuditMock).toHaveBeenCalled();
   });
+
+  it("commits Excel labor demand and links its hours to the created VOR row", async () => {
+    const tx = {
+      budgetItem: {
+        deleteMany: vi.fn(),
+        create: vi.fn(async ({ data }) => ({ id: "budget-1", ...data }))
+      },
+      budgetSection: { deleteMany: vi.fn(), upsert: vi.fn() },
+      material: { deleteMany: vi.fn(), create: vi.fn() },
+      scheduleItem: { deleteMany: vi.fn(), create: vi.fn() },
+      projectPayrollPolicy: { upsert: vi.fn() },
+      projectLaborDemand: {
+        deleteMany: vi.fn(),
+        create: vi.fn(async ({ data }) => ({ id: "demand-1", ...data }))
+      },
+      projectLaborAllocation: {
+        create: vi.fn(async ({ data }) => ({ id: "allocation-1", ...data }))
+      },
+      importBatch: { update: vi.fn() }
+    };
+    const importPreview = preview({
+      summary: {
+        ...preview().summary,
+        budgetItems: 1,
+        laborDemands: 1,
+        laborAllocations: 1
+      },
+      laborDemands: [{
+        category: "worker",
+        profession: "Бетонщик",
+        grossMonthlySalary: 120000,
+        peakHeadcount: 2,
+        personMonths: 2,
+        plannedHours: 320,
+        productivityNorm: 5,
+        startsAt: "2026-08-01T00:00:00.000Z",
+        endsAt: "2026-08-31T00:00:00.000Z",
+        monthlyProfile: [{ month: 1, label: "M1", headcount: 2 }],
+        source: "Excel · ФОТ",
+        sourceSheet: "ФОТ",
+        sourceRow: 3,
+        confidence: 0.95,
+        allocations: [{
+          budgetCode: "1.1",
+          budgetName: "Бетонирование",
+          sharePercent: 100,
+          personMonths: 2,
+          plannedHours: 320,
+          requiredHeadcount: 2,
+          confidence: 0.9,
+          reason: "Совпадение с ВОР"
+        }]
+      }]
+    });
+    getCurrentUserMock.mockResolvedValue(authorizedUser);
+    canProjectMock.mockResolvedValue(true);
+    projectFindUniqueMock.mockResolvedValue({ id: "project-demo", organizationId: "org-demo" });
+    importBatchFindFirstMock.mockResolvedValue({ id: "batch-1", status: "previewed", previewJson: importPreview });
+    transactionMock.mockImplementation(async (callback) => callback(tx));
+    const { POST } = await import("./route");
+
+    const response = await POST(requestJson({ importBatchId: "batch-1", mode: "append" }), {
+      params: { projectId: "project-demo" }
+    });
+
+    expect(response.status).toBe(200);
+    expect(tx.projectPayrollPolicy.upsert).toHaveBeenCalled();
+    expect(tx.projectLaborDemand.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ profession: "Бетонщик", importBatchId: "batch-1" })
+    }));
+    expect(tx.projectLaborAllocation.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        laborDemandId: "demand-1",
+        budgetItemId: "budget-1",
+        workName: "Бетонирование"
+      })
+    }));
+  });
 });

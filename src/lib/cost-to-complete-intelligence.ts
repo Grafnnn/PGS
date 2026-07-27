@@ -1,5 +1,17 @@
 import { budgetTotals, financeTotals, materialTotals, workTotals } from "@/lib/calculations";
-import type { BudgetItem, Material, Payment, ProcurementRequest, Project, Risk, ScheduleItem } from "@/lib/types";
+import { buildWorkforceEconomics } from "@/lib/workforce-capacity";
+import type {
+  BudgetItem,
+  Material,
+  Payment,
+  ProcurementRequest,
+  Project,
+  ProjectLaborDemand,
+  ProjectPayrollPolicy,
+  Risk,
+  ScheduleItem,
+  WorkforceResource
+} from "@/lib/types";
 
 export type CostForecastTone = "good" | "warn" | "bad" | "info" | "neutral";
 export type CostForecastStatus = "no_data" | "needs_baseline" | "attention" | "controlled" | "critical";
@@ -12,6 +24,9 @@ export type CostToCompleteInput = {
   procurementRequests?: ProcurementRequest[] | null;
   payments?: Payment[] | null;
   risks?: Risk[] | null;
+  workforceResources?: WorkforceResource[] | null;
+  laborDemands?: ProjectLaborDemand[] | null;
+  payrollPolicy?: ProjectPayrollPolicy | null;
 };
 
 export type CostToCompleteModel = {
@@ -37,10 +52,13 @@ export type CostToCompleteModel = {
     committedOutgoing: number;
     unpaidIncoming: number;
     unpaidOutgoing: number;
+    payrollEmployerCost: number;
+    payrollUncoveredCost: number;
+    payrollContributions: number;
   };
   categories: Array<{ key: string; label: string; planned: number; actual: number; forecast: number; deviation: number; tone: CostForecastTone }>;
-  signals: Array<{ id: string; title: string; detail: string; tone: CostForecastTone; targetTab: "Бюджет / ВОР" | "Финансы" | "График" | "Материалы" | "Заявки" | "Риски" }>;
-  actions: Array<{ title: string; detail: string; ownerRole: "РП" | "Финансовый директор" | "ПТО" | "Снабжение"; priority: "low" | "medium" | "high"; targetTab: "Бюджет / ВОР" | "Финансы" | "График" | "Материалы" | "Заявки" | "Риски" }>;
+  signals: Array<{ id: string; title: string; detail: string; tone: CostForecastTone; targetTab: "Бюджет / ВОР" | "Финансы" | "График" | "Материалы" | "Заявки" | "Риски" | "ФОТ" }>;
+  actions: Array<{ title: string; detail: string; ownerRole: "РП" | "Финансовый директор" | "ПТО" | "Снабжение"; priority: "low" | "medium" | "high"; targetTab: "Бюджет / ВОР" | "Финансы" | "График" | "Материалы" | "Заявки" | "Риски" | "ФОТ" }>;
   limitations: string[];
 };
 
@@ -80,11 +98,21 @@ export function buildCostToCompleteIntelligence(input: CostToCompleteInput): Cos
   const risks = input.risks ?? [];
   const contractAmount = Math.max(project.contractAmount ?? 0, 0);
   const budget = budgetTotals(contractAmount, budgetItems);
+  const workforce = buildWorkforceEconomics({
+    resources: input.workforceResources ?? [],
+    demands: input.laborDemands ?? [],
+    policy: input.payrollPolicy,
+    budgetItems,
+    contractAmount
+  });
   const work = workTotals(scheduleItems);
   const materialsStats = materialTotals(materials);
   const finance = financeTotals(payments);
-  const forecastDeviation = budget.totalForecastCost - budget.totalPlannedCost;
-  const costToComplete = Math.max(budget.totalForecastCost - budget.totalActualCost, 0);
+  const forecastCost = workforce.adjustedForecastCost;
+  const forecastProfit = contractAmount - forecastCost;
+  const forecastMarginPercent = contractAmount > 0 ? forecastProfit / contractAmount * 100 : 0;
+  const forecastDeviation = forecastCost - budget.totalPlannedCost;
+  const costToComplete = Math.max(forecastCost - budget.totalActualCost, 0);
   const unpaidIncoming = payments.filter((item) => item.direction === "incoming" && item.status !== "paid").reduce((sum, item) => sum + item.amount, 0);
   const unpaidOutgoing = payments.filter((item) => item.direction === "outgoing" && item.status !== "paid").reduce((sum, item) => sum + item.amount, 0);
   const committedOutgoing = payments.filter((item) => item.direction === "outgoing" && ["approved", "paid", "overdue"].includes(item.status)).reduce((sum, item) => sum + item.amount, 0);
@@ -92,7 +120,7 @@ export function buildCostToCompleteIntelligence(input: CostToCompleteInput): Cos
   const openCriticalRisks = risks.filter((item) => item.status !== "closed" && ["critical", "high"].includes(item.priority));
   const noBaseline = !contractAmount || !budgetItems.length;
   const noActual = budget.totalActualCost <= 0 && !payments.some((item) => item.direction === "outgoing" && item.status === "paid");
-  const critical = budget.forecastProfit < 0 || finance.cashGap < 0 || budget.forecastMarginPercent < 5;
+  const critical = forecastProfit < 0 || finance.cashGap < 0 || forecastMarginPercent < 5;
   const attention = forecastDeviation > 0 || work.overdueItems.length > 0 || materialsStats.deficitItems.length > 0 || openCriticalRisks.length > 0;
   const status: CostForecastStatus = noBaseline ? "no_data" : critical ? "critical" : noActual ? "needs_baseline" : attention ? "attention" : "controlled";
   const tone: CostForecastTone = status === "critical" ? "bad" : status === "attention" || status === "needs_baseline" ? "warn" : status === "no_data" ? "info" : "good";
@@ -120,7 +148,8 @@ export function buildCostToCompleteIntelligence(input: CostToCompleteInput): Cos
       const rows = budgetItems.filter((item) => item.kind === kind);
       const planned = rows.reduce((sum, item) => sum + item.qty * item.plannedUnitPrice, 0);
       const actual = rows.reduce((sum, item) => sum + item.qty * item.actualUnitPrice, 0);
-      const forecast = rows.reduce((sum, item) => sum + item.qty * item.forecastUnitPrice, 0);
+      const baseForecast = rows.reduce((sum, item) => sum + item.qty * item.forecastUnitPrice, 0);
+      const forecast = kind === "payroll" ? baseForecast + workforce.uncoveredEmployerCost : baseForecast;
       const deviation = forecast - planned;
       return { key: kind, label: categoryLabels[kind], planned: round(planned), actual: round(actual), forecast: round(forecast), deviation: round(deviation), tone: toneForDeviation(deviation, planned) };
     })
@@ -128,7 +157,8 @@ export function buildCostToCompleteIntelligence(input: CostToCompleteInput): Cos
 
   const signals = [
     ...(forecastDeviation > 0 ? [{ id: "forecast-overrun", title: "Рост прогнозной себестоимости", detail: `Forecast выше плана на ${Math.round(forecastDeviation).toLocaleString("ru-RU")} ₽.`, tone: toneForDeviation(forecastDeviation, budget.totalPlannedCost), targetTab: "Бюджет / ВОР" as const }] : []),
-    ...(budget.forecastMarginPercent < 5 && contractAmount ? [{ id: "margin-threshold", title: "Маржа ниже управленческого порога", detail: `Прогнозная маржа ${budget.forecastMarginPercent.toFixed(1)}%.`, tone: "bad" as const, targetTab: "Финансы" as const }] : []),
+    ...(forecastMarginPercent < 5 && contractAmount ? [{ id: "margin-threshold", title: "Маржа ниже управленческого порога", detail: `Прогнозная маржа ${forecastMarginPercent.toFixed(1)}%.`, tone: "bad" as const, targetTab: "Финансы" as const }] : []),
+    ...(workforce.uncoveredEmployerCost > 0 ? [{ id: "payroll-gap", title: "Полная стоимость ФОТ выше бюджета", detail: `Оклад и начисления работодателя не покрыты ВОР на ${Math.round(workforce.uncoveredEmployerCost).toLocaleString("ru-RU")} ₽.`, tone: "warn" as const, targetTab: "ФОТ" as const }] : []),
     ...(finance.cashGap < 0 ? [{ id: "cash-gap", title: "Кассовый разрыв", detail: `Потребность в финансировании ${Math.abs(finance.cashGap).toLocaleString("ru-RU")} ₽.`, tone: "bad" as const, targetTab: "Финансы" as const }] : []),
     ...(materialsStats.deficitItems.length ? [{ id: "material-deficit", title: "Дефицит материалов влияет на остаток работ", detail: `${materialsStats.deficitItems.length} позиций требуют снабжения; активных заявок ${activeProcurement.length}.`, tone: "warn" as const, targetTab: "Материалы" as const }] : []),
     ...(work.overdueItems.length ? [{ id: "schedule-delay", title: "Сроки могут увеличить cost-to-complete", detail: `${work.overdueItems.length} просроченных работ, максимальная задержка ${work.delayDays} дн.`, tone: "warn" as const, targetTab: "График" as const }] : []),
@@ -138,23 +168,34 @@ export function buildCostToCompleteIntelligence(input: CostToCompleteInput): Cos
     { title: "Подтвердить cost-to-complete", detail: `Остаток прогнозной себестоимости ${Math.round(costToComplete).toLocaleString("ru-RU")} ₽.`, ownerRole: "Финансовый директор" as const, priority: critical ? "high" as const : "medium" as const, targetTab: "Финансы" as const },
     { title: "Проверить статьи роста", detail: forecastDeviation > 0 ? `${categories.filter((item) => item.deviation > 0).length} категорий выше плана.` : "Рост forecast не выявлен.", ownerRole: "РП" as const, priority: forecastDeviation > 0 ? "high" as const : "low" as const, targetTab: "Бюджет / ВОР" as const },
     { title: "Сверить обязательства снабжения", detail: `${activeProcurement.length} активных заявок · неоплаченные исходящие ${Math.round(unpaidOutgoing).toLocaleString("ru-RU")} ₽.`, ownerRole: "Снабжение" as const, priority: materialsStats.deficitItems.length ? "high" as const : "medium" as const, targetTab: "Заявки" as const },
-    { title: "Защитить маржу графиком", detail: work.overdueItems.length ? `Нужно снять ${work.overdueItems.length} просроченных работ до следующего cashflow review.` : "Сверить остаток работ с forecast на планерке.", ownerRole: "ПТО" as const, priority: work.overdueItems.length ? "high" as const : "medium" as const, targetTab: "График" as const }
+    { title: "Защитить маржу графиком", detail: work.overdueItems.length ? `Нужно снять ${work.overdueItems.length} просроченных работ до следующего cashflow review.` : "Сверить остаток работ с forecast на планерке.", ownerRole: "ПТО" as const, priority: work.overdueItems.length ? "high" as const : "medium" as const, targetTab: "График" as const },
+    ...(workforce.totalEmployerCost ? [{
+      title: "Сверить ФОТ и начисления",
+      detail: `Полная стоимость труда ${Math.round(workforce.totalEmployerCost).toLocaleString("ru-RU")} ₽, включая начисления ${Math.round(workforce.employerContributions).toLocaleString("ru-RU")} ₽.`,
+      ownerRole: "Финансовый директор" as const,
+      priority: workforce.uncoveredEmployerCost > 0 ? "high" as const : "medium" as const,
+      targetTab: "ФОТ" as const
+    }] : [])
   ];
 
   return {
     summary: {
       status, tone, headline, nextStep, contractAmount, plannedCost: budget.totalPlannedCost, actualCost: budget.totalActualCost,
-      forecastCost: budget.totalForecastCost, costToComplete, plannedMargin: budget.plannedProfit, forecastMargin: budget.forecastProfit,
-      plannedMarginPercent: budget.plannedMarginPercent, forecastMarginPercent: budget.forecastMarginPercent, forecastDeviation,
+      forecastCost, costToComplete, plannedMargin: budget.plannedProfit, forecastMargin: forecastProfit,
+      plannedMarginPercent: budget.plannedMarginPercent, forecastMarginPercent, forecastDeviation,
       completionPercent: work.completionPercent, remainingWorkPercent: Math.max(0, 100 - work.completionPercent), cashGap: finance.cashGap,
-      financingNeed: finance.financingNeed, committedOutgoing, unpaidIncoming, unpaidOutgoing
+      financingNeed: finance.financingNeed, committedOutgoing, unpaidIncoming, unpaidOutgoing,
+      payrollEmployerCost: workforce.totalEmployerCost,
+      payrollUncoveredCost: workforce.uncoveredEmployerCost,
+      payrollContributions: workforce.employerContributions
     },
     categories,
     signals,
     actions,
     limitations: [
       noActual ? "Фактическая себестоимость неполная: v1 не подменяет закрытие первичных документов и управленческий учет." : "Факт берется из текущих цен ВОР и платежей; подтвердите его с бухгалтерией.",
-      "Прогноз не включает автоматическую индексацию, курсы валют, налоги или резерв по рискам без явного отражения в бюджете.",
+      "ФОТ включает настроенные страховые начисления работодателя; НДФЛ показывается отдельно как удержание и не добавляется повторно к себестоимости.",
+      "Прогноз не включает автоматическую индексацию, курсы валют или резерв по рискам без явного отражения в бюджете.",
       "Стоимость к завершению не записывается обратно в ВОР, платежи или cashflow без явного действия пользователя."
     ]
   };

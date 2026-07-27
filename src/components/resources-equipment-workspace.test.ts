@@ -7,10 +7,18 @@ import { getProjectBundle } from "@/lib/demo-data";
 describe("ResourcesEquipmentWorkspace", () => {
   it("renders the read-only resources workspace without provider calls", () => {
     const bundle = getProjectBundle("project-smoke");
-    const html = renderToStaticMarkup(createElement(ResourcesEquipmentWorkspace, { projectId: bundle.project.id, project: bundle.project, dailyReports: bundle.dailyReports, scheduleItems: bundle.scheduleItems, onNavigate: vi.fn() }));
-    expect(html).toContain("Workforce, ФОТ &amp; Equipment Capacity");
-    expect(html).toContain("Ресурсный план проекта");
-    expect(html).toContain("Сигналы из рапортов");
+    const html = renderToStaticMarkup(createElement(ResourcesEquipmentWorkspace, {
+      projectId: bundle.project.id,
+      project: bundle.project,
+      budgetItems: bundle.budgetItems,
+      dailyReports: bundle.dailyReports,
+      scheduleItems: bundle.scheduleItems,
+      onNavigate: vi.fn()
+    }));
+    expect(html).toContain("Workforce &amp; Payroll Intelligence");
+    expect(html).toContain("Штат, ФОТ и потребность проекта");
+    expect(html).toContain("Маржа с учетом ФОТ");
+    expect(html).toContain("Потребность по ВОР");
     expect(html).not.toContain("OPENAI_API_KEY");
   });
 });
