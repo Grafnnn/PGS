@@ -1,5 +1,39 @@
 # PGS Project Log
 
+## 2026-07-28 - Workforce Gap & Staffing Plan v1 online/core GO
+
+Status: Workforce Gap & Staffing Plan v1 from PR #159 is live on Render. The `ФОТ` workspace now compares monthly labor demand with assigned capacity by profession, estimates uncovered hours and employer cost, and suggests privacy-safe organization candidates without automatic assignment.
+
+- Online URL: https://pgs-frankfurt.onrender.com
+- Online commit: `3780acf1946e01c0ca01c225a3af877e33a501e4`
+- Render deploy: `dep-d9jt5dmq1p3s73bet750`
+- Feature PR: #159
+- Decision: ONLINE/CORE GO
+- Git SHA source: `RENDER_GIT_COMMIT`
+
+Online verification:
+
+- `/api/health`: HTTP 200 / `ok`; DB: `ok`; migrations: `ok`, count `24`;
+- Render reported the deploy live for `3780acf`, and the health SHA matched the expected main commit;
+- the authenticated `project-smoke` workspace opened `ФОТ -> Комплектование`;
+- `Workforce Gap & Staffing Plan`, `План комплектования по профессиям и месяцам`, coverage, peak gap, uncovered hours, closing cost, role filters and staffing guidance rendered correctly;
+- the no-demand state explicitly asks for Excel FOT import or manual demand and does not show a false green result;
+- the desktop page had no horizontal overflow at 1280 px; local mobile verification at 390 px also had no horizontal overflow;
+- unauthenticated `/api/auth/me` returned 401; workforce GET/POST and AI summary routes returned 403 before any mutation.
+
+Validation and safety:
+
+- PR #159 GitHub Actions CI #325 passed;
+- Vitest: 574/574 passed; ESLint, TypeScript, Prisma validate/generate, production build and `git diff --check` passed;
+- the plan model is deterministic and read-only; staffing changes remain explicit user actions;
+- candidate matching accounts for other-project commitments without exposing other project identifiers;
+- no employee assignment, resource creation, live AI, upload, import, project mutation, schema/migration, environment/secret change or manual deploy was performed;
+- no secret value was printed or committed.
+
+Remaining controlled follow-up:
+
+- an authenticated disposable staffing assignment -> capacity update -> cleanup lifecycle smoke remains optional.
+
 ## 2026-07-27 - Excel-to-ФОТ disposable import lifecycle smoke GO
 
 Status: The remaining controlled import follow-up for Workforce & Payroll Intelligence v1 is complete. PR #157 added a guarded staging-only smoke, and the deployed application passed the generated XLSX preview -> explicit commit -> labor/VOR allocation -> payroll economics -> cleanup lifecycle.
