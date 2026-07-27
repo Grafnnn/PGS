@@ -1,5 +1,37 @@
 # PGS Project Log
 
+## 2026-07-27 - Workforce & Payroll disposable lifecycle smoke GO
+
+Status: The controlled mutation follow-up for Workforce & Payroll Intelligence v1 is complete. PR #155 added a guarded staging-only smoke and the deployed application passed the synthetic employee, labor-demand, payroll calculation, profitability-impact and cleanup lifecycle.
+
+- Online URL: https://pgs-frankfurt.onrender.com
+- Online commit: `681c9ed63da98a9ced7d709e0c58e5a8a782fb70`
+- Render deploy: `dep-d9js8g4vikkc73ffn14g`
+- Feature PR: #155
+- Decision: FULL DISPOSABLE SMOKE GO
+- Git SHA source: `RENDER_GIT_COMMIT`
+
+Online verification:
+
+- `/api/health`: HTTP 200 / `ok`; DB: `ok`; migrations: `ok`, count `24`;
+- protected login, `/api/auth/me`, `project-smoke` read, unauthenticated AI guard and authenticated missing-project AI guard passed;
+- one bounded synthetic staff engineer and one synthetic labor demand were created through the normal authenticated project APIs and returned by the workforce read model;
+- gross payroll was `120,000`; employer contributions were `36,000`; withheld NDFL was `15,600`; net payroll was `104,400`; total employer cost was `156,000`;
+- allocated workforce capacity increased by one person and 160 hours while the synthetic rows existed;
+- adjusted project forecast cost increased by `156,000`, and forecast margin moved from 100% to 84.4%;
+- the labor demand and assignment were deleted through normal APIs; the synthetic organization resource and related audit rows were removed;
+- resource cleanup: `pass`; demand cleanup: `pass`; project role restored to its previous value;
+- live AI: `skip`; `secretsPrinted: false`.
+
+Validation and safety:
+
+- PR #155 GitHub Actions CI #317 passed;
+- Vitest: 566/566 passed; ESLint, TypeScript, Prisma validate, production build and `git diff --check` passed;
+- the endpoint remains restricted to `APP_ENV=staging`, the existing staging secret and `project-smoke` with `isSmokeProject=true`;
+- the staging smoke secret was rotated through Render without exposing its value; the temporary local request file was deleted and the in-memory copy was cleared;
+- no live AI, real employee/project data, upload, schema/migration or direct SQL operation was used;
+- only disposable staging rows were mutated, and no synthetic workforce, demand, allocation, assignment or audit record remained.
+
 ## 2026-07-27 - Workforce & Payroll Intelligence v1 online/core GO
 
 Status: Workforce & Payroll Intelligence v1 from PR #153 is live on Render. PGS now connects employees, ITR, workers and crews with project payroll policy, Excel FOT demand, reviewable VOR labor allocation and forecast project margin.
