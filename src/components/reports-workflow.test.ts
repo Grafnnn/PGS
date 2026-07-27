@@ -14,6 +14,7 @@ describe("ReportsWorkflow", () => {
     }));
     expect(html).toContain("Daily report workflow");
     expect(html).toContain("Новый рапорт");
+    expect(html).toContain("Обновить");
     expect(html).toContain("Versioned executive reporting");
     expect(html).toContain("Формирование выполняется только по явной команде");
     expect(html).not.toContain("18 рабочих");

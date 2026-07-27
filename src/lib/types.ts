@@ -156,6 +156,49 @@ export interface DailyReport {
   status: "draft" | "submitted" | "checked" | "approved";
 }
 
+export type ResourceKind = "worker" | "engineer" | "crew" | "equipment";
+export type ResourceEmploymentType = "staff" | "hired" | "subcontract" | "owned" | "rented";
+export type ResourceStatus = "active" | "unavailable" | "maintenance" | "archived";
+export type ResourceAssignmentStatus = "planned" | "active" | "completed";
+
+export interface ProjectResourceAssignment {
+  id: string;
+  projectId: string;
+  resourceId: string;
+  startsAt: string;
+  endsAt: string;
+  allocationPercent: number;
+  plannedHours: number;
+  plannedOutput: number;
+  status: ResourceAssignmentStatus;
+  notes?: string | null;
+}
+
+export interface WorkforceResource {
+  id: string;
+  kind: ResourceKind;
+  name: string;
+  profession?: string | null;
+  employmentType: ResourceEmploymentType;
+  headcount: number;
+  capacityHoursPerMonth: number;
+  productivityNorm: number;
+  productivityUnit?: string | null;
+  monthlyCost: number;
+  hourlyCost: number;
+  certifications: string[];
+  status: ResourceStatus;
+  notes?: string | null;
+  assignment: ProjectResourceAssignment;
+  allocation: {
+    currentProjectPercent: number;
+    otherProjectsPercent: number;
+    totalPercent: number;
+    overlappingProjects: number;
+    overloaded: boolean;
+  };
+}
+
 export interface Risk {
   id: string;
   projectId: string;

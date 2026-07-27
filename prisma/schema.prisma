@@ -52,6 +52,8 @@ model Organization {
   updatedAt                  DateTime                    @updatedAt @map("updated_at")
   users                      Membership[]
   projects                   Project[]
+  resources                  OrganizationResource[]
+  resourceAssignments        ProjectResourceAssignment[]
   userInvites                UserInvite[]
   auditLogs                  AuditLog[]
   externalCollaborationLinks ExternalCollaborationLink[]
@@ -173,6 +175,7 @@ model Project {
   qualityIssues              ProjectQualityIssue[]
   controlBaselines           ProjectControlBaseline[]
   controlPeriods             ProjectControlPeriod[]
+  resourceAssignments        ProjectResourceAssignment[]
   externalCollaborationLinks ExternalCollaborationLink[]
   invoices                   ProjectInvoice[]
 
@@ -557,6 +560,58 @@ model DailyReport {
   qualityIssues     ProjectQualityIssue[]
 
   @@map("daily_reports")
+}
+
+model OrganizationResource {
+  id                    String                      @id @default(cuid())
+  organizationId        String                      @map("organization_id")
+  kind                  String
+  name                  String
+  profession            String?
+  employmentType        String                      @default("staff") @map("employment_type")
+  headcount             Int                         @default(1)
+  capacityHoursPerMonth Decimal                     @default(160) @map("capacity_hours_per_month") @db.Decimal(10, 2)
+  productivityNorm      Decimal                     @default(0) @map("productivity_norm") @db.Decimal(14, 3)
+  productivityUnit      String?                     @map("productivity_unit")
+  monthlyCost           Decimal                     @default(0) @map("monthly_cost") @db.Decimal(14, 2)
+  hourlyCost            Decimal                     @default(0) @map("hourly_cost") @db.Decimal(14, 2)
+  certifications        Json?
+  status                String                      @default("active")
+  notes                 String?
+  createdBy             String?                     @map("created_by")
+  createdAt             DateTime                    @default(now()) @map("created_at")
+  updatedAt             DateTime                    @updatedAt @map("updated_at")
+  organization          Organization                @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  assignments           ProjectResourceAssignment[]
+
+  @@index([organizationId, kind, status])
+  @@index([organizationId, name])
+  @@map("organization_resources")
+}
+
+model ProjectResourceAssignment {
+  id                String               @id @default(cuid())
+  organizationId    String               @map("organization_id")
+  projectId         String               @map("project_id")
+  resourceId        String               @map("resource_id")
+  startsAt          DateTime             @map("starts_at")
+  endsAt            DateTime             @map("ends_at")
+  allocationPercent Int                  @default(100) @map("allocation_percent")
+  plannedHours      Decimal              @default(0) @map("planned_hours") @db.Decimal(12, 2)
+  plannedOutput     Decimal              @default(0) @map("planned_output") @db.Decimal(14, 3)
+  status            String               @default("planned")
+  notes             String?
+  createdBy         String?              @map("created_by")
+  createdAt         DateTime             @default(now()) @map("created_at")
+  updatedAt         DateTime             @updatedAt @map("updated_at")
+  organization      Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  project           Project              @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  resource          OrganizationResource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, resourceId])
+  @@index([organizationId, startsAt, endsAt])
+  @@index([resourceId, startsAt, endsAt])
+  @@map("project_resource_assignments")
 }
 
 model Risk {

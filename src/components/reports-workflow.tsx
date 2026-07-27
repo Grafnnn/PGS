@@ -7,6 +7,7 @@ import {
   FilePlus2,
   Pencil,
   Plus,
+  RefreshCw,
   Save,
   Send,
   ShieldCheck,
@@ -68,6 +69,8 @@ export function ReportsWorkflow({ projectId, reports, currentUser, currentUserLo
   const [form, setForm] = useState<ReportForm>(() => emptyReport(currentUser?.name));
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
+  const [dailyReportsLoaded, setDailyReportsLoaded] = useState(false);
+  const [dailyReportsError, setDailyReportsError] = useState("");
   const [executiveReports, setExecutiveReports] = useState<SerializedExecutiveReport[]>([]);
   const [selectedExecutiveId, setSelectedExecutiveId] = useState<string | null>(null);
   const [executiveLoaded, setExecutiveLoaded] = useState(false);
@@ -79,6 +82,30 @@ export function ReportsWorkflow({ projectId, reports, currentUser, currentUserLo
   const canApprove = role === "OWNER" || role === "ADMIN";
   const selectedExecutive = executiveReports.find((item) => item.id === selectedExecutiveId) ?? executiveReports[0] ?? null;
   const sortedReports = useMemo(() => [...reports].sort((a, b) => b.date.localeCompare(a.date)), [reports]);
+  const missingRequiredFields = [
+    !form.author.trim() ? "автор" : "",
+    !form.completedWorks.trim() ? "выполненные работы" : ""
+  ].filter(Boolean);
+
+  const loadDailyReports = useCallback(async () => {
+    if (!currentUserLoaded || !currentUser?.authenticated) {
+      setDailyReportsLoaded(true);
+      return;
+    }
+    setBusy((current) => current || "daily-load");
+    setDailyReportsError("");
+    try {
+      const response = await fetch(`/api/projects/${projectId}/daily-reports`, { cache: "no-store" });
+      if (!response.ok) throw new Error(await responseError(response, "Не удалось загрузить рапорты."));
+      const body = (await response.json()) as { items?: DailyReport[] };
+      onReportsChange(body.items ?? []);
+    } catch (loadError) {
+      setDailyReportsError(loadError instanceof Error ? loadError.message : "Не удалось загрузить рапорты.");
+    } finally {
+      setDailyReportsLoaded(true);
+      setBusy((current) => current === "daily-load" ? "" : current);
+    }
+  }, [currentUser?.authenticated, currentUserLoaded, onReportsChange, projectId]);
 
   const loadExecutiveReports = useCallback(async () => {
     if (!currentUserLoaded || !currentUser?.authenticated) {
@@ -101,6 +128,10 @@ export function ReportsWorkflow({ projectId, reports, currentUser, currentUserLo
   useEffect(() => {
     void loadExecutiveReports();
   }, [loadExecutiveReports]);
+
+  useEffect(() => {
+    void loadDailyReports();
+  }, [loadDailyReports]);
 
   function openNewReport() {
     setEditingId(null);
@@ -254,6 +285,7 @@ export function ReportsWorkflow({ projectId, reports, currentUser, currentUserLo
   return (
     <section className="reports-workflow" aria-label="Reports Workflow v2">
       {error ? <div className="form-error" role="alert">{error}</div> : null}
+      {dailyReportsError ? <div className="form-error" role="alert">{dailyReportsError}</div> : null}
 
       <div className="reports-workflow-heading">
         <div>
@@ -261,11 +293,16 @@ export function ReportsWorkflow({ projectId, reports, currentUser, currentUserLo
           <h3>Ежедневные рапорты</h3>
           <p className="muted">Черновик → отправка → проверка → утверждение. Рабочие данные не создаются до сохранения формы.</p>
         </div>
-        {canEdit ? (
-          <button className="button primary" type="button" onClick={openNewReport}>
-            <Plus size={17} /> Новый рапорт
+        <div className="form-actions">
+          <button className="button secondary" disabled={busy === "daily-load"} type="button" onClick={() => void loadDailyReports()}>
+            <RefreshCw className={busy === "daily-load" ? "spin" : ""} size={17} /> {busy === "daily-load" ? "Обновляю..." : "Обновить"}
           </button>
-        ) : null}
+          {canEdit ? (
+            <button className="button primary" type="button" onClick={openNewReport}>
+              <Plus size={17} /> Новый рапорт
+            </button>
+          ) : null}
+        </div>
       </div>
 
       {formOpen ? (
@@ -276,17 +313,18 @@ export function ReportsWorkflow({ projectId, reports, currentUser, currentUserLo
           </div>
           <div className="daily-report-form-grid">
             <label>Дата<input type="date" value={form.date} onChange={(event) => setForm({ ...form, date: event.target.value })} /></label>
-            <label>Автор<input value={form.author} onChange={(event) => setForm({ ...form, author: event.target.value })} /></label>
+            <label>Автор <span aria-hidden="true">*</span><input aria-invalid={!form.author.trim()} required value={form.author} onChange={(event) => setForm({ ...form, author: event.target.value })} /></label>
             <label>Погода<input value={form.weather} onChange={(event) => setForm({ ...form, weather: event.target.value })} placeholder="Температура, осадки, ветер" /></label>
             <label>Рабочие<input min="0" type="number" value={form.workers} onChange={(event) => setForm({ ...form, workers: Number(event.target.value) })} /></label>
             <label>ИТР<input min="0" type="number" value={form.engineers} onChange={(event) => setForm({ ...form, engineers: Number(event.target.value) })} /></label>
             <label className="wide">Техника<input value={form.equipment} onChange={(event) => setForm({ ...form, equipment: event.target.value })} placeholder="Наименование и количество" /></label>
-            <label className="wide">Выполненные работы<textarea required rows={3} value={form.completedWorks} onChange={(event) => setForm({ ...form, completedWorks: event.target.value })} /></label>
+            <label className="wide">Выполненные работы <span aria-hidden="true">*</span><textarea aria-invalid={!form.completedWorks.trim()} required rows={3} value={form.completedWorks} onChange={(event) => setForm({ ...form, completedWorks: event.target.value })} /></label>
             <label>Материалы получены<textarea rows={2} value={form.materialsReceived} onChange={(event) => setForm({ ...form, materialsReceived: event.target.value })} /></label>
             <label>Материалы израсходованы<textarea rows={2} value={form.materialsConsumed} onChange={(event) => setForm({ ...form, materialsConsumed: event.target.value })} /></label>
             <label>Простои<textarea rows={2} value={form.downtime} onChange={(event) => setForm({ ...form, downtime: event.target.value })} /></label>
             <label>Проблемы / замечания<textarea rows={2} value={form.issues} onChange={(event) => setForm({ ...form, issues: event.target.value })} /></label>
           </div>
+          {missingRequiredFields.length ? <p className="form-hint" role="status">Для сохранения заполните: {missingRequiredFields.join(", ")}.</p> : null}
           <div className="form-actions">
             <button className="button primary" disabled={busy === "daily-save" || !form.author.trim() || !form.completedWorks.trim()} type="button" onClick={() => void saveReport()}>
               <Save size={17} /> {busy === "daily-save" ? "Сохраняю..." : "Сохранить черновик"}
@@ -297,7 +335,7 @@ export function ReportsWorkflow({ projectId, reports, currentUser, currentUserLo
       ) : null}
 
       <div className="daily-report-list">
-        {sortedReports.length ? sortedReports.map((item) => (
+        {!dailyReportsLoaded && busy === "daily-load" ? <div className="reports-empty">Загружаю рапорты со стройплощадки...</div> : sortedReports.length ? sortedReports.map((item) => (
           <article className="daily-report-row" key={item.id}>
             <div className="daily-report-row-main">
               <div><strong>{new Date(item.date).toLocaleDateString("ru-RU")}</strong><span>{item.author} · {item.workers} рабочих / {item.engineers} ИТР</span></div>

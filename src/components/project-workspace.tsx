@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { AlertTriangle, BarChart3, Bot, ClipboardList, DatabaseZap, FileText, HardHat, Landmark, Package, Pencil, Plus, ReceiptText, Search, Send, Table2, TimerReset, Trash2, Truck, Users } from "lucide-react";
 import { AcceptanceBillingWorkspace } from "@/components/acceptance-billing-workspace";
+import { AiControlAgentWorkspace } from "@/components/ai-control-agent-workspace";
 import { AccountingBridgeWorkspace } from "@/components/accounting-bridge-workspace";
 import { CommercialProposalWorkspace } from "@/components/commercial-proposal-workspace";
 import { ChangeOrderManagementWorkspace } from "@/components/change-order-management-workspace";
@@ -214,6 +215,7 @@ export function ProjectWorkspace({
   const aiAnswerTone = aiLoading ? "loading" : aiAnswer ? (/OPENAI_API_KEY|not configured|failed|ошибка|error|Project not found/i.test(aiAnswer) ? "error" : "ready") : "empty";
   const aiDisplay = aiAnswerTone === "error" ? "AI-помощник сейчас недоступен. Проверьте подключение AI и повторите анализ позже." : aiAnswer;
   const canDeleteCurrentProject = currentUser?.role === "OWNER" || currentUser?.role === "ADMIN";
+  const canEditCurrentProject = currentUser?.role === "OWNER" || currentUser?.role === "ADMIN" || currentUser?.role === "MANAGER";
   const emptyOperationalBaseline =
     !budgetItems.length &&
     !scheduleItems.length &&
@@ -1319,6 +1321,7 @@ export function ProjectWorkspace({
             onNavigate={setActiveTab}
           />
           <ResourcesEquipmentWorkspace
+            projectId={initialBundle.project.id}
             project={initialBundle.project}
             dailyReports={reports}
             scheduleItems={scheduleItems}
@@ -1550,13 +1553,20 @@ export function ProjectWorkspace({
       )}
 
       {activeTab === "Действия" && (
-        <ProjectActionCenter
-          projectId={initialBundle.project.id}
-          canEdit={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN" || currentUser?.role === "MANAGER"}
-          canApprove={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN"}
-          onNavigate={setActiveTab}
-          suggestions={actionSuggestions}
-        />
+        <>
+          <AiControlAgentWorkspace
+            projectId={initialBundle.project.id}
+            canEdit={canEditCurrentProject}
+            onNavigate={setActiveTab}
+          />
+          <ProjectActionCenter
+            projectId={initialBundle.project.id}
+            canEdit={canEditCurrentProject}
+            canApprove={canDeleteCurrentProject}
+            onNavigate={setActiveTab}
+            suggestions={actionSuggestions}
+          />
+        </>
       )}
 
       {activeTab === "Процессы" && (
