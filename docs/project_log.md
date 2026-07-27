@@ -1,5 +1,38 @@
 # PGS Project Log
 
+## 2026-07-27 - AI Decision Journal disposable lifecycle smoke GO
+
+Status: The controlled follow-up for AI Decision Journal & Controlled Actions v1 is complete. PR #151 added a guarded deterministic staging smoke and the deployed application passed the full synthetic run -> feedback -> action conversion -> duplicate prevention -> cleanup lifecycle.
+
+- Online URL: https://pgs-frankfurt.onrender.com
+- Online commit: `ff56b5ee9c1723dc8cea524e1c5668373766b22b`
+- Render deploy: `dep-d9jn6epoagis7390501g`
+- Feature PR: #151
+- Decision: FULL DISPOSABLE SMOKE GO
+- Git SHA source: `RENDER_GIT_COMMIT`
+
+Online verification:
+
+- `/api/health`: HTTP 200 / `ok`; DB: `ok`; migrations: `ok`, count `23`;
+- the deployed SHA matched `ff56b5ee9c1723dc8cea524e1c5668373766b22b`;
+- protected login, `/api/auth/me`, `project-smoke` read, unauthenticated AI guard and authenticated missing-project AI guard passed;
+- a deterministic synthetic AI run was created and returned by the project journal API;
+- `needs_review` feedback was stored through the normal authenticated endpoint;
+- the first recommendation created one project action only after an explicit request;
+- a repeated conversion returned the existing action and did not create a duplicate;
+- the synthetic run, linked action and audit records were removed;
+- the smoke user was restored to its baseline `VIEWER` project role;
+- cleanup: `pass`; `secretsPrinted: false`; live AI: `skip`.
+
+Validation and safety:
+
+- PR #151 GitHub Actions CI #309 passed;
+- Vitest: 553/553 passed; ESLint, TypeScript, Prisma validate/generate, production build and `git diff --check` passed;
+- the endpoint remains restricted to `APP_ENV=staging`, the existing smoke secret and `project-smoke` with `isSmokeProject=true`;
+- the result cannot report success unless the complete lifecycle, cleanup and role restoration pass;
+- no provider call, real project mutation, upload, import, deletion, schema/migration, environment/secret change or manual deploy was performed;
+- no secret value was printed or committed.
+
 ## 2026-07-27 - AI Decision Journal & Controlled Actions v1 online/core GO
 
 Status: AI Decision Journal & Controlled Actions v1 from PR #149 is live on Render. PGS now keeps a project-scoped, sanitized history of AI scenarios and allows a recommendation to become a normal project action only after a separate user command and edit-permission check.
