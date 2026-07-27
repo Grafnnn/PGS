@@ -1,5 +1,40 @@
 # PGS Project Log
 
+## 2026-07-27 - AI Decision Journal & Controlled Actions v1 online/core GO
+
+Status: AI Decision Journal & Controlled Actions v1 from PR #149 is live on Render. PGS now keeps a project-scoped, sanitized history of AI scenarios and allows a recommendation to become a normal project action only after a separate user command and edit-permission check.
+
+- Online URL: https://pgs-frankfurt.onrender.com
+- Online commit: `a3731a120ef1a3bd3b86b8cb52739b318bd19cf5`
+- Render deploy: `dep-d9jmr4vaqgkc739r1oug`
+- Feature PR: #149
+- Decision: ONLINE/CORE GO
+- Git SHA source: `RENDER_GIT_COMMIT`
+
+Online verification:
+
+- `/api/health`: HTTP 200 / `ok`; DB: `ok`; migrations: `ok`, count `23`;
+- the deployed SHA matched `a3731a120ef1a3bd3b86b8cb52739b318bd19cf5`;
+- migration `20260727233000_ai_decision_journal_v1` applied successfully;
+- the authenticated `project-smoke` AI workspace loaded the new journal and its empty-state summary without page or console errors;
+- desktop 1280 px and mobile 390 px checks showed the journal without page-level horizontal overflow;
+- unauthenticated `/api/auth/me` returned 401;
+- unauthenticated history, feedback and recommendation-to-action routes returned 403 before database mutation;
+- the journal remains inside the existing `AI-помощник` section and does not add or duplicate application navigation.
+
+Validation and safety:
+
+- PR #149 GitHub Actions CI #304 passed;
+- Vitest: 551/551 passed; ESLint, TypeScript, Prisma validate/generate, production build and `git diff --check` passed;
+- a pre-merge security review added key-aware redaction for passwords, credentials, database URLs, API keys, cookies, sessions and tokens, including nested object values;
+- live AI, feedback mutation and recommendation-to-action mutation were not run during the online gate;
+- no project/import/delete/upload mutation, external connector call, Render environment/secret change or manual deploy was performed;
+- no secret value was printed or committed.
+
+Remaining controlled follow-up:
+
+- an authenticated disposable run -> feedback -> action conversion -> duplicate-prevention smoke remains optional and should use an explicitly approved provider call or a safe deterministic staging mode.
+
 ## 2026-07-27 - Project module mega-menu online/full visual GO
 
 Status: The project workspace navigation refresh from PR #145 is live on Render. The clipped horizontal tab strip was replaced with one translucent grouped menu that exposes all 23 project sections without duplicating the visible application navigation.
