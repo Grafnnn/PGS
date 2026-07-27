@@ -46,6 +46,7 @@ export type ProjectDeleteCounts = {
   dailyReports: number;
   risks: number;
   aiMessages: number;
+  aiRuns: number;
   importBatches: number;
   accountingSyncRuns: number;
   accountingExternalLinks: number;
@@ -87,6 +88,7 @@ async function countProjectOwnedData(client: TxClient, projectId: string): Promi
     dailyReports,
     risks,
     aiMessages,
+    aiRuns,
     importBatches,
     accountingSyncRuns,
     accountingExternalLinks,
@@ -110,6 +112,7 @@ async function countProjectOwnedData(client: TxClient, projectId: string): Promi
     client.dailyReport.count({ where: { projectId } }),
     client.risk.count({ where: { projectId } }),
     client.aiMessage.count({ where: { projectId } }),
+    client.aiRun.count({ where: { projectId } }),
     client.importBatch.count({ where: { projectId } }),
     client.accountingSyncRun.count({ where: { projectId } }),
     client.accountingExternalLink.count({ where: { projectId } }),
@@ -135,6 +138,7 @@ async function countProjectOwnedData(client: TxClient, projectId: string): Promi
     dailyReports,
     risks,
     aiMessages,
+    aiRuns,
     importBatches,
     accountingSyncRuns,
     accountingExternalLinks,

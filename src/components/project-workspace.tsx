@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { AlertTriangle, BarChart3, Bot, ClipboardList, DatabaseZap, FileText, HardHat, Landmark, Package, Pencil, Plus, ReceiptText, Search, Send, Table2, TimerReset, Trash2, Truck, Users } from "lucide-react";
 import { AcceptanceBillingWorkspace } from "@/components/acceptance-billing-workspace";
 import { AiControlAgentWorkspace } from "@/components/ai-control-agent-workspace";
+import { AiRunJournal } from "@/components/ai-run-journal";
 import { AccountingBridgeWorkspace } from "@/components/accounting-bridge-workspace";
 import { CommercialProposalWorkspace } from "@/components/commercial-proposal-workspace";
 import { ChangeOrderManagementWorkspace } from "@/components/change-order-management-workspace";
@@ -158,6 +159,7 @@ export function ProjectWorkspace({
   const [aiScenarioLoading, setAiScenarioLoading] = useState<AiScenario | null>(null);
   const [aiResults, setAiResults] = useState<Partial<Record<AiScenario, AiInsightResponse>>>({});
   const [aiErrors, setAiErrors] = useState<Partial<Record<AiScenario, string>>>({});
+  const [aiRunHistoryRefresh, setAiRunHistoryRefresh] = useState(0);
   const [saving, setSaving] = useState("");
   const [error, setError] = useState("");
   const [importFile, setImportFile] = useState<File | null>(null);
@@ -388,6 +390,7 @@ export function ProjectWorkspace({
       const data = (await response.json()) as { ok?: boolean; insight?: AiInsightResponse; error?: string; message?: string };
       if (!response.ok || !data.insight) throw new Error(data.message ?? data.error ?? "AI-сценарий недоступен.");
       setAiResults((current) => ({ ...current, [scenario]: data.insight }));
+      setAiRunHistoryRefresh((current) => current + 1);
     } catch (scenarioError) {
       setAiErrors((current) => ({ ...current, [scenario]: scenarioError instanceof Error ? scenarioError.message : "Ошибка AI-сценария." }));
     } finally {
@@ -1668,6 +1671,11 @@ export function ProjectWorkspace({
               />
             ))}
           </div>
+          <AiRunJournal
+            projectId={initialBundle.project.id}
+            refreshToken={aiRunHistoryRefresh}
+            canCreateActions={canEditCurrentProject}
+          />
         </Panel>
       )}
         </div>
