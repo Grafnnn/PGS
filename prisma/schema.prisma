@@ -58,6 +58,7 @@ model Organization {
   auditLogs                  AuditLog[]
   externalCollaborationLinks ExternalCollaborationLink[]
   projectInvoices            ProjectInvoice[]
+  aiRuns                     AiRun[]
 
   @@map("organizations")
 }
@@ -79,6 +80,7 @@ model User {
   passwordResetTokens PasswordResetToken[]
   documentVersions    DocumentVersion[]
   aiMessages          AiMessage[]
+  aiRuns              AiRun[]
   inboxItemStates     InboxItemState[]
 
   @@map("users")
@@ -155,6 +157,7 @@ model Project {
   dailyReports               DailyReport[]
   risks                      Risk[]
   aiMessages                 AiMessage[]
+  aiRuns                     AiRun[]
   auditLogs                  AuditLog[]
   importBatches              ImportBatch[]
   actionItems                ProjectActionItem[]
@@ -646,6 +649,51 @@ model AiMessage {
   @@map("ai_messages")
 }
 
+model AiRun {
+  id              String        @id @default(cuid())
+  organizationId  String        @map("organization_id")
+  projectId       String        @map("project_id")
+  userId          String?       @map("user_id")
+  scenario        String
+  promptVersion   String        @map("prompt_version")
+  inputJson       Json?         @map("input_json")
+  outputJson      Json?         @map("output_json")
+  status          String        @default("running")
+  provider        String        @default("deterministic")
+  durationMs      Int?          @map("duration_ms")
+  sanitizedError  String?       @map("sanitized_error")
+  feedback        String?
+  feedbackComment String?       @map("feedback_comment")
+  feedbackBy      String?       @map("feedback_by")
+  feedbackAt      DateTime?     @map("feedback_at")
+  completedAt     DateTime?     @map("completed_at")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  organization    Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  project         Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user            User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  actionLinks     AiRunAction[]
+
+  @@index([projectId, createdAt])
+  @@index([organizationId, createdAt])
+  @@index([projectId, status, createdAt])
+  @@map("ai_runs")
+}
+
+model AiRunAction {
+  id           String            @id @default(cuid())
+  aiRunId      String            @map("ai_run_id")
+  actionIndex  Int               @map("action_index")
+  actionItemId String            @unique @map("action_item_id")
+  createdBy    String?           @map("created_by")
+  createdAt    DateTime          @default(now()) @map("created_at")
+  aiRun        AiRun             @relation(fields: [aiRunId], references: [id], onDelete: Cascade)
+  actionItem   ProjectActionItem @relation(fields: [actionItemId], references: [id], onDelete: Cascade)
+
+  @@unique([aiRunId, actionIndex])
+  @@index([aiRunId, createdAt])
+  @@map("ai_run_actions")
+}
+
 model ImportBatch {
   id             String    @id @default(cuid())
   organizationId String    @map("organization_id")
@@ -729,6 +777,7 @@ model ProjectActionItem {
   createdAt        DateTime  @default(now()) @map("created_at")
   updatedAt        DateTime  @updatedAt @map("updated_at")
   project          Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  aiRunLinks       AiRunAction[]
 
   @@index([projectId, status, dueAt])
   @@index([projectId, assignee])

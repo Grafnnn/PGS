@@ -4,24 +4,20 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { canProject } from "@/lib/auth/project-permissions";
 import { demoState } from "@/lib/demo-data";
 import { aiScenarioAliases, runAiScenario, type AiScenario } from "@/lib/ai-command";
+import { aiRunStatusForInsight, recordAiRunSafely, sanitizeAiRunError, serializeAiRun } from "@/lib/ai-run-journal";
 import { prisma } from "@/lib/prisma";
 
 function json(body: unknown, status = 200) {
   return NextResponse.json(body, { status });
 }
 
-function sanitizeError(error: unknown) {
-  return error instanceof Error
-    ? error.message.replace(/postgres(ql)?:\/\/\S+/g, "[REDACTED_DATABASE_URL]").replace(/sk-[A-Za-z0-9_-]+/g, "[REDACTED_OPENAI_KEY]").slice(0, 180)
-    : "AI scenario failed";
-}
-
-async function projectExists(projectId: string) {
-  if (demoState.projects.some((project) => project.id === projectId)) return true;
+async function projectContext(projectId: string) {
+  const demoProject = demoState.projects.find((project) => project.id === projectId);
+  if (demoProject) return { id: demoProject.id, organizationId: demoProject.organizationId };
   try {
-    return Boolean(await prisma.project.findUnique({ where: { id: projectId }, select: { id: true } }));
+    return await prisma.project.findUnique({ where: { id: projectId }, select: { id: true, organizationId: true } });
   } catch (error) {
-    if (error instanceof Prisma.PrismaClientInitializationError) return false;
+    if (error instanceof Prisma.PrismaClientInitializationError) return null;
     throw error;
   }
 }
@@ -32,21 +28,44 @@ export async function POST(request: NextRequest, { params }: { params: { project
 
   const user = await getCurrentUser();
   if (!user) return json({ error: "Forbidden" }, 403);
-  if (!(await projectExists(params.projectId))) return json({ error: "Project not found" }, 404);
+  const project = await projectContext(params.projectId);
+  if (!project) return json({ error: "Project not found" }, 404);
   if (!(await canProject(user, params.projectId, "view"))) return json({ error: "Forbidden" }, 403);
 
   const body = (await request.json().catch(() => ({}))) as { textType?: string; topic?: string; instructions?: string; scenario?: AiScenario };
+  const runInput = {
+    projectId: params.projectId,
+    scenario,
+    textType: body.textType,
+    topic: body.topic,
+    instructions: body.instructions
+  };
+  const startedAt = Date.now();
 
   try {
-    const insight = await runAiScenario({
+    const insight = await runAiScenario(runInput);
+    const run = await recordAiRunSafely({
+      organizationId: project.organizationId,
       projectId: params.projectId,
-      scenario,
-      textType: body.textType,
-      topic: body.topic,
-      instructions: body.instructions
+      user,
+      runInput,
+      insight,
+      status: aiRunStatusForInsight(insight),
+      provider: insight.provider,
+      durationMs: Date.now() - startedAt
     });
-    return json({ ok: true, insight });
+    return json({ ok: true, insight, journaled: Boolean(run), run: run ? serializeAiRun(run) : null });
   } catch (error) {
-    return json({ ok: false, error: "AI_SCENARIO_FAILED", message: sanitizeError(error) }, 502);
+    const run = await recordAiRunSafely({
+      organizationId: project.organizationId,
+      projectId: params.projectId,
+      user,
+      runInput,
+      status: "failed",
+      provider: "none",
+      durationMs: Date.now() - startedAt,
+      error
+    });
+    return json({ ok: false, error: "AI_SCENARIO_FAILED", message: sanitizeAiRunError(error), journaled: Boolean(run) }, 502);
   }
 }

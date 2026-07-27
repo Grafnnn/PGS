@@ -52,6 +52,7 @@ function projectDeleteClient(project: { id: string; organizationId: string; name
     dailyReport: countDelegate(16),
     risk: countDelegate(17),
     aiMessage: countDelegate(18),
+    aiRun: countDelegate(23),
     importBatch: countDelegate(19),
     accountingSyncRun: countDelegate(20),
     accountingExternalLink: countDelegate(21),
@@ -131,6 +132,7 @@ describe("deleteProjectWithConfirmation", () => {
         budgetItems: 4,
         procurementRequestItems: 10,
         documentVersions: 15,
+        aiRuns: 23,
         accountingSyncRuns: 20,
         accountingExternalLinks: 21,
         auditLogs: 22

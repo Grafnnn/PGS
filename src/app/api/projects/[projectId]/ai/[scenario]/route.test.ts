@@ -17,6 +17,28 @@ vi.mock("@/lib/prisma", () => ({
     project: {
       findUnique: vi.fn()
     },
+    aiRun: {
+      create: vi.fn(async ({ data }: { data: Record<string, unknown> }) => ({
+        id: "ai-run-1",
+        projectId: "project-demo",
+        userId: null,
+        scenario: "summary",
+        promptVersion: "ai-command-v1",
+        inputJson: data.inputJson,
+        outputJson: data.outputJson,
+        status: data.status,
+        provider: data.provider,
+        durationMs: data.durationMs,
+        sanitizedError: data.sanitizedError ?? null,
+        feedback: null,
+        feedbackComment: null,
+        feedbackBy: null,
+        feedbackAt: null,
+        completedAt: new Date("2026-07-27T10:00:00.000Z"),
+        createdAt: new Date("2026-07-27T10:00:00.000Z"),
+        actionLinks: []
+      }))
+    },
     document: {
       findMany: vi.fn(async () => [])
     },
@@ -65,13 +87,15 @@ describe("AI scenario endpoint", () => {
     const { POST } = await import("./route");
 
     const response = await POST(request(), { params: { projectId: "project-demo", scenario: "summary" } });
-    const data = (await response.json()) as { ok: boolean; insight: { scenario: string; provider: string; findings: unknown[] } };
+    const data = (await response.json()) as { ok: boolean; journaled: boolean; run: { promptVersion: string }; insight: { scenario: string; provider: string; findings: unknown[] } };
 
     expect(response.status).toBe(200);
     expect(data.ok).toBe(true);
     expect(data.insight.scenario).toBe("summary");
     expect(data.insight.provider).toBe("deterministic");
     expect(data.insight.findings.length).toBeGreaterThan(0);
+    expect(data.journaled).toBe(true);
+    expect(data.run.promptVersion).toBe("ai-command-v1");
   });
 
   it("rejects unauthenticated users before project access checks", async () => {
@@ -134,5 +158,40 @@ describe("AI scenario endpoint", () => {
     expect(data.ok).toBe(true);
     expect(data.insight.provider).toBe("degraded");
     expect(JSON.stringify(data)).not.toContain("openai-token-redacted");
+  });
+
+  it("redacts secret-like input before writing the AI journal", async () => {
+    const { POST } = await import("./route");
+
+    const response = await POST(
+      request({
+        instructions: "DATABASE_URL=postgresql://admin:password@db.local/pgs token=abc123secret password=hunter2 sk-proj-abcdefghijklmnop"
+      }),
+      { params: { projectId: "project-demo", scenario: "summary" } }
+    );
+
+    expect(response.status).toBe(200);
+    const createInput = vi.mocked(prisma.aiRun.create).mock.calls.at(-1)?.[0];
+    const serialized = JSON.stringify(createInput);
+    expect(serialized).not.toContain("admin:password");
+    expect(serialized).not.toContain("abc123secret");
+    expect(serialized).not.toContain("hunter2");
+    expect(serialized).not.toContain("sk-proj-abcdefghijklmnop");
+    expect(serialized).toContain("[REDACTED");
+  });
+
+  it("keeps AI analysis available when journal persistence is unavailable", async () => {
+    vi.mocked(prisma.aiRun.create).mockRejectedValueOnce(new Error("ai_runs table is unavailable"));
+    const { POST } = await import("./route");
+
+    const response = await POST(request(), { params: { projectId: "project-demo", scenario: "summary" } });
+    const data = (await response.json()) as { ok: boolean; journaled: boolean; insight: { scenario: string } };
+
+    expect(response.status).toBe(200);
+    expect(data).toMatchObject({
+      ok: true,
+      journaled: false,
+      insight: { scenario: "summary" }
+    });
   });
 });

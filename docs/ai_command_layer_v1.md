@@ -11,6 +11,7 @@ Supported server scenarios:
 - `POST /api/projects/:id/ai/schedule-review`
 - `POST /api/projects/:id/ai/procurement-review`
 - `POST /api/projects/:id/ai/finance-review`
+- `POST /api/projects/:id/ai/contract-review`
 - `POST /api/projects/:id/ai/risk-review`
 - `POST /api/projects/:id/ai/document-review`
 - `POST /api/projects/:id/ai/daily-report-summary`
@@ -47,7 +48,8 @@ AI endpoints:
 
 - require an authenticated/local allowed user;
 - check project access through `canProject(user, projectId, "view")`;
-- do not write to the database;
+- write only sanitized execution metadata to the project AI decision journal;
+- do not change operational project data during analysis;
 - do not create risks, procurement requests, documents, or payments automatically;
 - return drafts and recommendations only;
 - do not log API keys, database URLs, cookies, or session tokens.
@@ -64,6 +66,8 @@ The project AI tab shows scenario cards. Each card lists the data used, runs one
 - optional draft text;
 - data limitations;
 - copy/retry actions.
+
+The AI tab also includes the project-scoped decision journal described in [AI Decision Journal & Controlled Actions v1](./ai_decision_journal_v1.md). Recommended project actions are created only after an explicit user click and edit-permission check.
 
 ## Smoke
 
@@ -84,6 +88,6 @@ curl -X POST "$APP_URL/api/projects/project-demo/ai/summary" \
 
 Live AI smoke should be explicitly approved and should run one read-only scenario on `project-demo`.
 
-## Next Step
+## Persistent history
 
-The natural next step is persistent `AiRun` history with prompt version, status, output JSON, sanitized error, duration, and user/project metadata. That requires a Prisma migration and should be reviewed separately.
+`AiRun` history is implemented as a separate migration-backed layer. It records prompt contract version, sanitized input and output, provider mode, status, duration, user/project metadata, feedback, and explicit action links.
