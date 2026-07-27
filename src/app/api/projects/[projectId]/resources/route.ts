@@ -13,6 +13,7 @@ import {
   serializeWorkforceResource,
   workforceResourceCreateSchema
 } from "@/lib/workforce-capacity";
+import { buildProductivityNormBenchmarks } from "@/lib/workforce-productivity";
 
 function json(body: unknown, status = 200) {
   return NextResponse.json(body, { status });
@@ -38,7 +39,14 @@ export async function GET(_request: Request, { params }: { params: { projectId: 
   try {
     const project = await projectContext(params.projectId);
     if (!project) return json({ error: "Project not found" }, 404);
-    const [assignments, allOrganizationAssignments, organizationResources, payrollPolicy, laborDemands] = await Promise.all([
+    const [
+      assignments,
+      allOrganizationAssignments,
+      organizationResources,
+      payrollPolicy,
+      laborDemands,
+      productivityLaborDemands
+    ] = await Promise.all([
       prisma.projectResourceAssignment.findMany({
         where: { projectId: params.projectId },
         include: { resource: true },
@@ -76,12 +84,57 @@ export async function GET(_request: Request, { params }: { params: { projectId: 
         where: { projectId: params.projectId },
         include: { allocations: { orderBy: [{ sharePercent: "desc" }, { workName: "asc" }] } },
         orderBy: [{ category: "asc" }, { startsAt: "asc" }, { profession: "asc" }]
-      })
+      }),
+      canEdit
+        ? prisma.projectLaborDemand.findMany({
+            where: {
+              organizationId: project.organizationId,
+              category: { in: ["worker", "crew"] },
+              productivityNorm: { gt: 0 }
+            },
+            select: {
+              category: true,
+              profession: true,
+              function: true,
+              productivityNorm: true,
+              productivityUnit: true,
+              personMonths: true,
+              confidence: true
+            }
+          })
+        : Promise.resolve([])
     ]);
     const assignedIds = new Set(assignments.map((item) => item.resourceId));
+    const productivityNorms = canEdit
+      ? buildProductivityNormBenchmarks([
+          ...productivityLaborDemands.map((item) => ({
+            category: item.category === "crew" ? "crew" as const : "worker" as const,
+            profession: item.profession,
+            function: item.function,
+            norm: Number(item.productivityNorm),
+            unit: item.productivityUnit,
+            weight: Math.max(0.1, Math.min(24, Number(item.personMonths) * Math.max(0.25, Number(item.confidence)))),
+            source: "labor-demand" as const
+          })),
+          ...organizationResources
+            .filter((item) =>
+              (item.kind === "worker" || item.kind === "crew") &&
+              Number(item.productivityNorm) > 0
+            )
+            .map((item) => ({
+              category: item.kind === "crew" ? "crew" as const : "worker" as const,
+              profession: item.profession || item.name,
+              norm: Number(item.productivityNorm),
+              unit: item.productivityUnit,
+              weight: Math.max(1, item.headcount),
+              source: "resource" as const
+            }))
+        ])
+      : [];
     return json({
       items: assignments.map((item) => serializeWorkforceResource(item.resource, item, allOrganizationAssignments)),
       demands: laborDemands.map(serializeLaborDemand),
+      productivityNorms,
       policy: serializePayrollPolicy(payrollPolicy, params.projectId),
       available: organizationResources
         .filter((item) => !assignedIds.has(item.id))

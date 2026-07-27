@@ -32,6 +32,11 @@ import {
   type WorkforceStaffingCandidate,
   type WorkforceStaffingGap
 } from "@/lib/workforce-staffing-plan";
+import {
+  recommendProductivityNorm,
+  type ProductivityNormBenchmark,
+  type ProductivityNormRecommendation
+} from "@/lib/workforce-productivity";
 import type {
   AvailableWorkforceResource,
   BudgetItem,
@@ -223,6 +228,12 @@ function confidenceLabel(value: number) {
   return "Требует проверки";
 }
 
+function normConfidenceLabel(value: ProductivityNormRecommendation["confidence"]) {
+  if (value === "high") return "высокое";
+  if (value === "medium") return "среднее";
+  return "низкое";
+}
+
 function staffingActionLabel(action: WorkforceStaffingGap["action"]) {
   if (action === "covered") return "Покрыто";
   if (action === "assign-existing") return "Назначить из штата";
@@ -244,6 +255,7 @@ export function ResourcesEquipmentWorkspace(props: Props) {
   const [policy, setPolicy] = useState<ProjectPayrollPolicy>(() => defaultPolicy(props.projectId));
   const [policyForm, setPolicyForm] = useState<ProjectPayrollPolicy>(() => defaultPolicy(props.projectId));
   const [available, setAvailable] = useState<AvailableWorkforceResource[]>([]);
+  const [productivityNorms, setProductivityNorms] = useState<ProductivityNormBenchmark[]>([]);
   const [canEdit, setCanEdit] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState("");
@@ -256,8 +268,30 @@ export function ResourcesEquipmentWorkspace(props: Props) {
   const [existingResourceId, setExistingResourceId] = useState("");
   const [form, setForm] = useState<ResourceForm>(() => defaultForm(props.project));
   const [demandForm, setDemandForm] = useState<DemandForm>(() => defaultDemand(props.project));
+  const [resourceNormAuto, setResourceNormAuto] = useState(true);
+  const [demandNormAuto, setDemandNormAuto] = useState(true);
   const [resourceFilter, setResourceFilter] = useState<"people" | "equipment">("people");
   const [staffingFilter, setStaffingFilter] = useState<"gaps" | "all">("gaps");
+
+  const resourceNormRecommendation = useMemo(() => recommendProductivityNorm({
+    category: form.kind === "equipment" ? "engineer" : form.kind,
+    profession: form.profession,
+    unit: form.productivityUnit,
+    benchmarks: productivityNorms
+  }), [form.kind, form.productivityUnit, form.profession, productivityNorms]);
+  const demandNormRecommendation = useMemo(() => recommendProductivityNorm({
+    category: demandForm.category,
+    profession: demandForm.profession,
+    function: demandForm.function,
+    unit: demandForm.productivityUnit,
+    benchmarks: productivityNorms
+  }), [demandForm.category, demandForm.function, demandForm.productivityUnit, demandForm.profession, productivityNorms]);
+  const resourceNormAutoApplied = resourceNormAuto && Boolean(resourceNormRecommendation?.autoApplicable);
+  const demandNormAutoApplied = demandNormAuto && Boolean(demandNormRecommendation?.autoApplicable);
+  const effectiveResourceNorm = resourceNormAutoApplied ? resourceNormRecommendation?.norm ?? 0 : form.productivityNorm;
+  const effectiveResourceUnit = resourceNormAutoApplied ? resourceNormRecommendation?.unit ?? "" : form.productivityUnit;
+  const effectiveDemandNorm = demandNormAutoApplied ? demandNormRecommendation?.norm ?? 0 : demandForm.productivityNorm;
+  const effectiveDemandUnit = demandNormAutoApplied ? demandNormRecommendation?.unit ?? "" : demandForm.productivityUnit;
 
   const summary = useMemo(() => buildWorkforceCapacitySummary(items, demands, policy), [demands, items, policy]);
   const economics = useMemo(() => buildWorkforceEconomics({
@@ -295,6 +329,7 @@ export function ResourcesEquipmentWorkspace(props: Props) {
         demands?: ProjectLaborDemand[];
         policy?: ProjectPayrollPolicy;
         available?: AvailableWorkforceResource[];
+        productivityNorms?: ProductivityNormBenchmark[];
         permissions?: { edit?: boolean };
       };
       const nextPolicy = body.policy ?? defaultPolicy(props.projectId);
@@ -303,6 +338,7 @@ export function ResourcesEquipmentWorkspace(props: Props) {
       setPolicy(nextPolicy);
       setPolicyForm(nextPolicy);
       setAvailable(body.available ?? []);
+      setProductivityNorms(body.productivityNorms ?? []);
       setCanEdit(Boolean(body.permissions?.edit));
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Не удалось загрузить ФОТ и ресурсный план.");
@@ -319,6 +355,7 @@ export function ResourcesEquipmentWorkspace(props: Props) {
     setEditingId(null);
     setExistingResourceId("");
     setForm({ ...defaultForm(props.project), kind });
+    setResourceNormAuto(true);
     setFormOpen(true);
     setDemandOpen(false);
     setError("");
@@ -329,6 +366,7 @@ export function ResourcesEquipmentWorkspace(props: Props) {
     setEditingId(item.id);
     setExistingResourceId("");
     setForm(formFromItem(item));
+    setResourceNormAuto(false);
     setFormOpen(true);
     setDemandOpen(false);
     setError("");
@@ -339,6 +377,7 @@ export function ResourcesEquipmentWorkspace(props: Props) {
     const allocationPercent = Math.max(1, Math.min(100, Math.ceil(gap.gapHeadcount / Math.max(1, candidate.headcount) * 100)));
     setEditingId(null);
     setExistingResourceId(candidate.resourceId);
+    setResourceNormAuto(false);
     setForm({
       ...defaultForm(props.project),
       kind: candidate.kind,
@@ -358,6 +397,7 @@ export function ResourcesEquipmentWorkspace(props: Props) {
   function openNewResourceForGap(gap: WorkforceStaffingGap) {
     setEditingId(null);
     setExistingResourceId("");
+    setResourceNormAuto(true);
     setForm({
       ...defaultForm(props.project),
       kind: gap.category,
@@ -374,6 +414,37 @@ export function ResourcesEquipmentWorkspace(props: Props) {
     setDemandOpen(false);
     setError("");
     setNotice("");
+  }
+
+  function openDemand() {
+    setDemandForm(defaultDemand(props.project));
+    setDemandNormAuto(true);
+    setDemandOpen(true);
+    setFormOpen(false);
+    setError("");
+    setNotice("");
+  }
+
+  function toggleResourceNormAuto(value: boolean) {
+    if (!value && resourceNormRecommendation?.autoApplicable) {
+      setForm((current) => ({
+        ...current,
+        productivityNorm: resourceNormRecommendation.norm,
+        productivityUnit: resourceNormRecommendation.unit
+      }));
+    }
+    setResourceNormAuto(value);
+  }
+
+  function toggleDemandNormAuto(value: boolean) {
+    if (!value && demandNormRecommendation?.autoApplicable) {
+      setDemandForm((current) => ({
+        ...current,
+        productivityNorm: demandNormRecommendation.norm,
+        productivityUnit: demandNormRecommendation.unit
+      }));
+    }
+    setDemandNormAuto(value);
   }
 
   async function saveResource(event: React.FormEvent) {
@@ -400,8 +471,8 @@ export function ResourcesEquipmentWorkspace(props: Props) {
             employmentType: form.employmentType,
             headcount: form.headcount,
             capacityHoursPerMonth: form.capacityHoursPerMonth,
-            productivityNorm: form.productivityNorm,
-            productivityUnit: form.productivityUnit || null,
+            productivityNorm: effectiveResourceNorm,
+            productivityUnit: effectiveResourceUnit || null,
             grossMonthlySalary: usesPayroll(form.kind, form.employmentType) ? form.grossMonthlySalary : 0,
             monthlyCost: usesPayroll(form.kind, form.employmentType) ? form.grossMonthlySalary * form.headcount : form.monthlyCost,
             hourlyCost: form.hourlyCost,
@@ -443,7 +514,8 @@ export function ResourcesEquipmentWorkspace(props: Props) {
         body: JSON.stringify({
           ...demandForm,
           function: demandForm.function || null,
-          productivityUnit: demandForm.productivityUnit || null,
+          productivityNorm: effectiveDemandNorm,
+          productivityUnit: effectiveDemandUnit || null,
           monthlyProfile: [],
           source: "Ручной план ФОТ",
           confidence: 1,
@@ -537,7 +609,7 @@ export function ResourcesEquipmentWorkspace(props: Props) {
           </button>
           {canEdit ? (
             <>
-              <button className="button secondary compact-button" type="button" onClick={() => { setDemandOpen(true); setFormOpen(false); }}>
+              <button className="button secondary compact-button" type="button" onClick={openDemand}>
                 <Plus size={16} /> Потребность
               </button>
               <button className="button primary compact-button" type="button" onClick={() => openCreate()}>
@@ -719,8 +791,14 @@ export function ResourcesEquipmentWorkspace(props: Props) {
               )}
               <label className="field"><span>Стоимость часа</span><input min={0} type="number" value={form.hourlyCost} onChange={(event) => setForm({ ...form, hourlyCost: Number(event.target.value) })} /></label>
               <label className="field"><span>Мощность, ч/мес.</span><input min={0} type="number" value={form.capacityHoursPerMonth} onChange={(event) => setForm({ ...form, capacityHoursPerMonth: Number(event.target.value) })} /></label>
-              <label className="field"><span>Норма выработки</span><input min={0} step="0.001" type="number" value={form.productivityNorm} onChange={(event) => setForm({ ...form, productivityNorm: Number(event.target.value) })} /></label>
-              <label className="field"><span>Единица выработки</span><input value={form.productivityUnit} onChange={(event) => setForm({ ...form, productivityUnit: event.target.value })} placeholder="м²/смена, м³/ч" /></label>
+              <label className="field"><span>Норма выработки</span><input min={0} readOnly={resourceNormAutoApplied} step="0.001" type="number" value={effectiveResourceNorm} onChange={(event) => { setResourceNormAuto(false); setForm({ ...form, productivityNorm: Number(event.target.value) }); }} /></label>
+              <label className="field"><span>Единица выработки</span><input readOnly={resourceNormAutoApplied} value={effectiveResourceUnit} onChange={(event) => { setResourceNormAuto(false); setForm({ ...form, productivityUnit: event.target.value }); }} placeholder="м²/смена, м³/ч" /></label>
+              <ProductivityNormAssistant
+                autoEnabled={resourceNormAuto}
+                category={form.kind}
+                onToggle={toggleResourceNormAuto}
+                recommendation={resourceNormRecommendation}
+              />
               <label className="field field-wide"><span>Допуски / удостоверения</span><input value={form.certifications} onChange={(event) => setForm({ ...form, certifications: event.target.value })} placeholder="Через запятую" /></label>
               <label className="field"><span>Статус</span><select value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value as ResourceStatus })}>{Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
               <label className="field field-wide"><span>Примечание</span><input value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} /></label>
@@ -755,8 +833,14 @@ export function ResourcesEquipmentWorkspace(props: Props) {
             <label className="field"><span>Пиковая численность</span><input min={0} step="0.1" type="number" value={demandForm.peakHeadcount} onChange={(event) => setDemandForm({ ...demandForm, peakHeadcount: Number(event.target.value) })} /></label>
             <label className="field"><span>Человеко-месяцы</span><input min={0} step="0.1" type="number" value={demandForm.personMonths} onChange={(event) => setDemandForm({ ...demandForm, personMonths: Number(event.target.value) })} /></label>
             <label className="field"><span>План часов</span><input min={0} type="number" value={demandForm.plannedHours} onChange={(event) => setDemandForm({ ...demandForm, plannedHours: Number(event.target.value) })} /></label>
-            <label className="field"><span>Норма выработки</span><input min={0} step="0.001" type="number" value={demandForm.productivityNorm} onChange={(event) => setDemandForm({ ...demandForm, productivityNorm: Number(event.target.value) })} /></label>
-            <label className="field"><span>Единица нормы</span><input value={demandForm.productivityUnit} onChange={(event) => setDemandForm({ ...demandForm, productivityUnit: event.target.value })} /></label>
+            <label className="field"><span>Норма выработки</span><input min={0} readOnly={demandNormAutoApplied} step="0.001" type="number" value={effectiveDemandNorm} onChange={(event) => { setDemandNormAuto(false); setDemandForm({ ...demandForm, productivityNorm: Number(event.target.value) }); }} /></label>
+            <label className="field"><span>Единица нормы</span><input readOnly={demandNormAutoApplied} value={effectiveDemandUnit} onChange={(event) => { setDemandNormAuto(false); setDemandForm({ ...demandForm, productivityUnit: event.target.value }); }} /></label>
+            <ProductivityNormAssistant
+              autoEnabled={demandNormAuto}
+              category={demandForm.category}
+              onToggle={toggleDemandNormAuto}
+              recommendation={demandNormRecommendation}
+            />
             <label className="field"><span>Начало</span><input required type="date" value={demandForm.startsAt} onChange={(event) => setDemandForm({ ...demandForm, startsAt: event.target.value })} /></label>
             <label className="field"><span>Окончание</span><input required type="date" value={demandForm.endsAt} onChange={(event) => setDemandForm({ ...demandForm, endsAt: event.target.value })} /></label>
             <label className="field field-wide"><span>Примечание</span><input value={demandForm.notes} onChange={(event) => setDemandForm({ ...demandForm, notes: event.target.value })} /></label>
@@ -815,7 +899,7 @@ export function ResourcesEquipmentWorkspace(props: Props) {
         <>
           <div className="payroll-section-heading">
             <div><FileSpreadsheet size={18} /><span><strong>Потребность из Excel и ручного плана</strong><small>ИТР, рабочие и бригады не создаются как фактические сотрудники: это план для комплектования проекта.</small></span></div>
-            {canEdit ? <button className="button secondary compact-button" type="button" onClick={() => { setDemandOpen(true); setFormOpen(false); }}><Plus size={16} /> Добавить строку</button> : null}
+            {canEdit ? <button className="button secondary compact-button" type="button" onClick={openDemand}><Plus size={16} /> Добавить строку</button> : null}
           </div>
           {demands.length ? (
             <div className="labor-demand-list">
@@ -834,6 +918,7 @@ export function ResourcesEquipmentWorkspace(props: Props) {
                       <span>Период <strong>{new Date(item.startsAt).toLocaleDateString("ru-RU")} – {new Date(item.endsAt).toLocaleDateString("ru-RU")}</strong></span>
                       <span>Часы <strong>{number(item.plannedHours)}</strong></span>
                       <span>Оклад <strong>{money(item.grossMonthlySalary)}/мес.</strong></span>
+                      <span>Норма <strong>{item.productivityNorm ? `${number(item.productivityNorm, 3)} ${item.productivityUnit || "ед."}` : "не задана"}</strong></span>
                       <span>Источник <strong>{item.sourceSheet ? `${item.sourceSheet}${item.sourceRow ? `, строка ${item.sourceRow}` : ""}` : item.source}</strong></span>
                     </div>
                     {item.allocations.length ? (
@@ -892,4 +977,46 @@ export function ResourcesEquipmentWorkspace(props: Props) {
 
 function Metric({ title, value, detail, tone }: { title: string; value: string; detail: string; tone: ResourcesEquipmentTone }) {
   return <div className={`quality-issues-card metric tone-${tone}`}><small>{title}</small><strong>{value}</strong><span>{detail}</span></div>;
+}
+
+function ProductivityNormAssistant({
+  autoEnabled,
+  category,
+  onToggle,
+  recommendation
+}: {
+  autoEnabled: boolean;
+  category: ResourceKind;
+  onToggle: (value: boolean) => void;
+  recommendation: ProductivityNormRecommendation | null;
+}) {
+  const eligible = category === "worker" || category === "crew";
+  const autoApplied = eligible && autoEnabled && Boolean(recommendation?.autoApplicable);
+  return (
+    <div className={`productivity-norm-assistant ${autoApplied ? "is-applied" : ""}`}>
+      <Calculator size={18} />
+      <div>
+        <strong>
+          {!eligible
+            ? "Норма задаётся вручную"
+            : recommendation
+              ? `Средняя: ${number(recommendation.norm, 3)} ${recommendation.unit}`
+              : "Средняя норма пока не рассчитана"}
+        </strong>
+        <span>
+          {!eligible
+            ? "Автоматический расчёт применяется только к рабочим и бригадам."
+            : recommendation
+              ? `${recommendation.explanation} Диапазон ${number(recommendation.minimum, 3)}–${number(recommendation.maximum, 3)}; доверие ${normConfidenceLabel(recommendation.confidence)}.`
+              : "Нужны минимум два сопоставимых наблюдения по профессии и единице выработки."}
+        </span>
+      </div>
+      {eligible ? (
+        <label className="productivity-norm-toggle">
+          <input checked={autoEnabled} onChange={(event) => onToggle(event.target.checked)} type="checkbox" />
+          <span>{autoApplied ? "Применяется автоматически" : "Автоматически при достаточных данных"}</span>
+        </label>
+      ) : null}
+    </div>
+  );
 }

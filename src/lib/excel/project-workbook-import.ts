@@ -12,6 +12,7 @@ import type {
   ImportSheetMapping
 } from "./import-types";
 import { buildProjectWorkbookQualityGate, failedProjectWorkbookQualityGate, type ProjectWorkbookQualityGate } from "./project-workbook-quality";
+import { enrichLaborDemandsWithAverageProductivity } from "@/lib/workforce-productivity";
 
 export type { ProjectWorkbookQualityGate, ProjectWorkbookQualityIssue, ProjectWorkbookQualityStatus } from "./project-workbook-quality";
 
@@ -319,10 +320,16 @@ function buildProjectWorkbook(buffer: Buffer, fileName: string, projectId: strin
   const selectedMaterialRows = new Set(uniqueMaterials.map((item) => rowKey(item.sheetName, item.rowNumber)));
   const selectedBudgetItems = budgetItems.filter((item) => item.kind !== "material" || selectedMaterialRows.has(rowKey(item.sheetName, item.rowNumber)));
   let uniqueBudgetItems = dedupeBudgetItems(selectedBudgetItems);
-  const laborDemands = parsedLaborDemands.map((item) => ({
+  const productivityEnrichment = enrichLaborDemandsWithAverageProductivity(parsedLaborDemands);
+  const laborDemands = productivityEnrichment.items.map((item) => ({
     ...item,
     allocations: buildLaborAllocations(item, uniqueBudgetItems)
   }));
+  if (productivityEnrichment.applied > 0) {
+    warnings.push(
+      `Автоматически рассчитана средняя норма выработки для ${productivityEnrichment.applied} строк ФОТ. Использованы только сопоставимые профессии и единицы; значения отмечены в примечаниях для проверки.`
+    );
+  }
   const duplicateRows = selectedBudgetItems.length - uniqueBudgetItems.length;
   const sourceDirectCost = extractDirectCost(enabledSheetData);
   const parsedDirectCost = sumCost(uniqueBudgetItems);
@@ -830,7 +837,7 @@ function classifyLaborCategory(name: string, functionText: string, sheetName: st
 
 function inferProductivityUnit(...values: string[]) {
   const text = normalizeHeader(values.join(" "));
-  const unit = text.match(/(?:м2|м²|м3|м³|пог м|шт|т|кг|компл)[^\s,;]*/)?.[0];
+  const unit = text.match(/(?:^|\s)(м2|м²|м3|м³|пог м|шт|т|кг|компл)(?=\s|$)/u)?.[1];
   return unit ? `${unit}/чел.-мес.` : "ед./чел.-мес.";
 }
 

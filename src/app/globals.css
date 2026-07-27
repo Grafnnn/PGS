@@ -12086,6 +12086,68 @@ input[type="checkbox"] {
   grid-column: span 2;
 }
 
+.productivity-norm-assistant {
+  align-items: center;
+  background: var(--panel-muted);
+  border-block: 1px solid var(--line);
+  color: var(--muted);
+  display: grid;
+  gap: 12px;
+  grid-column: 1 / -1;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  margin-top: 2px;
+  min-width: 0;
+  padding: 12px 2px;
+}
+
+.productivity-norm-assistant.is-applied {
+  background: color-mix(in srgb, var(--green-soft) 72%, var(--surface));
+  border-color: color-mix(in srgb, var(--green) 24%, var(--line));
+  color: var(--green);
+}
+
+.productivity-norm-assistant > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.productivity-norm-assistant strong,
+.productivity-norm-assistant span {
+  overflow-wrap: anywhere;
+}
+
+.productivity-norm-assistant strong {
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.productivity-norm-assistant span {
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.productivity-norm-toggle {
+  align-items: center;
+  cursor: pointer;
+  display: flex;
+  gap: 8px;
+  justify-self: end;
+  max-width: 230px;
+}
+
+.productivity-norm-toggle input {
+  flex: 0 0 auto;
+  height: 16px;
+  width: 16px;
+}
+
+.productivity-norm-toggle span {
+  color: var(--ink);
+  font-weight: 700;
+  min-width: 0;
+}
+
 .resource-filter {
   margin-top: -2px;
 }
@@ -12950,8 +13012,14 @@ input[type="checkbox"] {
 
   .resource-capacity-row,
   .ai-control-agent-header,
-  .ai-control-confirm {
+  .ai-control-confirm,
+  .productivity-norm-assistant {
     grid-template-columns: 1fr;
+  }
+
+  .productivity-norm-toggle {
+    justify-self: start;
+    max-width: none;
   }
 
   .resource-capacity-status {
