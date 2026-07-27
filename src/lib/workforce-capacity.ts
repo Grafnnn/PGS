@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type {
+  AvailableWorkforceResource,
   BudgetItem,
   ProjectLaborDemand,
   ProjectPayrollPolicy,
@@ -201,6 +202,35 @@ export function serializeWorkforceResource(
       overlappingProjects: new Set(overlapping.map((item) => item.projectId)).size,
       overloaded: totalPercent > 100
     }
+  };
+}
+
+export function serializeAvailableWorkforceResource(
+  resource: ResourceRecord,
+  allAssignments: ConflictAssignment[]
+): AvailableWorkforceResource {
+  return {
+    id: resource.id,
+    kind: resource.kind as AvailableWorkforceResource["kind"],
+    name: resource.name,
+    profession: resource.profession,
+    employmentType: resource.employmentType as AvailableWorkforceResource["employmentType"],
+    headcount: resource.headcount,
+    capacityHoursPerMonth: number(resource.capacityHoursPerMonth),
+    grossMonthlySalary: number(resource.grossMonthlySalary) || (
+      isPayrollResource(resource.kind as ResourceKind, resource.employmentType)
+        ? number(resource.monthlyCost) / Math.max(1, resource.headcount)
+        : 0
+    ),
+    monthlyCost: number(resource.monthlyCost),
+    status: resource.status as AvailableWorkforceResource["status"],
+    commitments: allAssignments
+      .filter((item) => item.resourceId === resource.id)
+      .map((item) => ({
+        startsAt: item.startsAt.toISOString(),
+        endsAt: item.endsAt.toISOString(),
+        allocationPercent: item.allocationPercent
+      }))
   };
 }
 

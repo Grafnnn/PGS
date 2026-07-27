@@ -200,6 +200,24 @@ export interface WorkforceResource {
   };
 }
 
+export interface AvailableWorkforceResource {
+  id: string;
+  kind: ResourceKind;
+  name: string;
+  profession?: string | null;
+  employmentType: ResourceEmploymentType;
+  headcount: number;
+  capacityHoursPerMonth: number;
+  grossMonthlySalary: number;
+  monthlyCost: number;
+  status: ResourceStatus;
+  commitments: Array<{
+    startsAt: string;
+    endsAt: string;
+    allocationPercent: number;
+  }>;
+}
+
 export interface ProjectPayrollPolicy {
   id?: string;
   projectId: string;

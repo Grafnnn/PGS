@@ -12309,6 +12309,217 @@ input[type="checkbox"] {
   line-height: 1.45;
 }
 
+.staffing-plan-heading {
+  align-items: flex-start;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  gap: 18px;
+  justify-content: space-between;
+  padding: 2px 0 14px;
+}
+
+.staffing-plan-heading h3 {
+  margin: 4px 0 6px;
+}
+
+.staffing-plan-heading p {
+  color: var(--muted);
+  margin: 0;
+  max-width: 820px;
+}
+
+.staffing-kpi-grid {
+  display: grid;
+  gap: 1px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  overflow: hidden;
+}
+
+.staffing-kpi-grid .quality-issues-card {
+  border-radius: 0;
+}
+
+.staffing-filter {
+  margin: 0;
+}
+
+.staffing-timeline {
+  display: grid;
+  gap: 18px;
+  min-width: 0;
+}
+
+.staffing-month {
+  display: grid;
+  gap: 0;
+  min-width: 0;
+}
+
+.staffing-month-header {
+  align-items: center;
+  background: var(--panel-muted);
+  border-block: 1px solid var(--line);
+  display: flex;
+  gap: 14px;
+  justify-content: space-between;
+  padding: 10px 12px;
+}
+
+.staffing-month-header > div {
+  align-items: baseline;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.staffing-month-header span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.staffing-gap-list {
+  display: grid;
+  min-width: 0;
+}
+
+.staffing-gap-row {
+  align-items: center;
+  border-bottom: 1px solid var(--line);
+  display: grid;
+  gap: 14px;
+  grid-template-columns: minmax(190px, 1.15fr) minmax(130px, 0.7fr) minmax(300px, 1.45fr) minmax(210px, 1fr) auto;
+  min-width: 0;
+  padding: 12px;
+}
+
+.staffing-gap-row.has-gap {
+  box-shadow: inset 3px 0 0 var(--yellow);
+}
+
+.staffing-gap-row.covered {
+  box-shadow: inset 3px 0 0 var(--green);
+}
+
+.staffing-gap-identity {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  min-width: 0;
+}
+
+.staffing-gap-identity > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.staffing-gap-identity strong,
+.staffing-gap-identity span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.staffing-gap-identity span,
+.staffing-coverage span,
+.staffing-gap-metrics small,
+.staffing-candidates > span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.staffing-coverage {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+
+.staffing-coverage > div:first-child {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+.staffing-coverage-track {
+  background: var(--surface-muted);
+  border: 1px solid var(--line);
+  height: 7px;
+  overflow: hidden;
+}
+
+.staffing-coverage-track > span {
+  background: var(--green);
+  display: block;
+  height: 100%;
+  max-width: 100%;
+}
+
+.staffing-gap-metrics {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(4, minmax(62px, 1fr));
+  min-width: 0;
+}
+
+.staffing-gap-metrics > span {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.staffing-gap-metrics strong {
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.staffing-candidates {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.staffing-candidates > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.staffing-candidates em {
+  background: var(--blue-soft);
+  color: var(--blue);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 700;
+  padding: 3px 6px;
+}
+
+.staffing-limitations {
+  align-items: flex-start;
+  background: var(--panel-muted);
+  border-left: 4px solid var(--yellow);
+  display: flex;
+  gap: 10px;
+  padding: 12px 14px;
+}
+
+.staffing-limitations > svg {
+  color: var(--yellow);
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+
+.staffing-limitations > div {
+  display: grid;
+  gap: 4px;
+}
+
+.staffing-limitations span {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
 .payroll-section-heading {
   align-items: center;
   border-bottom: 1px solid var(--line);
@@ -12711,6 +12922,18 @@ input[type="checkbox"] {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .staffing-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .staffing-gap-row {
+    grid-template-columns: minmax(190px, 1fr) minmax(130px, 0.65fr) minmax(280px, 1.5fr) auto;
+  }
+
+  .staffing-candidates {
+    grid-column: 1 / span 3;
+  }
+
   .labor-demand-row > summary {
     grid-template-columns: auto minmax(220px, 1fr) repeat(2, minmax(100px, 0.5fr)) auto;
   }
@@ -12750,6 +12973,20 @@ input[type="checkbox"] {
   .payroll-economics-band,
   .payroll-capacity-strip {
     grid-template-columns: 1fr;
+  }
+
+  .staffing-gap-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .staffing-coverage,
+  .staffing-gap-metrics,
+  .staffing-candidates {
+    grid-column: 1 / -1;
+  }
+
+  .staffing-candidates {
+    grid-column: 1 / -1;
   }
 
   .payroll-economics-band > div + div {
@@ -12806,6 +13043,32 @@ input[type="checkbox"] {
 
   .payroll-kpi-grid {
     grid-template-columns: 1fr;
+  }
+
+  .staffing-plan-heading,
+  .staffing-month-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .staffing-kpi-grid,
+  .staffing-gap-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .staffing-gap-row {
+    grid-template-columns: 1fr;
+  }
+
+  .staffing-coverage,
+  .staffing-gap-metrics,
+  .staffing-candidates {
+    grid-column: auto;
+  }
+
+  .staffing-gap-row > .button {
+    justify-content: center;
+    width: 100%;
   }
 
   .payroll-readiness-note {

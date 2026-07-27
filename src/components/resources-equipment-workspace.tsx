@@ -14,6 +14,8 @@ import {
   ShieldCheck,
   TimerReset,
   Trash2,
+  UserPlus,
+  UserRoundSearch,
   Users,
   Wrench,
   X
@@ -25,7 +27,13 @@ import {
   buildWorkforceEconomics,
   DEFAULT_PAYROLL_POLICY
 } from "@/lib/workforce-capacity";
+import {
+  buildWorkforceStaffingPlan,
+  type WorkforceStaffingCandidate,
+  type WorkforceStaffingGap
+} from "@/lib/workforce-staffing-plan";
 import type {
+  AvailableWorkforceResource,
   BudgetItem,
   DailyReport,
   Project,
@@ -39,8 +47,7 @@ import type {
   WorkforceResource
 } from "@/lib/types";
 
-type AvailableResource = Pick<WorkforceResource, "id" | "name" | "kind" | "profession" | "employmentType" | "status">;
-type ViewMode = "economics" | "team" | "demand" | "settings";
+type ViewMode = "economics" | "staffing" | "team" | "demand" | "settings";
 
 type Props = {
   projectId: string;
@@ -216,6 +223,14 @@ function confidenceLabel(value: number) {
   return "Требует проверки";
 }
 
+function staffingActionLabel(action: WorkforceStaffingGap["action"]) {
+  if (action === "covered") return "Покрыто";
+  if (action === "assign-existing") return "Назначить из штата";
+  if (action === "combine") return "Штат + найм";
+  if (action === "hire") return "Подбор ИТР";
+  return "Найм / субподряд";
+}
+
 async function responseError(response: Response, fallback: string) {
   const body = (await response.json().catch(() => ({}))) as { error?: string };
   if (response.status === 401 || response.status === 403) return "Недостаточно прав для изменения ФОТ и ресурсов.";
@@ -228,7 +243,7 @@ export function ResourcesEquipmentWorkspace(props: Props) {
   const [demands, setDemands] = useState<ProjectLaborDemand[]>([]);
   const [policy, setPolicy] = useState<ProjectPayrollPolicy>(() => defaultPolicy(props.projectId));
   const [policyForm, setPolicyForm] = useState<ProjectPayrollPolicy>(() => defaultPolicy(props.projectId));
-  const [available, setAvailable] = useState<AvailableResource[]>([]);
+  const [available, setAvailable] = useState<AvailableWorkforceResource[]>([]);
   const [canEdit, setCanEdit] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState("");
@@ -242,6 +257,7 @@ export function ResourcesEquipmentWorkspace(props: Props) {
   const [form, setForm] = useState<ResourceForm>(() => defaultForm(props.project));
   const [demandForm, setDemandForm] = useState<DemandForm>(() => defaultDemand(props.project));
   const [resourceFilter, setResourceFilter] = useState<"people" | "equipment">("people");
+  const [staffingFilter, setStaffingFilter] = useState<"gaps" | "all">("gaps");
 
   const summary = useMemo(() => buildWorkforceCapacitySummary(items, demands, policy), [demands, items, policy]);
   const economics = useMemo(() => buildWorkforceEconomics({
@@ -251,6 +267,12 @@ export function ResourcesEquipmentWorkspace(props: Props) {
     budgetItems: props.budgetItems,
     contractAmount: props.project.contractAmount ?? 0
   }), [demands, items, policy, props.budgetItems, props.project.contractAmount]);
+  const staffingPlan = useMemo(() => buildWorkforceStaffingPlan({
+    resources: items,
+    demands,
+    availableResources: available,
+    policy
+  }), [available, demands, items, policy]);
   const visibleItems = useMemo(
     () => items.filter((item) => resourceFilter === "equipment" ? item.kind === "equipment" : item.kind !== "equipment"),
     [items, resourceFilter]
@@ -272,7 +294,7 @@ export function ResourcesEquipmentWorkspace(props: Props) {
         items?: WorkforceResource[];
         demands?: ProjectLaborDemand[];
         policy?: ProjectPayrollPolicy;
-        available?: AvailableResource[];
+        available?: AvailableWorkforceResource[];
         permissions?: { edit?: boolean };
       };
       const nextPolicy = body.policy ?? defaultPolicy(props.projectId);
@@ -307,6 +329,47 @@ export function ResourcesEquipmentWorkspace(props: Props) {
     setEditingId(item.id);
     setExistingResourceId("");
     setForm(formFromItem(item));
+    setFormOpen(true);
+    setDemandOpen(false);
+    setError("");
+    setNotice("");
+  }
+
+  function openCandidateAssignment(candidate: WorkforceStaffingCandidate, gap: WorkforceStaffingGap) {
+    const allocationPercent = Math.max(1, Math.min(100, Math.ceil(gap.gapHeadcount / Math.max(1, candidate.headcount) * 100)));
+    setEditingId(null);
+    setExistingResourceId(candidate.resourceId);
+    setForm({
+      ...defaultForm(props.project),
+      kind: candidate.kind,
+      startsAt: gap.monthStartsAt.slice(0, 10),
+      endsAt: gap.monthEndsAt.slice(0, 10),
+      allocationPercent,
+      plannedHours: Math.round(gap.gapHeadcount * policy.workingHoursPerMonth),
+      assignmentStatus: "planned",
+      assignmentNotes: `Комплектование: ${gap.profession}, ${gap.monthLabel}`
+    });
+    setFormOpen(true);
+    setDemandOpen(false);
+    setError("");
+    setNotice("");
+  }
+
+  function openNewResourceForGap(gap: WorkforceStaffingGap) {
+    setEditingId(null);
+    setExistingResourceId("");
+    setForm({
+      ...defaultForm(props.project),
+      kind: gap.category,
+      profession: gap.profession,
+      headcount: Math.max(1, Math.ceil(gap.gapHeadcount)),
+      grossMonthlySalary: gap.grossMonthlySalary,
+      startsAt: gap.monthStartsAt.slice(0, 10),
+      endsAt: gap.monthEndsAt.slice(0, 10),
+      plannedHours: Math.round(gap.gapHeadcount * policy.workingHoursPerMonth),
+      assignmentStatus: "planned",
+      assignmentNotes: `Закрытие дефицита: ${gap.profession}, ${gap.monthLabel}`
+    });
     setFormOpen(true);
     setDemandOpen(false);
     setError("");
@@ -490,6 +553,7 @@ export function ResourcesEquipmentWorkspace(props: Props) {
 
       <div className="project-action-toolbar payroll-mode-tabs" role="tablist" aria-label="Режим раздела ФОТ">
         <button className={mode === "economics" ? "active" : ""} type="button" onClick={() => setMode("economics")}><Calculator size={15} /> Экономика</button>
+        <button className={mode === "staffing" ? "active" : ""} type="button" onClick={() => setMode("staffing")}><UserRoundSearch size={15} /> Комплектование</button>
         <button className={mode === "team" ? "active" : ""} type="button" onClick={() => setMode("team")}><Users size={15} /> Штат</button>
         <button className={mode === "demand" ? "active" : ""} type="button" onClick={() => setMode("demand")}><FileSpreadsheet size={15} /> Потребность по ВОР</button>
         <button className={mode === "settings" ? "active" : ""} type="button" onClick={() => setMode("settings")}><ShieldCheck size={15} /> Начисления</button>
@@ -539,6 +603,95 @@ export function ResourcesEquipmentWorkspace(props: Props) {
                 : "Загрузите единый Excel проекта: строки ФОТ станут потребностью, а ВОР получат плановые трудозатраты."}</span>
             </div>
             <button className="button secondary compact-button" type="button" onClick={() => props.onNavigate("Бюджет / ВОР")}>Открыть импорт</button>
+          </div>
+        </>
+      ) : null}
+
+      {mode === "staffing" ? (
+        <>
+          <div className="staffing-plan-heading">
+            <div>
+              <div className="eyebrow">Workforce Gap &amp; Staffing Plan</div>
+              <h3>План комплектования по профессиям и месяцам</h3>
+              <p>Сопоставляет потребность из ФОТ/ВОР с назначенным штатом и показывает, кого можно привлечь из реестра организации.</p>
+            </div>
+            <span className={`badge ${staffingPlan.summary.status === "controlled" ? "green" : staffingPlan.summary.status === "attention" ? "yellow" : "gray"}`}>
+              {staffingPlan.summary.status === "controlled" ? "Потребность покрыта" : staffingPlan.summary.status === "attention" ? "Требуется комплектование" : "Нет плана потребности"}
+            </span>
+          </div>
+
+          <div className="staffing-kpi-grid">
+            <Metric title="Покрытие потребности" value={percent(staffingPlan.summary.coveragePercent)} detail={`${number(staffingPlan.summary.assignedPersonMonths, 1)} из ${number(staffingPlan.summary.requiredPersonMonths, 1)} чел.-мес.`} tone={staffingPlan.summary.status === "controlled" ? "good" : staffingPlan.summary.status === "attention" ? "warn" : "neutral"} />
+            <Metric title="Пиковый дефицит" value={`${number(staffingPlan.summary.peakGapHeadcount, 1)} чел.`} detail={`${staffingPlan.summary.professionsWithGap} профессий требуют решения`} tone={staffingPlan.summary.peakGapHeadcount ? "warn" : staffingPlan.summary.peakRequiredHeadcount ? "good" : "neutral"} />
+            <Metric title="Дефицит трудозатрат" value={`${number(staffingPlan.summary.shortageHours)} ч`} detail="Суммарно по непокрытым месяцам" tone={staffingPlan.summary.shortageHours ? "warn" : "neutral"} />
+            <Metric title="Стоимость закрытия" value={money(staffingPlan.summary.estimatedGapEmployerCost)} detail={canEdit ? `${staffingPlan.summary.matchedAvailableResources} подходящих ресурсов в реестре` : "Подбор кандидатов доступен редактору проекта"} tone={staffingPlan.summary.estimatedGapEmployerCost ? "info" : "neutral"} />
+          </div>
+
+          <div className="project-action-toolbar staffing-filter" role="group" aria-label="Фильтр плана комплектования">
+            <button className={staffingFilter === "gaps" ? "active" : ""} type="button" onClick={() => setStaffingFilter("gaps")}>Только дефицит</button>
+            <button className={staffingFilter === "all" ? "active" : ""} type="button" onClick={() => setStaffingFilter("all")}>Все роли</button>
+          </div>
+
+          {staffingPlan.months.length ? (
+            <div className="staffing-timeline">
+              {staffingPlan.months.map((month) => {
+                const rows = staffingFilter === "gaps" ? month.rows.filter((row) => row.gapHeadcount > 0) : month.rows;
+                if (!rows.length) return null;
+                return (
+                  <section className="staffing-month" key={month.key}>
+                    <header className="staffing-month-header">
+                      <div><strong>{month.label}</strong><span>{number(month.requiredHeadcount, 1)} требуется · {number(month.assignedHeadcount, 1)} назначено</span></div>
+                      <span className={`badge ${month.gapHeadcount ? "yellow" : "green"}`}>{month.gapHeadcount ? `Дефицит ${number(month.gapHeadcount, 1)}` : "Покрыто"}</span>
+                    </header>
+                    <div className="staffing-gap-list">
+                      {rows.map((row) => (
+                        <article className={`staffing-gap-row ${row.gapHeadcount ? "has-gap" : "covered"}`} key={row.key}>
+                          <div className="staffing-gap-identity">
+                            <span className="resource-kind-icon"><HardHat size={17} /></span>
+                            <div><strong>{row.profession}</strong><span>{kindLabels[row.category]} · {staffingActionLabel(row.action)}</span></div>
+                          </div>
+                          <div className="staffing-coverage">
+                            <div><span>Покрытие</span><strong>{percent(row.coveragePercent)}</strong></div>
+                            <div className="staffing-coverage-track" aria-label={`Покрытие ${row.coveragePercent}%`}><span style={{ width: `${row.coveragePercent}%` }} /></div>
+                          </div>
+                          <div className="staffing-gap-metrics">
+                            <span><small>Нужно</small><strong>{number(row.requiredHeadcount, 1)}</strong></span>
+                            <span><small>Назначено</small><strong>{number(row.assignedHeadcount, 1)}</strong></span>
+                            <span><small>Дефицит</small><strong>{number(row.gapHeadcount, 1)}</strong></span>
+                            <span><small>Стоимость</small><strong>{money(row.estimatedEmployerCost)}</strong></span>
+                          </div>
+                          <div className="staffing-candidates">
+                            {row.gapHeadcount ? (
+                              row.candidates.length ? (
+                                <>
+                                  <span>Подходят из реестра</span>
+                                  <div>{row.candidates.map((candidate) => <em key={candidate.resourceId}>{candidate.name} · свободно {number(candidate.availableHeadcount, 1)}</em>)}</div>
+                                </>
+                              ) : <span>{canEdit ? "Свободных совпадений в реестре нет" : "Подбор кандидатов доступен редактору проекта"}</span>
+                            ) : <span>Дополнительное назначение не требуется</span>}
+                          </div>
+                          {canEdit && row.gapHeadcount ? (
+                            row.candidates[0]
+                              ? <button className="button secondary compact-button" type="button" onClick={() => openCandidateAssignment(row.candidates[0], row)}><UserPlus size={15} /> Назначить</button>
+                              : <button className="button secondary compact-button" type="button" onClick={() => openNewResourceForGap(row)}><Plus size={15} /> Добавить</button>
+                          ) : null}
+                        </article>
+                      ))}
+                    </div>
+                  </section>
+                );
+              })}
+              {staffingFilter === "gaps" && staffingPlan.rows.every((row) => row.gapHeadcount <= 0)
+                ? <div className="empty-state">Все рассчитанные роли уже покрыты назначенными ресурсами.</div>
+                : null}
+            </div>
+          ) : (
+            <div className="empty-state">Сначала загрузите ФОТ из проектного Excel или добавьте потребность вручную. План комплектования не строит ложный «зелёный» статус без исходных данных.</div>
+          )}
+
+          <div className="staffing-limitations">
+            <AlertTriangle size={17} />
+            <div><strong>Проверка перед назначением</strong>{staffingPlan.limitations.map((item) => <span key={item}>{item}</span>)}</div>
           </div>
         </>
       ) : null}
