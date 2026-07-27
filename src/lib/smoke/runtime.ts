@@ -9,9 +9,16 @@ import { buildDeterministicImportExplanation } from "@/lib/excel/ai-import-summa
 import type { ImportPreview } from "@/lib/excel/import-types";
 import { prisma } from "@/lib/prisma";
 import { getStorageProvider } from "@/lib/storage";
+import type { BudgetItem, Project, ProjectLaborDemand, ProjectPayrollPolicy, WorkforceResource } from "@/lib/types";
+import { buildWorkforceCapacitySummary, buildWorkforceEconomics } from "@/lib/workforce-capacity";
 import { aiDecisionJournalSmokePassed, buildAiDecisionJournalSmokeInsight } from "./ai-decision-journal";
 import { assertSmokeMutationTarget, SMOKE_PROJECT_ID } from "./cleanup";
 import { CREATE_STAGING_SMOKE_USER_CONFIRM, createOrRotateStagingSmokeUser, type StagingSmokeUserReport } from "./user";
+import {
+  buildWorkforcePayrollSmokeFixture,
+  expectedPayrollAmounts,
+  workforcePayrollSmokePassed
+} from "./workforce-payroll";
 
 const STAGING_SMOKE_EMAIL = "smoke+staging-runtime@pgs.local";
 const AI_SMOKE_PROMPT = "Кратко проверь smoke-проект и скажи, каких данных не хватает для управленческого анализа.";
@@ -100,6 +107,39 @@ export interface RuntimeAiDecisionJournalSmokeResult extends RuntimeSmokeCheck {
   cleanup: "pass" | "fail" | "skip";
 }
 
+export interface RuntimeWorkforcePayrollSmokeResult extends RuntimeSmokeCheck {
+  projectId: string;
+  operations: string[];
+  resource?: {
+    created: boolean;
+    listed: boolean;
+    cleaned: boolean;
+  };
+  demand?: {
+    created: boolean;
+    listed: boolean;
+    cleaned: boolean;
+  };
+  payroll?: {
+    grossPayroll: number;
+    employerContributions: number;
+    withheldPersonalIncomeTax: number;
+    netPayroll: number;
+    totalEmployerCost: number;
+  };
+  projectEconomics?: {
+    forecastCostDelta: number;
+    marginBefore: number;
+    marginAfter: number;
+  };
+  capacity?: {
+    headcountDelta: number;
+    allocatedHoursDelta: number;
+  };
+  permissionScope?: "temporary-project-manager-restored" | "restore-failed";
+  cleanup: "pass" | "fail" | "skip";
+}
+
 export interface RuntimeSmokeResult {
   ok: boolean;
   smokeUser: StagingSmokeUserReport;
@@ -160,6 +200,7 @@ export interface RuntimeSmokeResult {
   projectCreationDocumentsSmoke?: RuntimeProjectCreationDocumentSmokeResult;
   projectControlsSmoke?: RuntimeProjectControlsSmokeResult;
   aiDecisionJournalSmoke?: RuntimeAiDecisionJournalSmokeResult;
+  workforcePayrollSmoke?: RuntimeWorkforcePayrollSmokeResult;
   secretsPrinted: false;
 }
 
@@ -174,6 +215,7 @@ export interface RuntimeSmokeInput {
   includeProjectCreationDocumentsSmoke?: boolean;
   includeProjectControlsSmoke?: boolean;
   includeAiDecisionJournalSmoke?: boolean;
+  includeWorkforcePayrollSmoke?: boolean;
   requestId: string;
 }
 
@@ -1582,6 +1624,388 @@ async function runImportSmoke(baseUrl: string, cookie: string, requestId: string
   }
 }
 
+type WorkforceApiResponse = {
+  items?: WorkforceResource[];
+  demands?: ProjectLaborDemand[];
+  policy?: ProjectPayrollPolicy;
+};
+
+type ProjectBundleResponse = {
+  project?: Project;
+  budgetItems?: BudgetItem[];
+};
+
+function closeEnough(actual: number, expected: number) {
+  return Math.abs(actual - expected) <= Math.max(0.01, Math.abs(expected) * 0.000001);
+}
+
+async function cleanupWorkforcePayrollSmoke(input: {
+  organizationId: string;
+  marker: string;
+  resourceId?: string;
+  assignmentId?: string;
+  demandId?: string;
+}) {
+  assertSmokeMutationTarget(SMOKE_PROJECT_ID, "staging");
+
+  const [resources, demands] = await Promise.all([
+    prisma.organizationResource.findMany({
+      where: {
+        organizationId: input.organizationId,
+        OR: [
+          ...(input.resourceId ? [{ id: input.resourceId }] : []),
+          { name: { startsWith: input.marker } }
+        ]
+      },
+      select: { id: true }
+    }),
+    prisma.projectLaborDemand.findMany({
+      where: {
+        projectId: SMOKE_PROJECT_ID,
+        OR: [
+          ...(input.demandId ? [{ id: input.demandId }] : []),
+          { source: input.marker }
+        ]
+      },
+      select: { id: true }
+    })
+  ]);
+  const resourceIds = [...new Set([...resources.map((item) => item.id), ...(input.resourceId ? [input.resourceId] : [])])];
+  const demandIds = [...new Set([...demands.map((item) => item.id), ...(input.demandId ? [input.demandId] : [])])];
+  const auditEntityIds = [...new Set([...resourceIds, ...demandIds, ...(input.assignmentId ? [input.assignmentId] : [])])];
+
+  await prisma.$transaction(async (tx) => {
+    if (demandIds.length) {
+      await tx.projectLaborAllocation.deleteMany({
+        where: { projectId: SMOKE_PROJECT_ID, laborDemandId: { in: demandIds } }
+      });
+      await tx.projectLaborDemand.deleteMany({
+        where: { projectId: SMOKE_PROJECT_ID, id: { in: demandIds } }
+      });
+    }
+    if (resourceIds.length) {
+      await tx.projectResourceAssignment.deleteMany({
+        where: { projectId: SMOKE_PROJECT_ID, resourceId: { in: resourceIds } }
+      });
+      await tx.organizationResource.deleteMany({
+        where: {
+          organizationId: input.organizationId,
+          id: { in: resourceIds },
+          name: { startsWith: input.marker }
+        }
+      });
+    }
+    if (auditEntityIds.length) {
+      await tx.auditLog.deleteMany({
+        where: { projectId: SMOKE_PROJECT_ID, entityId: { in: auditEntityIds } }
+      });
+    }
+  });
+
+  const [remainingResources, remainingDemands] = await Promise.all([
+    prisma.organizationResource.count({
+      where: { organizationId: input.organizationId, name: { startsWith: input.marker } }
+    }),
+    prisma.projectLaborDemand.count({
+      where: { projectId: SMOKE_PROJECT_ID, source: input.marker }
+    })
+  ]);
+
+  return {
+    resourceCleaned: remainingResources === 0,
+    demandCleaned: remainingDemands === 0
+  };
+}
+
+async function runWorkforcePayrollSmoke(
+  baseUrl: string,
+  cookie: string,
+  requestId: string
+): Promise<RuntimeWorkforcePayrollSmokeResult> {
+  const operations: string[] = [];
+  let permissionScope: RuntimeWorkforcePayrollSmokeResult["permissionScope"];
+  let cleanup: RuntimeWorkforcePayrollSmokeResult["cleanup"] = "skip";
+  let temporaryRole: Awaited<ReturnType<typeof grantTemporaryImportRole>> | undefined;
+  let organizationId: string | undefined;
+  let marker = "";
+  let resourceId: string | undefined;
+  let assignmentId: string | undefined;
+  let demandId: string | undefined;
+  let resourceCreated = false;
+  let demandCreated = false;
+  let resourceListed = false;
+  let demandListed = false;
+  let resourceCleaned = false;
+  let demandCleaned = false;
+  let lastHttpStatus: number | undefined;
+  let payroll: RuntimeWorkforcePayrollSmokeResult["payroll"];
+  let projectEconomics: RuntimeWorkforcePayrollSmokeResult["projectEconomics"];
+  let capacity: RuntimeWorkforcePayrollSmokeResult["capacity"];
+
+  try {
+    assertSmokeMutationTarget(SMOKE_PROJECT_ID, "staging");
+    if ((process.env.APP_ENV ?? process.env.NODE_ENV) === "production") {
+      throw new Error("Workforce payroll smoke is blocked in production.");
+    }
+    const smokeProject = await prisma.project.findUnique({
+      where: { id: SMOKE_PROJECT_ID },
+      select: { id: true, organizationId: true, isSmokeProject: true }
+    });
+    if (!smokeProject?.isSmokeProject) {
+      throw new Error(`${SMOKE_PROJECT_ID} is missing or isSmokeProject=false`);
+    }
+    organizationId = smokeProject.organizationId;
+
+    temporaryRole = await grantTemporaryImportRole();
+    operations.push("temporary-project-manager-role");
+
+    const [bundleResponse, beforeResponse] = await Promise.all([
+      get(baseUrl, `/api/projects/${SMOKE_PROJECT_ID}`, cookie, requestId),
+      get(baseUrl, `/api/projects/${SMOKE_PROJECT_ID}/resources`, cookie, requestId)
+    ]);
+    operations.push("project-read", "workforce-before-read");
+    lastHttpStatus = beforeResponse.status;
+    const bundle = await safeJson<ProjectBundleResponse>(bundleResponse);
+    const beforeBody = await safeJson<WorkforceApiResponse>(beforeResponse);
+    if (
+      bundleResponse.status !== 200 ||
+      beforeResponse.status !== 200 ||
+      !bundle?.project ||
+      !beforeBody?.items ||
+      !beforeBody.demands ||
+      !beforeBody.policy
+    ) {
+      throw new Error("Workforce payroll baseline could not be read.");
+    }
+
+    const beforeEconomics = buildWorkforceEconomics({
+      resources: beforeBody.items,
+      demands: beforeBody.demands,
+      policy: beforeBody.policy,
+      budgetItems: bundle.budgetItems ?? [],
+      contractAmount: bundle.project.contractAmount
+    });
+    const beforeCapacity = buildWorkforceCapacitySummary(beforeBody.items, beforeBody.demands, beforeBody.policy);
+    const contributionFactor = 1 + (
+      beforeBody.policy.insuranceContributionRate + beforeBody.policy.accidentContributionRate
+    ) / 100;
+    const desiredCostDelta = 120_000;
+    const requiredDemandGross = Math.max(
+      120_000,
+      beforeEconomics.grossPayroll + desiredCostDelta - beforeEconomics.demandGrossPayroll,
+      (Math.max(beforeEconomics.totalEmployerCost, beforeEconomics.payrollBudget) + desiredCostDelta) / contributionFactor -
+        beforeEconomics.demandGrossPayroll
+    );
+    if (!Number.isFinite(requiredDemandGross) || requiredDemandGross > 50_000_000) {
+      throw new Error("Synthetic payroll requirement exceeds the bounded smoke limit.");
+    }
+
+    const runKey = requestId.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 18) || Date.now().toString();
+    const fixture = buildWorkforcePayrollSmokeFixture(runKey, requiredDemandGross);
+    marker = fixture.marker;
+
+    const resourceResponse = await postJson(
+      baseUrl,
+      `/api/projects/${SMOKE_PROJECT_ID}/resources`,
+      fixture.resource,
+      cookie,
+      requestId
+    );
+    operations.push("resource-create");
+    lastHttpStatus = resourceResponse.status;
+    const resourceBody = await safeJson<{ item?: WorkforceResource }>(resourceResponse);
+    resourceId = resourceBody?.item?.id;
+    assignmentId = resourceBody?.item?.assignment.id;
+    resourceCreated = resourceResponse.status === 201 && Boolean(resourceId) && resourceBody?.item?.name === fixture.resource.name;
+    if (!resourceCreated) throw new Error("Synthetic workforce resource was not created.");
+
+    const demandResponse = await postJson(
+      baseUrl,
+      `/api/projects/${SMOKE_PROJECT_ID}/labor-demands`,
+      fixture.demand,
+      cookie,
+      requestId
+    );
+    operations.push("labor-demand-create");
+    lastHttpStatus = demandResponse.status;
+    const demandBody = await safeJson<{ item?: ProjectLaborDemand }>(demandResponse);
+    demandId = demandBody?.item?.id;
+    demandCreated = demandResponse.status === 201 && Boolean(demandId) && demandBody?.item?.source === marker;
+    if (!demandCreated) throw new Error("Synthetic labor demand was not created.");
+
+    const afterResponse = await get(baseUrl, `/api/projects/${SMOKE_PROJECT_ID}/resources`, cookie, requestId);
+    operations.push("workforce-after-read");
+    lastHttpStatus = afterResponse.status;
+    const afterBody = await safeJson<WorkforceApiResponse>(afterResponse);
+    if (afterResponse.status !== 200 || !afterBody?.items || !afterBody.demands || !afterBody.policy) {
+      throw new Error("Workforce payroll result could not be read.");
+    }
+    const createdResource = afterBody.items.find((item) => item.id === resourceId);
+    const createdDemand = afterBody.demands.find((item) => item.id === demandId);
+    resourceListed = Boolean(createdResource);
+    demandListed = Boolean(createdDemand);
+    if (!createdResource || !createdDemand) throw new Error("Synthetic workforce rows are missing from the project read model.");
+
+    const isolatedEconomics = buildWorkforceEconomics({
+      resources: [createdResource],
+      demands: [createdDemand],
+      policy: afterBody.policy
+    });
+    const expected = expectedPayrollAmounts(
+      createdDemand.grossMonthlySalary * createdDemand.personMonths,
+      afterBody.policy
+    );
+    payroll = {
+      grossPayroll: isolatedEconomics.grossPayroll,
+      employerContributions: isolatedEconomics.employerContributions,
+      withheldPersonalIncomeTax: isolatedEconomics.withheldPersonalIncomeTax,
+      netPayroll: isolatedEconomics.netPayroll,
+      totalEmployerCost: isolatedEconomics.totalEmployerCost
+    };
+
+    const afterEconomics = buildWorkforceEconomics({
+      resources: afterBody.items,
+      demands: afterBody.demands,
+      policy: afterBody.policy,
+      budgetItems: bundle.budgetItems ?? [],
+      contractAmount: bundle.project.contractAmount
+    });
+    const afterCapacity = buildWorkforceCapacitySummary(afterBody.items, afterBody.demands, afterBody.policy);
+    projectEconomics = {
+      forecastCostDelta: afterEconomics.adjustedForecastCost - beforeEconomics.adjustedForecastCost,
+      marginBefore: beforeEconomics.adjustedForecastMarginPercent,
+      marginAfter: afterEconomics.adjustedForecastMarginPercent
+    };
+    capacity = {
+      headcountDelta: afterCapacity.headcount - beforeCapacity.headcount,
+      allocatedHoursDelta: afterCapacity.allocatedCapacityHours - beforeCapacity.allocatedCapacityHours
+    };
+
+    const payrollCalculated = closeEnough(isolatedEconomics.grossPayroll, expected.grossPayroll);
+    const contributionsCalculated =
+      closeEnough(isolatedEconomics.employerContributions, expected.employerContributions) &&
+      closeEnough(isolatedEconomics.totalEmployerCost, expected.totalEmployerCost);
+    const personalIncomeTaxCalculated =
+      closeEnough(isolatedEconomics.withheldPersonalIncomeTax, expected.withheldPersonalIncomeTax) &&
+      closeEnough(isolatedEconomics.netPayroll, expected.netPayroll);
+    const capacityChanged = closeEnough(capacity.headcountDelta, 1) && closeEnough(capacity.allocatedHoursDelta, 160);
+    const profitabilityChanged =
+      projectEconomics.forecastCostDelta >= desiredCostDelta - 1 &&
+      (bundle.project.contractAmount <= 0 || projectEconomics.marginAfter < projectEconomics.marginBefore);
+
+    const demandDeleteResponse = await deleteJson(
+      baseUrl,
+      `/api/projects/${SMOKE_PROJECT_ID}/labor-demands/${demandId}`,
+      {},
+      cookie,
+      requestId
+    );
+    operations.push("labor-demand-delete");
+    const resourceDeleteResponse = await deleteJson(
+      baseUrl,
+      `/api/projects/${SMOKE_PROJECT_ID}/resources/${resourceId}`,
+      {},
+      cookie,
+      requestId
+    );
+    operations.push("resource-unassign");
+    lastHttpStatus = resourceDeleteResponse.status;
+
+    const cleanupResult = await cleanupWorkforcePayrollSmoke({
+      organizationId,
+      marker,
+      resourceId,
+      assignmentId,
+      demandId
+    });
+    resourceCleaned = cleanupResult.resourceCleaned;
+    demandCleaned = cleanupResult.demandCleaned;
+    cleanup =
+      demandDeleteResponse.status === 200 &&
+      resourceDeleteResponse.status === 200 &&
+      resourceCleaned &&
+      demandCleaned
+        ? "pass"
+        : "fail";
+    operations.push("workforce-cleanup");
+
+    await restoreTemporaryImportRole(temporaryRole);
+    temporaryRole = undefined;
+    permissionScope = "temporary-project-manager-restored";
+    operations.push("restore-project-role");
+
+    const status = workforcePayrollSmokePassed({
+      resourceCreated,
+      demandCreated,
+      resourceListed,
+      demandListed,
+      payrollCalculated,
+      contributionsCalculated,
+      personalIncomeTaxCalculated,
+      capacityChanged,
+      profitabilityChanged,
+      cleanupPassed: cleanup === "pass",
+      roleRestored: permissionScope === "temporary-project-manager-restored"
+    })
+      ? "pass"
+      : "fail";
+
+    return {
+      name: "workforce payroll lifecycle smoke",
+      status,
+      httpStatus: status === "pass" ? undefined : lastHttpStatus,
+      detail: status === "pass" ? undefined : "Workforce payroll lifecycle did not complete every calculation or cleanup check.",
+      projectId: SMOKE_PROJECT_ID,
+      operations,
+      resource: { created: resourceCreated, listed: resourceListed, cleaned: resourceCleaned },
+      demand: { created: demandCreated, listed: demandListed, cleaned: demandCleaned },
+      payroll,
+      projectEconomics,
+      capacity,
+      permissionScope,
+      cleanup
+    };
+  } catch (error) {
+    if (organizationId && marker) {
+      await cleanupWorkforcePayrollSmoke({ organizationId, marker, resourceId, assignmentId, demandId })
+        .then((result) => {
+          resourceCleaned = result.resourceCleaned;
+          demandCleaned = result.demandCleaned;
+          cleanup = resourceCleaned && demandCleaned ? "pass" : "fail";
+          operations.push("workforce-cleanup");
+        })
+        .catch(() => {
+          cleanup = "fail";
+        });
+    }
+    if (temporaryRole) {
+      await restoreTemporaryImportRole(temporaryRole)
+        .then(() => {
+          permissionScope = "temporary-project-manager-restored";
+          operations.push("restore-project-role");
+        })
+        .catch(() => {
+          permissionScope = "restore-failed";
+        });
+    }
+    return {
+      name: "workforce payroll lifecycle smoke",
+      status: "fail",
+      httpStatus: lastHttpStatus,
+      detail: failureDetail(error),
+      projectId: SMOKE_PROJECT_ID,
+      operations,
+      resource: { created: resourceCreated, listed: resourceListed, cleaned: resourceCleaned },
+      demand: { created: demandCreated, listed: demandListed, cleaned: demandCleaned },
+      ...(payroll ? { payroll } : {}),
+      ...(projectEconomics ? { projectEconomics } : {}),
+      ...(capacity ? { capacity } : {}),
+      permissionScope,
+      cleanup
+    };
+  }
+}
+
 export async function runStagingSmokeBootstrap(input: RuntimeSmokeInput): Promise<RuntimeSmokeResult> {
   const password = generateSmokePassword();
   const smokeUser = await createOrRotateStagingSmokeUser(prisma, {
@@ -1684,6 +2108,7 @@ export async function runStagingSmokeBootstrap(input: RuntimeSmokeInput): Promis
   let projectCreationDocumentsSmoke: RuntimeSmokeResult["projectCreationDocumentsSmoke"];
   let projectControlsSmoke: RuntimeSmokeResult["projectControlsSmoke"];
   let aiDecisionJournalSmoke: RuntimeSmokeResult["aiDecisionJournalSmoke"];
+  let workforcePayrollSmoke: RuntimeSmokeResult["workforcePayrollSmoke"];
 
   if (input.includeStorageSmoke) {
     storage = await runStorageSmoke(input.requestId);
@@ -1720,6 +2145,11 @@ export async function runStagingSmokeBootstrap(input: RuntimeSmokeInput): Promis
     optionalChecks.push(aiDecisionJournalSmoke);
   }
 
+  if (input.includeWorkforcePayrollSmoke) {
+    workforcePayrollSmoke = await runWorkforcePayrollSmoke(input.baseUrl, sessionCookie, input.requestId);
+    optionalChecks.push(workforcePayrollSmoke);
+  }
+
   return {
     ok:
       checks.every((item) => item.status === "pass") &&
@@ -1735,6 +2165,7 @@ export async function runStagingSmokeBootstrap(input: RuntimeSmokeInput): Promis
     ...(projectCreationDocumentsSmoke ? { projectCreationDocumentsSmoke } : {}),
     ...(projectControlsSmoke ? { projectControlsSmoke } : {}),
     ...(aiDecisionJournalSmoke ? { aiDecisionJournalSmoke } : {}),
+    ...(workforcePayrollSmoke ? { workforcePayrollSmoke } : {}),
     secretsPrinted: false
   };
 }
