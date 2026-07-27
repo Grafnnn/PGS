@@ -602,6 +602,30 @@ async function cleanupImportRole(input: Awaited<ReturnType<typeof grantTemporary
   return "temporary-project-manager-restored" as const;
 }
 
+async function grantTemporaryAiDecisionJournalRole() {
+  const user = await prisma.user.findUnique({ where: { email: STAGING_SMOKE_EMAIL }, select: { id: true } });
+  if (!user) throw new Error("Smoke AI decision journal user is missing.");
+  const membership = await prisma.projectMember.findUnique({
+    where: { projectId_userId: { projectId: SMOKE_PROJECT_ID, userId: user.id } },
+    select: { role: true }
+  });
+  if (!membership) throw new Error("Smoke AI decision journal project membership is missing.");
+  if (membership.role !== "MANAGER") {
+    await prisma.projectMember.update({
+      where: { projectId_userId: { projectId: SMOKE_PROJECT_ID, userId: user.id } },
+      data: { role: "MANAGER" }
+    });
+  }
+  return { userId: user.id };
+}
+
+async function restoreAiDecisionJournalRole(userId: string) {
+  await prisma.projectMember.update({
+    where: { projectId_userId: { projectId: SMOKE_PROJECT_ID, userId } },
+    data: { role: "VIEWER" }
+  });
+}
+
 async function cleanupAiDecisionJournalSmoke(runId: string | undefined) {
   if (!runId) return "skip" as const;
   const result = await prisma.$transaction(async (tx) => {
@@ -647,7 +671,7 @@ async function runAiDecisionJournalSmoke(
   const operations: string[] = [];
   let cleanup: RuntimeAiDecisionJournalSmokeResult["cleanup"] = "skip";
   let permissionScope: RuntimeAiDecisionJournalSmokeResult["permissionScope"];
-  let temporaryRole: Awaited<ReturnType<typeof grantTemporaryImportRole>> | undefined;
+  let temporaryRole: Awaited<ReturnType<typeof grantTemporaryAiDecisionJournalRole>> | undefined;
   let runId: string | undefined;
   let runCreated = false;
   let runListed = false;
@@ -664,7 +688,7 @@ async function runAiDecisionJournalSmoke(
     });
     if (!project?.isSmokeProject) throw new Error(`${SMOKE_PROJECT_ID} is missing or isSmokeProject=false`);
 
-    temporaryRole = await grantTemporaryImportRole();
+    temporaryRole = await grantTemporaryAiDecisionJournalRole();
     operations.push("temporary-project-manager-role");
 
     const runKey = requestId.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 18) || Date.now().toString();
@@ -753,7 +777,7 @@ async function runAiDecisionJournalSmoke(
 
     cleanup = await cleanupAiDecisionJournalSmoke(runId);
     operations.push("journal-cleanup");
-    await restoreTemporaryImportRole(temporaryRole);
+    await restoreAiDecisionJournalRole(temporaryRole.userId);
     temporaryRole = undefined;
     permissionScope = "temporary-project-manager-restored";
     operations.push("restore-project-role");
@@ -793,7 +817,7 @@ async function runAiDecisionJournalSmoke(
     cleanup = await cleanupAiDecisionJournalSmoke(runId).catch(() => "fail" as const);
     if (runId) operations.push("journal-cleanup");
     if (temporaryRole) {
-      await restoreTemporaryImportRole(temporaryRole)
+      await restoreAiDecisionJournalRole(temporaryRole.userId)
         .then(() => {
           permissionScope = "temporary-project-manager-restored";
           operations.push("restore-project-role");
