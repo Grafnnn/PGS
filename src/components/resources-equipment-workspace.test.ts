@@ -18,6 +18,7 @@ describe("ResourcesEquipmentWorkspace", () => {
     expect(html).toContain("Workforce &amp; Payroll Intelligence");
     expect(html).toContain("Штат, ФОТ и потребность проекта");
     expect(html).toContain("Маржа с учетом ФОТ");
+    expect(html).toContain("Комплектование");
     expect(html).toContain("Потребность по ВОР");
     expect(html).not.toContain("OPENAI_API_KEY");
   });

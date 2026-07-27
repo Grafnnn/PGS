@@ -97,6 +97,32 @@ describe("project workforce resources route", () => {
     });
   });
 
+  it("returns sanitized staffing candidates to project editors without other project ids", async () => {
+    vi.mocked(prisma.projectResourceAssignment.findMany)
+      .mockResolvedValueOnce([] as never)
+      .mockResolvedValueOnce([{
+        projectId: "other-project-secret",
+        resourceId: resource.id,
+        startsAt: new Date("2026-07-01T00:00:00.000Z"),
+        endsAt: new Date("2026-07-31T00:00:00.000Z"),
+        allocationPercent: 50
+      }] as never);
+    vi.mocked(prisma.organizationResource.findMany).mockResolvedValue([resource] as never);
+
+    const { GET } = await import("./route");
+    const response = await GET(new Request("https://pgs.local"), { params: { projectId: "project-1" } });
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.available).toEqual([expect.objectContaining({
+      id: resource.id,
+      name: resource.name,
+      headcount: 8,
+      commitments: [expect.objectContaining({ allocationPercent: 50 })]
+    })]);
+    expect(JSON.stringify(body.available)).not.toContain("other-project-secret");
+  });
+
   it("requires edit permission before parsing create payload", async () => {
     vi.mocked(canProject).mockResolvedValue(false);
     const { POST } = await import("./route");

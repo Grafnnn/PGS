@@ -35,7 +35,7 @@
 - Prisma/PostgreSQL multi-tenant схема.
 - Prisma CRUD API для ключевых сущностей проекта.
 - Excel import preview для ВОР/сметы без автосохранения непроверенных данных.
-- Workforce & Payroll Intelligence: штат, ИТР, рабочие и бригады, плановые начисления, потребность из листов ФОТ и распределение трудозатрат по ВОР.
+- Workforce & Payroll Intelligence: штат, ИТР, рабочие и бригады, плановые начисления, потребность из листов ФОТ, распределение трудозатрат по ВОР и помесячный план комплектования.
 - Транзакционный commit импорта в `BudgetSection`, `BudgetItem`, `Material`, `ScheduleItem`.
 - Inline edit/delete для ВОР, материалов и графика.
 - Audit trail для импорта и ключевых CRUD-операций.

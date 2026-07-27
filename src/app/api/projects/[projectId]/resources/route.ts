@@ -7,6 +7,7 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import {
   existingWorkforceResourceAssignmentSchema,
+  serializeAvailableWorkforceResource,
   serializeLaborDemand,
   serializePayrollPolicy,
   serializeWorkforceResource,
@@ -44,13 +45,29 @@ export async function GET(_request: Request, { params }: { params: { projectId: 
         orderBy: [{ status: "asc" }, { startsAt: "asc" }, { createdAt: "asc" }]
       }),
       prisma.projectResourceAssignment.findMany({
-        where: { organizationId: project.organizationId },
+        where: { organizationId: project.organizationId, status: { not: "completed" } },
         select: { projectId: true, resourceId: true, startsAt: true, endsAt: true, allocationPercent: true }
       }),
       canEdit
         ? prisma.organizationResource.findMany({
             where: { organizationId: project.organizationId, status: { not: "archived" } },
-            select: { id: true, name: true, kind: true, profession: true, employmentType: true, status: true },
+            select: {
+              id: true,
+              kind: true,
+              name: true,
+              profession: true,
+              employmentType: true,
+              headcount: true,
+              capacityHoursPerMonth: true,
+              productivityNorm: true,
+              productivityUnit: true,
+              monthlyCost: true,
+              grossMonthlySalary: true,
+              hourlyCost: true,
+              certifications: true,
+              status: true,
+              notes: true
+            },
             orderBy: [{ kind: "asc" }, { name: "asc" }]
           })
         : Promise.resolve([]),
@@ -66,7 +83,9 @@ export async function GET(_request: Request, { params }: { params: { projectId: 
       items: assignments.map((item) => serializeWorkforceResource(item.resource, item, allOrganizationAssignments)),
       demands: laborDemands.map(serializeLaborDemand),
       policy: serializePayrollPolicy(payrollPolicy, params.projectId),
-      available: organizationResources.filter((item) => !assignedIds.has(item.id)),
+      available: organizationResources
+        .filter((item) => !assignedIds.has(item.id))
+        .map((item) => serializeAvailableWorkforceResource(item, allOrganizationAssignments)),
       permissions: { edit: canEdit }
     });
   } catch (error) {
