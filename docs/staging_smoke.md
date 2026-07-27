@@ -24,6 +24,7 @@ The endpoint:
 - optionally runs Project Data Pipeline smoke after a synthetic import on `project-smoke`;
 - optionally creates a disposable `SMOKE-...` project, uploads one synthetic starting document, verifies the Documents list, deletes the project, and restores the smoke user's role;
 - optionally verifies the AI decision journal lifecycle with a synthetic deterministic run, feedback, controlled action conversion, duplicate prevention, cleanup, and restoration to the smoke user's baseline `VIEWER` role;
+- optionally verifies the workforce/payroll lifecycle on `project-smoke`: synthetic employee and labor-demand creation, payroll taxes, capacity and project-margin impact, API cleanup, audit cleanup, and role restoration;
 - returns only statuses and safe metadata.
 
 ## Required Render env
@@ -204,6 +205,32 @@ Expected:
 - `liveAi.status: skip`;
 - no provider calls, real project actions, passwords, cookies, session tokens, `DATABASE_URL`, `OPENAI_API_KEY`, or smoke secret remain or are returned.
 
+## Optional workforce + payroll lifecycle smoke
+
+Run only after core smoke is green. This check temporarily grants the smoke user project-manager access to `project-smoke`, creates one bounded synthetic staff engineer and one synthetic labor demand through the normal project APIs, and reads the resulting workforce model. It verifies gross payroll, employer insurance and accident contributions, personal income tax withholding, net payroll, total employer cost, capacity, and adjusted project forecast/margin through the production calculation module. It then deletes the demand and assignment through the normal APIs, removes the synthetic organization resource and related audit rows, verifies cleanup, and restores the previous project role.
+
+```bash
+curl -sS -X POST "$APP_URL/api/internal/staging-smoke" \
+  -H "content-type: application/json" \
+  -H "authorization: Bearer $STAGING_SMOKE_SECRET" \
+  --data '{"includeWorkforcePayrollSmoke":true}'
+```
+
+Expected:
+
+- HTTP `200`;
+- `ok: true`;
+- `workforcePayrollSmoke.status: pass`;
+- the resource and demand are created, listed, and cleaned;
+- payroll figures include gross payroll, employer contributions, withheld personal income tax, net payroll, and total employer cost;
+- capacity increases while the synthetic rows exist;
+- adjusted forecast cost increases and margin decreases when the project has a positive contract amount;
+- `workforcePayrollSmoke.cleanup: pass`;
+- `workforcePayrollSmoke.permissionScope: temporary-project-manager-restored`;
+- `liveAi.status: skip`;
+- no synthetic workforce, labor-demand, assignment, allocation, or audit rows remain;
+- no passwords, cookies, session tokens, `DATABASE_URL`, `OPENAI_API_KEY`, or smoke secret are returned.
+
 ## Browser session handoff
 
 For a controlled browser-only staging smoke, request a short-lived session without exposing a password or session token in JSON:
@@ -234,6 +261,7 @@ Delete the temporary cookie jar after cleanup. Production returns `404`; missing
 - The disposable project creation smoke is allowed only for generated `SMOKE-...` project names and must restore the synthetic smoke user role before returning.
 - The Project Controls smoke must use only generated `SMOKE-PC-...` source rows, restore any previously active smoke baseline, and remove its baseline, period, audit, source, and role changes before returning.
 - The AI decision journal smoke must use only its freshly created synthetic run on `project-smoke`, remove its linked action and audit rows, and restore the smoke user's baseline `VIEWER` role before returning.
+- The workforce/payroll smoke must use only generated `SMOKE-WORKFORCE-...` rows on `project-smoke`, enforce its bounded synthetic payroll limit, remove resource/demand/assignment/allocation/audit rows, and restore the prior project role.
 - The synthetic user password is generated in memory and is never returned.
 - Existing smoke-user sessions are revoked during rotation.
 - The endpoint uses the deployed app's runtime `DATABASE_URL`; operators never need to expose that URL to Codex.
