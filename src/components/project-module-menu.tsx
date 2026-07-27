@@ -30,6 +30,7 @@ import {
 export const projectTabs = [
   "Обзор",
   "Бюджет / ВОР",
+  "ФОТ",
   "График",
   "Материалы",
   "Заявки",
@@ -66,7 +67,7 @@ export const projectTabGroups: ReadonlyArray<{ label: string; tabs: readonly Pro
   },
   {
     label: "Коммерция",
-    tabs: ["Бюджет / ВОР", "Финансы", "ERP / Учёт", "Договор / Тендер", "КП / Подача", "КС"]
+    tabs: ["Бюджет / ВОР", "ФОТ", "Финансы", "ERP / Учёт", "Договор / Тендер", "КП / Подача", "КС"]
   },
   {
     label: "Контроль",
@@ -77,6 +78,7 @@ export const projectTabGroups: ReadonlyArray<{ label: string; tabs: readonly Pro
 const tabMeta: Record<ProjectTab, { code: string; icon: React.ReactNode; hint: string }> = {
   Обзор: { code: "00", icon: <LayoutGrid size={17} />, hint: "Сводка проекта" },
   "Бюджет / ВОР": { code: "01", icon: <Table2 size={17} />, hint: "Объемы и бюджет" },
+  ФОТ: { code: "PAY", icon: <Users size={17} />, hint: "Люди и начисления" },
   График: { code: "02", icon: <TimerReset size={17} />, hint: "Сроки и этапы" },
   Материалы: { code: "03", icon: <Package size={17} />, hint: "Потребность" },
   Заявки: { code: "04", icon: <Truck size={17} />, hint: "Закупки" },

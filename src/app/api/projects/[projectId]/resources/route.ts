@@ -7,6 +7,8 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import {
   existingWorkforceResourceAssignmentSchema,
+  serializeLaborDemand,
+  serializePayrollPolicy,
   serializeWorkforceResource,
   workforceResourceCreateSchema
 } from "@/lib/workforce-capacity";
@@ -35,7 +37,7 @@ export async function GET(_request: Request, { params }: { params: { projectId: 
   try {
     const project = await projectContext(params.projectId);
     if (!project) return json({ error: "Project not found" }, 404);
-    const [assignments, allOrganizationAssignments, organizationResources] = await Promise.all([
+    const [assignments, allOrganizationAssignments, organizationResources, payrollPolicy, laborDemands] = await Promise.all([
       prisma.projectResourceAssignment.findMany({
         where: { projectId: params.projectId },
         include: { resource: true },
@@ -51,11 +53,19 @@ export async function GET(_request: Request, { params }: { params: { projectId: 
             select: { id: true, name: true, kind: true, profession: true, employmentType: true, status: true },
             orderBy: [{ kind: "asc" }, { name: "asc" }]
           })
-        : Promise.resolve([])
+        : Promise.resolve([]),
+      prisma.projectPayrollPolicy.findUnique({ where: { projectId: params.projectId } }),
+      prisma.projectLaborDemand.findMany({
+        where: { projectId: params.projectId },
+        include: { allocations: { orderBy: [{ sharePercent: "desc" }, { workName: "asc" }] } },
+        orderBy: [{ category: "asc" }, { startsAt: "asc" }, { profession: "asc" }]
+      })
     ]);
     const assignedIds = new Set(assignments.map((item) => item.resourceId));
     return json({
       items: assignments.map((item) => serializeWorkforceResource(item.resource, item, allOrganizationAssignments)),
+      demands: laborDemands.map(serializeLaborDemand),
+      policy: serializePayrollPolicy(payrollPolicy, params.projectId),
       available: organizationResources.filter((item) => !assignedIds.has(item.id)),
       permissions: { edit: canEdit }
     });
@@ -130,6 +140,7 @@ export async function POST(request: NextRequest, { params }: { params: { project
           productivityNorm: new Prisma.Decimal(data.productivityNorm),
           productivityUnit: data.productivityUnit || null,
           monthlyCost: new Prisma.Decimal(data.monthlyCost),
+          grossMonthlySalary: new Prisma.Decimal(data.grossMonthlySalary),
           hourlyCost: new Prisma.Decimal(data.hourlyCost),
           certifications: data.certifications,
           status: data.status,

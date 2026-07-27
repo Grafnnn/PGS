@@ -8,6 +8,7 @@ import { buildCommitPlan } from "@/lib/excel/import-parser";
 import { importCommitRequestSchema, importPreviewSchema, type ImportPreview } from "@/lib/excel/import-types";
 import { prisma } from "@/lib/prisma";
 import { serializeBudgetItem, serializeMaterial, serializeScheduleItem } from "@/lib/serializers";
+import { serializeLaborDemand } from "@/lib/workforce-capacity";
 
 export const runtime = "nodejs";
 
@@ -53,6 +54,9 @@ export async function POST(request: NextRequest, { params }: { params: { project
       }
       if (plan.mode === "replace_all" || plan.mode === "replace_schedule") {
         await tx.scheduleItem.deleteMany({ where: { projectId: project.id } });
+      }
+      if (plan.mode === "replace_all" || plan.mode === "replace_budget" || plan.mode === "replace_budget_materials") {
+        await tx.projectLaborDemand.deleteMany({ where: { projectId: project.id, importBatchId: { not: null } } });
       }
 
       const sectionNames = Array.from(new Set([...plan.sections.map((section) => section.name), ...plan.budgetItems.map((item) => item.section)]));
@@ -136,6 +140,73 @@ export async function POST(request: NextRequest, { params }: { params: { project
         )
       );
 
+      const budgetItemBySource = new Map(
+        plan.budgetItems.map((source, index) => [
+          `${source.code}\u0000${source.name}`,
+          budgetItems[index]
+        ])
+      );
+      if (plan.laborDemands.length) {
+        await tx.projectPayrollPolicy.upsert({
+          where: { projectId: project.id },
+          update: {},
+          create: {
+            organizationId: project.organizationId,
+            projectId: project.id,
+            createdBy: user.id
+          }
+        });
+      }
+      const laborDemands = await Promise.all(
+        plan.laborDemands.map(async (item) => {
+          const demand = await tx.projectLaborDemand.create({
+            data: {
+              organizationId: project.organizationId,
+              projectId: project.id,
+              importBatchId: batch.id,
+              category: item.category,
+              profession: item.profession,
+              function: item.function || null,
+              grossMonthlySalary: new Prisma.Decimal(item.grossMonthlySalary),
+              peakHeadcount: new Prisma.Decimal(item.peakHeadcount),
+              personMonths: new Prisma.Decimal(item.personMonths),
+              plannedHours: new Prisma.Decimal(item.plannedHours),
+              productivityNorm: new Prisma.Decimal(item.productivityNorm),
+              productivityUnit: item.productivityUnit || null,
+              startsAt: new Date(item.startsAt),
+              endsAt: new Date(item.endsAt),
+              monthlyProfile: toJson(item.monthlyProfile),
+              source: item.source,
+              sourceSheet: item.sourceSheet,
+              sourceRow: item.sourceRow,
+              confidence: new Prisma.Decimal(item.confidence),
+              notes: item.notes || null,
+              createdBy: user.id
+            }
+          });
+          const allocations = await Promise.all(item.allocations.map((allocation) => {
+            const budgetItem = budgetItemBySource.get(`${allocation.budgetCode ?? ""}\u0000${allocation.budgetName}`);
+            return tx.projectLaborAllocation.create({
+              data: {
+                organizationId: project.organizationId,
+                projectId: project.id,
+                laborDemandId: demand.id,
+                budgetItemId: budgetItem?.id ?? null,
+                workCode: allocation.budgetCode || null,
+                workName: allocation.budgetName,
+                sharePercent: new Prisma.Decimal(allocation.sharePercent),
+                personMonths: new Prisma.Decimal(allocation.personMonths),
+                plannedHours: new Prisma.Decimal(allocation.plannedHours),
+                requiredHeadcount: new Prisma.Decimal(allocation.requiredHeadcount),
+                confidence: new Prisma.Decimal(allocation.confidence),
+                reason: allocation.reason
+              }
+            });
+          }));
+          return { ...demand, allocations };
+        })
+      );
+
       await tx.importBatch.update({
         where: { id: batch.id },
         data: {
@@ -145,14 +216,16 @@ export async function POST(request: NextRequest, { params }: { params: { project
             ...preview.summary,
             commitResult: {
               mode: plan.mode,
-              created: budgetItems.length + materials.length + scheduleItems.length,
+              created: budgetItems.length + materials.length + scheduleItems.length + laborDemands.length,
               updated: 0,
               skipped: (preview.summary.skippedRows ?? 0) + preview.summary.unknownRows,
               errors: preview.summary.errors,
               warnings: preview.summary.warnings,
               budgetItems: budgetItems.length,
               materials: materials.length,
-              scheduleItems: scheduleItems.length
+              scheduleItems: scheduleItems.length,
+              laborDemands: laborDemands.length,
+              laborAllocations: laborDemands.reduce((sum, item) => sum + item.allocations.length, 0)
             }
           }),
           committedAt: new Date()
@@ -168,7 +241,7 @@ export async function POST(request: NextRequest, { params }: { params: { project
         entity: "excel_import",
         entityId: batch.id,
         action: "import_commit",
-        summary: `Excel import saved: budget ${budgetItems.length}, materials ${materials.length}, schedule ${scheduleItems.length}, mode ${plan.mode}`,
+        summary: `Excel import saved: budget ${budgetItems.length}, materials ${materials.length}, schedule ${scheduleItems.length}, labor demands ${laborDemands.length}, mode ${plan.mode}`,
         after: {
           importBatchId: batch.id,
           mode: plan.mode,
@@ -176,14 +249,17 @@ export async function POST(request: NextRequest, { params }: { params: { project
           summary: plan.summary,
           budgetItems: budgetItems.length,
           materials: materials.length,
-          scheduleItems: scheduleItems.length
+          scheduleItems: scheduleItems.length,
+          laborDemands: laborDemands.length,
+          laborAllocations: laborDemands.reduce((sum, item) => sum + item.allocations.length, 0)
         }
       });
 
       return {
         budgetItems: budgetItems.map(serializeBudgetItem),
         materials: materials.map(serializeMaterial),
-        scheduleItems: scheduleItems.map(serializeScheduleItem)
+        scheduleItems: scheduleItems.map(serializeScheduleItem),
+        laborDemands: laborDemands.map(serializeLaborDemand)
       };
     }, { maxWait: 10_000, timeout: 30_000 });
 

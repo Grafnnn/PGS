@@ -77,7 +77,18 @@ describe("project workbook import", () => {
     expect(analysis.suggestions.confidenceByField.customer).toBe("high");
     expect(analysis.suggestions.evidenceByField.customer).toContain("01_ССР_КП");
     expect(analysis.suggestions.missingFields).toEqual([]);
-    expect(analysis.summary).toMatchObject({ budgetItems: 4, materials: 1, scheduleItems: 1, payrollItems: 1, equipmentItems: 1, sourceDirectCost: 4200, reconciliationGap: 0, automatedCoveragePercent: 100 });
+    expect(analysis.summary).toMatchObject({
+      budgetItems: 4,
+      materials: 1,
+      scheduleItems: 1,
+      payrollItems: 1,
+      equipmentItems: 1,
+      workforceDemandRows: 1,
+      laborAllocationRows: 0,
+      sourceDirectCost: 4200,
+      reconciliationGap: 0,
+      automatedCoveragePercent: 100
+    });
     expect(analysis.summary.estimatedDirectCost).toBeCloseTo(4200);
     expect(analysis.quality).toMatchObject({
       status: "ready",
@@ -100,6 +111,11 @@ describe("project workbook import", () => {
       ["ИТОГО"]
     ]), "ФОТ рабочих");
     XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([
+      ["Монтажные работы"],
+      ["№", "Наименование работ", "Ед.", "Кол-во", "Ставка без НДС, ₽"],
+      [1, "Монтаж металлоконструкций", "т", 200, 1000]
+    ]), "ВОР Монтаж");
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([
       ["Календарный график"],
       ["Раздел", "M1", "M2"],
       ["Монтаж", 1, 1]
@@ -109,10 +125,63 @@ describe("project workbook import", () => {
 
     const preview = parseProjectWorkbookBuffer(buffer, "labor.xlsx", "project", { startsAt: "2026-07-01" });
     const payroll = preview.budgetItems.find((item) => item.kind === "payroll");
+    const demand = preview.laborDemands?.[0];
+    if (!demand) throw new Error("Expected labor demand from payroll sheet");
 
     expect(payroll).toMatchObject({ name: "Монтажник", unit: "чел.-мес.", qty: 4, plannedUnitPrice: 120000, actualUnitPrice: 0 });
     expect(payroll?.comment).toContain("Норма выработки: 50");
     expect(payroll?.comment).toContain("Объем для расчета: 200");
+    expect(demand).toMatchObject({
+      category: "worker",
+      profession: "Монтажник",
+      grossMonthlySalary: 120000,
+      personMonths: 4,
+      plannedHours: 640
+    });
+    expect(demand.allocations).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        budgetName: "Монтаж металлоконструкций",
+        plannedHours: 640,
+        confidence: expect.any(Number)
+      })
+    ]));
+    expect(demand.allocations.reduce((sum, item) => sum + item.sharePercent, 0)).toBe(100);
+  });
+
+  it("keeps project-wide ITR unallocated and classifies a master as engineering staff", () => {
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([
+      ["ИТР и управление — ФОТ"],
+      ["Должность", "Функция", "ФОТ 1 ед./мес, ₽", "Чел-Мес всего"],
+      ["Руководитель проекта", "Управление проектом", 250000, 3],
+      ["Мастер СМР", "Управление рабочими бригадами", 150000, 3],
+      ["ИТОГО"]
+    ]), "23_ИТР_ФОТ");
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([
+      ["Общестроительные работы"],
+      ["№", "Наименование работ", "Ед.", "Кол-во", "Ставка без НДС, ₽"],
+      [1, "Строительно-монтажные работы по проекту", "компл.", 1, 1_000_000]
+    ]), "ВОР Общестрой");
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([
+      ["Календарный график"],
+      ["Раздел", "M1", "M2", "M3"],
+      ["Общестрой", 1, 1, 1]
+    ]), "График");
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([["Итог"], ["справочно"]]), "Итог");
+    const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" }) as Buffer;
+
+    const preview = parseProjectWorkbookBuffer(buffer, "itr.xlsx", "project", { startsAt: "2026-07-01" });
+    const manager = preview.laborDemands?.find((item) => item.profession === "Руководитель проекта");
+    const master = preview.laborDemands?.find((item) => item.profession === "Мастер СМР");
+
+    expect(manager).toMatchObject({ category: "engineer", allocations: [] });
+    expect(master?.category).toBe("engineer");
+    expect(master?.allocations).toEqual([
+      expect.objectContaining({
+        budgetName: "Строительно-монтажные работы по проекту",
+        sharePercent: 100
+      })
+    ]);
   });
 
   it("recalculates the workbook from confirmed sheet roles and exclusions", () => {

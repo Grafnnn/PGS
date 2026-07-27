@@ -102,6 +102,38 @@ export interface ImportScheduleItem {
   rowNumber: number;
 }
 
+export interface ImportLaborAllocation {
+  budgetCode?: string;
+  budgetName: string;
+  sharePercent: number;
+  personMonths: number;
+  plannedHours: number;
+  requiredHeadcount: number;
+  confidence: number;
+  reason: string;
+}
+
+export interface ImportLaborDemand {
+  category: "worker" | "engineer" | "crew";
+  profession: string;
+  function?: string;
+  grossMonthlySalary: number;
+  peakHeadcount: number;
+  personMonths: number;
+  plannedHours: number;
+  productivityNorm: number;
+  productivityUnit?: string;
+  startsAt: string;
+  endsAt: string;
+  monthlyProfile: Array<{ month: number; label: string; headcount: number }>;
+  source: string;
+  sourceSheet: string;
+  sourceRow: number;
+  confidence: number;
+  notes?: string;
+  allocations: ImportLaborAllocation[];
+}
+
 export interface UnknownImportRow {
   sheetName: string;
   rowNumber: number;
@@ -187,6 +219,8 @@ export interface ImportPreview {
     budgetItems: number;
     materials: number;
     scheduleItems: number;
+    laborDemands?: number;
+    laborAllocations?: number;
     workRows?: number;
     materialRows?: number;
     unknownRows: number;
@@ -201,6 +235,7 @@ export interface ImportPreview {
   budgetItems: ImportBudgetItem[];
   materials: ImportMaterial[];
   scheduleItems: ImportScheduleItem[];
+  laborDemands?: ImportLaborDemand[];
   unknownRows: UnknownImportRow[];
   previewRows?: ImportPreviewRow[];
   sourceRows?: ImportSourceRow[];
@@ -215,6 +250,7 @@ export interface ImportCommitPlan {
   budgetItems: ImportBudgetItem[];
   materials: ImportMaterial[];
   scheduleItems: ImportScheduleItem[];
+  laborDemands: ImportLaborDemand[];
   warnings: string[];
   summary: ImportPreview["summary"];
 }
@@ -286,6 +322,42 @@ export const importScheduleItemSchema = z.object({
   rowNumber: z.coerce.number().int().positive()
 });
 
+export const importLaborAllocationSchema = z.object({
+  budgetCode: z.string().optional(),
+  budgetName: z.string().min(2),
+  sharePercent: z.coerce.number().min(0).max(100),
+  personMonths: z.coerce.number().nonnegative(),
+  plannedHours: z.coerce.number().nonnegative(),
+  requiredHeadcount: z.coerce.number().nonnegative(),
+  confidence: z.coerce.number().min(0).max(1),
+  reason: z.string().min(1)
+});
+
+export const importLaborDemandSchema = z.object({
+  category: z.enum(["worker", "engineer", "crew"]),
+  profession: z.string().min(2),
+  function: z.string().optional(),
+  grossMonthlySalary: z.coerce.number().nonnegative(),
+  peakHeadcount: z.coerce.number().nonnegative(),
+  personMonths: z.coerce.number().nonnegative(),
+  plannedHours: z.coerce.number().nonnegative(),
+  productivityNorm: z.coerce.number().nonnegative(),
+  productivityUnit: z.string().optional(),
+  startsAt: z.coerce.date(),
+  endsAt: z.coerce.date(),
+  monthlyProfile: z.array(z.object({
+    month: z.coerce.number().int().positive(),
+    label: z.string().min(1),
+    headcount: z.coerce.number().nonnegative()
+  })).default([]),
+  source: z.string().min(1),
+  sourceSheet: z.string(),
+  sourceRow: z.coerce.number().int().positive(),
+  confidence: z.coerce.number().min(0).max(1),
+  notes: z.string().optional(),
+  allocations: z.array(importLaborAllocationSchema).default([])
+});
+
 export const importPreviewSummarySchema = z.object({
   totalRows: z.coerce.number().int().nonnegative(),
   parsedRows: z.coerce.number().int().nonnegative(),
@@ -298,6 +370,8 @@ export const importPreviewSummarySchema = z.object({
   budgetItems: z.coerce.number().int().nonnegative(),
   materials: z.coerce.number().int().nonnegative(),
   scheduleItems: z.coerce.number().int().nonnegative(),
+  laborDemands: z.coerce.number().int().nonnegative().default(0),
+  laborAllocations: z.coerce.number().int().nonnegative().default(0),
   workRows: z.coerce.number().int().nonnegative().default(0),
   materialRows: z.coerce.number().int().nonnegative().default(0),
   unknownRows: z.coerce.number().int().nonnegative(),
@@ -397,6 +471,7 @@ export const importPreviewSchema = z.object({
   budgetItems: z.array(importBudgetItemSchema),
   materials: z.array(importMaterialSchema),
   scheduleItems: z.array(importScheduleItemSchema),
+  laborDemands: z.array(importLaborDemandSchema).default([]),
   unknownRows: z.array(unknownImportRowSchema),
   previewRows: z.array(importPreviewRowSchema).default([]),
   sourceRows: z.array(importSourceRowSchema).optional(),
@@ -427,5 +502,6 @@ export const importPreviewCommitSchema = z.object({
   sections: z.array(importSectionSchema),
   budgetItems: z.array(importBudgetItemSchema),
   materials: z.array(importMaterialSchema),
-  scheduleItems: z.array(importScheduleItemSchema)
+  scheduleItems: z.array(importScheduleItemSchema),
+  laborDemands: z.array(importLaborDemandSchema).default([])
 });

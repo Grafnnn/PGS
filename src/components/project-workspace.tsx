@@ -291,7 +291,7 @@ export function ProjectWorkspace({
   }, [initialBundle.project.id]);
 
   useEffect(() => {
-    if (!["Бюджет / ВОР", "График", "Материалы", "Заявки", "Финансы", "Договор / Тендер", "КП / Подача", "КС", "Исполнение", "Аналитика"].includes(activeTab)) return;
+    if (!["Бюджет / ВОР", "ФОТ", "График", "Материалы", "Заявки", "Финансы", "Договор / Тендер", "КП / Подача", "КС", "Исполнение", "Аналитика"].includes(activeTab)) return;
     void loadImportHistory();
   }, [activeTab, loadImportHistory]);
 
@@ -353,7 +353,7 @@ export function ProjectWorkspace({
   }, [initialBundle.project.id]);
 
   useEffect(() => {
-    if (!["Обзор", "Бюджет / ВОР", "Материалы", "Заявки", "График", "Финансы", "Договор / Тендер", "КП / Подача", "КС", "Исполнение", "Документы", "Действия", "Аналитика", "AI-помощник"].includes(activeTab)) return;
+    if (!["Обзор", "Бюджет / ВОР", "ФОТ", "Материалы", "Заявки", "График", "Финансы", "Договор / Тендер", "КП / Подача", "КС", "Исполнение", "Документы", "Действия", "Аналитика", "AI-помощник"].includes(activeTab)) return;
     void loadPipeline();
   }, [activeTab, loadPipeline]);
 
@@ -1090,6 +1090,19 @@ export function ProjectWorkspace({
         </Panel>
       )}
 
+      {activeTab === "ФОТ" && (
+        <Panel title="ФОТ, штат и трудовая потребность" icon={<Users size={18} />}>
+          <ResourcesEquipmentWorkspace
+            projectId={initialBundle.project.id}
+            project={initialBundle.project}
+            budgetItems={budgetItems}
+            dailyReports={reports}
+            scheduleItems={scheduleItems}
+            onNavigate={setActiveTab}
+          />
+        </Panel>
+      )}
+
       {activeTab === "Финансы" && (
         <Panel title="Платежи и кассовый план" icon={<Landmark size={18} />}>
           <div className="accounting-bridge-entry">
@@ -1321,13 +1334,6 @@ export function ProjectWorkspace({
             risks={risks}
             documents={documents}
             documentChecklist={documentChecklist}
-            onNavigate={setActiveTab}
-          />
-          <ResourcesEquipmentWorkspace
-            projectId={initialBundle.project.id}
-            project={initialBundle.project}
-            dailyReports={reports}
-            scheduleItems={scheduleItems}
             onNavigate={setActiveTab}
           />
           <QualityIssuesWorkspace

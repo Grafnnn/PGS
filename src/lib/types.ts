@@ -185,6 +185,7 @@ export interface WorkforceResource {
   productivityNorm: number;
   productivityUnit?: string | null;
   monthlyCost: number;
+  grossMonthlySalary: number;
   hourlyCost: number;
   certifications: string[];
   status: ResourceStatus;
@@ -197,6 +198,54 @@ export interface WorkforceResource {
     overlappingProjects: number;
     overloaded: boolean;
   };
+}
+
+export interface ProjectPayrollPolicy {
+  id?: string;
+  projectId: string;
+  insuranceContributionRate: number;
+  accidentContributionRate: number;
+  personalIncomeTaxRate: number;
+  workingHoursPerMonth: number;
+  sourceYear: number;
+  notes?: string | null;
+}
+
+export interface ProjectLaborAllocation {
+  id: string;
+  budgetItemId?: string | null;
+  workCode?: string | null;
+  workName: string;
+  sharePercent: number;
+  personMonths: number;
+  plannedHours: number;
+  requiredHeadcount: number;
+  confidence: number;
+  reason?: string | null;
+}
+
+export interface ProjectLaborDemand {
+  id: string;
+  projectId: string;
+  importBatchId?: string | null;
+  category: Exclude<ResourceKind, "equipment">;
+  profession: string;
+  function?: string | null;
+  grossMonthlySalary: number;
+  peakHeadcount: number;
+  personMonths: number;
+  plannedHours: number;
+  productivityNorm: number;
+  productivityUnit?: string | null;
+  startsAt: string;
+  endsAt: string;
+  monthlyProfile: Array<{ month: number; label: string; headcount: number }>;
+  source: string;
+  sourceSheet?: string | null;
+  sourceRow?: number | null;
+  confidence: number;
+  notes?: string | null;
+  allocations: ProjectLaborAllocation[];
 }
 
 export interface Risk {

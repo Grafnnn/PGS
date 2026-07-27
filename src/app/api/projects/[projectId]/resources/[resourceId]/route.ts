@@ -44,6 +44,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { projec
           productivityNorm: data.productivityNorm === undefined ? undefined : new Prisma.Decimal(data.productivityNorm),
           productivityUnit: data.productivityUnit === undefined ? undefined : data.productivityUnit || null,
           monthlyCost: data.monthlyCost === undefined ? undefined : new Prisma.Decimal(data.monthlyCost),
+          grossMonthlySalary: data.grossMonthlySalary === undefined ? undefined : new Prisma.Decimal(data.grossMonthlySalary),
           hourlyCost: data.hourlyCost === undefined ? undefined : new Prisma.Decimal(data.hourlyCost),
           certifications: data.certifications,
           status: data.status,

@@ -1028,6 +1028,9 @@ export function ProjectCreationWizard() {
                     {projectWorkbook.analysis.summary.budgetItems} строк бюджета · {projectWorkbook.analysis.summary.materials} материалов · {projectWorkbook.analysis.summary.scheduleItems} задач · {projectWorkbook.analysis.summary.payrollItems} строк ФОТ
                   </span>
                   <span>
+                    {projectWorkbook.analysis.summary.workforceDemandRows ?? 0} ролей потребности · {projectWorkbook.analysis.summary.laborAllocationRows ?? 0} связей ФОТ с ВОР
+                  </span>
+                  <span>
                     {projectWorkbook.analysis.summary.overriddenSheets} ручных решений · {projectWorkbook.analysis.summary.excludedSheets} листов исключено
                   </span>
                   <span>
@@ -1256,7 +1259,9 @@ function ProjectWorkbookCard({
           <div>
             <small>ФОТ</small>
             <strong>{compactMoney(state.analysis.summary.payrollCost)}</strong>
-            <span>{state.analysis.summary.payrollItems} должностей / бригад</span>
+            <span>
+              {state.analysis.summary.workforceDemandRows ?? state.analysis.summary.payrollItems} ролей · {state.analysis.summary.laborAllocationRows ?? 0} связей с ВОР
+            </span>
           </div>
           <div>
             <small>Техника</small>
@@ -1323,7 +1328,7 @@ function ProjectWorkbookDistribution({
         <AlertTriangle size={18} />
         <div>
           <strong>ФОТ формирует расходную часть проекта</strong>
-          <span>Система использует человеко-месяцы или считает их из объема и нормы выработки. Месячная зарплата становится ставкой, а помесячная загрузка сохраняется в обосновании.</span>
+          <span>Система создаёт потребность, а не фиктивных сотрудников: использует человеко-месяцы, нормы и помесячную загрузку, затем распределяет трудозатраты по ВОР с указанием уверенности.</span>
         </div>
       </div>
       <div className="project-workbook-mapping">

@@ -369,7 +369,7 @@ export function buildCommitPlan(preview: ImportPreview, mode: ImportMode): Impor
   if (preview.errors.length > 0) {
     throw new Error("Нельзя сохранить импорт с ошибками preview.");
   }
-  if (!preview.budgetItems.length && !preview.materials.length && !preview.scheduleItems.length) {
+  if (!preview.budgetItems.length && !preview.materials.length && !preview.scheduleItems.length && !(preview.laborDemands?.length)) {
     throw new Error("В preview нет строк для сохранения.");
   }
 
@@ -379,6 +379,7 @@ export function buildCommitPlan(preview: ImportPreview, mode: ImportMode): Impor
     budgetItems: preview.budgetItems,
     materials: preview.materials,
     scheduleItems: preview.scheduleItems,
+    laborDemands: preview.laborDemands ?? [],
     warnings: preview.warnings,
     summary: preview.summary
   };
@@ -417,6 +418,8 @@ export function buildPreview(input: BuildPreviewInput): ImportPreview {
       budgetItems: input.budgetItems.length,
       materials: input.materials.length,
       scheduleItems: input.scheduleItems.length,
+      laborDemands: input.laborDemands?.length ?? 0,
+      laborAllocations: input.laborDemands?.reduce((sum, item) => sum + item.allocations.length, 0) ?? 0,
       workRows: summary.workRows ?? input.budgetItems.filter((item) => item.kind === "work").length,
       materialRows: summary.materialRows ?? input.materials.length,
       unknownRows: input.unknownRows.length,

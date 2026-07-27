@@ -54,6 +54,9 @@ model Organization {
   projects                   Project[]
   resources                  OrganizationResource[]
   resourceAssignments        ProjectResourceAssignment[]
+  payrollPolicies            ProjectPayrollPolicy[]
+  laborDemands               ProjectLaborDemand[]
+  laborAllocations           ProjectLaborAllocation[]
   userInvites                UserInvite[]
   auditLogs                  AuditLog[]
   externalCollaborationLinks ExternalCollaborationLink[]
@@ -179,6 +182,9 @@ model Project {
   controlBaselines           ProjectControlBaseline[]
   controlPeriods             ProjectControlPeriod[]
   resourceAssignments        ProjectResourceAssignment[]
+  payrollPolicy              ProjectPayrollPolicy?
+  laborDemands               ProjectLaborDemand[]
+  laborAllocations           ProjectLaborAllocation[]
   externalCollaborationLinks ExternalCollaborationLink[]
   invoices                   ProjectInvoice[]
 
@@ -258,6 +264,7 @@ model BudgetItem {
   changeOrderItems     ProjectChangeOrderItem[]
   commitmentLines      ProjectCommitmentLine[]
   controlBaselineLines ProjectControlBaselineLine[]
+  laborAllocations     ProjectLaborAllocation[]
 
   @@index([costCodeId])
   @@map("budget_items")
@@ -577,6 +584,7 @@ model OrganizationResource {
   productivityNorm      Decimal                     @default(0) @map("productivity_norm") @db.Decimal(14, 3)
   productivityUnit      String?                     @map("productivity_unit")
   monthlyCost           Decimal                     @default(0) @map("monthly_cost") @db.Decimal(14, 2)
+  grossMonthlySalary    Decimal                     @default(0) @map("gross_monthly_salary") @db.Decimal(14, 2)
   hourlyCost            Decimal                     @default(0) @map("hourly_cost") @db.Decimal(14, 2)
   certifications        Json?
   status                String                      @default("active")
@@ -615,6 +623,87 @@ model ProjectResourceAssignment {
   @@index([organizationId, startsAt, endsAt])
   @@index([resourceId, startsAt, endsAt])
   @@map("project_resource_assignments")
+}
+
+model ProjectPayrollPolicy {
+  id                        String       @id @default(cuid())
+  organizationId            String       @map("organization_id")
+  projectId                 String       @unique @map("project_id")
+  insuranceContributionRate Decimal      @default(30) @map("insurance_contribution_rate") @db.Decimal(6, 3)
+  accidentContributionRate  Decimal      @default(0) @map("accident_contribution_rate") @db.Decimal(6, 3)
+  personalIncomeTaxRate     Decimal      @default(13) @map("personal_income_tax_rate") @db.Decimal(6, 3)
+  workingHoursPerMonth      Decimal      @default(160) @map("working_hours_per_month") @db.Decimal(8, 2)
+  sourceYear                Int          @default(2026) @map("source_year")
+  notes                     String?
+  createdBy                 String?      @map("created_by")
+  createdAt                 DateTime     @default(now()) @map("created_at")
+  updatedAt                 DateTime     @updatedAt @map("updated_at")
+  organization              Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  project                   Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@map("project_payroll_policies")
+}
+
+model ProjectLaborDemand {
+  id                 String                   @id @default(cuid())
+  organizationId     String                   @map("organization_id")
+  projectId          String                   @map("project_id")
+  importBatchId      String?                  @map("import_batch_id")
+  category           String
+  profession         String
+  function           String?
+  grossMonthlySalary Decimal                  @default(0) @map("gross_monthly_salary") @db.Decimal(14, 2)
+  peakHeadcount      Decimal                  @default(0) @map("peak_headcount") @db.Decimal(10, 3)
+  personMonths       Decimal                  @default(0) @map("person_months") @db.Decimal(12, 3)
+  plannedHours       Decimal                  @default(0) @map("planned_hours") @db.Decimal(14, 2)
+  productivityNorm   Decimal                  @default(0) @map("productivity_norm") @db.Decimal(14, 3)
+  productivityUnit   String?                  @map("productivity_unit")
+  startsAt           DateTime                 @map("starts_at")
+  endsAt             DateTime                 @map("ends_at")
+  monthlyProfile     Json?                    @map("monthly_profile")
+  source             String
+  sourceSheet        String?                  @map("source_sheet")
+  sourceRow          Int?                     @map("source_row")
+  confidence         Decimal                  @default(0) @db.Decimal(5, 4)
+  notes              String?
+  createdBy          String?                  @map("created_by")
+  createdAt          DateTime                 @default(now()) @map("created_at")
+  updatedAt          DateTime                 @updatedAt @map("updated_at")
+  organization       Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  project            Project                  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  importBatch        ImportBatch?             @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
+  allocations        ProjectLaborAllocation[]
+
+  @@index([projectId, category])
+  @@index([projectId, startsAt, endsAt])
+  @@index([importBatchId])
+  @@map("project_labor_demands")
+}
+
+model ProjectLaborAllocation {
+  id                String             @id @default(cuid())
+  organizationId    String             @map("organization_id")
+  projectId         String             @map("project_id")
+  laborDemandId     String             @map("labor_demand_id")
+  budgetItemId      String?            @map("budget_item_id")
+  workCode          String?            @map("work_code")
+  workName          String             @map("work_name")
+  sharePercent      Decimal            @default(0) @map("share_percent") @db.Decimal(7, 3)
+  personMonths      Decimal            @default(0) @map("person_months") @db.Decimal(12, 3)
+  plannedHours      Decimal            @default(0) @map("planned_hours") @db.Decimal(14, 2)
+  requiredHeadcount Decimal            @default(0) @map("required_headcount") @db.Decimal(10, 3)
+  confidence        Decimal            @default(0) @db.Decimal(5, 4)
+  reason            String?
+  createdAt         DateTime           @default(now()) @map("created_at")
+  organization      Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  project           Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  laborDemand       ProjectLaborDemand @relation(fields: [laborDemandId], references: [id], onDelete: Cascade)
+  budgetItem        BudgetItem?        @relation(fields: [budgetItemId], references: [id], onDelete: SetNull)
+
+  @@index([projectId, budgetItemId])
+  @@index([laborDemandId])
+  @@map("project_labor_allocations")
 }
 
 model Risk {
@@ -695,25 +784,26 @@ model AiRunAction {
 }
 
 model ImportBatch {
-  id             String    @id @default(cuid())
-  organizationId String    @map("organization_id")
-  projectId      String    @map("project_id")
-  createdBy      String?   @map("created_by")
-  fileName       String    @map("file_name")
-  fileSize       Int?      @map("file_size")
-  parserVersion  String    @map("parser_version")
-  status         String    @default("previewed")
+  id             String               @id @default(cuid())
+  organizationId String               @map("organization_id")
+  projectId      String               @map("project_id")
+  createdBy      String?              @map("created_by")
+  fileName       String               @map("file_name")
+  fileSize       Int?                 @map("file_size")
+  parserVersion  String               @map("parser_version")
+  status         String               @default("previewed")
   mode           String?
   sheets         Json?
   mapping        Json?
   summary        Json
-  previewJson    Json      @map("preview_json")
+  previewJson    Json                 @map("preview_json")
   warnings       Json?
   errors         Json?
-  committedAt    DateTime? @map("committed_at")
-  createdAt      DateTime  @default(now()) @map("created_at")
-  updatedAt      DateTime  @updatedAt @map("updated_at")
-  project        Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  committedAt    DateTime?            @map("committed_at")
+  createdAt      DateTime             @default(now()) @map("created_at")
+  updatedAt      DateTime             @updatedAt @map("updated_at")
+  project        Project              @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  laborDemands   ProjectLaborDemand[]
 
   @@index([projectId, createdAt])
   @@map("import_batches")
@@ -758,25 +848,25 @@ model InboxItemState {
 }
 
 model ProjectActionItem {
-  id               String    @id @default(cuid())
-  organizationId   String    @map("organization_id")
-  projectId        String    @map("project_id")
-  createdBy        String?   @map("created_by")
+  id               String        @id @default(cuid())
+  organizationId   String        @map("organization_id")
+  projectId        String        @map("project_id")
+  createdBy        String?       @map("created_by")
   title            String
   description      String?
-  sourceModule     String    @default("manual") @map("source_module")
-  targetTab        String?   @map("target_tab")
-  priority         String    @default("medium")
-  status           String    @default("open")
+  sourceModule     String        @default("manual") @map("source_module")
+  targetTab        String?       @map("target_tab")
+  priority         String        @default("medium")
+  status           String        @default("open")
   assignee         String?
-  dueAt            DateTime? @map("due_at")
-  completedAt      DateTime? @map("completed_at")
-  requiresApproval Boolean   @default(false) @map("requires_approval")
-  approvedAt       DateTime? @map("approved_at")
-  approvedBy       String?   @map("approved_by")
-  createdAt        DateTime  @default(now()) @map("created_at")
-  updatedAt        DateTime  @updatedAt @map("updated_at")
-  project          Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  dueAt            DateTime?     @map("due_at")
+  completedAt      DateTime?     @map("completed_at")
+  requiresApproval Boolean       @default(false) @map("requires_approval")
+  approvedAt       DateTime?     @map("approved_at")
+  approvedBy       String?       @map("approved_by")
+  createdAt        DateTime      @default(now()) @map("created_at")
+  updatedAt        DateTime      @updatedAt @map("updated_at")
+  project          Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
   aiRunLinks       AiRunAction[]
 
   @@index([projectId, status, dueAt])
