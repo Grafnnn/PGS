@@ -11,10 +11,13 @@ import { ClaimsNoticesWorkspace } from "@/components/claims-notices-workspace";
 import { ContractCommitmentsWorkspace } from "@/components/contract-commitments-workspace";
 import { ContractTenderWorkspace } from "@/components/contract-tender-workspace";
 import { CostCodeWorkspace } from "@/components/cost-code-workspace";
+import { CostForecastByCodeWorkspace } from "@/components/cost-forecast-by-code-workspace";
 import { CostToCompleteWorkspace } from "@/components/cost-to-complete-workspace";
+import { ExternalCollaborationWorkspace } from "@/components/external-collaboration-workspace";
 import { FieldOperationsWorkspace } from "@/components/field-operations-workspace";
 import { FieldMobileWorkspace } from "@/components/field-mobile-workspace";
 import { HseSafetyPermitWorkspace } from "@/components/hse-safety-permit-workspace";
+import { InvoiceReconciliationWorkspace } from "@/components/invoice-reconciliation-workspace";
 import { ProjectCommandCenter } from "@/components/project-command-center";
 import { ProjectActionCenter, type ProjectActionSuggestion } from "@/components/project-action-center";
 import { ProjectControlsWorkspace } from "@/components/project-controls-workspace";
@@ -1100,6 +1103,12 @@ export function ProjectWorkspace({
             risks={risks}
             onNavigate={setActiveTab}
           />
+          <CostForecastByCodeWorkspace projectId={initialBundle.project.id} />
+          <InvoiceReconciliationWorkspace
+            projectId={initialBundle.project.id}
+            canEdit={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN" || currentUser?.role === "MANAGER"}
+            canDelete={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN"}
+          />
           <ScheduleCashflowWorkspace
             projectName={initialBundle.project.name}
             projectStartsAt={initialBundle.project.startsAt}
@@ -1522,12 +1531,18 @@ export function ProjectWorkspace({
       )}
 
       {activeTab === "RFI / Согласования" && (
-        <RfiSubmittalsWorkspace
-          projectId={initialBundle.project.id}
-          documents={documents}
-          canEdit={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN" || currentUser?.role === "MANAGER"}
-          canDelete={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN"}
-        />
+        <>
+          <ExternalCollaborationWorkspace
+            projectId={initialBundle.project.id}
+            canManage={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN"}
+          />
+          <RfiSubmittalsWorkspace
+            projectId={initialBundle.project.id}
+            documents={documents}
+            canEdit={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN" || currentUser?.role === "MANAGER"}
+            canDelete={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN"}
+          />
+        </>
       )}
 
       {activeTab === "Аналитика" && (

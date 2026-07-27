@@ -73,11 +73,36 @@ This is a directional product audit based on public vendor materials, not a feat
 - Paid status requires a matching existing paid project payment; no payment or posting is created automatically.
 - Approved change-order linkage and real commitment data in the ERP accounting export.
 
-## Recommended next trains
+## Implemented in the product-gap closure branch
 
-1. **External Collaboration v1** — controlled owner/designer/supplier responses without broad project access.
-2. **Cost Forecast by Cost Code v1** — ETC/EAC roll-up and variance analysis over the shipped CBS-WBS hierarchy.
-3. **Invoice / AP-AR Reconciliation v1** — invoice intake and three-way checks against commitments, applications and accounting payments.
+### External Collaboration v1
+
+- OWNER/ADMIN creates a time-limited, one-response link for exactly one open RFI or submitted submittal.
+- The database stores only a SHA-256 token hash; the raw link is returned once.
+- The public page exposes only the selected item and a minimal project label, never the project workspace.
+- External answers and decisions are rate-limited, transactional and audited.
+- Expired, responded and revoked links cannot be reused; one active link per entity is enforced in PostgreSQL.
+
+### Cost Forecast by Cost Code v1
+
+- Read-only BAC, approved changes, revised budget, EV, paid actual cost, open commitments, ETC, EAC and VAC by Cost Code.
+- Uses the active Project Controls baseline and latest published period when available, with VOR fallback.
+- Missing baseline, control periods and unclassified financial data are explicit limitations rather than false green.
+- No budget, commitment, payment or accounting records are created or changed by the forecast.
+
+### Invoice / AP-AR Reconciliation v1
+
+- Persistent AP/AR invoice register linked to Cost Codes, commitments, payment applications, payments and documents.
+- Explicit three-way reconciliation with amount, counterparty, source-document and payment-direction checks.
+- All linked records must belong to the same project.
+- Reconciliation is separately confirmed and audited; it never creates a payment or posting.
+- Paid status requires an already linked paid project payment.
+
+## Next validation gates
+
+1. Review and merge the feature PR after CI is green.
+2. Apply the PostgreSQL migration on staging through the normal Render deploy path.
+3. Run authenticated disposable smoke for link response, AP/AR reconciliation and cleanup.
 
 ## Product guardrails
 

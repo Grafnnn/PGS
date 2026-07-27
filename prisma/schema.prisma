@@ -46,16 +46,18 @@ enum RiskPriority {
 }
 
 model Organization {
-  id                  String                      @id @default(cuid())
-  name                String
-  createdAt           DateTime                    @default(now()) @map("created_at")
-  updatedAt           DateTime                    @updatedAt @map("updated_at")
-  users               Membership[]
-  projects            Project[]
-  resources           OrganizationResource[]
-  resourceAssignments ProjectResourceAssignment[]
-  userInvites         UserInvite[]
-  auditLogs           AuditLog[]
+  id                         String                      @id @default(cuid())
+  name                       String
+  createdAt                  DateTime                    @default(now()) @map("created_at")
+  updatedAt                  DateTime                    @updatedAt @map("updated_at")
+  users                      Membership[]
+  projects                   Project[]
+  resources                  OrganizationResource[]
+  resourceAssignments        ProjectResourceAssignment[]
+  userInvites                UserInvite[]
+  auditLogs                  AuditLog[]
+  externalCollaborationLinks ExternalCollaborationLink[]
+  projectInvoices            ProjectInvoice[]
 
   @@map("organizations")
 }
@@ -112,68 +114,70 @@ model Membership {
 }
 
 model Project {
-  id                      String                       @id @default(cuid())
-  organizationId          String                       @map("organization_id")
-  name                    String
-  code                    String?
-  customer                String
-  object                  String
-  objectType              String?                      @map("object_type")
-  address                 String
-  description             String?
-  contractAmount          Decimal                      @map("contract_amount") @db.Decimal(14, 2)
-  vatMode                 String                       @default("vat") @map("vat_mode")
-  vatPercent              Decimal?                     @map("vat_percent") @db.Decimal(5, 2)
-  startsAt                DateTime                     @map("starts_at")
-  endsAt                  DateTime                     @map("ends_at")
-  manager                 String
-  tenderSource            String?                      @map("tender_source")
-  paymentNotes            String?                      @map("payment_notes")
-  volumeChangeMode        String?                      @map("volume_change_mode")
-  templateId              String?                      @map("template_id")
-  selectedModules         Json?                        @map("selected_modules")
-  status                  ProjectStatus                @default(planning)
-  isSmokeProject          Boolean                      @default(false) @map("is_smoke_project")
-  createdAt               DateTime                     @default(now()) @map("created_at")
-  updatedAt               DateTime                     @updatedAt @map("updated_at")
-  organization            Organization                 @relation(fields: [organizationId], references: [id])
-  members                 ProjectMember[]
-  userInvites             UserInvite[]
-  budgetSections          BudgetSection[]
-  budgetItems             BudgetItem[]
-  scheduleItems           ScheduleItem[]
-  workProgressEntries     WorkProgressEntry[]
-  materials               Material[]
-  materialNeeds           MaterialNeed[]
-  procurementRequests     ProcurementRequest[]
-  supplierQuotes          SupplierQuote[]
-  payments                Payment[]
-  cashflowPeriods         CashflowPeriod[]
-  documents               Document[]
-  dailyReports            DailyReport[]
-  risks                   Risk[]
-  aiMessages              AiMessage[]
-  auditLogs               AuditLog[]
-  importBatches           ImportBatch[]
-  actionItems             ProjectActionItem[]
-  executiveReports        ExecutiveReport[]
-  rfis                    ProjectRfi[]
-  submittals              ProjectSubmittal[]
-  documentTransmittals    ProjectDocumentTransmittal[]
-  fieldSyncReceipts       FieldSyncReceipt[]
-  accountingSyncRuns      AccountingSyncRun[]
-  accountingExternalLinks AccountingExternalLink[]
-  workflowTemplates       ProjectWorkflowTemplate[]
-  workflowRuns            ProjectWorkflowRun[]
-  changeOrders            ProjectChangeOrder[]
-  costCodes               ProjectCostCode[]
-  commitments             ProjectCommitment[]
-  paymentApplications     ProjectPaymentApplication[]
-  qualityInspections      ProjectQualityInspection[]
-  qualityIssues           ProjectQualityIssue[]
-  controlBaselines        ProjectControlBaseline[]
-  controlPeriods          ProjectControlPeriod[]
-  resourceAssignments     ProjectResourceAssignment[]
+  id                         String                       @id @default(cuid())
+  organizationId             String                       @map("organization_id")
+  name                       String
+  code                       String?
+  customer                   String
+  object                     String
+  objectType                 String?                      @map("object_type")
+  address                    String
+  description                String?
+  contractAmount             Decimal                      @map("contract_amount") @db.Decimal(14, 2)
+  vatMode                    String                       @default("vat") @map("vat_mode")
+  vatPercent                 Decimal?                     @map("vat_percent") @db.Decimal(5, 2)
+  startsAt                   DateTime                     @map("starts_at")
+  endsAt                     DateTime                     @map("ends_at")
+  manager                    String
+  tenderSource               String?                      @map("tender_source")
+  paymentNotes               String?                      @map("payment_notes")
+  volumeChangeMode           String?                      @map("volume_change_mode")
+  templateId                 String?                      @map("template_id")
+  selectedModules            Json?                        @map("selected_modules")
+  status                     ProjectStatus                @default(planning)
+  isSmokeProject             Boolean                      @default(false) @map("is_smoke_project")
+  createdAt                  DateTime                     @default(now()) @map("created_at")
+  updatedAt                  DateTime                     @updatedAt @map("updated_at")
+  organization               Organization                 @relation(fields: [organizationId], references: [id])
+  members                    ProjectMember[]
+  userInvites                UserInvite[]
+  budgetSections             BudgetSection[]
+  budgetItems                BudgetItem[]
+  scheduleItems              ScheduleItem[]
+  workProgressEntries        WorkProgressEntry[]
+  materials                  Material[]
+  materialNeeds              MaterialNeed[]
+  procurementRequests        ProcurementRequest[]
+  supplierQuotes             SupplierQuote[]
+  payments                   Payment[]
+  cashflowPeriods            CashflowPeriod[]
+  documents                  Document[]
+  dailyReports               DailyReport[]
+  risks                      Risk[]
+  aiMessages                 AiMessage[]
+  auditLogs                  AuditLog[]
+  importBatches              ImportBatch[]
+  actionItems                ProjectActionItem[]
+  executiveReports           ExecutiveReport[]
+  rfis                       ProjectRfi[]
+  submittals                 ProjectSubmittal[]
+  documentTransmittals       ProjectDocumentTransmittal[]
+  fieldSyncReceipts          FieldSyncReceipt[]
+  accountingSyncRuns         AccountingSyncRun[]
+  accountingExternalLinks    AccountingExternalLink[]
+  workflowTemplates          ProjectWorkflowTemplate[]
+  workflowRuns               ProjectWorkflowRun[]
+  changeOrders               ProjectChangeOrder[]
+  costCodes                  ProjectCostCode[]
+  commitments                ProjectCommitment[]
+  paymentApplications        ProjectPaymentApplication[]
+  qualityInspections         ProjectQualityInspection[]
+  qualityIssues              ProjectQualityIssue[]
+  controlBaselines           ProjectControlBaseline[]
+  controlPeriods             ProjectControlPeriod[]
+  resourceAssignments        ProjectResourceAssignment[]
+  externalCollaborationLinks ExternalCollaborationLink[]
+  invoices                   ProjectInvoice[]
 
   @@map("projects")
 }
@@ -449,6 +453,7 @@ model Payment {
   project            Project                    @relation(fields: [projectId], references: [id], onDelete: Cascade)
   costCode           ProjectCostCode?           @relation(fields: [costCodeId], references: [id], onDelete: SetNull)
   paymentApplication ProjectPaymentApplication?
+  invoices           ProjectInvoice[]
 
   @@index([costCodeId])
   @@map("payments")
@@ -500,6 +505,7 @@ model Document {
   qualityInspectionLinks ProjectQualityInspection[]
   qualityIssueLinks      ProjectQualityIssue[]
   qualityEvidenceLinks   ProjectQualityEvidence[]
+  invoices               ProjectInvoice[]
 
   @@map("documents")
 }
@@ -755,6 +761,7 @@ model ProjectCostCode {
   payments                Payment[]
   changeOrderItems        ProjectChangeOrderItem[]
   commitmentLines         ProjectCommitmentLine[]
+  invoices                ProjectInvoice[]
   qualityInspections      ProjectQualityInspection[]
   qualityIssues           ProjectQualityIssue[]
   controlBaselineLines    ProjectControlBaselineLine[]
@@ -1017,6 +1024,7 @@ model ProjectCommitment {
   lines                      ProjectCommitmentLine[]
   paymentApplications        ProjectPaymentApplication[]
   changeOrders               ProjectChangeOrder[]
+  invoices                   ProjectInvoice[]
 
   @@unique([projectId, sequence])
   @@unique([projectId, number])
@@ -1084,6 +1092,7 @@ model ProjectPaymentApplication {
   commitment      ProjectCommitment               @relation(fields: [commitmentId], references: [id], onDelete: Cascade)
   payment         Payment?                        @relation(fields: [paymentId], references: [id], onDelete: SetNull)
   lines           ProjectPaymentApplicationLine[]
+  invoices        ProjectInvoice[]
 
   @@unique([commitmentId, sequence])
   @@unique([commitmentId, number])
@@ -1107,6 +1116,57 @@ model ProjectPaymentApplicationLine {
   @@unique([applicationId, commitmentLineId])
   @@index([commitmentLineId])
   @@map("project_payment_application_lines")
+}
+
+model ProjectInvoice {
+  id                   String                     @id @default(cuid())
+  organizationId       String                     @map("organization_id")
+  projectId            String                     @map("project_id")
+  costCodeId           String?                    @map("cost_code_id")
+  commitmentId         String?                    @map("commitment_id")
+  paymentApplicationId String?                    @map("payment_application_id")
+  paymentId            String?                    @map("payment_id")
+  linkedDocumentId     String?                    @map("linked_document_id")
+  sequence             Int
+  number               String
+  direction            String
+  invoiceType          String                     @default("invoice") @map("invoice_type")
+  counterparty         String
+  issueDate            DateTime                   @map("issue_date")
+  dueDate              DateTime                   @map("due_date")
+  servicePeriodStart   DateTime?                  @map("service_period_start")
+  servicePeriodEnd     DateTime?                  @map("service_period_end")
+  grossAmount          Decimal                    @map("gross_amount") @db.Decimal(16, 2)
+  taxAmount            Decimal                    @default(0) @map("tax_amount") @db.Decimal(16, 2)
+  currency             String                     @default("RUB")
+  status               String                     @default("received")
+  matchStatus          String                     @default("unmatched") @map("match_status")
+  matchSnapshot        Json?                      @map("match_snapshot")
+  notes                String?
+  approvedAt           DateTime?                  @map("approved_at")
+  paidAt               DateTime?                  @map("paid_at")
+  voidedAt             DateTime?                  @map("voided_at")
+  createdBy            String?                    @map("created_by")
+  createdAt            DateTime                   @default(now()) @map("created_at")
+  updatedAt            DateTime                   @updatedAt @map("updated_at")
+  organization         Organization               @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  project              Project                    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  costCode             ProjectCostCode?           @relation(fields: [costCodeId], references: [id], onDelete: SetNull)
+  commitment           ProjectCommitment?         @relation(fields: [commitmentId], references: [id], onDelete: SetNull)
+  paymentApplication   ProjectPaymentApplication? @relation(fields: [paymentApplicationId], references: [id], onDelete: SetNull)
+  payment              Payment?                   @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  linkedDocument       Document?                  @relation(fields: [linkedDocumentId], references: [id], onDelete: SetNull)
+
+  @@unique([projectId, sequence])
+  @@unique([projectId, direction, number])
+  @@index([projectId, status, dueDate])
+  @@index([projectId, matchStatus, updatedAt])
+  @@index([costCodeId])
+  @@index([commitmentId])
+  @@index([paymentApplicationId])
+  @@index([paymentId])
+  @@index([linkedDocumentId])
+  @@map("project_invoices")
 }
 
 model ProjectQualityInspection {
@@ -1483,6 +1543,34 @@ model ProjectRfi {
   @@unique([projectId, sequence])
   @@index([projectId, status, dueAt])
   @@map("project_rfis")
+}
+
+model ExternalCollaborationLink {
+  id              String       @id @default(cuid())
+  organizationId  String       @map("organization_id")
+  projectId       String       @map("project_id")
+  entityType      String       @map("entity_type")
+  entityId        String       @map("entity_id")
+  recipientName   String?      @map("recipient_name")
+  recipientEmail  String       @map("recipient_email")
+  tokenHash       String       @unique @map("token_hash")
+  status          String       @default("active")
+  expiresAt       DateTime     @map("expires_at")
+  responseLimit   Int          @default(1) @map("response_limit")
+  responseCount   Int          @default(0) @map("response_count")
+  lastRespondedAt DateTime?    @map("last_responded_at")
+  revokedAt       DateTime?    @map("revoked_at")
+  metadata        Json?
+  createdBy       String?      @map("created_by")
+  createdAt       DateTime     @default(now()) @map("created_at")
+  updatedAt       DateTime     @updatedAt @map("updated_at")
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  project         Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, entityType, entityId])
+  @@index([projectId, status, expiresAt])
+  @@index([recipientEmail])
+  @@map("external_collaboration_links")
 }
 
 model RfiResponse {

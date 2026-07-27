@@ -25,6 +25,7 @@ import {
 import { type ReactNode, useCallback, useEffect, useId, useState } from "react";
 import { BrandLogo } from "@/components/brand-logo";
 import { PwaRegister } from "@/components/pwa-register";
+import { isStandaloneAppSurface } from "@/components/app-nav-routes";
 import { readSidebarPreference, type SidebarPreference, writeSidebarPreference } from "@/components/app-nav-state";
 
 type NavItem = {
@@ -220,9 +221,9 @@ export function AppNav({ children }: { children: ReactNode }) {
   const isCollapsed = shellState === "collapsed";
   const sidebarExpandedForInteraction = isCollapsed && peekOpen;
   const activeItem = navItems.find((item) => isItemActive(pathname, item));
-  const isAuthSurface = pathname === "/login" || pathname === "/reset-password" || pathname.startsWith("/invite/");
+  const isStandaloneSurface = isStandaloneAppSurface(pathname);
 
-  if (isAuthSurface) {
+  if (isStandaloneSurface) {
     return (
       <div className="auth-shell">
         <PwaRegister />
