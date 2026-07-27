@@ -48,11 +48,32 @@ const SECRET_PATTERNS: Array<[RegExp, string]> = [
   [/(?:postgres|postgresql):\/\/[^\s"'<>]+/gi, "[REDACTED_DATABASE_URL]"],
   [/\bsk-(?:proj-)?[A-Za-z0-9_-]{12,}\b/g, "[REDACTED_OPENAI_KEY]"],
   [/\bBearer\s+[A-Za-z0-9._~+/-]+=*\b/gi, "Bearer [REDACTED_TOKEN]"],
-  [/\b(password|secret|token|api[_-]?key)\s*[:=]\s*[^\s,;]+/gi, "$1=[REDACTED]"]
+  [
+    /\b(password|secret|token|api[_-]?key|client[_-]?secret|access[_-]?token|refresh[_-]?token|session[_-]?(?:id|token)|authorization|cookie)\b\s*["']?\s*[:=]\s*["']?[^\s,;"'}]+/gi,
+    "$1=[REDACTED]"
+  ]
 ];
 
 export function sanitizeAiJournalText(value: string, max = 6000) {
   return SECRET_PATTERNS.reduce((text, [pattern, replacement]) => text.replace(pattern, replacement), value).slice(0, max);
+}
+
+function isSensitiveAiJournalKey(key: string) {
+  const normalized = key.replace(/[^a-z0-9]/gi, "").toLowerCase();
+  return (
+    normalized === "authorization"
+    || normalized === "cookie"
+    || normalized === "credentials"
+    || normalized === "databaseurl"
+    || normalized === "privatekey"
+    || normalized === "session"
+    || normalized === "sessionid"
+    || normalized.endsWith("password")
+    || normalized.endsWith("secret")
+    || normalized.endsWith("token")
+    || normalized.endsWith("apikey")
+    || normalized.endsWith("cookie")
+  );
 }
 
 export function sanitizeAiJournalValue(value: unknown, depth = 0): unknown {
@@ -63,7 +84,12 @@ export function sanitizeAiJournalValue(value: unknown, depth = 0): unknown {
     return Object.fromEntries(
       Object.entries(value)
         .slice(0, 80)
-        .map(([key, item]) => [key, sanitizeAiJournalValue(item, depth + 1)])
+        .map(([key, item]) => [
+          key,
+          item !== null && item !== undefined && isSensitiveAiJournalKey(key)
+            ? "[REDACTED]"
+            : sanitizeAiJournalValue(item, depth + 1)
+        ])
     );
   }
   return value;

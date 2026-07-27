@@ -21,8 +21,46 @@ describe("AI decision journal safety", () => {
 
     expect(output).toEqual({
       summary: "Нужно проверить график",
-      nested: [{ token: "token=[REDACTED]", count: 2 }]
+      nested: [{ token: "[REDACTED]", count: 2 }]
     });
+  });
+
+  it("redacts values based on sensitive object keys even when values are unlabeled", () => {
+    const output = sanitizeAiJournalValue({
+      summary: "Нужно проверить график",
+      password: "hunter2",
+      connection: {
+        databaseUrl: "opaque-value",
+        accessToken: "plain-token-value",
+        tokenCount: 3
+      },
+      credentials: {
+        login: "owner",
+        value: "must-not-survive"
+      }
+    });
+
+    expect(output).toEqual({
+      summary: "Нужно проверить график",
+      password: "[REDACTED]",
+      connection: {
+        databaseUrl: "[REDACTED]",
+        accessToken: "[REDACTED]",
+        tokenCount: 3
+      },
+      credentials: "[REDACTED]"
+    });
+    expect(JSON.stringify(output)).not.toContain("hunter2");
+    expect(JSON.stringify(output)).not.toContain("opaque-value");
+    expect(JSON.stringify(output)).not.toContain("plain-token-value");
+    expect(JSON.stringify(output)).not.toContain("must-not-survive");
+  });
+
+  it("redacts secret-like values embedded in JSON-shaped text", () => {
+    const output = sanitizeAiJournalText('{"password":"hunter2","client_secret":"opaque-value"}');
+
+    expect(output).not.toContain("hunter2");
+    expect(output).not.toContain("opaque-value");
   });
 
   it("marks provider fallback as degraded", () => {
