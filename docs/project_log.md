@@ -1,5 +1,39 @@
 # PGS Project Log
 
+## 2026-07-27 - Workforce & Payroll Intelligence v1 online/core GO
+
+Status: Workforce & Payroll Intelligence v1 from PR #153 is live on Render. PGS now connects employees, ITR, workers and crews with project payroll policy, Excel FOT demand, reviewable VOR labor allocation and forecast project margin.
+
+- Online URL: https://pgs-frankfurt.onrender.com
+- Online commit: `59b65b329bc52f4f0cb30903ea32f0f60974451d`
+- Feature PR: #153
+- Decision: ONLINE/CORE GO
+- Git SHA source: `RENDER_GIT_COMMIT`
+
+Online verification:
+
+- `/api/health`: HTTP 200 / `ok`; DB: `ok`; migrations: `ok`, count `24`;
+- the deployed SHA matched `59b65b329bc52f4f0cb30903ea32f0f60974451d`;
+- the authenticated `project-smoke` page loaded the dedicated `ФОТ` workspace without database or console errors;
+- `Экономика`, `Штат`, `Потребность по ВОР` and `Начисления` switched correctly; add-employee and add-demand controls were available;
+- tax base, employer contributions, total labor cost, NDFL withholding and margin indicators rendered without page-level horizontal overflow at 1280 px;
+- unauthenticated `/api/auth/me` returned 401; resources, payroll-policy and labor-demand routes returned 403;
+- migration `20260727234500_workforce_payroll_intelligence_v1` applied successfully.
+
+Excel and calculation validation:
+
+- the supplied `Серов_ССР_КП_финал_111.xlsx` was checked read-only: 14 ITR roles, 78.4 person-months and gross FOT `15,262,000` were recognized;
+- 10 project-wide ITR roles remained unallocated to avoid false precision; specialized roles produced 74 reviewable VOR allocations;
+- allocation shares totaled 100% for every allocated demand;
+- employer contributions are added to project cost, while NDFL remains a displayed withholding and is not counted twice;
+- PR #153 CI #313 passed; Vitest 563/563, ESLint, TypeScript, Prisma validate/generate, production build and `git diff --check` passed.
+
+Safety and remaining follow-up:
+
+- no live AI, online employee/demand/import mutation, real file upload, direct DB write, environment/secret change or manual deploy was performed;
+- no secret value was printed or committed;
+- an authenticated disposable employee/demand/import commit and cleanup smoke remains an optional controlled follow-up.
+
 ## 2026-07-27 - AI Decision Journal disposable lifecycle smoke GO
 
 Status: The controlled follow-up for AI Decision Journal & Controlled Actions v1 is complete. PR #151 added a guarded deterministic staging smoke and the deployed application passed the full synthetic run -> feedback -> action conversion -> duplicate prevention -> cleanup lifecycle.
