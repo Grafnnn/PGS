@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   effectiveRole: vi.fn(),
   projectFind: vi.fn(),
   reportFind: vi.fn(),
+  reportFindMany: vi.fn(),
   reportCreate: vi.fn(),
   reportUpdate: vi.fn(),
   reportDelete: vi.fn(),
@@ -23,7 +24,7 @@ vi.mock("@/lib/project-data", () => ({
 vi.mock("@/lib/prisma", () => ({
   prisma: {
     project: { findUnique: mocks.projectFind },
-    dailyReport: { findUnique: mocks.reportFind, findUniqueOrThrow: mocks.reportFind, create: mocks.reportCreate, update: mocks.reportUpdate, delete: mocks.reportDelete },
+    dailyReport: { findMany: mocks.reportFindMany, findUnique: mocks.reportFind, findUniqueOrThrow: mocks.reportFind, create: mocks.reportCreate, update: mocks.reportUpdate, delete: mocks.reportDelete },
     auditLog: { create: mocks.audit },
     $transaction: vi.fn(async (callback: (tx: unknown) => unknown) => callback({
       dailyReport: { create: mocks.reportCreate, update: mocks.reportUpdate, delete: mocks.reportDelete },
@@ -54,9 +55,19 @@ describe("daily reports catch-all workflow", () => {
     mocks.projectFind.mockResolvedValue({ organizationId: "org-1" });
     mocks.demoContext.mockResolvedValue({ organizationId: "org-1", userId: "demo-user" });
     mocks.reportFind.mockResolvedValue(before);
+    mocks.reportFindMany.mockResolvedValue([before]);
     mocks.reportCreate.mockResolvedValue(before);
     mocks.reportUpdate.mockImplementation(async ({ data }: { data: Record<string, unknown> }) => ({ ...before, ...data }));
     mocks.reportDelete.mockResolvedValue(before);
+  });
+
+  it("loads project reports independently from the page bundle", async () => {
+    const { GET } = await import("./route");
+    const response = await GET(new Request("https://pgs.local") as never, { params: { path: ["projects", "project-1", "daily-reports"] } });
+    const body = await response.json();
+    expect(response.status).toBe(200);
+    expect(mocks.reportFindMany).toHaveBeenCalledWith({ where: { projectId: "project-1" }, orderBy: { date: "desc" } });
+    expect(body.items).toEqual([expect.objectContaining({ id: "daily-1", projectId: "project-1", completedWorks: "Монтаж" })]);
   });
 
   it("creates only a draft and writes audit atomically", async () => {
