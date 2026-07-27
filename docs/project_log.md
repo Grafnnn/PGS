@@ -1,5 +1,37 @@
 # PGS Project Log
 
+## 2026-07-27 - Excel-to-ФОТ disposable import lifecycle smoke GO
+
+Status: The remaining controlled import follow-up for Workforce & Payroll Intelligence v1 is complete. PR #157 added a guarded staging-only smoke, and the deployed application passed the generated XLSX preview -> explicit commit -> labor/VOR allocation -> payroll economics -> cleanup lifecycle.
+
+- Online URL: https://pgs-frankfurt.onrender.com
+- Online commit: `4c99e5b1b85de7abab7aa1dda63afa94ecfd3feb`
+- Render deploy: `dep-d9jslk0k1i2s73e28jq0`
+- Feature PR: #157
+- Decision: FULL DISPOSABLE EXCEL-ФОТ SMOKE GO
+- Git SHA source: `RENDER_GIT_COMMIT`
+
+Online verification:
+
+- `/api/health`: HTTP 200 / `ok`; DB: `ok`; migrations: `ok`, count `24`;
+- protected login, `/api/auth/me`, `project-smoke` read, unauthenticated AI guard and authenticated missing-project AI guard passed;
+- the in-memory XLSX preview produced one payroll item, one labor demand, one labor allocation, 4 person-months and 640 planned hours;
+- the explicit standard import commit created two budget rows and one imported labor demand; its ВОР allocation was linked and totaled 100%;
+- the workforce read model returned the committed demand and the import batch reached `committed`;
+- gross payroll was `480,000`; employer contributions were `144,000`; withheld NDFL was `62,400`; net payroll was `417,600`; total employer cost was `624,000`;
+- payroll budget was `480,000`; the isolated imported forecast cost including the ВОР row and employer contributions was `824,000`;
+- import batch, budget sections/items, schedule rows, labor demand/allocation, audit rows and any smoke-only payroll policy were removed;
+- cleanup: `pass`; project role restored to its previous value; live AI: `skip`; `secretsPrinted: false`.
+
+Validation and safety:
+
+- PR #157 GitHub Actions CI #321 passed;
+- Vitest: 568/568 passed; ESLint, TypeScript, Prisma validate/generate, production build and `git diff --check` passed;
+- the endpoint remains restricted to `APP_ENV=staging`, the existing staging secret and `project-smoke` with `isSmokeProject=true`;
+- the staging smoke secret was rotated without exposing its value; the temporary owner-only request file was deleted and the in-memory copy was cleared;
+- no real workbook, client/project data, provider call, live AI, schema/migration or direct SQL operation was used;
+- no synthetic import, budget, schedule, labor, allocation or audit row remained after the smoke.
+
 ## 2026-07-27 - Workforce & Payroll disposable lifecycle smoke GO
 
 Status: The controlled mutation follow-up for Workforce & Payroll Intelligence v1 is complete. PR #155 added a guarded staging-only smoke and the deployed application passed the synthetic employee, labor-demand, payroll calculation, profitability-impact and cleanup lifecycle.
