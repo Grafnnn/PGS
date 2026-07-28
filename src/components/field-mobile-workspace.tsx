@@ -23,8 +23,10 @@ import {
   syncFieldQueue,
   type FieldQueueItem
 } from "@/lib/field-offline-queue";
+import { DailyReportWorkOutputEditor } from "@/components/daily-report-work-output-editor";
+import { dailyReportWorkOutputsComplete } from "@/lib/daily-report-work-outputs";
 import { fieldSyncKindLabel } from "@/lib/field-sync";
-import type { DailyReport, ProjectDocument } from "@/lib/types";
+import type { DailyReport, DailyReportWorkOutput, ProjectDocument } from "@/lib/types";
 
 type UserContext = {
   role?: "OWNER" | "ADMIN" | "MANAGER" | "VIEWER";
@@ -43,7 +45,11 @@ type Props = {
 
 type Mode = "daily_report" | "field_issue" | "photo_evidence";
 
-const emptyReport = (author = "Прораб") => ({
+type FieldReportDraft = Omit<DailyReport, "id" | "projectId" | "status" | "workOutputs"> & {
+  workOutputs: DailyReportWorkOutput[];
+};
+
+const emptyReport = (author = "Прораб"): FieldReportDraft => ({
   date: new Date().toISOString().slice(0, 10),
   author,
   weather: "",
@@ -54,7 +60,8 @@ const emptyReport = (author = "Прораб") => ({
   materialsReceived: "",
   materialsConsumed: "",
   downtime: "",
-  issues: ""
+  issues: "",
+  workOutputs: []
 });
 
 const emptyIssue = { title: "", description: "", priority: "medium" as const, assignee: "", dueAt: "" };
@@ -73,7 +80,10 @@ function queueItemTitle(item: FieldQueueItem) {
 }
 
 function queueItemDetail(item: FieldQueueItem) {
-  if (item.kind === "daily_report") return `${item.payload.workers} рабочих · ${item.payload.engineers} ИТР`;
+  if (item.kind === "daily_report") {
+    const outputs = item.payload.workOutputs?.length ?? 0;
+    return `${item.payload.workers} рабочих · ${item.payload.engineers} ИТР${outputs ? ` · ${outputs} факт. ${outputs === 1 ? "работа" : "работы"}` : ""}`;
+  }
   if (item.kind === "field_issue") return `${item.payload.priority} · ${item.payload.assignee || "без ответственного"}`;
   return `${item.payload.category} · ${(item.payload.file.size / 1024 / 1024).toLocaleString("ru-RU", { maximumFractionDigits: 1 })} МБ`;
 }
@@ -159,6 +169,10 @@ export function FieldMobileWorkspace({ projectId, projectName, currentUser, curr
 
   async function queueReport(event: React.FormEvent) {
     event.preventDefault();
+    if (!dailyReportWorkOutputsComplete(report.workOutputs)) {
+      setError("Заполните профессию, работу, объём, единицу и человеко-часы во всех строках фактической выработки.");
+      return;
+    }
     setBusy("queue-report");
     setNotice("");
     setError("");
@@ -312,7 +326,8 @@ export function FieldMobileWorkspace({ projectId, projectName, currentUser, curr
                   </div>
                 </details>
               </div>
-              <button className="button primary" disabled={busy === "queue-report"} type="submit"><HardDrive size={16} /> Сохранить на устройстве</button>
+              <DailyReportWorkOutputEditor outputs={report.workOutputs} onChange={(workOutputs) => setReport({ ...report, workOutputs })} />
+              <button className="button primary" disabled={busy === "queue-report" || !dailyReportWorkOutputsComplete(report.workOutputs)} type="submit"><HardDrive size={16} /> Сохранить на устройстве</button>
             </form>
           )}
 

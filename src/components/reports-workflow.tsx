@@ -15,9 +15,11 @@ import {
   X
 } from "lucide-react";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { DailyReportWorkOutputEditor } from "@/components/daily-report-work-output-editor";
+import { dailyReportWorkOutputNorm, dailyReportWorkOutputsComplete } from "@/lib/daily-report-work-outputs";
 import { dailyReportStatusLabel } from "@/lib/daily-reports";
 import type { SerializedExecutiveReport } from "@/lib/executive-reports";
-import type { DailyReport } from "@/lib/types";
+import type { DailyReport, DailyReportWorkOutput } from "@/lib/types";
 
 type UserContext = {
   role?: "OWNER" | "ADMIN" | "MANAGER" | "VIEWER";
@@ -33,7 +35,9 @@ type Props = {
   onReportsChange: (items: DailyReport[]) => void;
 };
 
-type ReportForm = Omit<DailyReport, "id" | "projectId" | "status">;
+type ReportForm = Omit<DailyReport, "id" | "projectId" | "status" | "workOutputs"> & {
+  workOutputs: DailyReportWorkOutput[];
+};
 
 const emptyReport = (author = "Прораб"): ReportForm => ({
   date: new Date().toISOString().slice(0, 10),
@@ -46,7 +50,8 @@ const emptyReport = (author = "Прораб"): ReportForm => ({
   materialsReceived: "",
   materialsConsumed: "",
   downtime: "",
-  issues: ""
+  issues: "",
+  workOutputs: []
 });
 
 function tone(status: string) {
@@ -84,7 +89,8 @@ export function ReportsWorkflow({ projectId, reports, currentUser, currentUserLo
   const sortedReports = useMemo(() => [...reports].sort((a, b) => b.date.localeCompare(a.date)), [reports]);
   const missingRequiredFields = [
     !form.author.trim() ? "автор" : "",
-    !form.completedWorks.trim() ? "выполненные работы" : ""
+    !form.completedWorks.trim() ? "выполненные работы" : "",
+    !dailyReportWorkOutputsComplete(form.workOutputs) ? "полные строки фактической выработки" : ""
   ].filter(Boolean);
 
   const loadDailyReports = useCallback(async () => {
@@ -153,7 +159,8 @@ export function ReportsWorkflow({ projectId, reports, currentUser, currentUserLo
       materialsReceived: item.materialsReceived,
       materialsConsumed: item.materialsConsumed,
       downtime: item.downtime,
-      issues: item.issues
+      issues: item.issues,
+      workOutputs: item.workOutputs ?? []
     });
     setFormOpen(true);
     setError("");
@@ -324,9 +331,10 @@ export function ReportsWorkflow({ projectId, reports, currentUser, currentUserLo
             <label>Простои<textarea rows={2} value={form.downtime} onChange={(event) => setForm({ ...form, downtime: event.target.value })} /></label>
             <label>Проблемы / замечания<textarea rows={2} value={form.issues} onChange={(event) => setForm({ ...form, issues: event.target.value })} /></label>
           </div>
+          <DailyReportWorkOutputEditor outputs={form.workOutputs} onChange={(workOutputs) => setForm({ ...form, workOutputs })} />
           {missingRequiredFields.length ? <p className="form-hint" role="status">Для сохранения заполните: {missingRequiredFields.join(", ")}.</p> : null}
           <div className="form-actions">
-            <button className="button primary" disabled={busy === "daily-save" || !form.author.trim() || !form.completedWorks.trim()} type="button" onClick={() => void saveReport()}>
+            <button className="button primary" disabled={busy === "daily-save" || missingRequiredFields.length > 0} type="button" onClick={() => void saveReport()}>
               <Save size={17} /> {busy === "daily-save" ? "Сохраняю..." : "Сохранить черновик"}
             </button>
             <button className="button secondary" type="button" onClick={() => setFormOpen(false)}>Отмена</button>
@@ -343,6 +351,20 @@ export function ReportsWorkflow({ projectId, reports, currentUser, currentUserLo
             </div>
             <p>{item.completedWorks || "Выполненные работы не заполнены"}</p>
             <small>{item.weather || "Погода не указана"} · {item.equipment || "Техника не указана"}</small>
+            {item.workOutputs?.length ? (
+              <div className="daily-report-output-summary">
+                {item.workOutputs.map((output, index) => {
+                  const actual = dailyReportWorkOutputNorm(output);
+                  return (
+                    <span key={`${output.profession}-${output.workName}-${index}`}>
+                      <strong>{output.profession} · {output.workName}</strong>
+                      {output.quantity.toLocaleString("ru-RU", { maximumFractionDigits: 3 })} {output.unit}
+                      {actual ? ` · ${actual.norm.toLocaleString("ru-RU", { maximumFractionDigits: 3 })} ${actual.unit}` : ""}
+                    </span>
+                  );
+                })}
+              </div>
+            ) : null}
             {item.issues || item.downtime ? <div className="daily-report-alert">{item.issues || item.downtime}</div> : null}
             <div className="daily-report-actions">
               {item.status === "draft" && canEdit ? <button className="button secondary compact-button" type="button" onClick={() => openEditReport(item)}><Pencil size={15} /> Редактировать</button> : null}

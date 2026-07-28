@@ -2,9 +2,10 @@ import type { ProjectLaborDemand, ResourceKind } from "@/lib/types";
 
 type PeopleKind = Exclude<ResourceKind, "equipment">;
 
-export type ProductivityNormSource = "labor-demand" | "resource" | "workbook";
+export type ProductivityNormSource = "daily-report" | "labor-demand" | "resource" | "workbook";
 export type ProductivityNormConfidence = "low" | "medium" | "high";
 export type ProductivityNormMatch = "profession" | "family";
+export type ProductivityNormBasis = "actual" | "mixed" | "planned";
 
 export type ProductivityNormSample = {
   category: PeopleKind;
@@ -31,6 +32,7 @@ export type ProductivityNormBenchmark = {
   maximum: number;
   dispersionPercent: number;
   confidence: ProductivityNormConfidence;
+  basis: ProductivityNormBasis;
   autoApplicable: boolean;
 };
 
@@ -142,7 +144,8 @@ function confidenceFor(sampleCount: number, dispersionPercent: number): Producti
 }
 
 function buildBenchmark(samples: ProductivityNormSample[]): ProductivityNormBenchmark {
-  const retained = trimOutliers(samples);
+  const actualSamples = samples.filter((item) => item.source === "daily-report");
+  const retained = trimOutliers(actualSamples.length >= 2 ? actualSamples : samples);
   const totalWeight = retained.reduce((sum, item) => sum + Math.max(0.1, Math.min(24, finite(item.weight) || 1)), 0);
   const norm = retained.reduce(
     (sum, item) => sum + item.norm * Math.max(0.1, Math.min(24, finite(item.weight) || 1)),
@@ -157,6 +160,11 @@ function buildBenchmark(samples: ProductivityNormSample[]): ProductivityNormBenc
   const unit = normalizeProductivityUnit(retained[0].unit);
   const family = productivityFamily(retained.map((item) => `${item.profession} ${item.function ?? ""}`).join(" "));
   const sources = Array.from(new Set(retained.map((item) => item.source))).sort();
+  const basis: ProductivityNormBasis = sources.every((item) => item === "daily-report")
+    ? "actual"
+    : sources.includes("daily-report")
+      ? "mixed"
+      : "planned";
 
   return {
     id: `${category}:${productivityProfessionKey(profession)}:${productivityUnitKey(unit)}`,
@@ -173,6 +181,7 @@ function buildBenchmark(samples: ProductivityNormSample[]): ProductivityNormBenc
     maximum: round(Math.max(...retained.map((item) => item.norm))),
     dispersionPercent: round(dispersionPercent, 1),
     confidence,
+    basis,
     autoApplicable: retained.length >= 2 && confidence !== "low"
   };
 }
@@ -239,9 +248,14 @@ export function recommendProductivityNorm(input: {
   const exactEnough = selected.lexical >= 0.85;
   const familyEnough = Boolean(selected.family && selected.item.sampleCount >= 3 && selected.item.confidence !== "low");
   const autoApplicable = selected.item.autoApplicable && (exactEnough || familyEnough);
+  const evidence = selected.item.basis === "actual"
+    ? "подтвержденному факту"
+    : selected.item.basis === "mixed"
+      ? "плану и подтвержденному факту"
+      : "накопленным плановым данным";
   const explanation = selected.match === "profession"
-    ? `Среднее по сопоставимой профессии: ${selected.item.sampleCount} наблюд.`
-    : `Среднее по сопоставимому виду работ: ${selected.item.sampleCount} наблюд.`;
+    ? `Среднее по сопоставимой профессии и ${evidence}: ${selected.item.sampleCount} наблюд.`
+    : `Среднее по сопоставимому виду работ и ${evidence}: ${selected.item.sampleCount} наблюд.`;
 
   return {
     ...selected.item,

@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { Prisma, PrismaClient } from "@prisma/client";
 import { demoState } from "../src/lib/demo-data";
 import { hashPassword } from "../src/lib/auth/password";
 import { ensureBootstrapAdmin } from "../src/lib/auth/bootstrap-admin";
@@ -267,7 +267,13 @@ async function main() {
       await prisma.dailyReport.upsert({
         where: { id: item.id },
         update: {},
-        create: { ...item, organizationId: org.id, date: new Date(item.date), createdBy: user.id }
+        create: {
+          ...item,
+          workOutputs: item.workOutputs as unknown as Prisma.InputJsonValue | undefined,
+          organizationId: org.id,
+          date: new Date(item.date),
+          createdBy: user.id
+        }
       });
     }
 

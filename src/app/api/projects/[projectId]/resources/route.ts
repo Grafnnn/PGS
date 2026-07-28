@@ -13,6 +13,7 @@ import {
   serializeWorkforceResource,
   workforceResourceCreateSchema
 } from "@/lib/workforce-capacity";
+import { approvedDailyReportProductivitySamples } from "@/lib/daily-report-work-outputs";
 import { buildProductivityNormBenchmarks } from "@/lib/workforce-productivity";
 
 function json(body: unknown, status = 200) {
@@ -45,7 +46,8 @@ export async function GET(_request: Request, { params }: { params: { projectId: 
       organizationResources,
       payrollPolicy,
       laborDemands,
-      productivityLaborDemands
+      productivityLaborDemands,
+      approvedDailyReports
     ] = await Promise.all([
       prisma.projectResourceAssignment.findMany({
         where: { projectId: params.projectId },
@@ -102,9 +104,24 @@ export async function GET(_request: Request, { params }: { params: { projectId: 
               confidence: true
             }
           })
+        : Promise.resolve([]),
+      canEdit
+        ? prisma.dailyReport.findMany({
+            where: {
+              organizationId: project.organizationId,
+              status: "approved"
+            },
+            select: {
+              status: true,
+              workOutputs: true
+            },
+            orderBy: { date: "desc" },
+            take: 500
+          })
         : Promise.resolve([])
     ]);
     const assignedIds = new Set(assignments.map((item) => item.resourceId));
+    const serializedPolicy = serializePayrollPolicy(payrollPolicy, params.projectId);
     const productivityNorms = canEdit
       ? buildProductivityNormBenchmarks([
           ...productivityLaborDemands.map((item) => ({
@@ -128,14 +145,15 @@ export async function GET(_request: Request, { params }: { params: { projectId: 
               unit: item.productivityUnit,
               weight: Math.max(1, item.headcount),
               source: "resource" as const
-            }))
+            })),
+          ...approvedDailyReportProductivitySamples(approvedDailyReports, serializedPolicy.workingHoursPerMonth)
         ])
       : [];
     return json({
       items: assignments.map((item) => serializeWorkforceResource(item.resource, item, allOrganizationAssignments)),
       demands: laborDemands.map(serializeLaborDemand),
       productivityNorms,
-      policy: serializePayrollPolicy(payrollPolicy, params.projectId),
+      policy: serializedPolicy,
       available: organizationResources
         .filter((item) => !assignedIds.has(item.id))
         .map((item) => serializeAvailableWorkforceResource(item, allOrganizationAssignments)),

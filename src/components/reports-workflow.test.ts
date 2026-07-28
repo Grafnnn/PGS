@@ -32,4 +32,32 @@ describe("ReportsWorkflow", () => {
     expect(html).not.toContain("Новый рапорт");
     expect(html).not.toContain("Сформировать версию");
   });
+
+  it("shows approved measurable output and its normalized monthly productivity", () => {
+    const html = renderToStaticMarkup(createElement(ReportsWorkflow, {
+      projectId: "project-1",
+      reports: [{
+        id: "report-1",
+        projectId: "project-1",
+        date: "2026-07-28",
+        author: "Прораб",
+        weather: "Ясно",
+        workers: 4,
+        engineers: 1,
+        equipment: "",
+        completedWorks: "Кладка стен",
+        materialsReceived: "",
+        materialsConsumed: "",
+        downtime: "",
+        issues: "",
+        workOutputs: [{ profession: "Каменщик", workName: "Кладка стен", quantity: 20, unit: "м²", laborHours: 32 }],
+        status: "approved"
+      }],
+      currentUser: { authenticated: true, role: "MANAGER", name: "РП" },
+      currentUserLoaded: true,
+      onReportsChange: () => undefined
+    }));
+    expect(html).toContain("Каменщик");
+    expect(html).toContain("100 м²/чел.-мес.");
+  });
 });

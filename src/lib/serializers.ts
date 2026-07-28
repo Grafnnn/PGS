@@ -11,6 +11,7 @@ import type {
   Risk as DbRisk,
   ScheduleItem as DbScheduleItem
 } from "@prisma/client";
+import { parseDailyReportWorkOutputs } from "@/lib/daily-report-work-outputs";
 import type { BudgetItem, DailyReport, Material, Payment, ProcurementRequest, Project, Risk, ScheduleItem } from "./types";
 
 const dateOnly = (date: Date) => date.toISOString().slice(0, 10);
@@ -154,6 +155,7 @@ export function serializeDailyReport(item: DbDailyReport): DailyReport {
     materialsConsumed: item.materialsConsumed,
     downtime: item.downtime,
     issues: item.issues,
+    workOutputs: parseDailyReportWorkOutputs(item.workOutputs),
     status: item.status as DailyReport["status"]
   };
 }

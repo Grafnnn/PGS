@@ -17,6 +17,8 @@ describe("FieldMobileWorkspace", () => {
 
     expect(html).toContain("Field Mobile / Offline v1");
     expect(html).toContain("Сохранить на устройстве");
+    expect(html).toContain("Фактическая выработка смены");
+    expect(html).toContain("Добавить работу");
     expect(html).toContain("Синхронизировать (0)");
     expect(html).toContain("FIFO · только явная отправка");
     expect(html).toContain("Редактирование серверных записей offline не выполняется");
