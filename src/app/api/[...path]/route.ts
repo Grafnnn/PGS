@@ -431,7 +431,14 @@ async function createProjectResource(projectId: string, resource: string | undef
     const data = dailyReportSchema.parse(body);
     const item = await prisma.$transaction(async (tx) => {
       const created = await tx.dailyReport.create({
-        data: { ...data, status: "draft", organizationId: project.organizationId, projectId, createdBy: userId }
+        data: {
+          ...data,
+          workOutputs: data.workOutputs as unknown as Prisma.InputJsonValue,
+          status: "draft",
+          organizationId: project.organizationId,
+          projectId,
+          createdBy: userId
+        }
       });
       await writeAudit(tx, {
         organizationId: project.organizationId,
@@ -585,7 +592,15 @@ async function updateResource(resource: string, id: string, body: unknown) {
       return json({ error: "Only draft reports can be edited" }, 409);
     }
     const item = await prisma.$transaction(async (tx) => {
-      const updated = await tx.dailyReport.update({ where: { id }, data });
+      const updated = await tx.dailyReport.update({
+        where: { id },
+        data: {
+          ...data,
+          ...(data.workOutputs !== undefined
+            ? { workOutputs: data.workOutputs as unknown as Prisma.InputJsonValue }
+            : {})
+        }
+      });
       await writeAudit(tx, {
         organizationId: before.organizationId,
         projectId: before.projectId,

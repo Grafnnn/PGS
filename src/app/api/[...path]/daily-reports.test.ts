@@ -39,7 +39,9 @@ const user = { id: "manager-1", name: "РП", email: "rp@example.test", role: "M
 const before = {
   id: "daily-1", organizationId: "org-1", projectId: "project-1", date: new Date("2026-07-14T12:00:00Z"), author: "Прораб",
   weather: "Ясно", workers: 5, engineers: 1, equipment: "Кран", completedWorks: "Монтаж", materialsReceived: "",
-  materialsConsumed: "", downtime: "", issues: "", status: "draft", createdBy: "manager-1", createdAt: new Date(), updatedAt: new Date()
+  materialsConsumed: "", downtime: "", issues: "",
+  workOutputs: [{ profession: "Монтажник", workName: "Монтаж конструкций", quantity: 12, unit: "т", laborHours: 160 }],
+  status: "draft", createdBy: "manager-1", createdAt: new Date(), updatedAt: new Date()
 };
 
 function request(body: unknown) {
@@ -74,7 +76,12 @@ describe("daily reports catch-all workflow", () => {
     const { POST } = await import("./route");
     const response = await POST(request({ ...before, status: "approved" }), { params: { path: ["projects", "project-1", "daily-reports"] } });
     expect(response.status).toBe(201);
-    expect(mocks.reportCreate).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ status: "draft" }) }));
+    expect(mocks.reportCreate).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        status: "draft",
+        workOutputs: [expect.objectContaining({ profession: "Монтажник", laborHours: 160 })]
+      })
+    }));
     expect(mocks.audit).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ entity: "daily_report", action: "create" }) }));
   });
 

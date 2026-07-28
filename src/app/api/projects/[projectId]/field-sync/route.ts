@@ -64,6 +64,7 @@ export async function POST(request: NextRequest, { params }: { params: { project
         const created = await tx.dailyReport.create({
           data: {
             ...input.payload,
+            workOutputs: input.payload.workOutputs as unknown as Prisma.InputJsonValue,
             status: "draft",
             organizationId: project.organizationId,
             projectId: params.projectId,

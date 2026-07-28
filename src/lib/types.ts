@@ -153,7 +153,16 @@ export interface DailyReport {
   materialsConsumed: string;
   downtime: string;
   issues: string;
+  workOutputs?: DailyReportWorkOutput[];
   status: "draft" | "submitted" | "checked" | "approved";
+}
+
+export interface DailyReportWorkOutput {
+  profession: string;
+  workName: string;
+  quantity: number;
+  unit: string;
+  laborHours: number;
 }
 
 export type ResourceKind = "worker" | "engineer" | "crew" | "equipment";

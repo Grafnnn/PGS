@@ -1,4 +1,5 @@
 import type { FieldSyncRequest } from "@/lib/field-sync";
+import type { DailyReportWorkOutput } from "@/lib/types";
 
 export type FieldQueueState = "pending" | "syncing" | "failed" | "conflict";
 export type FieldQueueKind = FieldSyncRequest["kind"] | "photo_evidence";
@@ -28,6 +29,7 @@ export type DailyReportQueueItem = QueueBase & {
     materialsConsumed: string;
     downtime: string;
     issues: string;
+    workOutputs?: DailyReportWorkOutput[];
   };
 };
 

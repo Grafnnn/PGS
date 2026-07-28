@@ -47,6 +47,7 @@ const report = {
   materialsConsumed: "",
   downtime: "",
   issues: "",
+  workOutputs: [{ profession: "Арматурщик", workName: "Армирование плиты", quantity: 2, unit: "т", laborHours: 64 }],
   status: "draft",
   createdBy: "user-1",
   createdAt: new Date("2026-07-15T10:00:00.000Z"),
@@ -72,7 +73,8 @@ function reportRequest() {
         materialsReceived: "",
         materialsConsumed: "",
         downtime: "",
-        issues: ""
+        issues: "",
+        workOutputs: [{ profession: "Арматурщик", workName: "Армирование плиты", quantity: 2, unit: "т", laborHours: 64 }]
       }
     })
   }) as never;
@@ -113,7 +115,12 @@ describe("field sync route", () => {
     const { POST } = await import("./route");
     const response = await POST(reportRequest(), { params: { projectId: "project-1" } });
     expect(response.status).toBe(201);
-    expect(mocks.reportCreate).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ status: "draft" }) }));
+    expect(mocks.reportCreate).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        status: "draft",
+        workOutputs: [expect.objectContaining({ profession: "Арматурщик", laborHours: 64 })]
+      })
+    }));
     expect(mocks.auditCreate).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ entity: "daily_report", action: "create" }) }));
     expect(mocks.receiptCreate).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ clientMutationId: "mutation_123456", entityId: "report-1" }) }));
   });

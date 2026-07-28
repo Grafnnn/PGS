@@ -20,6 +20,7 @@ vi.mock("@/lib/prisma", () => ({
     projectResourceAssignment: { findMany: vi.fn(), create: mocks.assignmentCreate },
     projectPayrollPolicy: { findUnique: vi.fn() },
     projectLaborDemand: { findMany: vi.fn() },
+    dailyReport: { findMany: vi.fn() },
     $transaction: vi.fn(async (callback: (tx: unknown) => unknown) => callback({
       organizationResource: { create: mocks.resourceCreate },
       projectResourceAssignment: { create: mocks.assignmentCreate }
@@ -73,6 +74,7 @@ describe("project workforce resources route", () => {
     vi.mocked(prisma.organizationResource.findMany).mockResolvedValue([] as never);
     vi.mocked(prisma.projectPayrollPolicy.findUnique).mockResolvedValue(null);
     vi.mocked(prisma.projectLaborDemand.findMany).mockResolvedValue([] as never);
+    vi.mocked(prisma.dailyReport.findMany).mockResolvedValue([] as never);
     mocks.resourceCreate.mockResolvedValue(resource);
     mocks.assignmentCreate.mockResolvedValue(assignment);
   });
@@ -91,6 +93,7 @@ describe("project workforce resources route", () => {
     const response = await GET(new Request("https://pgs.local"), { params: { projectId: "project-1" } });
     expect(response.status).toBe(200);
     expect(prisma.organizationResource.findMany).not.toHaveBeenCalled();
+    expect(prisma.dailyReport.findMany).not.toHaveBeenCalled();
     expect(prisma.projectLaborDemand.findMany).toHaveBeenCalledTimes(1);
     await expect(response.json()).resolves.toMatchObject({
       available: [],
@@ -163,6 +166,53 @@ describe("project workforce resources route", () => {
     expect(JSON.stringify(body.productivityNorms)).not.toContain("other-project-secret");
     expect(JSON.stringify(body.productivityNorms)).not.toContain("resource-1");
     expect(JSON.stringify(body.productivityNorms)).not.toContain("resource-2");
+  });
+
+  it("lets approved actual output replace plan estimates using the current project work month", async () => {
+    vi.mocked(prisma.projectPayrollPolicy.findUnique).mockResolvedValue({
+      id: "policy-1",
+      projectId: "project-1",
+      insuranceContributionRate: 30,
+      accidentContributionRate: 0.2,
+      personalIncomeTaxRate: 13,
+      workingHoursPerMonth: 152,
+      sourceYear: 2026,
+      notes: null
+    } as never);
+    vi.mocked(prisma.organizationResource.findMany).mockResolvedValue([
+      { ...resource, id: "resource-1", name: "Каменщик", profession: "Каменщик", headcount: 2, productivityNorm: 140, productivityUnit: "м2/чел.-мес." }
+    ] as never);
+    vi.mocked(prisma.projectLaborDemand.findMany)
+      .mockResolvedValueOnce([] as never)
+      .mockResolvedValueOnce([{
+        category: "worker",
+        profession: "Каменщик",
+        function: "Кладка стен",
+        productivityNorm: 120,
+        productivityUnit: "м2/чел.-мес.",
+        personMonths: 2,
+        confidence: 0.9
+      }] as never);
+    vi.mocked(prisma.dailyReport.findMany).mockResolvedValue([
+      { status: "approved", workOutputs: [{ profession: "Каменщик", workName: "Кладка стен", quantity: 20, unit: "м2", laborHours: 32 }] },
+      { status: "approved", workOutputs: [{ profession: "Каменщик", workName: "Кладка стен", quantity: 22, unit: "м2", laborHours: 32 }] }
+    ] as never);
+
+    const { GET } = await import("./route");
+    const response = await GET(new Request("https://pgs.local"), { params: { projectId: "project-1" } });
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.productivityNorms).toEqual([
+      expect.objectContaining({
+        profession: "Каменщик",
+        norm: 99.75,
+        unit: "м2/чел.-мес.",
+        sampleCount: 2,
+        basis: "actual",
+        sources: ["daily-report"]
+      })
+    ]);
   });
 
   it("requires edit permission before parsing create payload", async () => {

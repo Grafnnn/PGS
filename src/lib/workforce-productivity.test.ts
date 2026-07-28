@@ -84,6 +84,28 @@ describe("workforce productivity norms", () => {
     })).toMatchObject({ norm: 50, confidence: "low", autoApplicable: false });
   });
 
+  it("prefers two approved actual observations over accumulated plan estimates", () => {
+    const benchmarks = buildProductivityNormBenchmarks([
+      sample(100, { source: "labor-demand" }),
+      sample(120, { source: "resource" }),
+      sample(48, { source: "daily-report" }),
+      sample(52, { source: "daily-report" })
+    ]);
+
+    expect(benchmarks[0]).toMatchObject({
+      norm: 50,
+      sampleCount: 2,
+      sources: ["daily-report"],
+      basis: "actual",
+      autoApplicable: true
+    });
+    expect(recommendProductivityNorm({
+      category: "worker",
+      profession: "Монтажник металлоконструкций",
+      benchmarks
+    })?.explanation).toContain("подтвержденному факту");
+  });
+
   it("fills a missing workbook norm only when a comparable average is reliable enough", () => {
     const base = {
       id: "demand",

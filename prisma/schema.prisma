@@ -562,6 +562,7 @@ model DailyReport {
   materialsConsumed String                @map("materials_consumed")
   downtime          String
   issues            String
+  workOutputs       Json?                 @map("work_outputs")
   status            String
   createdBy         String?               @map("created_by")
   createdAt         DateTime              @default(now()) @map("created_at")
@@ -569,6 +570,7 @@ model DailyReport {
   project           Project               @relation(fields: [projectId], references: [id], onDelete: Cascade)
   qualityIssues     ProjectQualityIssue[]
 
+  @@index([organizationId, status, date])
   @@map("daily_reports")
 }
 

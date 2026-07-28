@@ -992,6 +992,11 @@ function ProductivityNormAssistant({
 }) {
   const eligible = category === "worker" || category === "crew";
   const autoApplied = eligible && autoEnabled && Boolean(recommendation?.autoApplicable);
+  const averageLabel = recommendation?.basis === "actual"
+    ? "Фактическая средняя"
+    : recommendation?.basis === "mixed"
+      ? "Смешанная средняя"
+      : "Плановая средняя";
   return (
     <div className={`productivity-norm-assistant ${autoApplied ? "is-applied" : ""}`}>
       <Calculator size={18} />
@@ -1000,7 +1005,7 @@ function ProductivityNormAssistant({
           {!eligible
             ? "Норма задаётся вручную"
             : recommendation
-              ? `Средняя: ${number(recommendation.norm, 3)} ${recommendation.unit}`
+              ? `${averageLabel}: ${number(recommendation.norm, 3)} ${recommendation.unit}`
               : "Средняя норма пока не рассчитана"}
         </strong>
         <span>
