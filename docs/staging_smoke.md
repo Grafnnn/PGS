@@ -232,6 +232,32 @@ Expected:
 - no synthetic workforce, labor-demand, assignment, allocation, or audit rows remain;
 - no passwords, cookies, session tokens, `DATABASE_URL`, `OPENAI_API_KEY`, or smoke secret are returned.
 
+## Optional approved-report productivity feedback smoke
+
+Run only after core smoke is green. This check temporarily grants the smoke user project-owner access to `project-smoke`, creates two synthetic daily reports through the standard API, and moves each report through `draft → submitted → checked → approved`. Both reports contain the same unique profession and measurable output with different actual volumes. The workforce read model must then expose a two-sample `actual` productivity benchmark calculated with the project's current working-hours policy. The check removes the approved synthetic reports and their audit rows through the guarded runtime cleanup, verifies that the benchmark disappears, and restores the previous project role.
+
+```bash
+curl -sS -X POST "$APP_URL/api/internal/staging-smoke" \
+  -H "content-type: application/json" \
+  -H "authorization: Bearer $STAGING_SMOKE_SECRET" \
+  --data '{"includeProductivityFeedbackSmoke":true}'
+```
+
+Expected:
+
+- HTTP `200`;
+- `ok: true`;
+- `productivityFeedbackSmoke.status: pass`;
+- two reports are created, submitted, checked, and approved;
+- the resulting benchmark has `basis: actual`, `sampleCount: 2`, and `autoApplicable: true`;
+- with a `160` hour policy the expected average is `110`; other policies are calculated dynamically;
+- `productivityFeedbackSmoke.cleanup: pass`;
+- `productivityFeedbackSmoke.benchmark.cleared: true`;
+- `productivityFeedbackSmoke.permissionScope: temporary-project-owner-restored`;
+- `liveAi.status: skip`;
+- no synthetic daily reports, benchmark inputs, or related audit rows remain;
+- no passwords, cookies, session tokens, `DATABASE_URL`, `OPENAI_API_KEY`, or smoke secret are returned.
+
 ## Optional Excel-to-ФОТ import lifecycle smoke
 
 Run only after core smoke is green. This check builds a generated XLSX in memory with one synthetic ВОР row and one ФОТ row, previews it through the standard Excel import API, and commits it explicitly through the standard budget import API. It verifies the imported payroll budget, labor demand, 100% ВОР allocation, gross payroll, employer contributions, personal income tax, net payroll, and project cost calculation. It then removes the import batch, budget/schedule/labor/allocation/audit rows and any payroll policy created only for the smoke, verifies that no synthetic rows remain, and restores the prior project role.

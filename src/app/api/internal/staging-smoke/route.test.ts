@@ -102,6 +102,7 @@ describe("staging smoke runtime endpoint", () => {
       includeAiDecisionJournalSmoke: false,
       includeWorkforcePayrollSmoke: false,
       includeWorkforcePayrollImportSmoke: false,
+      includeProductivityFeedbackSmoke: false,
       requestId: "test-request-id"
     });
   });
@@ -129,6 +130,7 @@ describe("staging smoke runtime endpoint", () => {
       includeAiDecisionJournalSmoke: false,
       includeWorkforcePayrollSmoke: false,
       includeWorkforcePayrollImportSmoke: false,
+      includeProductivityFeedbackSmoke: false,
       requestId: "test-request-id"
     });
   });
@@ -153,7 +155,8 @@ describe("staging smoke runtime endpoint", () => {
           includeProjectControlsSmoke: true,
           includeAiDecisionJournalSmoke: true,
           includeWorkforcePayrollSmoke: true,
-          includeWorkforcePayrollImportSmoke: true
+          includeWorkforcePayrollImportSmoke: true,
+          includeProductivityFeedbackSmoke: true
         }
       })
     );
@@ -172,6 +175,7 @@ describe("staging smoke runtime endpoint", () => {
       includeAiDecisionJournalSmoke: true,
       includeWorkforcePayrollSmoke: true,
       includeWorkforcePayrollImportSmoke: true,
+      includeProductivityFeedbackSmoke: true,
       requestId: "test-request-id"
     });
   });
