@@ -148,6 +148,42 @@ describe("project workbook import", () => {
     expect(demand.allocations.reduce((sum, item) => sum + item.sharePercent, 0)).toBe(100);
   });
 
+  it("fills a missing worker norm from a reliable workbook average", () => {
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([
+      ["ФОТ привлеченных рабочих"],
+      ["Профессия", "Функция", "Месячная зарплата", "Чел-Мес всего", "Норма выработки", "Примечание"],
+      ["Каменщик", "Кладка стен м2", 120000, 2, 90, "м2"],
+      ["Каменщик", "Кладка стен м2", 120000, 2, 110, "м2"],
+      ["Каменщик", "Кладка стен м2", 120000, 2, "", "м2"],
+      ["ИТОГО"]
+    ]), "ФОТ рабочих");
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([
+      ["Каменные работы"],
+      ["№", "Наименование работ", "Ед.", "Кол-во", "Ставка без НДС, ₽"],
+      [1, "Кладка стен", "м2", 600, 1000]
+    ]), "ВОР Кладка");
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([
+      ["Календарный график"],
+      ["Раздел", "M1", "M2"],
+      ["Кладка", 1, 1]
+    ]), "График");
+    const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" }) as Buffer;
+
+    const preview = parseProjectWorkbookBuffer(buffer, "labor-average.xlsx", "project", { startsAt: "2026-07-01" });
+    const demands = preview.laborDemands ?? [];
+
+    expect(demands).toHaveLength(3);
+    expect(demands[2]).toMatchObject({
+      profession: "Каменщик",
+      productivityNorm: 100,
+      productivityUnit: "м2/чел.-мес.",
+      confidence: 0.75
+    });
+    expect(demands[2].notes).toContain("Автонорма");
+    expect(preview.warnings).toContainEqual(expect.stringContaining("Автоматически рассчитана средняя норма выработки для 1 строк ФОТ"));
+  });
+
   it("keeps project-wide ITR unallocated and classifies a master as engineering staff", () => {
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([

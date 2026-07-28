@@ -91,8 +91,10 @@ describe("project workforce resources route", () => {
     const response = await GET(new Request("https://pgs.local"), { params: { projectId: "project-1" } });
     expect(response.status).toBe(200);
     expect(prisma.organizationResource.findMany).not.toHaveBeenCalled();
+    expect(prisma.projectLaborDemand.findMany).toHaveBeenCalledTimes(1);
     await expect(response.json()).resolves.toMatchObject({
       available: [],
+      productivityNorms: [],
       permissions: { edit: false }
     });
   });
@@ -121,6 +123,46 @@ describe("project workforce resources route", () => {
       commitments: [expect.objectContaining({ allocationPercent: 50 })]
     })]);
     expect(JSON.stringify(body.available)).not.toContain("other-project-secret");
+  });
+
+  it("returns only aggregated productivity norms without exposing source project ids", async () => {
+    vi.mocked(prisma.organizationResource.findMany).mockResolvedValue([
+      { ...resource, id: "resource-1", name: "Каменщик 1", profession: "Каменщик", headcount: 2, productivityNorm: 90, productivityUnit: "м2/чел.-мес." },
+      { ...resource, id: "resource-2", name: "Каменщик 2", profession: "Каменщик", headcount: 2, productivityNorm: 110, productivityUnit: "м2/чел.-мес." }
+    ] as never);
+    vi.mocked(prisma.projectLaborDemand.findMany)
+      .mockResolvedValueOnce([] as never)
+      .mockResolvedValueOnce([
+        {
+          projectId: "other-project-secret",
+          category: "worker",
+          profession: "Каменщик",
+          function: "Кладка стен",
+          productivityNorm: 100,
+          productivityUnit: "м2/чел.-мес.",
+          personMonths: 2,
+          confidence: 0.9
+        }
+      ] as never);
+
+    const { GET } = await import("./route");
+    const response = await GET(new Request("https://pgs.local"), { params: { projectId: "project-1" } });
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.productivityNorms).toEqual([
+      expect.objectContaining({
+        category: "worker",
+        profession: "Каменщик",
+        norm: 100,
+        unit: "м2/чел.-мес.",
+        sampleCount: 3,
+        autoApplicable: true
+      })
+    ]);
+    expect(JSON.stringify(body.productivityNorms)).not.toContain("other-project-secret");
+    expect(JSON.stringify(body.productivityNorms)).not.toContain("resource-1");
+    expect(JSON.stringify(body.productivityNorms)).not.toContain("resource-2");
   });
 
   it("requires edit permission before parsing create payload", async () => {
