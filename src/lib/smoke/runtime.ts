@@ -24,6 +24,11 @@ import {
   inspectWorkforcePayrollImportPreview,
   workforcePayrollImportSmokePassed
 } from "./workforce-payroll-import";
+import {
+  buildProductivityFeedbackSmokeFixture,
+  expectedProductivityFeedbackNorm,
+  productivityFeedbackSmokePassed
+} from "./productivity-feedback";
 
 const STAGING_SMOKE_EMAIL = "smoke+staging-runtime@pgs.local";
 const AI_SMOKE_PROMPT = "Кратко проверь smoke-проект и скажи, каких данных не хватает для управленческого анализа.";
@@ -177,6 +182,31 @@ export interface RuntimeWorkforcePayrollImportSmokeResult extends RuntimeSmokeCh
   cleanup: "pass" | "fail" | "skip";
 }
 
+export interface RuntimeProductivityFeedbackSmokeResult extends RuntimeSmokeCheck {
+  projectId: string;
+  operations: string[];
+  reports?: {
+    created: number;
+    submitted: number;
+    checked: number;
+    approved: number;
+    cleaned: boolean;
+  };
+  benchmark?: {
+    baselineClean: boolean;
+    found: boolean;
+    norm?: number;
+    expectedNorm: number;
+    sampleCount?: number;
+    basis?: "actual" | "mixed" | "planned";
+    autoApplicable?: boolean;
+    cleared: boolean;
+    workingHoursPerMonth: number;
+  };
+  permissionScope?: "temporary-project-owner-restored" | "restore-failed";
+  cleanup: "pass" | "fail" | "skip";
+}
+
 export interface RuntimeSmokeResult {
   ok: boolean;
   smokeUser: StagingSmokeUserReport;
@@ -239,6 +269,7 @@ export interface RuntimeSmokeResult {
   aiDecisionJournalSmoke?: RuntimeAiDecisionJournalSmokeResult;
   workforcePayrollSmoke?: RuntimeWorkforcePayrollSmokeResult;
   workforcePayrollImportSmoke?: RuntimeWorkforcePayrollImportSmokeResult;
+  productivityFeedbackSmoke?: RuntimeProductivityFeedbackSmokeResult;
   secretsPrinted: false;
 }
 
@@ -255,6 +286,7 @@ export interface RuntimeSmokeInput {
   includeAiDecisionJournalSmoke?: boolean;
   includeWorkforcePayrollSmoke?: boolean;
   includeWorkforcePayrollImportSmoke?: boolean;
+  includeProductivityFeedbackSmoke?: boolean;
   requestId: string;
 }
 
@@ -1667,6 +1699,14 @@ type WorkforceApiResponse = {
   items?: WorkforceResource[];
   demands?: ProjectLaborDemand[];
   policy?: ProjectPayrollPolicy;
+  productivityNorms?: Array<{
+    profession: string;
+    norm: number;
+    unit: string;
+    sampleCount: number;
+    basis: "actual" | "mixed" | "planned";
+    autoApplicable: boolean;
+  }>;
 };
 
 type ProjectBundleResponse = {
@@ -1676,6 +1716,280 @@ type ProjectBundleResponse = {
 
 function closeEnough(actual: number, expected: number) {
   return Math.abs(actual - expected) <= Math.max(0.01, Math.abs(expected) * 0.000001);
+}
+
+async function cleanupProductivityFeedbackSmoke(marker: string) {
+  assertSmokeMutationTarget(SMOKE_PROJECT_ID, process.env.APP_ENV ?? process.env.NODE_ENV);
+  const reports = await prisma.dailyReport.findMany({
+    where: {
+      projectId: SMOKE_PROJECT_ID,
+      author: { startsWith: marker }
+    },
+    select: { id: true }
+  });
+  const reportIds = reports.map((item) => item.id);
+
+  if (reportIds.length) {
+    await prisma.$transaction(async (tx) => {
+      await tx.auditLog.deleteMany({
+        where: {
+          projectId: SMOKE_PROJECT_ID,
+          entity: "daily_report",
+          entityId: { in: reportIds }
+        }
+      });
+      await tx.dailyReport.deleteMany({
+        where: {
+          projectId: SMOKE_PROJECT_ID,
+          id: { in: reportIds },
+          author: { startsWith: marker }
+        }
+      });
+    });
+  }
+
+  return (await prisma.dailyReport.count({
+    where: {
+      projectId: SMOKE_PROJECT_ID,
+      author: { startsWith: marker }
+    }
+  })) === 0;
+}
+
+async function runProductivityFeedbackSmoke(
+  baseUrl: string,
+  cookie: string,
+  requestId: string
+): Promise<RuntimeProductivityFeedbackSmokeResult> {
+  const operations: string[] = [];
+  const runKey = requestId.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 18) || Date.now().toString();
+  const fixture = buildProductivityFeedbackSmokeFixture(runKey);
+  let temporaryRole: Awaited<ReturnType<typeof grantTemporaryProjectOwnerRole>> | undefined;
+  let permissionScope: RuntimeProductivityFeedbackSmokeResult["permissionScope"];
+  let cleanup: RuntimeProductivityFeedbackSmokeResult["cleanup"] = "skip";
+  let lastHttpStatus: number | undefined;
+  let baselineClean = false;
+  let created = 0;
+  let submitted = 0;
+  let checked = 0;
+  let approved = 0;
+  let reportsCleaned = false;
+  let benchmarkFound = false;
+  let benchmarkActual = false;
+  let sampleCountCorrect = false;
+  let normCalculated = false;
+  let autoApplicable = false;
+  let benchmarkCleared = false;
+  let expectedNorm = 0;
+  let workingHoursPerMonth = 0;
+  let benchmarkNorm: number | undefined;
+  let benchmarkSampleCount: number | undefined;
+  let benchmarkBasis: "actual" | "mixed" | "planned" | undefined;
+  let benchmarkAutoApplicable: boolean | undefined;
+
+  try {
+    assertSmokeMutationTarget(SMOKE_PROJECT_ID, process.env.APP_ENV ?? process.env.NODE_ENV);
+    const smokeProject = await prisma.project.findUnique({
+      where: { id: SMOKE_PROJECT_ID },
+      select: { id: true, isSmokeProject: true }
+    });
+    if (!smokeProject?.isSmokeProject) {
+      throw new Error(`${SMOKE_PROJECT_ID} is missing or isSmokeProject=false`);
+    }
+
+    temporaryRole = await grantTemporaryProjectOwnerRole();
+    operations.push("temporary-project-owner-role");
+
+    const beforeResponse = await get(baseUrl, `/api/projects/${SMOKE_PROJECT_ID}/resources`, cookie, requestId);
+    lastHttpStatus = beforeResponse.status;
+    operations.push("productivity-before-read");
+    const beforeBody = await safeJson<WorkforceApiResponse>(beforeResponse);
+    if (beforeResponse.status !== 200 || !beforeBody?.policy || !Array.isArray(beforeBody.productivityNorms)) {
+      throw new Error("Productivity feedback baseline could not be read.");
+    }
+    workingHoursPerMonth = beforeBody.policy.workingHoursPerMonth;
+    expectedNorm = expectedProductivityFeedbackNorm(fixture, workingHoursPerMonth);
+    baselineClean = !beforeBody.productivityNorms.some((item) => item.profession === fixture.profession);
+    if (!baselineClean) throw new Error("Synthetic productivity benchmark already exists before smoke.");
+
+    const reportIds: string[] = [];
+    for (const [index, report] of fixture.reports.entries()) {
+      const createResponse = await postJson(
+        baseUrl,
+        `/api/projects/${SMOKE_PROJECT_ID}/daily-reports`,
+        {
+          date: new Date(Date.now() - (index + 1) * 86_400_000).toISOString(),
+          author: fixture.marker,
+          weather: "Smoke",
+          workers: 2,
+          engineers: 1,
+          equipment: "",
+          completedWorks: fixture.workName,
+          materialsReceived: "",
+          materialsConsumed: "",
+          downtime: "",
+          issues: "",
+          workOutputs: [{
+            profession: fixture.profession,
+            workName: fixture.workName,
+            quantity: report.quantity,
+            unit: fixture.unit,
+            laborHours: report.laborHours
+          }]
+        },
+        cookie,
+        requestId
+      );
+      lastHttpStatus = createResponse.status;
+      const createBody = await safeJson<{ item?: { id?: string; status?: string } }>(createResponse);
+      if (createResponse.status !== 201 || !createBody?.item?.id || createBody.item.status !== "draft") {
+        throw new Error("Synthetic daily report was not created as draft.");
+      }
+      reportIds.push(createBody.item.id);
+      created += 1;
+      operations.push(`report-${index + 1}-create`);
+    }
+
+    for (const [index, reportId] of reportIds.entries()) {
+      for (const status of ["submitted", "checked", "approved"] as const) {
+        const transitionResponse = await patchJson(
+          baseUrl,
+          `/api/daily-reports/${reportId}`,
+          { status },
+          cookie,
+          requestId
+        );
+        lastHttpStatus = transitionResponse.status;
+        const transitionBody = await safeJson<{ item?: { status?: string } }>(transitionResponse);
+        if (transitionResponse.status !== 200 || transitionBody?.item?.status !== status) {
+          throw new Error(`Synthetic daily report transition to ${status} failed.`);
+        }
+        if (status === "submitted") submitted += 1;
+        if (status === "checked") checked += 1;
+        if (status === "approved") approved += 1;
+        operations.push(`report-${index + 1}-${status}`);
+      }
+    }
+
+    const afterResponse = await get(baseUrl, `/api/projects/${SMOKE_PROJECT_ID}/resources`, cookie, requestId);
+    lastHttpStatus = afterResponse.status;
+    operations.push("productivity-after-read");
+    const afterBody = await safeJson<WorkforceApiResponse>(afterResponse);
+    if (afterResponse.status !== 200 || !Array.isArray(afterBody?.productivityNorms)) {
+      throw new Error("Productivity feedback result could not be read.");
+    }
+    const benchmark = afterBody.productivityNorms.find((item) => item.profession === fixture.profession);
+    benchmarkFound = Boolean(benchmark);
+    benchmarkNorm = benchmark?.norm;
+    benchmarkSampleCount = benchmark?.sampleCount;
+    benchmarkBasis = benchmark?.basis;
+    benchmarkAutoApplicable = benchmark?.autoApplicable;
+    benchmarkActual = benchmark?.basis === "actual";
+    sampleCountCorrect = benchmark?.sampleCount === fixture.reports.length;
+    normCalculated = benchmark ? closeEnough(benchmark.norm, expectedNorm) : false;
+    autoApplicable = benchmark?.autoApplicable === true;
+
+    reportsCleaned = await cleanupProductivityFeedbackSmoke(fixture.marker);
+    cleanup = reportsCleaned ? "pass" : "fail";
+    operations.push("productivity-cleanup");
+
+    const cleanupResponse = await get(baseUrl, `/api/projects/${SMOKE_PROJECT_ID}/resources`, cookie, requestId);
+    lastHttpStatus = cleanupResponse.status;
+    const cleanupBody = await safeJson<WorkforceApiResponse>(cleanupResponse);
+    benchmarkCleared =
+      cleanupResponse.status === 200 &&
+      Array.isArray(cleanupBody?.productivityNorms) &&
+      !cleanupBody.productivityNorms.some((item) => item.profession === fixture.profession);
+    operations.push("productivity-cleanup-read");
+
+    await restoreTemporaryProjectOwnerRole(temporaryRole);
+    temporaryRole = undefined;
+    permissionScope = "temporary-project-owner-restored";
+    operations.push("restore-project-role");
+
+    const status = productivityFeedbackSmokePassed({
+      baselineClean,
+      reportsCreated: created === fixture.reports.length,
+      reportsSubmitted: submitted === fixture.reports.length,
+      reportsChecked: checked === fixture.reports.length,
+      reportsApproved: approved === fixture.reports.length,
+      benchmarkFound,
+      benchmarkActual,
+      sampleCountCorrect,
+      normCalculated,
+      autoApplicable,
+      cleanupPassed: cleanup === "pass",
+      benchmarkCleared,
+      roleRestored: permissionScope === "temporary-project-owner-restored"
+    })
+      ? "pass"
+      : "fail";
+
+    return {
+      name: "approved report productivity feedback smoke",
+      status,
+      httpStatus: status === "pass" ? undefined : lastHttpStatus,
+      detail: status === "pass" ? undefined : "Approved reports did not complete the full productivity feedback lifecycle.",
+      projectId: SMOKE_PROJECT_ID,
+      operations,
+      reports: { created, submitted, checked, approved, cleaned: reportsCleaned },
+      benchmark: {
+        baselineClean,
+        found: benchmarkFound,
+        ...(benchmarkNorm !== undefined ? { norm: benchmarkNorm } : {}),
+        expectedNorm,
+        ...(benchmarkSampleCount !== undefined ? { sampleCount: benchmarkSampleCount } : {}),
+        ...(benchmarkBasis ? { basis: benchmarkBasis } : {}),
+        ...(benchmarkAutoApplicable !== undefined ? { autoApplicable: benchmarkAutoApplicable } : {}),
+        cleared: benchmarkCleared,
+        workingHoursPerMonth
+      },
+      permissionScope,
+      cleanup
+    };
+  } catch (error) {
+    await cleanupProductivityFeedbackSmoke(fixture.marker)
+      .then((cleaned) => {
+        reportsCleaned = cleaned;
+        cleanup = cleaned ? "pass" : "fail";
+        operations.push("productivity-cleanup");
+      })
+      .catch(() => {
+        cleanup = "fail";
+      });
+    if (temporaryRole) {
+      await restoreTemporaryProjectOwnerRole(temporaryRole)
+        .then(() => {
+          permissionScope = "temporary-project-owner-restored";
+          operations.push("restore-project-role");
+        })
+        .catch(() => {
+          permissionScope = "restore-failed";
+        });
+    }
+    return {
+      name: "approved report productivity feedback smoke",
+      status: "fail",
+      httpStatus: lastHttpStatus,
+      detail: failureDetail(error),
+      projectId: SMOKE_PROJECT_ID,
+      operations,
+      reports: { created, submitted, checked, approved, cleaned: reportsCleaned },
+      benchmark: {
+        baselineClean,
+        found: benchmarkFound,
+        ...(benchmarkNorm !== undefined ? { norm: benchmarkNorm } : {}),
+        expectedNorm,
+        ...(benchmarkSampleCount !== undefined ? { sampleCount: benchmarkSampleCount } : {}),
+        ...(benchmarkBasis ? { basis: benchmarkBasis } : {}),
+        ...(benchmarkAutoApplicable !== undefined ? { autoApplicable: benchmarkAutoApplicable } : {}),
+        cleared: benchmarkCleared,
+        workingHoursPerMonth
+      },
+      permissionScope,
+      cleanup
+    };
+  }
 }
 
 async function cleanupWorkforcePayrollSmoke(input: {
@@ -2654,6 +2968,7 @@ export async function runStagingSmokeBootstrap(input: RuntimeSmokeInput): Promis
   let aiDecisionJournalSmoke: RuntimeSmokeResult["aiDecisionJournalSmoke"];
   let workforcePayrollSmoke: RuntimeSmokeResult["workforcePayrollSmoke"];
   let workforcePayrollImportSmoke: RuntimeSmokeResult["workforcePayrollImportSmoke"];
+  let productivityFeedbackSmoke: RuntimeSmokeResult["productivityFeedbackSmoke"];
 
   if (input.includeStorageSmoke) {
     storage = await runStorageSmoke(input.requestId);
@@ -2700,6 +3015,11 @@ export async function runStagingSmokeBootstrap(input: RuntimeSmokeInput): Promis
     optionalChecks.push(workforcePayrollImportSmoke);
   }
 
+  if (input.includeProductivityFeedbackSmoke) {
+    productivityFeedbackSmoke = await runProductivityFeedbackSmoke(input.baseUrl, sessionCookie, input.requestId);
+    optionalChecks.push(productivityFeedbackSmoke);
+  }
+
   return {
     ok:
       checks.every((item) => item.status === "pass") &&
@@ -2717,6 +3037,7 @@ export async function runStagingSmokeBootstrap(input: RuntimeSmokeInput): Promis
     ...(aiDecisionJournalSmoke ? { aiDecisionJournalSmoke } : {}),
     ...(workforcePayrollSmoke ? { workforcePayrollSmoke } : {}),
     ...(workforcePayrollImportSmoke ? { workforcePayrollImportSmoke } : {}),
+    ...(productivityFeedbackSmoke ? { productivityFeedbackSmoke } : {}),
     secretsPrinted: false
   };
 }
