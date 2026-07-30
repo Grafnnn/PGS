@@ -71,6 +71,23 @@ describe("approval inbox model", () => {
       url: "/api/projects/project-1/commitments/commitment-1/payment-applications/application-1",
       body: { action: "reject", comment: "Нет акта" }
     });
+    const closeout = item({
+      sourceType: "closeout_package",
+      decision: {
+        type: "closeout_package",
+        packageId: "closeout-1",
+        actions: ["approve", "request_revision", "reject"]
+      }
+    });
+    expect(inboxDecisionRequest(closeout, "request_revision", "Добавить исполнительную схему")).toEqual({
+      url: "/api/projects/project-1/closeout",
+      body: {
+        action: "update_package",
+        id: "closeout-1",
+        status: "in_progress",
+        decisionComment: "Добавить исполнительную схему"
+      }
+    });
     expect(() => inboxDecisionRequest(payment, "request_revision", "Исправить")).toThrow("Решение для этого элемента недоступно");
   });
 

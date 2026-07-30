@@ -5,7 +5,9 @@ export const inboxSourceTypes = [
   "project_action",
   "change_order",
   "commitment",
-  "payment_application"
+  "payment_application",
+  "closeout_package",
+  "warranty_obligation"
 ] as const;
 
 export type InboxSourceType = (typeof inboxSourceTypes)[number];
@@ -20,7 +22,8 @@ export type InboxDecision =
   | { type: "project_action"; actionId: string; actions: ["approve"] }
   | { type: "change_order"; changeOrderId: string; actions: InboxDecisionAction[] }
   | { type: "commitment"; commitmentId: string; actions: InboxDecisionAction[] }
-  | { type: "payment_application"; commitmentId: string; applicationId: string; actions: Array<"approve" | "reject"> };
+  | { type: "payment_application"; commitmentId: string; applicationId: string; actions: Array<"approve" | "reject"> }
+  | { type: "closeout_package"; packageId: string; actions: InboxDecisionAction[] };
 
 export interface InboxItemStateValue {
   readAt: string | null;
@@ -140,6 +143,18 @@ export function inboxDecisionRequest(item: ApprovalInboxItem, action: InboxDecis
     return {
       url: `/api/projects/${projectId}/commitments/${encodeURIComponent(item.decision.commitmentId)}`,
       body: { action, comment: comment || undefined }
+    };
+  }
+  if (item.decision.type === "closeout_package") {
+    const status = action === "approve" ? "accepted" : action === "reject" ? "rejected" : "in_progress";
+    return {
+      url: `/api/projects/${projectId}/closeout`,
+      body: {
+        action: "update_package",
+        id: item.decision.packageId,
+        status,
+        decisionComment: comment || (action === "approve" ? "Пакет принят через Approval Inbox." : "Пакет возвращён через Approval Inbox.")
+      }
     };
   }
   return {

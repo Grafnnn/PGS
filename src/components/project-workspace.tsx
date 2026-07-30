@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { AlertTriangle, BarChart3, Bot, ClipboardList, DatabaseZap, FileText, HardHat, Landmark, Package, Pencil, Plus, ReceiptText, Search, Send, Table2, TimerReset, Trash2, Truck, Users } from "lucide-react";
+import { AlertTriangle, BadgeCheck, BarChart3, Bot, ClipboardList, DatabaseZap, FileText, HardHat, Landmark, Package, Pencil, Plus, ReceiptText, Search, Send, Table2, TimerReset, Trash2, Truck, Users } from "lucide-react";
 import { AcceptanceBillingWorkspace } from "@/components/acceptance-billing-workspace";
 import { AiControlAgentWorkspace } from "@/components/ai-control-agent-workspace";
 import { AiRunJournal } from "@/components/ai-run-journal";
@@ -22,6 +22,7 @@ import { InvoiceReconciliationWorkspace } from "@/components/invoice-reconciliat
 import { ProjectCommandCenter } from "@/components/project-command-center";
 import { ProjectActionCenter, type ProjectActionSuggestion } from "@/components/project-action-center";
 import { ProjectControlsWorkspace } from "@/components/project-controls-workspace";
+import { ProjectCloseoutOverview, ProjectCloseoutWorkspace } from "@/components/project-closeout-workspace";
 import { ProjectModuleMenu, projectTabs, type ProjectTab } from "@/components/project-module-menu";
 import { DocumentComplianceWorkspace } from "@/components/document-compliance-workspace";
 import { DocumentTransmittalsWorkspace } from "@/components/document-transmittals-workspace";
@@ -846,6 +847,7 @@ export function ProjectWorkspace({
                   void runAiCommandScenario("summary");
                 }}
               />
+              <ProjectCloseoutOverview projectId={initialBundle.project.id} onOpen={() => setActiveTab("Сдача / Гарантия")} />
               <details className="panel compact-details overview-intelligence-details">
                 <summary>Подробная аналитика по модулям <span>открыть drill-down</span></summary>
                 <ProjectIntelligenceDrilldown
@@ -1275,6 +1277,16 @@ export function ProjectWorkspace({
             documents={documents}
             documentChecklist={documentChecklist}
             onNavigate={setActiveTab}
+          />
+        </Panel>
+      )}
+
+      {activeTab === "Сдача / Гарантия" && (
+        <Panel title="Сдача объекта, передача и гарантия" icon={<BadgeCheck size={18} />}>
+          <ProjectCloseoutWorkspace
+            projectId={initialBundle.project.id}
+            canEdit={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN" || currentUser?.role === "MANAGER"}
+            canApprove={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN"}
           />
         </Panel>
       )}

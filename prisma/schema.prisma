@@ -187,6 +187,8 @@ model Project {
   laborAllocations           ProjectLaborAllocation[]
   externalCollaborationLinks ExternalCollaborationLink[]
   invoices                   ProjectInvoice[]
+  closeoutPackages           ProjectCloseoutPackage[]
+  warrantyObligations        ProjectWarrantyObligation[]
 
   @@map("projects")
 }
@@ -488,24 +490,24 @@ model CashflowPeriod {
 }
 
 model Document {
-  id                     String                     @id @default(cuid())
-  organizationId         String                     @map("organization_id")
-  projectId              String                     @map("project_id")
+  id                     String                         @id @default(cuid())
+  organizationId         String                         @map("organization_id")
+  projectId              String                         @map("project_id")
   category               String
   title                  String
-  filePath               String                     @map("file_path")
-  fileName               String?                    @map("file_name")
-  mimeType               String?                    @map("mime_type")
-  sizeBytes              Int?                       @map("size_bytes")
-  storageKey             String?                    @map("storage_key")
-  uploadedAt             DateTime                   @default(now()) @map("uploaded_at")
-  version                Int                        @default(1)
+  filePath               String                         @map("file_path")
+  fileName               String?                        @map("file_name")
+  mimeType               String?                        @map("mime_type")
+  sizeBytes              Int?                           @map("size_bytes")
+  storageKey             String?                        @map("storage_key")
+  uploadedAt             DateTime                       @default(now()) @map("uploaded_at")
+  version                Int                            @default(1)
   author                 String
   comment                String?
-  createdBy              String?                    @map("created_by")
-  createdAt              DateTime                   @default(now()) @map("created_at")
-  updatedAt              DateTime                   @updatedAt @map("updated_at")
-  project                Project                    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdBy              String?                        @map("created_by")
+  createdAt              DateTime                       @default(now()) @map("created_at")
+  updatedAt              DateTime                       @updatedAt @map("updated_at")
+  project                Project                        @relation(fields: [projectId], references: [id], onDelete: Cascade)
   versions               DocumentVersion[]
   rfiLinks               ProjectRfi[]
   submittalLinks         ProjectSubmittal[]
@@ -516,6 +518,8 @@ model Document {
   qualityIssueLinks      ProjectQualityIssue[]
   qualityEvidenceLinks   ProjectQualityEvidence[]
   invoices               ProjectInvoice[]
+  closeoutChecklistItems ProjectCloseoutChecklistItem[]
+  warrantySourceLinks    ProjectWarrantyObligation[]
 
   @@map("documents")
 }
@@ -1774,28 +1778,29 @@ model SubmittalReview {
 }
 
 model ProjectDocumentTransmittal {
-  id             String                     @id @default(cuid())
-  organizationId String                     @map("organization_id")
-  projectId      String                     @map("project_id")
-  sequence       Int
-  subject        String
-  purpose        String?
-  recipient      String?
-  ccRecipients   String?                    @map("cc_recipients")
-  reviewer       String?
-  dueAt          DateTime?                  @map("due_at")
-  status         String                     @default("draft")
-  revision       Int                        @default(0)
-  issuedAt       DateTime?                  @map("issued_at")
-  acknowledgedAt DateTime?                  @map("acknowledged_at")
-  reviewedAt     DateTime?                  @map("reviewed_at")
-  closedAt       DateTime?                  @map("closed_at")
-  createdBy      String?                    @map("created_by")
-  createdAt      DateTime                   @default(now()) @map("created_at")
-  updatedAt      DateTime                   @updatedAt @map("updated_at")
-  project        Project                    @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  items          DocumentTransmittalItem[]
-  events         DocumentTransmittalEvent[]
+  id               String                     @id @default(cuid())
+  organizationId   String                     @map("organization_id")
+  projectId        String                     @map("project_id")
+  sequence         Int
+  subject          String
+  purpose          String?
+  recipient        String?
+  ccRecipients     String?                    @map("cc_recipients")
+  reviewer         String?
+  dueAt            DateTime?                  @map("due_at")
+  status           String                     @default("draft")
+  revision         Int                        @default(0)
+  issuedAt         DateTime?                  @map("issued_at")
+  acknowledgedAt   DateTime?                  @map("acknowledged_at")
+  reviewedAt       DateTime?                  @map("reviewed_at")
+  closedAt         DateTime?                  @map("closed_at")
+  createdBy        String?                    @map("created_by")
+  createdAt        DateTime                   @default(now()) @map("created_at")
+  updatedAt        DateTime                   @updatedAt @map("updated_at")
+  project          Project                    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  items            DocumentTransmittalItem[]
+  events           DocumentTransmittalEvent[]
+  closeoutPackages ProjectCloseoutPackage[]
 
   @@unique([projectId, sequence])
   @@index([projectId, status, dueAt])
@@ -1835,4 +1840,98 @@ model DocumentTransmittalEvent {
 
   @@index([transmittalId, createdAt])
   @@map("document_transmittal_events")
+}
+
+model ProjectCloseoutPackage {
+  id                  String                         @id @default(cuid())
+  organizationId      String                         @map("organization_id")
+  projectId           String                         @map("project_id")
+  sequence            Int
+  number              String
+  title               String
+  scope               String?
+  status              String                         @default("draft")
+  responsibleParty    String?                        @map("responsible_party")
+  dueAt               DateTime?                      @map("due_at")
+  submittedAt         DateTime?                      @map("submitted_at")
+  acceptedAt          DateTime?                      @map("accepted_at")
+  handoverAt          DateTime?                      @map("handover_at")
+  closedAt            DateTime?                      @map("closed_at")
+  decisionComment     String?                        @map("decision_comment")
+  transmittalId       String?                        @map("transmittal_id")
+  notes               String?
+  createdBy           String?                        @map("created_by")
+  createdAt           DateTime                       @default(now()) @map("created_at")
+  updatedAt           DateTime                       @updatedAt @map("updated_at")
+  project             Project                        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  transmittal         ProjectDocumentTransmittal?    @relation(fields: [transmittalId], references: [id], onDelete: SetNull)
+  checklistItems      ProjectCloseoutChecklistItem[]
+  warrantyObligations ProjectWarrantyObligation[]
+
+  @@unique([projectId, sequence])
+  @@unique([projectId, number])
+  @@index([projectId, status, dueAt])
+  @@index([transmittalId])
+  @@map("project_closeout_packages")
+}
+
+model ProjectCloseoutChecklistItem {
+  id          String                 @id @default(cuid())
+  packageId   String                 @map("package_id")
+  sequence    Int
+  title       String
+  category    String                 @default("general")
+  required    Boolean                @default(true)
+  status      String                 @default("pending")
+  sourceType  String                 @default("manual") @map("source_type")
+  sourceId    String?                @map("source_id")
+  documentId  String?                @map("document_id")
+  notes       String?
+  confirmedBy String?                @map("confirmed_by")
+  confirmedAt DateTime?              @map("confirmed_at")
+  createdAt   DateTime               @default(now()) @map("created_at")
+  updatedAt   DateTime               @updatedAt @map("updated_at")
+  package     ProjectCloseoutPackage @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  document    Document?              @relation(fields: [documentId], references: [id], onDelete: SetNull)
+
+  @@unique([packageId, sequence])
+  @@index([packageId, status])
+  @@index([documentId])
+  @@map("project_closeout_checklist_items")
+}
+
+model ProjectWarrantyObligation {
+  id                 String                  @id @default(cuid())
+  organizationId     String                  @map("organization_id")
+  projectId          String                  @map("project_id")
+  packageId          String?                 @map("package_id")
+  sequence           Int
+  number             String
+  title              String
+  category           String                  @default("workmanship")
+  status             String                  @default("draft")
+  counterparty       String?
+  responsibleParty   String?                 @map("responsible_party")
+  startsAt           DateTime?               @map("starts_at")
+  endsAt             DateTime?               @map("ends_at")
+  noticeDays         Int                     @default(30) @map("notice_days")
+  retentionAmount    Decimal                 @default(0) @map("retention_amount") @db.Decimal(14, 2)
+  retentionReleaseAt DateTime?               @map("retention_release_at")
+  terms              String?
+  notes              String?
+  sourceDocumentId   String?                 @map("source_document_id")
+  closedAt           DateTime?               @map("closed_at")
+  createdBy          String?                 @map("created_by")
+  createdAt          DateTime                @default(now()) @map("created_at")
+  updatedAt          DateTime                @updatedAt @map("updated_at")
+  project            Project                 @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  package            ProjectCloseoutPackage? @relation(fields: [packageId], references: [id], onDelete: SetNull)
+  sourceDocument     Document?               @relation(fields: [sourceDocumentId], references: [id], onDelete: SetNull)
+
+  @@unique([projectId, sequence])
+  @@unique([projectId, number])
+  @@index([projectId, status, endsAt])
+  @@index([packageId])
+  @@index([sourceDocumentId])
+  @@map("project_warranty_obligations")
 }
