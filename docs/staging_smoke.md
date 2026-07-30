@@ -159,6 +159,34 @@ Expected:
 - the project name starts with `SMOKE-`;
 - no real client files, live AI calls, arbitrary project mutations, passwords, cookies, session tokens, `DATABASE_URL`, `OPENAI_API_KEY`, or smoke secret.
 
+## Optional Project Closeout + Warranty lifecycle smoke
+
+Run only after core smoke is green and a disposable closeout lifecycle is explicitly approved. This check creates one synthetic `SMOKE-...` project, uploads synthetic evidence, proves that an acceptance-blocking quality issue prevents checklist completion, clears the blocker, issues and links a document transmittal, confirms warranty evidence and retention, completes the required checklist, submits the package, verifies its Approval Inbox entry, accepts and closes the package, closes the warranty, completes the project, and then deletes the project and storage object. The smoke user's previous application role is restored before returning.
+
+```bash
+curl -sS -X POST "$APP_URL/api/internal/staging-smoke" \
+  -H "content-type: application/json" \
+  -H "authorization: Bearer $STAGING_SMOKE_SECRET" \
+  --data '{"includeProjectCloseoutSmoke":true}'
+```
+
+Expected:
+
+- HTTP `200`;
+- `ok: true`;
+- `projectCloseoutSmoke.status: pass`;
+- quality blocker enforcement and cleanup are `true`;
+- transmittal creation, issue, and closeout linkage are `true`;
+- every required checklist item is completed;
+- package submit, Approval Inbox visibility, acceptance, and close are `true`;
+- warranty evidence, activation, close, and retention release are `true`;
+- project completion and final closeout read are `true`;
+- `projectCloseoutSmoke.cleanup: pass`;
+- `projectCloseoutSmoke.permissionScope: temporary-admin-restored`;
+- project delete and deleted verification are `true`;
+- `liveAi.status: skip`;
+- no real project records, provider calls, passwords, cookies, session tokens, `DATABASE_URL`, `OPENAI_API_KEY`, or smoke secret remain or are returned.
+
 ## Optional Project Controls + Earned Value smoke
 
 Run only after core smoke is green. This check temporarily creates one synthetic cost code, VOR line, schedule activity, approved progress entry, and paid outgoing cost on `project-smoke`. It then verifies baseline preview/activation, reporting-period preview/publication/lock, removes every synthetic record, restores the prior active baseline, and restores the smoke user's project role.
@@ -312,6 +340,7 @@ Delete the temporary cookie jar after cleanup. Production returns `404`; missing
 
 - The endpoint must not be used for arbitrary mutation smoke; only built-in synthetic `project-smoke` checks with cleanup are allowed.
 - The disposable project creation smoke is allowed only for generated `SMOKE-...` project names and must restore the synthetic smoke user role before returning.
+- The Project Closeout smoke must use only its generated disposable `SMOKE-...` project, synthetic document and blocker, remove the project and storage object, and restore the smoke user's prior application role before returning.
 - The Project Controls smoke must use only generated `SMOKE-PC-...` source rows, restore any previously active smoke baseline, and remove its baseline, period, audit, source, and role changes before returning.
 - The AI decision journal smoke must use only its freshly created synthetic run on `project-smoke`, remove its linked action and audit rows, and restore the smoke user's baseline `VIEWER` role before returning.
 - The workforce/payroll smoke must use only generated `SMOKE-WORKFORCE-...` rows on `project-smoke`, enforce its bounded synthetic payroll limit, remove resource/demand/assignment/allocation/audit rows, and restore the prior project role.

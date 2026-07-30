@@ -29,6 +29,7 @@ import {
   expectedProductivityFeedbackNorm,
   productivityFeedbackSmokePassed
 } from "./productivity-feedback";
+import { projectCloseoutSmokePassed } from "./project-closeout";
 
 const STAGING_SMOKE_EMAIL = "smoke+staging-runtime@pgs.local";
 const AI_SMOKE_PROMPT = "Кратко проверь smoke-проект и скажи, каких данных не хватает для управленческого анализа.";
@@ -76,6 +77,49 @@ export interface RuntimeProjectCreationDocumentSmokeResult extends RuntimeSmokeC
     visibleInDocumentsTab: boolean;
     category?: string;
     fileName?: string;
+  };
+  permissionScope?: "temporary-admin-restored" | "restore-failed";
+  cleanup: "pass" | "fail" | "skip";
+}
+
+export interface RuntimeProjectCloseoutSmokeResult extends RuntimeSmokeCheck {
+  operations: string[];
+  project?: {
+    id: string;
+    name: string;
+    created: boolean;
+    opened: boolean;
+    completed: boolean;
+    deleted: boolean;
+  };
+  document?: {
+    uploaded: boolean;
+    linked: boolean;
+  };
+  quality?: {
+    blockerEnforced: boolean;
+    blockerCleared: boolean;
+  };
+  transmittal?: {
+    created: boolean;
+    issued: boolean;
+    linked: boolean;
+  };
+  closeout?: {
+    bootstrapped: boolean;
+    requiredChecklistItems: number;
+    checklistCompleted: number;
+    submitted: boolean;
+    inboxVisible: boolean;
+    accepted: boolean;
+    closed: boolean;
+    finalReadPassed: boolean;
+  };
+  warranty?: {
+    evidenceLinked: boolean;
+    activated: boolean;
+    closed: boolean;
+    retentionReleased: boolean;
   };
   permissionScope?: "temporary-admin-restored" | "restore-failed";
   cleanup: "pass" | "fail" | "skip";
@@ -265,6 +309,7 @@ export interface RuntimeSmokeResult {
     pipeline?: RuntimePipelineSmokeResult;
   };
   projectCreationDocumentsSmoke?: RuntimeProjectCreationDocumentSmokeResult;
+  projectCloseoutSmoke?: RuntimeProjectCloseoutSmokeResult;
   projectControlsSmoke?: RuntimeProjectControlsSmokeResult;
   aiDecisionJournalSmoke?: RuntimeAiDecisionJournalSmokeResult;
   workforcePayrollSmoke?: RuntimeWorkforcePayrollSmokeResult;
@@ -282,6 +327,7 @@ export interface RuntimeSmokeInput {
   includeImportSmoke?: boolean;
   includePipelineSmoke?: boolean;
   includeProjectCreationDocumentsSmoke?: boolean;
+  includeProjectCloseoutSmoke?: boolean;
   includeProjectControlsSmoke?: boolean;
   includeAiDecisionJournalSmoke?: boolean;
   includeWorkforcePayrollSmoke?: boolean;
@@ -1142,6 +1188,516 @@ async function runProjectCreationDocumentsSmoke(
       detail: failureDetail(error),
       operations,
       ...(projectId && projectName ? { project: { id: projectId, name: projectName, created: true, opened: false, deleted: cleanup === "pass" } } : {}),
+      permissionScope,
+      cleanup
+    };
+  }
+}
+
+type ProjectCloseoutSmokePayload = {
+  project?: { id?: string; status?: string };
+  packages?: Array<{
+    id?: string;
+    status?: string;
+    transmittal?: { id?: string; status?: string } | null;
+    checklistItems?: Array<{
+      id?: string;
+      required?: boolean;
+      status?: string;
+      storedStatus?: string;
+      sourceType?: string;
+      documentId?: string | null;
+    }>;
+  }>;
+  warranties?: Array<{
+    id?: string;
+    status?: string;
+    storedStatus?: string;
+    sourceDocumentId?: string | null;
+  }>;
+  summary?: {
+    remainingItemCount?: number;
+    retentionHeld?: number;
+    canCompleteProject?: boolean;
+  };
+};
+
+async function runProjectCloseoutSmoke(
+  baseUrl: string,
+  cookie: string,
+  requestId: string
+): Promise<RuntimeProjectCloseoutSmokeResult> {
+  const operations: string[] = [];
+  let permissionScope: RuntimeProjectCloseoutSmokeResult["permissionScope"];
+  let cleanup: RuntimeProjectCloseoutSmokeResult["cleanup"] = "skip";
+  let temporaryRole: Awaited<ReturnType<typeof grantTemporaryProjectAdminRole>> | undefined;
+  let projectId: string | undefined;
+  let projectName: string | undefined;
+  let storageKey: string | null | undefined;
+  let documentId: string | undefined;
+  let projectCreated = false;
+  let projectOpened = false;
+  let documentUploaded = false;
+  let blockerEnforced = false;
+  let blockerCleared = false;
+  let transmittalCreated = false;
+  let transmittalIssued = false;
+  let transmittalLinked = false;
+  let closeoutBootstrapped = false;
+  let requiredChecklistItems = 0;
+  let checklistCompleted = 0;
+  let packageSubmitted = false;
+  let inboxVisible = false;
+  let packageAccepted = false;
+  let packageClosed = false;
+  let warrantyEvidenceLinked = false;
+  let warrantyActivated = false;
+  let warrantyClosed = false;
+  let projectCompleted = false;
+  let finalReadPassed = false;
+  let projectDeleted = false;
+  let projectDeletionVerified = false;
+  let storageCleaned = false;
+
+  try {
+    if ((process.env.APP_ENV ?? process.env.NODE_ENV) === "production") {
+      throw new Error("Project closeout smoke is blocked in production.");
+    }
+
+    temporaryRole = await grantTemporaryProjectAdminRole();
+    operations.push("temporary-admin-role");
+
+    const runKey = requestId.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 18) || Date.now().toString();
+    projectName = `SMOKE-${runKey} disposable closeout project`;
+    const now = new Date();
+    const projectStartsAt = new Date(now.getTime() - 90 * 86_400_000).toISOString().slice(0, 10);
+    const projectEndsAt = new Date(now.getTime() + 7 * 86_400_000).toISOString().slice(0, 10);
+    const projectResponse = await postJson(
+      baseUrl,
+      "/api/projects",
+      {
+        name: projectName,
+        customer: "SMOKE staging customer",
+        object: "SMOKE closeout and warranty lifecycle",
+        address: "SMOKE staging address",
+        contractAmount: 1_250_000,
+        vatMode: "vat",
+        startsAt: projectStartsAt,
+        endsAt: projectEndsAt,
+        manager: "Smoke Runtime",
+        status: "active"
+      },
+      cookie,
+      requestId
+    );
+    operations.push("project-create");
+    const projectBody = await safeJson<{ project?: { id?: string; name?: string } }>(projectResponse);
+    projectId = projectBody?.project?.id;
+    projectCreated = projectResponse.status === 201 && Boolean(projectId) && projectBody?.project?.name === projectName;
+    if (!projectCreated || !projectId) throw new Error("Disposable closeout project was not created.");
+
+    const openResponse = await get(baseUrl, `/api/projects/${projectId}`, cookie, requestId);
+    operations.push("project-open");
+    projectOpened = openResponse.status === 200;
+
+    const fileName = `SMOKE-${runKey}-closeout-evidence.pdf`;
+    const documentBytes = Buffer.from(`PGS disposable closeout evidence ${runKey}`);
+    const form = new FormData();
+    form.append("category", "исполнительная");
+    form.append("file", new Blob([Uint8Array.from(documentBytes)], { type: "application/pdf" }), fileName);
+    const uploadResponse = await postForm(baseUrl, `/api/projects/${projectId}/documents/upload`, form, cookie, requestId);
+    operations.push("document-upload");
+    const uploadBody = await safeJson<{ item?: { id?: string; storageKey?: string | null } }>(uploadResponse);
+    documentId = uploadBody?.item?.id;
+    storageKey = uploadBody?.item?.storageKey;
+    documentUploaded = uploadResponse.status === 201 && Boolean(documentId);
+    if (!documentUploaded || !documentId) throw new Error("Synthetic closeout evidence was not uploaded.");
+
+    const qualityResponse = await postJson(
+      baseUrl,
+      `/api/projects/${projectId}/quality-issues`,
+      {
+        type: "punch",
+        title: `SMOKE-${runKey} acceptance blocker`,
+        description: "Synthetic acceptance blocker used only for the staging closeout lifecycle smoke.",
+        severity: "high",
+        acceptanceBlocker: true
+      },
+      cookie,
+      requestId
+    );
+    operations.push("quality-blocker-create");
+    const qualityBody = await safeJson<{ item?: { id?: string } }>(qualityResponse);
+    const qualityIssueId = qualityBody?.item?.id;
+    if (qualityResponse.status !== 201 || !qualityIssueId) throw new Error("Synthetic acceptance blocker was not created.");
+
+    const bootstrapResponse = await postJson(
+      baseUrl,
+      `/api/projects/${projectId}/closeout`,
+      { action: "bootstrap" },
+      cookie,
+      requestId
+    );
+    operations.push("closeout-bootstrap");
+    const bootstrapBody = await safeJson<ProjectCloseoutSmokePayload>(bootstrapResponse);
+    const closeoutPackage = bootstrapBody?.packages?.[0];
+    const warranty = bootstrapBody?.warranties?.[0];
+    const packageId = closeoutPackage?.id;
+    const warrantyId = warranty?.id;
+    const checklistItems = closeoutPackage?.checklistItems?.filter((item) => item.required) ?? [];
+    requiredChecklistItems = checklistItems.length;
+    closeoutBootstrapped = bootstrapResponse.status === 200 && Boolean(packageId) && Boolean(warrantyId) && requiredChecklistItems > 0;
+    if (!closeoutBootstrapped || !packageId || !warrantyId) throw new Error("Closeout bootstrap did not create the required registers.");
+
+    const qualityGate = checklistItems.find((item) => item.sourceType === "quality_gate");
+    if (!qualityGate?.id) throw new Error("Closeout quality gate is missing.");
+    const blockedGateResponse = await postJson(
+      baseUrl,
+      `/api/projects/${projectId}/closeout`,
+      { action: "update_checklist_item", id: qualityGate.id, status: "completed" },
+      cookie,
+      requestId
+    );
+    operations.push("quality-blocker-enforcement");
+    blockerEnforced = blockedGateResponse.status === 409;
+
+    const clearBlockerResponse = await deleteJson(
+      baseUrl,
+      `/api/projects/${projectId}/quality-issues/${qualityIssueId}`,
+      {},
+      cookie,
+      requestId
+    );
+    operations.push("quality-blocker-clear");
+    blockerCleared = clearBlockerResponse.status === 200;
+
+    const transmittalDueAt = new Date(now.getTime() + 14 * 86_400_000).toISOString();
+    const transmittalResponse = await postJson(
+      baseUrl,
+      `/api/projects/${projectId}/transmittals`,
+      {
+        subject: `SMOKE-${runKey} final closeout package`,
+        purpose: "Synthetic staging closeout handover.",
+        recipient: "SMOKE customer",
+        reviewer: "SMOKE owner",
+        dueAt: transmittalDueAt,
+        documentIds: [documentId]
+      },
+      cookie,
+      requestId
+    );
+    operations.push("transmittal-create");
+    const transmittalBody = await safeJson<{ item?: { id?: string } }>(transmittalResponse);
+    const transmittalId = transmittalBody?.item?.id;
+    transmittalCreated = transmittalResponse.status === 201 && Boolean(transmittalId);
+    if (!transmittalCreated || !transmittalId) throw new Error("Synthetic transmittal was not created.");
+
+    const issueTransmittalResponse = await patchJson(
+      baseUrl,
+      `/api/projects/${projectId}/transmittals/${transmittalId}`,
+      { action: "issue" },
+      cookie,
+      requestId
+    );
+    operations.push("transmittal-issue");
+    const issueTransmittalBody = await safeJson<{ item?: { status?: string } }>(issueTransmittalResponse);
+    transmittalIssued = issueTransmittalResponse.status === 200 && issueTransmittalBody?.item?.status === "issued";
+
+    const packageEvidenceResponse = await postJson(
+      baseUrl,
+      `/api/projects/${projectId}/closeout`,
+      {
+        action: "update_package",
+        id: packageId,
+        transmittalId,
+        handoverAt: now.toISOString()
+      },
+      cookie,
+      requestId
+    );
+    operations.push("closeout-handover-link");
+    const packageEvidenceBody = await safeJson<ProjectCloseoutSmokePayload>(packageEvidenceResponse);
+    transmittalLinked = packageEvidenceResponse.status === 200
+      && packageEvidenceBody?.packages?.some((item) => item.id === packageId && item.transmittal?.id === transmittalId) === true;
+
+    const warrantyEndsAt = new Date(now.getTime() + 365 * 86_400_000).toISOString();
+    const warrantyResponse = await postJson(
+      baseUrl,
+      `/api/projects/${projectId}/closeout`,
+      {
+        action: "update_warranty",
+        id: warrantyId,
+        status: "active",
+        startsAt: now.toISOString(),
+        endsAt: warrantyEndsAt,
+        noticeDays: 30,
+        retentionAmount: 50_000,
+        retentionReleaseAt: warrantyEndsAt,
+        terms: "SMOKE contractual warranty evidence; synthetic staging data only.",
+        sourceDocumentId: documentId
+      },
+      cookie,
+      requestId
+    );
+    operations.push("warranty-evidence-link");
+    const warrantyBody = await safeJson<ProjectCloseoutSmokePayload>(warrantyResponse);
+    const activeWarranty = warrantyBody?.warranties?.find((item) => item.id === warrantyId);
+    warrantyEvidenceLinked = warrantyResponse.status === 200 && activeWarranty?.sourceDocumentId === documentId;
+    warrantyActivated = activeWarranty?.storedStatus === "active" || activeWarranty?.status === "active";
+
+    for (const item of checklistItems) {
+      if (!item.id) continue;
+      const checklistResponse = await postJson(
+        baseUrl,
+        `/api/projects/${projectId}/closeout`,
+        {
+          action: "update_checklist_item",
+          id: item.id,
+          status: "completed",
+          ...(item.sourceType === "document_requirement" ? { documentId } : {})
+        },
+        cookie,
+        requestId
+      );
+      operations.push(`checklist-${item.sourceType ?? "manual"}`);
+      if (checklistResponse.status === 200) checklistCompleted += 1;
+    }
+
+    const submitResponse = await postJson(
+      baseUrl,
+      `/api/projects/${projectId}/closeout`,
+      { action: "update_package", id: packageId, status: "submitted" },
+      cookie,
+      requestId
+    );
+    operations.push("closeout-submit");
+    const submitBody = await safeJson<ProjectCloseoutSmokePayload>(submitResponse);
+    packageSubmitted = submitResponse.status === 200
+      && submitBody?.packages?.some((item) => item.id === packageId && item.status === "submitted") === true;
+
+    const inboxResponse = await get(baseUrl, "/api/inbox", cookie, requestId);
+    operations.push("approval-inbox-read");
+    const inboxBody = await safeJson<{ items?: Array<{ sourceType?: string; sourceId?: string; projectId?: string }> }>(inboxResponse);
+    inboxVisible = inboxResponse.status === 200
+      && inboxBody?.items?.some((item) =>
+        item.sourceType === "closeout_package" && item.sourceId === packageId && item.projectId === projectId
+      ) === true;
+
+    const acceptResponse = await postJson(
+      baseUrl,
+      `/api/projects/${projectId}/closeout`,
+      {
+        action: "update_package",
+        id: packageId,
+        status: "accepted",
+        decisionComment: "SMOKE package accepted through the staging lifecycle check."
+      },
+      cookie,
+      requestId
+    );
+    operations.push("closeout-accept");
+    const acceptBody = await safeJson<ProjectCloseoutSmokePayload>(acceptResponse);
+    packageAccepted = acceptResponse.status === 200
+      && acceptBody?.packages?.some((item) => item.id === packageId && item.status === "accepted") === true;
+
+    const closePackageResponse = await postJson(
+      baseUrl,
+      `/api/projects/${projectId}/closeout`,
+      { action: "update_package", id: packageId, status: "closed" },
+      cookie,
+      requestId
+    );
+    operations.push("closeout-close");
+    const closePackageBody = await safeJson<ProjectCloseoutSmokePayload>(closePackageResponse);
+    packageClosed = closePackageResponse.status === 200
+      && closePackageBody?.packages?.some((item) => item.id === packageId && item.status === "closed") === true;
+
+    const closeWarrantyResponse = await postJson(
+      baseUrl,
+      `/api/projects/${projectId}/closeout`,
+      { action: "update_warranty", id: warrantyId, status: "closed" },
+      cookie,
+      requestId
+    );
+    operations.push("warranty-close");
+    const closeWarrantyBody = await safeJson<ProjectCloseoutSmokePayload>(closeWarrantyResponse);
+    const closedWarranty = closeWarrantyBody?.warranties?.find((item) => item.id === warrantyId);
+    warrantyClosed = closeWarrantyResponse.status === 200
+      && (closedWarranty?.storedStatus === "closed" || closedWarranty?.status === "closed");
+
+    const completeProjectResponse = await postJson(
+      baseUrl,
+      `/api/projects/${projectId}/closeout`,
+      { action: "complete_project" },
+      cookie,
+      requestId
+    );
+    operations.push("project-complete");
+    const completeProjectBody = await safeJson<ProjectCloseoutSmokePayload>(completeProjectResponse);
+    projectCompleted = completeProjectResponse.status === 200 && completeProjectBody?.project?.status === "completed";
+
+    const finalReadResponse = await get(baseUrl, `/api/projects/${projectId}/closeout`, cookie, requestId);
+    operations.push("closeout-final-read");
+    const finalReadBody = await safeJson<ProjectCloseoutSmokePayload>(finalReadResponse);
+    const finalPackage = finalReadBody?.packages?.find((item) => item.id === packageId);
+    const finalWarranty = finalReadBody?.warranties?.find((item) => item.id === warrantyId);
+    const documentLinked = finalPackage?.checklistItems
+      ?.filter((item) => item.sourceType === "document_requirement")
+      .every((item) => item.documentId === documentId) === true;
+    const retentionReleased = finalReadBody?.summary?.retentionHeld === 0;
+    finalReadPassed = finalReadResponse.status === 200
+      && finalReadBody?.project?.status === "completed"
+      && finalPackage?.status === "closed"
+      && (finalWarranty?.storedStatus === "closed" || finalWarranty?.status === "closed")
+      && finalReadBody?.summary?.remainingItemCount === 0
+      && finalReadBody?.summary?.canCompleteProject === true
+      && retentionReleased;
+
+    const deleteResponse = await deleteJson(
+      baseUrl,
+      `/api/projects/${projectId}`,
+      { confirm: true, projectName },
+      cookie,
+      requestId
+    );
+    operations.push("project-delete");
+    projectDeleted = deleteResponse.status === 200;
+
+    const verifyDeletedResponse = await get(baseUrl, `/api/projects/${projectId}`, cookie, requestId);
+    operations.push("verify-deleted");
+    projectDeletionVerified = verifyDeletedResponse.status === 404;
+
+    if (storageKey) {
+      await getStorageProvider().delete(storageKey);
+      operations.push("storage-cleanup");
+    }
+    storageCleaned = true;
+    cleanup = projectDeleted && projectDeletionVerified && storageCleaned ? "pass" : "fail";
+
+    permissionScope = await cleanupProjectAdminRole(temporaryRole, operations);
+    temporaryRole = undefined;
+
+    const status = projectCloseoutSmokePassed({
+      projectCreated,
+      projectOpened,
+      documentUploaded,
+      blockerEnforced,
+      blockerCleared,
+      transmittalCreated,
+      transmittalIssued,
+      transmittalLinked,
+      warrantyEvidenceLinked,
+      checklistCompleted,
+      requiredChecklistItems,
+      packageSubmitted,
+      inboxVisible,
+      packageAccepted,
+      packageClosed,
+      warrantyClosed,
+      projectCompleted,
+      finalReadPassed,
+      projectDeleted,
+      projectDeletionVerified,
+      storageCleaned,
+      permissionRestored: permissionScope === "temporary-admin-restored"
+    })
+      ? "pass"
+      : "fail";
+
+    return {
+      name: "project closeout and warranty lifecycle smoke",
+      status,
+      detail: status === "pass" ? undefined : "Disposable closeout lifecycle did not complete all expected checks.",
+      operations,
+      project: {
+        id: projectId,
+        name: projectName,
+        created: projectCreated,
+        opened: projectOpened,
+        completed: projectCompleted,
+        deleted: projectDeleted && projectDeletionVerified
+      },
+      document: { uploaded: documentUploaded, linked: documentLinked },
+      quality: { blockerEnforced, blockerCleared },
+      transmittal: { created: transmittalCreated, issued: transmittalIssued, linked: transmittalLinked },
+      closeout: {
+        bootstrapped: closeoutBootstrapped,
+        requiredChecklistItems,
+        checklistCompleted,
+        submitted: packageSubmitted,
+        inboxVisible,
+        accepted: packageAccepted,
+        closed: packageClosed,
+        finalReadPassed
+      },
+      warranty: {
+        evidenceLinked: warrantyEvidenceLinked,
+        activated: warrantyActivated,
+        closed: warrantyClosed,
+        retentionReleased
+      },
+      permissionScope,
+      cleanup
+    };
+  } catch (error) {
+    if (storageKey) {
+      await getStorageProvider()
+        .delete(storageKey)
+        .then(() => {
+          storageCleaned = true;
+          operations.push("storage-cleanup");
+        })
+        .catch(() => undefined);
+    } else {
+      storageCleaned = true;
+    }
+    cleanup = await fallbackDeleteDisposableProject(projectId, projectName, operations).catch(() => "fail" as const);
+    if (temporaryRole) {
+      await restoreTemporaryProjectAdminRole(temporaryRole)
+        .then(() => {
+          permissionScope = "temporary-admin-restored";
+          operations.push("restore-admin-role");
+        })
+        .catch(() => {
+          permissionScope = "restore-failed";
+        });
+    }
+    return {
+      name: "project closeout and warranty lifecycle smoke",
+      status: "fail",
+      detail: failureDetail(error),
+      operations,
+      ...(projectId && projectName
+        ? {
+            project: {
+              id: projectId,
+              name: projectName,
+              created: projectCreated,
+              opened: projectOpened,
+              completed: projectCompleted,
+              deleted: cleanup === "pass"
+            }
+          }
+        : {}),
+      document: { uploaded: documentUploaded, linked: false },
+      quality: { blockerEnforced, blockerCleared },
+      transmittal: { created: transmittalCreated, issued: transmittalIssued, linked: transmittalLinked },
+      closeout: {
+        bootstrapped: closeoutBootstrapped,
+        requiredChecklistItems,
+        checklistCompleted,
+        submitted: packageSubmitted,
+        inboxVisible,
+        accepted: packageAccepted,
+        closed: packageClosed,
+        finalReadPassed
+      },
+      warranty: {
+        evidenceLinked: warrantyEvidenceLinked,
+        activated: warrantyActivated,
+        closed: warrantyClosed,
+        retentionReleased: false
+      },
       permissionScope,
       cleanup
     };
@@ -2964,6 +3520,7 @@ export async function runStagingSmokeBootstrap(input: RuntimeSmokeInput): Promis
   let connectors: RuntimeSmokeResult["connectors"];
   let importSmoke: RuntimeSmokeResult["importSmoke"];
   let projectCreationDocumentsSmoke: RuntimeSmokeResult["projectCreationDocumentsSmoke"];
+  let projectCloseoutSmoke: RuntimeSmokeResult["projectCloseoutSmoke"];
   let projectControlsSmoke: RuntimeSmokeResult["projectControlsSmoke"];
   let aiDecisionJournalSmoke: RuntimeSmokeResult["aiDecisionJournalSmoke"];
   let workforcePayrollSmoke: RuntimeSmokeResult["workforcePayrollSmoke"];
@@ -2993,6 +3550,11 @@ export async function runStagingSmokeBootstrap(input: RuntimeSmokeInput): Promis
   if (input.includeProjectCreationDocumentsSmoke) {
     projectCreationDocumentsSmoke = await runProjectCreationDocumentsSmoke(input.baseUrl, sessionCookie, input.requestId);
     optionalChecks.push(projectCreationDocumentsSmoke);
+  }
+
+  if (input.includeProjectCloseoutSmoke) {
+    projectCloseoutSmoke = await runProjectCloseoutSmoke(input.baseUrl, sessionCookie, input.requestId);
+    optionalChecks.push(projectCloseoutSmoke);
   }
 
   if (input.includeProjectControlsSmoke) {
@@ -3033,6 +3595,7 @@ export async function runStagingSmokeBootstrap(input: RuntimeSmokeInput): Promis
     ...(connectors ? { connectors } : {}),
     ...(importSmoke ? { importSmoke } : {}),
     ...(projectCreationDocumentsSmoke ? { projectCreationDocumentsSmoke } : {}),
+    ...(projectCloseoutSmoke ? { projectCloseoutSmoke } : {}),
     ...(projectControlsSmoke ? { projectControlsSmoke } : {}),
     ...(aiDecisionJournalSmoke ? { aiDecisionJournalSmoke } : {}),
     ...(workforcePayrollSmoke ? { workforcePayrollSmoke } : {}),
