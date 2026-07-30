@@ -1,5 +1,40 @@
 # PGS Project Log
 
+## 2026-07-31 - Project Closeout & Warranty v1 full disposable lifecycle smoke GO
+
+Status: Project Closeout & Warranty v1 from PR #165 is live on Render, and the guarded runtime lifecycle added in PR #166 passed the full disposable closeout, approval, warranty, completion and cleanup flow.
+
+- Online URL: https://pgs-frankfurt.onrender.com
+- Feature app commit: `dc6e067fbe2032cd9ca1ed353b680b8a99270998`
+- Online smoke commit: `bb05fcf8ff6834d2c4a7e4fc64e7a3f7cb2903c6`
+- Render deploy: `dep-d9lsfqv10e5c73eaad80`
+- Feature PR: #165
+- Smoke PR: #166
+- Decision: FULL DISPOSABLE LIFECYCLE SMOKE GO
+- Git SHA source: `RENDER_GIT_COMMIT`
+
+Online verification:
+
+- `/api/health`: HTTP 200 / `ok`; DB: `ok`; migrations: `ok`, count `26`; auth required; AI configured; local storage writable;
+- migration `20260730120000_project_closeout_warranty_v1` applied successfully, and the deployed SHA matched `bb05fcf8ff6834d2c4a7e4fc64e7a3f7cb2903c6`;
+- protected login, `/api/auth/me`, `project-smoke` read, unauthenticated AI guard and authenticated missing-project AI guard passed;
+- a generated disposable project was created, opened and supplied with one synthetic PDF through the normal authenticated application flow;
+- an acceptance-blocking quality issue correctly prevented closeout completion until it was removed;
+- a transmittal was created, issued and linked to the closeout package;
+- all 8 required closeout checklist items were completed, the package was submitted, appeared in Approval Inbox, was accepted and closed;
+- warranty evidence and confirmed dates were linked, warranty was activated and closed, retention was released, and the final read model passed;
+- the project was completed, deleted with exact-name confirmation and verified absent; the uploaded storage object was removed;
+- cleanup: `pass`; temporary ADMIN role restored; live AI: `skip`; `secretsPrinted: false`; recent Render logs contained no 5xx errors.
+
+Validation and safety:
+
+- PR #166 GitHub Actions CI #340 passed;
+- Vitest: 616/616 passed; ESLint, TypeScript, Prisma validate/generate, production build and `git diff --check` passed;
+- the lifecycle endpoint remains restricted to `APP_ENV=staging` and the existing staging-secret guard;
+- `STAGING_SMOKE_SECRET` was rotated without exposing its value; no other Render environment value or secret was changed;
+- no real project, document or employee data, live AI/provider call, direct SQL or production action was used;
+- temporary local secret/response files were removed, and no synthetic project, document, quality issue, transmittal, closeout, warranty or permission elevation remained.
+
 ## 2026-07-28 - Workforce Gap & Staffing Plan v1 online/core GO
 
 Status: Workforce Gap & Staffing Plan v1 from PR #159 is live on Render. The `ФОТ` workspace now compares monthly labor demand with assigned capacity by profession, estimates uncovered hours and employer cost, and suggests privacy-safe organization candidates without automatic assignment.
