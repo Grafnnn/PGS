@@ -123,7 +123,7 @@ export async function loadApprovalInbox(user: AppUser, now = new Date()): Promis
   const projectIds = projects.map((project) => project.id);
   if (!projectIds.length) return { items: [], summary: summarizeApprovalInbox([]), projects: [], scopeByKey: new Map() };
 
-  const [workflowRuns, actionItems, changeOrders, commitments, paymentApplications] = await Promise.all([
+  const [workflowRuns, actionItems, changeOrders, commitments, paymentApplications, closeoutPackages, warrantyObligations] = await Promise.all([
     prisma.projectWorkflowRun.findMany({
       where: { projectId: { in: projectIds }, status: "active", steps: { some: { status: "active" } } },
       orderBy: { updatedAt: "desc" },
@@ -219,6 +219,40 @@ export async function loadApprovalInbox(user: AppUser, now = new Date()): Promis
         createdAt: true,
         updatedAt: true,
         commitment: { select: { number: true, title: true, counterparty: true } }
+      }
+    }),
+    prisma.projectCloseoutPackage.findMany({
+      where: { projectId: { in: projectIds }, status: "submitted" },
+      orderBy: { updatedAt: "desc" },
+      take: 150,
+      select: {
+        id: true,
+        projectId: true,
+        number: true,
+        title: true,
+        scope: true,
+        responsibleParty: true,
+        dueAt: true,
+        createdAt: true,
+        updatedAt: true
+      }
+    }),
+    prisma.projectWarrantyObligation.findMany({
+      where: { projectId: { in: projectIds }, status: { in: ["active", "expiring", "expired"] } },
+      orderBy: { endsAt: "asc" },
+      take: 250,
+      select: {
+        id: true,
+        projectId: true,
+        number: true,
+        title: true,
+        responsibleParty: true,
+        endsAt: true,
+        noticeDays: true,
+        retentionAmount: true,
+        retentionReleaseAt: true,
+        createdAt: true,
+        updatedAt: true
       }
     })
   ]);
@@ -350,6 +384,59 @@ export async function loadApprovalInbox(user: AppUser, now = new Date()): Promis
           applicationId: application.id,
           actions: ["approve", "reject"]
         }
+      })
+    );
+  });
+
+  closeoutPackages.forEach((closeoutPackage) => {
+    const project = projectById.get(closeoutPackage.projectId);
+    if (!project || (project.role !== "OWNER" && project.role !== "ADMIN")) return;
+    rawItems.push(
+      baseItem({
+        project,
+        sourceType: "closeout_package",
+        sourceId: closeoutPackage.id,
+        kind: "approval",
+        status: inboxStatusFor(closeoutPackage.dueAt, "pending", now),
+        priority: closeoutPackage.dueAt && closeoutPackage.dueAt < now ? "critical" : "high",
+        title: `${closeoutPackage.number}: ${closeoutPackage.title}`,
+        description: closeoutPackage.scope || (closeoutPackage.responsibleParty ? `Ответственный: ${closeoutPackage.responsibleParty}` : "Пакет готов к решению по приёмке."),
+        sourceModule: "project_closeout",
+        sourceLabel: "Пакет сдачи на приёмке",
+        targetTab: "Сдача / Гарантия",
+        dueAt: closeoutPackage.dueAt,
+        createdAt: closeoutPackage.createdAt,
+        updatedAt: closeoutPackage.updatedAt,
+        decision: { type: "closeout_package", packageId: closeoutPackage.id, actions: ["approve", "request_revision", "reject"] }
+      })
+    );
+  });
+
+  warrantyObligations.forEach((warranty) => {
+    const project = projectById.get(warranty.projectId);
+    if (!project?.role) return;
+    const dates = [warranty.endsAt, warranty.retentionReleaseAt].filter((value): value is Date => Boolean(value));
+    if (!dates.length) return;
+    const attentionAt = dates.reduce((earliest, value) => value < earliest ? value : earliest);
+    if (attentionAt.getTime() > now.getTime() + warranty.noticeDays * 86_400_000) return;
+    const retention = Number(warranty.retentionAmount);
+    rawItems.push(
+      baseItem({
+        project,
+        sourceType: "warranty_obligation",
+        sourceId: warranty.id,
+        kind: "attention",
+        status: inboxStatusFor(attentionAt, "pending", now),
+        priority: attentionAt < now ? "critical" : "high",
+        title: `${warranty.number}: ${warranty.title}`,
+        description: `${warranty.responsibleParty ? `Ответственный: ${warranty.responsibleParty}` : "Ответственный не назначен"}${retention > 0 ? ` · удержание ${money(retention)}` : ""}`,
+        sourceModule: "project_warranty",
+        sourceLabel: attentionAt < now ? "Просроченная гарантия / удержание" : "Срок гарантии / удержания",
+        targetTab: "Сдача / Гарантия",
+        dueAt: attentionAt,
+        createdAt: warranty.createdAt,
+        updatedAt: warranty.updatedAt,
+        decision: null
       })
     );
   });

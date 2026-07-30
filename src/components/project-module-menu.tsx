@@ -3,6 +3,7 @@
 import React, { useEffect, useId, useRef, useState } from "react";
 import {
   AlertTriangle,
+  BadgeCheck,
   BarChart3,
   Bot,
   Check,
@@ -39,6 +40,7 @@ export const projectTabs = [
   "Договор / Тендер",
   "КП / Подача",
   "КС",
+  "Сдача / Гарантия",
   "Исполнение",
   "Площадка",
   "Рапорты",
@@ -71,7 +73,7 @@ export const projectTabGroups: ReadonlyArray<{ label: string; tabs: readonly Pro
   },
   {
     label: "Контроль",
-    tabs: ["Документы", "RFI / Согласования", "Риски", "Процессы"]
+    tabs: ["Документы", "RFI / Согласования", "Риски", "Сдача / Гарантия", "Процессы"]
   }
 ];
 
@@ -87,6 +89,7 @@ const tabMeta: Record<ProjectTab, { code: string; icon: React.ReactNode; hint: s
   "Договор / Тендер": { code: "06", icon: <Search size={17} />, hint: "Контракт" },
   "КП / Подача": { code: "07", icon: <Send size={17} />, hint: "Предложение" },
   КС: { code: "08", icon: <ReceiptText size={17} />, hint: "Закрытие объемов" },
+  "Сдача / Гарантия": { code: "CLS", icon: <BadgeCheck size={17} />, hint: "Передача и гарантия" },
   Исполнение: { code: "09", icon: <Users size={17} />, hint: "Подрядчики" },
   Площадка: { code: "FS", icon: <HardHat size={17} />, hint: "Работы на объекте" },
   Рапорты: { code: "10", icon: <ClipboardList size={17} />, hint: "Ежедневный факт" },
@@ -101,6 +104,15 @@ const tabMeta: Record<ProjectTab, { code: string; icon: React.ReactNode; hint: s
   Настройки: { code: "18", icon: <Trash2 size={17} />, hint: "Параметры проекта" },
   "AI-помощник": { code: "AI", icon: <Bot size={17} />, hint: "Сценарии анализа" }
 };
+
+export function countNoun(value: number, forms: readonly [string, string, string]) {
+  const lastTwo = value % 100;
+  const last = value % 10;
+  if (lastTwo >= 11 && lastTwo <= 14) return forms[2];
+  if (last === 1) return forms[0];
+  if (last >= 2 && last <= 4) return forms[1];
+  return forms[2];
+}
 
 export function ProjectModuleMenu({
   activeTab,
@@ -166,7 +178,7 @@ export function ProjectModuleMenu({
           <strong>{activeTab}</strong>
           <span>{activeMeta.hint}</span>
         </span>
-        <span className="project-module-trigger-count">{projectTabs.length} раздела</span>
+        <span className="project-module-trigger-count">{projectTabs.length} {countNoun(projectTabs.length, ["раздел", "раздела", "разделов"])}</span>
         <ChevronDown className="project-module-chevron" size={18} aria-hidden="true" />
       </button>
 
@@ -177,7 +189,7 @@ export function ProjectModuleMenu({
               <small>Навигация по проекту</small>
               <strong>Все разделы</strong>
             </div>
-            <span>{projectTabs.length} рабочие зоны</span>
+            <span>{projectTabs.length} {countNoun(projectTabs.length, ["рабочая зона", "рабочие зоны", "рабочих зон"])}</span>
           </div>
           <div className="project-module-grid">
             {projectTabGroups.map((group) => (
