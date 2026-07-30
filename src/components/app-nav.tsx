@@ -5,107 +5,208 @@ import type { Route } from "next";
 import { usePathname } from "next/navigation";
 import {
   Bell,
-  Bot,
   BriefcaseBusiness,
-  FileText,
+  ChevronRight,
   Gauge,
-  Landmark,
   Layers3,
+  LogIn,
+  LogOut,
   Menu,
-  PackageCheck,
   PanelLeftClose,
   PanelLeftOpen,
+  Plug,
   Plus,
   Search,
-  ShieldAlert,
-  SlidersHorizontal,
   Users,
   X
 } from "lucide-react";
-import { type ReactNode, useCallback, useEffect, useId, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useId, useRef, useState } from "react";
 import { BrandLogo } from "@/components/brand-logo";
 import { PwaRegister } from "@/components/pwa-register";
 import { isStandaloneAppSurface } from "@/components/app-nav-routes";
-import { readSidebarPreference, type SidebarPreference, writeSidebarPreference } from "@/components/app-nav-state";
+import {
+  APP_NAVIGATION_GROUPS,
+  APP_NAVIGATION_ITEMS,
+  type AppNavigationItem,
+  filterNavigationItems,
+  isNavigationItemActive,
+  readSidebarPreference,
+  type SidebarPreference,
+  writeSidebarPreference
+} from "@/components/app-nav-state";
 
-type NavItem = {
-  code: string;
-  group: "Управление" | "Проектный контур" | "Система";
-  href: string;
-  icon: ReactNode;
-  label: string;
-  section?: string;
-  match?: string[];
+const navigationIcons: Record<AppNavigationItem["id"], ReactNode> = {
+  dashboard: <Gauge size={18} />,
+  inbox: <Bell size={18} />,
+  portfolio: <Layers3 size={18} />,
+  projects: <BriefcaseBusiness size={18} />,
+  users: <Users size={18} />,
+  integrations: <Plug size={18} />
 };
 
-const navItems: NavItem[] = [
-  { code: "01", group: "Управление", href: "/dashboard", icon: <Gauge size={17} />, label: "Главная", section: "Сводка портфеля", match: ["/dashboard"] },
-  { code: "02", group: "Управление", href: "/inbox", icon: <Bell size={17} />, label: "Согласования", section: "Решения и блокеры", match: ["/inbox"] },
-  { code: "03", group: "Управление", href: "/portfolio", icon: <Layers3 size={17} />, label: "Портфель", section: "Все объекты", match: ["/portfolio"] },
-  { code: "04", group: "Управление", href: "/projects", icon: <BriefcaseBusiness size={17} />, label: "Проекты", section: "Рабочие пространства", match: ["/projects"] },
-  { code: "05", group: "Проектный контур", href: "/projects", icon: <PackageCheck size={17} />, label: "Снабжение", section: "Материалы и закупки" },
-  { code: "06", group: "Проектный контур", href: "/projects", icon: <Landmark size={17} />, label: "Финансы", section: "Бюджет и cash-flow" },
-  { code: "07", group: "Проектный контур", href: "/projects", icon: <FileText size={17} />, label: "Документы", section: "Комплектность и КС" },
-  { code: "08", group: "Проектный контур", href: "/projects", icon: <ShieldAlert size={17} />, label: "Риски", section: "Контроль отклонений" },
-  { code: "AI", group: "Система", href: "/projects", icon: <Bot size={17} />, label: "AI-помощник", section: "Сценарии и сводки" },
-  { code: "09", group: "Система", href: "/admin/users", icon: <Users size={17} />, label: "Администрирование", section: "Пользователи и связи", match: ["/admin"] }
-];
-const navGroups: NavItem["group"][] = ["Управление", "Проектный контур", "Система"];
-
-function isItemActive(pathname: string, item: NavItem) {
-  return item.match?.some((path) => pathname === path || pathname.startsWith(`${path}/`)) ?? false;
-}
-
-function NavigationLinks({ onNavigate }: { onNavigate?: () => void }) {
+function NavigationLinks({
+  onClearQuery,
+  onNavigate,
+  query
+}: {
+  onClearQuery: () => void;
+  onNavigate?: () => void;
+  query: string;
+}) {
   const pathname = usePathname();
+  const filteredItems = filterNavigationItems(APP_NAVIGATION_ITEMS, query);
 
   return (
     <nav className="nav sidebar-nav" aria-label="Основная навигация">
-      {navGroups.map((group) => (
-        <div className="nav-group" key={group}>
-          <span className="nav-group-label">{group}</span>
-          <div className="nav-group-links">
-            {navItems.filter((item) => item.group === group).map((item) => {
-              const active = isItemActive(pathname, item);
-              return (
-                <Link
-                  aria-current={active ? "page" : undefined}
-                  className={active ? "active" : undefined}
-                  data-tooltip={item.label}
-                  href={item.href as Route}
-                  key={`${item.label}-${item.href}`}
-                  onClick={onNavigate}
-                  title={item.label}
-                >
-                  <span className="nav-icon" aria-hidden="true">
-                    {item.icon}
-                  </span>
-                  <span className="nav-code" aria-hidden="true">
-                    {item.code}
-                  </span>
-                  <span className="nav-copy">
-                    <strong>{item.label}</strong>
-                    <small>{item.section}</small>
-                  </span>
-                </Link>
-              );
-            })}
+      {APP_NAVIGATION_GROUPS.map((group) => {
+        const groupItems = filteredItems.filter((item) => item.group === group);
+        if (!groupItems.length) return null;
+        return (
+          <div className="nav-group" key={group}>
+            <span className="nav-group-label">{group}</span>
+            <div className="nav-group-links">
+              {groupItems.map((item) => {
+                const active = isNavigationItemActive(pathname, item);
+                return (
+                  <Link
+                    aria-current={active ? "page" : undefined}
+                    className={active ? "active" : undefined}
+                    data-tooltip={item.label}
+                    href={item.href as Route}
+                    key={item.id}
+                    onClick={onNavigate}
+                    title={item.label}
+                  >
+                    <span className="nav-icon" aria-hidden="true">
+                      {navigationIcons[item.id]}
+                    </span>
+                    <span className="nav-copy">
+                      <strong>{item.label}</strong>
+                      <small>{item.section}</small>
+                    </span>
+                    <ChevronRight className="nav-arrow" size={15} aria-hidden="true" />
+                  </Link>
+                );
+              })}
+            </div>
           </div>
+        );
+      })}
+      {!filteredItems.length && (
+        <div className="sidebar-search-empty" role="status">
+          <Search size={18} aria-hidden="true" />
+          <strong>Раздел не найден</strong>
+          <span>Попробуйте другое название или модуль.</span>
+          <button onClick={onClearQuery} type="button">Сбросить поиск</button>
         </div>
-      ))}
+      )}
     </nav>
   );
 }
 
-function SidebarSystemCard() {
+function SidebarSearch({
+  onChange,
+  onClear,
+  value
+}: {
+  onChange: (value: string) => void;
+  onClear: () => void;
+  value: string;
+}) {
   return (
-    <div className="sidebar-system-card">
-      <span className="sidebar-system-icon"><SlidersHorizontal size={16} /></span>
-      <div>
-        <strong>PGS Studio v3</strong>
-        <span>Единый контур управления</span>
-      </div>
-      <span aria-label="Система активна" className="sidebar-system-status" role="status" title="Система активна" />
+    <label className="sidebar-search">
+      <Search size={16} aria-hidden="true" />
+      <input
+        aria-label="Найти раздел или модуль"
+        autoComplete="off"
+        onChange={(event) => onChange(event.target.value)}
+        placeholder="Раздел или модуль"
+        type="search"
+        value={value}
+      />
+      {value && (
+        <button aria-label="Очистить поиск" onClick={onClear} title="Очистить поиск" type="button">
+          <X size={14} />
+        </button>
+      )}
+    </label>
+  );
+}
+
+type NavigationUser = {
+  authenticated: boolean;
+  name: string;
+  role: string;
+};
+
+function userInitials(name: string) {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toLocaleUpperCase("ru-RU"))
+    .join("") || "PG";
+}
+
+function SidebarUserCard({ onNavigate }: { onNavigate?: () => void }) {
+  const [user, setUser] = useState<NavigationUser | null>(null);
+  const [loggingOut, setLoggingOut] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    void fetch("/api/auth/me", { cache: "no-store" })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data: { user?: NavigationUser } | null) => {
+        if (active) setUser(data?.user ?? null);
+      })
+      .catch(() => {
+        if (active) setUser(null);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  async function logout() {
+    setLoggingOut(true);
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+      window.location.assign("/login");
+    } finally {
+      setLoggingOut(false);
+    }
+  }
+
+  if (!user) {
+    return (
+      <Link className="sidebar-user-card is-guest" data-tooltip="Войти" href={"/login" as Route} onClick={onNavigate} title="Войти">
+        <span className="sidebar-user-avatar" aria-hidden="true"><LogIn size={17} /></span>
+        <span className="sidebar-user-copy">
+          <strong>Войти в PGS</strong>
+          <small>Открыть рабочий контур</small>
+        </span>
+        <ChevronRight className="sidebar-user-action" size={15} aria-hidden="true" />
+      </Link>
+    );
+  }
+
+  return (
+    <div className="sidebar-user-card" data-tooltip={user.name} title={user.name}>
+      <span className="sidebar-user-avatar" aria-hidden="true">{userInitials(user.name)}</span>
+      <span className="sidebar-user-copy">
+        <strong>{user.name}</strong>
+        <small>{user.role}</small>
+      </span>
+      <button
+        aria-label="Выйти из PGS"
+        className="sidebar-user-action"
+        disabled={loggingOut}
+        onClick={() => void logout()}
+        title="Выйти"
+        type="button"
+      >
+        <LogOut size={15} />
+      </button>
     </div>
   );
 }
@@ -145,44 +246,91 @@ function InboxBell() {
 
 function SidebarContent({
   collapsed,
+  pinnedCollapsed,
+  onCloseMobile,
   onNavigate,
   onTogglePinned
 }: {
   collapsed?: boolean;
+  pinnedCollapsed?: boolean;
+  onCloseMobile?: () => void;
   onNavigate?: () => void;
   onTogglePinned?: () => void;
 }) {
+  const [query, setQuery] = useState("");
+
+  const navigate = useCallback(() => {
+    setQuery("");
+    onNavigate?.();
+  }, [onNavigate]);
+
   return (
     <>
       <div className="sidebar-header">
         <BrandLogo compact={collapsed} />
-        {onTogglePinned && (
-          <button
-            aria-label={collapsed ? "Развернуть меню" : "Свернуть меню"}
-            aria-expanded={!collapsed}
-            className="icon-button sidebar-pin-button"
-            onClick={onTogglePinned}
-            title={collapsed ? "Развернуть меню" : "Свернуть меню"}
-            type="button"
-          >
-            {collapsed ? <PanelLeftOpen size={17} /> : <PanelLeftClose size={17} />}
-          </button>
-        )}
+        <div className="sidebar-header-actions">
+          {onTogglePinned && (
+            <button
+              aria-label={pinnedCollapsed ? "Закрепить развёрнутое меню" : "Свернуть меню"}
+              aria-expanded={!pinnedCollapsed}
+              className="icon-button sidebar-pin-button"
+              onClick={onTogglePinned}
+              title={pinnedCollapsed ? "Закрепить меню" : "Свернуть меню"}
+              type="button"
+            >
+              {pinnedCollapsed ? <PanelLeftOpen size={17} /> : <PanelLeftClose size={17} />}
+            </button>
+          )}
+          {onCloseMobile && (
+            <button
+              aria-label="Закрыть меню"
+              className="icon-button sidebar-close-button"
+              onClick={onCloseMobile}
+              title="Закрыть меню"
+              type="button"
+            >
+              <X size={17} />
+            </button>
+          )}
+        </div>
       </div>
-      <NavigationLinks onNavigate={onNavigate} />
-      <SidebarSystemCard />
+
+      <Link
+        className="sidebar-create-link"
+        data-tooltip="Новый проект"
+        href={"/projects#create-project" as Route}
+        onClick={navigate}
+        title="Создать новый проект"
+      >
+        <span className="sidebar-create-icon" aria-hidden="true"><Plus size={17} /></span>
+        <span className="sidebar-create-copy">
+          <strong>Новый проект</strong>
+          <small>Создание и импорт данных</small>
+        </span>
+        <ChevronRight className="sidebar-create-arrow" size={15} aria-hidden="true" />
+      </Link>
+
+      <SidebarSearch onChange={setQuery} onClear={() => setQuery("")} value={query} />
+      <NavigationLinks onClearQuery={() => setQuery("")} onNavigate={navigate} query={query} />
+
+      <div className="sidebar-footer">
+        <SidebarUserCard onNavigate={navigate} />
+      </div>
     </>
   );
 }
 
 export function AppNav({ children }: { children: ReactNode }) {
   const sidebarId = useId();
-  const drawerId = useId();
   const pathname = usePathname();
   const [preference, setPreference] = useState<SidebarPreference>("expanded");
   const [hydrated, setHydrated] = useState(false);
   const [peekOpen, setPeekOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
+  const mobileMenuButton = useRef<HTMLButtonElement>(null);
+  const peekTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const wasDrawerOpen = useRef(false);
 
   useEffect(() => {
     const saved = readSidebarPreference(window.localStorage);
@@ -194,10 +342,25 @@ export function AppNav({ children }: { children: ReactNode }) {
     setHydrated(true);
   }, []);
 
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 767px)");
+    const syncViewport = () => {
+      setIsMobileViewport(media.matches);
+      if (!media.matches) setDrawerOpen(false);
+    };
+    syncViewport();
+    media.addEventListener("change", syncViewport);
+    return () => media.removeEventListener("change", syncViewport);
+  }, []);
+
   const closeTransientNavigation = useCallback(() => {
     setPeekOpen(false);
     setDrawerOpen(false);
   }, []);
+
+  useEffect(() => {
+    closeTransientNavigation();
+  }, [closeTransientNavigation, pathname]);
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -206,6 +369,26 @@ export function AppNav({ children }: { children: ReactNode }) {
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [closeTransientNavigation]);
+
+  useEffect(() => {
+    if (!drawerOpen || !isMobileViewport) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [drawerOpen, isMobileViewport]);
+
+  useEffect(() => {
+    if (isMobileViewport && wasDrawerOpen.current && !drawerOpen) {
+      mobileMenuButton.current?.focus();
+    }
+    wasDrawerOpen.current = drawerOpen;
+  }, [drawerOpen, isMobileViewport]);
+
+  useEffect(() => () => {
+    if (peekTimer.current) clearTimeout(peekTimer.current);
+  }, []);
 
   const setPinnedPreference = useCallback((next: SidebarPreference) => {
     setPreference(next);
@@ -220,7 +403,7 @@ export function AppNav({ children }: { children: ReactNode }) {
   const shellState = hydrated ? preference : "expanded";
   const isCollapsed = shellState === "collapsed";
   const sidebarExpandedForInteraction = isCollapsed && peekOpen;
-  const activeItem = navItems.find((item) => isItemActive(pathname, item));
+  const activeItem = APP_NAVIGATION_ITEMS.find((item) => isNavigationItemActive(pathname, item));
   const isStandaloneSurface = isStandaloneAppSurface(pathname);
 
   if (isStandaloneSurface) {
@@ -236,24 +419,37 @@ export function AppNav({ children }: { children: ReactNode }) {
     <div className="app-shell" data-sidebar={shellState}>
       <PwaRegister />
       <aside
-        className={`sidebar app-sidebar ${isCollapsed ? "is-collapsed" : "is-expanded"} ${sidebarExpandedForInteraction ? "is-peek-open" : ""}`}
+        aria-hidden={isMobileViewport ? !drawerOpen : undefined}
+        className={`sidebar app-sidebar ${isCollapsed ? "is-collapsed" : "is-expanded"} ${sidebarExpandedForInteraction ? "is-peek-open" : ""} ${drawerOpen ? "is-mobile-open" : ""}`}
         id={sidebarId}
         onMouseEnter={() => {
-          if (isCollapsed) setPeekOpen(true);
+          if (!isCollapsed || isMobileViewport) return;
+          if (peekTimer.current) clearTimeout(peekTimer.current);
+          peekTimer.current = setTimeout(() => setPeekOpen(true), 140);
         }}
-        onMouseLeave={() => setPeekOpen(false)}
+        onMouseLeave={() => {
+          if (peekTimer.current) clearTimeout(peekTimer.current);
+          setPeekOpen(false);
+        }}
       >
-        <SidebarContent collapsed={isCollapsed && !sidebarExpandedForInteraction} onTogglePinned={togglePreference} />
+        <SidebarContent
+          collapsed={!isMobileViewport && isCollapsed && !sidebarExpandedForInteraction}
+          onCloseMobile={() => setDrawerOpen(false)}
+          onNavigate={closeTransientNavigation}
+          onTogglePinned={togglePreference}
+          pinnedCollapsed={isCollapsed}
+        />
       </aside>
 
       <div className="app-main">
         <header className="topbar">
           <button
-            aria-controls={drawerId}
+            aria-controls={sidebarId}
             aria-expanded={drawerOpen}
             aria-label="Открыть меню"
             className="icon-button mobile-menu-button"
             onClick={() => setDrawerOpen(true)}
+            ref={mobileMenuButton}
             type="button"
           >
             <Menu size={17} />
@@ -293,16 +489,6 @@ export function AppNav({ children }: { children: ReactNode }) {
       </div>
 
       <div className={`drawer-backdrop ${drawerOpen ? "open" : ""}`} onClick={() => setDrawerOpen(false)} />
-      <aside aria-hidden={!drawerOpen} className={`sidebar mobile-drawer ${drawerOpen ? "open" : ""}`} id={drawerId}>
-        <div className="sidebar-header">
-          <BrandLogo />
-          <button aria-label="Закрыть меню" className="icon-button" onClick={() => setDrawerOpen(false)} title="Закрыть меню" type="button">
-            <X size={17} />
-          </button>
-        </div>
-        <NavigationLinks onNavigate={() => setDrawerOpen(false)} />
-        <SidebarSystemCard />
-      </aside>
     </div>
   );
 }

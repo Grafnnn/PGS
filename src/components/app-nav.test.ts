@@ -1,6 +1,14 @@
+import fs from "node:fs";
 import { describe, expect, it } from "vitest";
 import { isStandaloneAppSurface } from "@/components/app-nav-routes";
-import { readSidebarPreference, SIDEBAR_STORAGE_KEY, writeSidebarPreference } from "@/components/app-nav-state";
+import {
+  APP_NAVIGATION_ITEMS,
+  filterNavigationItems,
+  isNavigationItemActive,
+  readSidebarPreference,
+  SIDEBAR_STORAGE_KEY,
+  writeSidebarPreference
+} from "@/components/app-nav-state";
 
 function createMemoryStorage(initial?: string) {
   const values = new Map<string, string>();
@@ -63,5 +71,39 @@ describe("app navigation surface", () => {
     expect(isStandaloneAppSurface("/dashboard")).toBe(false);
     expect(isStandaloneAppSurface("/projects/project-1")).toBe(false);
     expect(isStandaloneAppSurface("/external")).toBe(false);
+  });
+});
+
+describe("app navigation model", () => {
+  it("uses unique real destinations instead of duplicate project placeholders", () => {
+    const hrefs = APP_NAVIGATION_ITEMS.map((item) => item.href);
+    expect(new Set(hrefs).size).toBe(hrefs.length);
+    expect(hrefs).toEqual([
+      "/dashboard",
+      "/inbox",
+      "/portfolio",
+      "/projects",
+      "/admin/users",
+      "/admin/integrations"
+    ]);
+  });
+
+  it("finds the project workspace by module names", () => {
+    expect(filterNavigationItems(APP_NAVIGATION_ITEMS, "материалы").map((item) => item.id)).toEqual(["projects"]);
+    expect(filterNavigationItems(APP_NAVIGATION_ITEMS, "cash-flow").map((item) => item.id)).toEqual(["projects"]);
+    expect(filterNavigationItems(APP_NAVIGATION_ITEMS, "роли доступ").map((item) => item.id)).toEqual(["users"]);
+  });
+
+  it("keeps active state scoped to the matching route", () => {
+    const projects = APP_NAVIGATION_ITEMS.find((item) => item.id === "projects");
+    const users = APP_NAVIGATION_ITEMS.find((item) => item.id === "users");
+    expect(projects && isNavigationItemActive("/projects/project-smoke", projects)).toBe(true);
+    expect(users && isNavigationItemActive("/admin/integrations", users)).toBe(false);
+  });
+
+  it("renders one shared navigation instance for desktop and mobile", () => {
+    const source = fs.readFileSync(new URL("./app-nav.tsx", import.meta.url), "utf8");
+    expect(source.match(/<NavigationLinks/g)).toHaveLength(1);
+    expect(source).not.toContain("mobile-drawer");
   });
 });
