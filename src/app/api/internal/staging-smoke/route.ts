@@ -42,6 +42,7 @@ export async function POST(request: NextRequest) {
     includeImportSmoke?: unknown;
     includePipelineSmoke?: unknown;
     includeProjectCreationDocumentsSmoke?: unknown;
+    includeProjectCloseoutSmoke?: unknown;
     includeProjectControlsSmoke?: unknown;
     includeAiDecisionJournalSmoke?: unknown;
     includeWorkforcePayrollSmoke?: unknown;
@@ -59,6 +60,7 @@ export async function POST(request: NextRequest) {
       includeImportSmoke: body.includeImportSmoke === true,
       includePipelineSmoke: body.includePipelineSmoke === true,
       includeProjectCreationDocumentsSmoke: body.includeProjectCreationDocumentsSmoke === true,
+      includeProjectCloseoutSmoke: body.includeProjectCloseoutSmoke === true,
       includeProjectControlsSmoke: body.includeProjectControlsSmoke === true,
       includeAiDecisionJournalSmoke: body.includeAiDecisionJournalSmoke === true,
       includeWorkforcePayrollSmoke: body.includeWorkforcePayrollSmoke === true,
