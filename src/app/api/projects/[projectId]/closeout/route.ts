@@ -7,8 +7,7 @@ import {
   buildCloseoutBootstrapChecklist,
   canTransitionCloseoutPackage,
   canTransitionWarranty,
-  closeoutMutationSchema,
-  summarizeProjectCloseout
+  closeoutMutationSchema
 } from "@/lib/project-closeout";
 import { loadProjectCloseout } from "@/lib/project-closeout-db";
 import { prisma } from "@/lib/prisma";
@@ -186,16 +185,15 @@ export async function POST(request: NextRequest, { params }: { params: { project
         if (!transmittal) return NextResponse.json({ error: "Transmittal does not belong to this project" }, { status: 409 });
       }
       if (data.status === "submitted" || data.status === "accepted" || data.status === "closed") {
-        const summary = summarizeProjectCloseout({
-          projectStatus: project.status,
-          packages: [current],
-          warranties: [],
-          openAcceptanceBlockers: project.qualityIssues.length
-        });
-        if (summary.remainingItemCount || summary.openAcceptanceBlockers) {
+        const payload = await loadProjectCloseout(params.projectId);
+        const effectivePackage = payload?.packages.find((item) => item.id === current.id);
+        const remainingItemCount = effectivePackage?.checklistItems.filter((item) =>
+          item.required && item.status !== "completed" && item.status !== "not_applicable"
+        ).length ?? current.checklistItems.length;
+        if (remainingItemCount || project.qualityIssues.length) {
           return NextResponse.json({
             error: "Closeout package still has required blockers",
-            blockers: summary.remainingItemCount + summary.openAcceptanceBlockers
+            blockers: remainingItemCount + project.qualityIssues.length
           }, { status: 409 });
         }
       }
@@ -241,10 +239,20 @@ export async function POST(request: NextRequest, { params }: { params: { project
     if (data.action === "update_checklist_item") {
       const current = await prisma.projectCloseoutChecklistItem.findFirst({
         where: { id: data.id, package: { projectId: params.projectId } },
-        include: { package: { select: { id: true, number: true } } }
+        include: {
+          package: {
+            select: {
+              id: true,
+              number: true,
+              transmittalId: true,
+              handoverAt: true,
+              transmittal: { select: { status: true } }
+            }
+          }
+        }
       });
       if (!current) return NextResponse.json({ error: "Checklist item not found" }, { status: 404 });
-      let documentId = data.documentId === undefined ? current.documentId : data.documentId;
+      const documentId = data.documentId === undefined ? current.documentId : data.documentId;
       if (documentId) {
         const document = await prisma.document.findFirst({ where: { id: documentId, projectId: params.projectId }, select: { id: true } });
         if (!document) return NextResponse.json({ error: "Document does not belong to this project" }, { status: 409 });
@@ -254,6 +262,36 @@ export async function POST(request: NextRequest, { params }: { params: { project
       }
       if (data.status === "completed" && current.sourceType === "quality_gate" && project.qualityIssues.length) {
         return NextResponse.json({ error: "Open acceptance-blocking quality issues must be closed first" }, { status: 409 });
+      }
+      if (
+        data.status === "completed"
+        && current.sourceType === "transmittal_gate"
+        && (
+          !current.package.transmittalId
+          || !current.package.handoverAt
+          || !current.package.transmittal
+          || !["issued", "acknowledged", "approved", "closed"].includes(current.package.transmittal.status)
+        )
+      ) {
+        return NextResponse.json({
+          error: "An issued project transmittal and handover date are required to complete this item"
+        }, { status: 409 });
+      }
+      if (data.status === "completed" && current.sourceType === "warranty_gate") {
+        const warrantyCandidates = await prisma.projectWarrantyObligation.findMany({
+          where: {
+            projectId: params.projectId,
+            OR: [{ packageId: current.package.id }, { packageId: null }],
+            startsAt: { not: null },
+            endsAt: { not: null }
+          },
+          select: { sourceDocumentId: true, terms: true }
+        });
+        if (!warrantyCandidates.some((item) => item.sourceDocumentId || item.terms?.trim())) {
+          return NextResponse.json({
+            error: "Confirmed warranty dates and contractual evidence are required to complete this item"
+          }, { status: 409 });
+        }
       }
       await prisma.$transaction(async (tx) => {
         const updated = await tx.projectCloseoutChecklistItem.update({
@@ -350,6 +388,9 @@ export async function POST(request: NextRequest, { params }: { params: { project
       if (!current) return NextResponse.json({ error: "Warranty obligation not found" }, { status: 404 });
       if (data.status && !canTransitionWarranty(current.status, data.status)) {
         return NextResponse.json({ error: `Invalid warranty transition: ${current.status} -> ${data.status}` }, { status: 409 });
+      }
+      if (data.status === "closed" && !canApprove) {
+        return NextResponse.json({ error: "Owner or admin approval is required to close a warranty" }, { status: 403 });
       }
       if (data.sourceDocumentId) {
         const sourceDocument = await prisma.document.findFirst({

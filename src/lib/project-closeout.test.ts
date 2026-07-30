@@ -47,6 +47,33 @@ describe("project closeout model", () => {
     expect(summary.canCompleteProject).toBe(false);
   });
 
+  it("reopens a completed evidence gate when its source is no longer valid", () => {
+    const summary = summarizeProjectCloseout({
+      projectStatus: "active",
+      openAcceptanceBlockers: 0,
+      packages: [{
+        status: "accepted",
+        dueAt: null,
+        checklistItems: [
+          {
+            required: true,
+            status: "completed",
+            sourceType: "transmittal_gate",
+            sourceSatisfied: false
+          }
+        ]
+      }],
+      warranties: []
+    });
+
+    expect(summary).toMatchObject({
+      readiness: "blocked",
+      blockedItemCount: 1,
+      remainingItemCount: 1,
+      canCompleteProject: false
+    });
+  });
+
   it("marks the project ready only when every required item and package is accepted", () => {
     const summary = summarizeProjectCloseout({
       projectStatus: "active",

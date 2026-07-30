@@ -15,6 +15,8 @@ const packageInclude = {
   }
 };
 
+const issuedTransmittalStatuses = new Set(["issued", "acknowledged", "approved", "closed"]);
+
 function iso(value: Date | null | undefined) {
   return value?.toISOString() ?? null;
 }
@@ -60,6 +62,13 @@ export async function loadProjectCloseout(projectId: string, now = new Date()) {
 
   if (!project) return null;
   const blockerCount = project.qualityIssues.length;
+  const warrantiesWithEvidence = project.warrantyObligations.filter((item) =>
+    Boolean(item.startsAt && item.endsAt && (item.sourceDocumentId || item.terms?.trim()))
+  );
+  const hasGlobalWarrantyEvidence = warrantiesWithEvidence.some((item) => !item.packageId);
+  const warrantyPackageIds = new Set(
+    warrantiesWithEvidence.flatMap((item) => item.packageId ? [item.packageId] : [])
+  );
   const packages = project.closeoutPackages.map((item) => ({
     id: item.id,
     sequence: item.sequence,
@@ -78,23 +87,33 @@ export async function loadProjectCloseout(projectId: string, now = new Date()) {
     transmittal: item.transmittal,
     createdAt: item.createdAt.toISOString(),
     updatedAt: item.updatedAt.toISOString(),
-    checklistItems: item.checklistItems.map((checklistItem) => ({
-      id: checklistItem.id,
-      sequence: checklistItem.sequence,
-      title: checklistItem.title,
-      category: checklistItem.category,
-      required: checklistItem.required,
-      status: effectiveChecklistStatus(checklistItem, blockerCount),
-      storedStatus: checklistItem.status,
-      sourceType: checklistItem.sourceType,
-      sourceId: checklistItem.sourceId,
-      documentId: checklistItem.documentId,
-      document: checklistItem.document,
-      notes: checklistItem.notes,
-      confirmedBy: checklistItem.confirmedBy,
-      confirmedAt: iso(checklistItem.confirmedAt),
-      updatedAt: checklistItem.updatedAt.toISOString()
-    }))
+    checklistItems: item.checklistItems.map((checklistItem) => {
+      const sourceSatisfied = checklistItem.sourceType === "document_requirement"
+        ? Boolean(checklistItem.documentId)
+        : checklistItem.sourceType === "transmittal_gate"
+          ? Boolean(item.transmittal && item.handoverAt && issuedTransmittalStatuses.has(item.transmittal.status))
+          : checklistItem.sourceType === "warranty_gate"
+            ? hasGlobalWarrantyEvidence || warrantyPackageIds.has(item.id)
+            : null;
+      return {
+        id: checklistItem.id,
+        sequence: checklistItem.sequence,
+        title: checklistItem.title,
+        category: checklistItem.category,
+        required: checklistItem.required,
+        status: effectiveChecklistStatus({ ...checklistItem, sourceSatisfied }, blockerCount),
+        storedStatus: checklistItem.status,
+        sourceSatisfied,
+        sourceType: checklistItem.sourceType,
+        sourceId: checklistItem.sourceId,
+        documentId: checklistItem.documentId,
+        document: checklistItem.document,
+        notes: checklistItem.notes,
+        confirmedBy: checklistItem.confirmedBy,
+        confirmedAt: iso(checklistItem.confirmedAt),
+        updatedAt: checklistItem.updatedAt.toISOString()
+      };
+    })
   }));
   const warranties = project.warrantyObligations.map((item) => ({
     id: item.id,

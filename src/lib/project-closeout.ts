@@ -21,6 +21,7 @@ export type CloseoutChecklistLike = {
   required: boolean;
   status: string;
   sourceType: string;
+  sourceSatisfied?: boolean | null;
 };
 
 export type CloseoutPackageLike = {
@@ -189,9 +190,11 @@ export function effectiveWarrantyStatus(warranty: WarrantyLike, now = new Date()
 
 export function effectiveChecklistStatus(item: CloseoutChecklistLike, openAcceptanceBlockers: number): CloseoutChecklistStatus {
   if (item.sourceType === "quality_gate" && openAcceptanceBlockers > 0) return "blocked";
-  return closeoutChecklistStatuses.includes(item.status as CloseoutChecklistStatus)
+  const status = closeoutChecklistStatuses.includes(item.status as CloseoutChecklistStatus)
     ? item.status as CloseoutChecklistStatus
     : "pending";
+  if (status === "completed" && item.sourceSatisfied === false) return "blocked";
+  return status;
 }
 
 export function summarizeProjectCloseout(input: {

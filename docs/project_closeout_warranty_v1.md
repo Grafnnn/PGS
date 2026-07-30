@@ -22,7 +22,9 @@ Project Closeout & Warranty is the controlled final stage of a PGS project. It c
 - Uploaded or existing documents are candidates, not automatic proof of completion.
 - Document requirements cannot be completed without a document from the same project.
 - Open acceptance-blocking NCR, Punch or Defect records prevent quality-gate completion.
+- Completed evidence gates are revalidated against the linked document, issued transmittal, handover date and confirmed warranty basis.
 - Package acceptance, rejection, closure and final project completion require OWNER or ADMIN.
+- Closing a warranty obligation and releasing it from active retention control require OWNER or ADMIN.
 - Warranty dates, retention and contractual terms are never invented.
 - Every mutation is protected by project permissions and written to the project audit log.
 - Existing project documents, quality records, transmittals and billing data remain the source of truth.

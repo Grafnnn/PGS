@@ -530,7 +530,10 @@ export function ProjectCloseoutWorkspace({
               value={warranty.storedStatus}
               onChange={(event) => void mutate(`warranty-${warranty.id}`, { action: "update_warranty", id: warranty.id, status: event.target.value })}
             >
-              {[warranty.storedStatus, ...warrantyTransitions[warranty.storedStatus]].map((value) => <option key={value} value={value}>{warrantyStatusLabels[value]}</option>)}
+              {[
+                warranty.storedStatus,
+                ...warrantyTransitions[warranty.storedStatus].filter((value) => value !== "closed" || canApprove)
+              ].map((value) => <option key={value} value={value}>{warrantyStatusLabels[value]}</option>)}
             </select>
           </article>
         )) : <div className="empty-state compact">Гарантийные обязательства ещё не заведены.</div>}
