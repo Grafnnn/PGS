@@ -1,5 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { applyDailyProgressImpact, DailyProgressImpactError } from "@/lib/daily-progress-impact-db";
+import {
+  applyDailyProgressImpact,
+  DailyProgressImpactError,
+  loadDailyProgressImpact
+} from "@/lib/daily-progress-impact-db";
 
 const mocks = vi.hoisted(() => ({
   reportFind: vi.fn(),
@@ -132,7 +136,8 @@ describe("daily progress impact DB commit", () => {
   });
 
   it("claims and applies an approved report atomically with source traceability", async () => {
-    const result = await applyDailyProgressImpact("report-1", user);
+    const loaded = await loadDailyProgressImpact("report-1");
+    const result = await applyDailyProgressImpact("report-1", user, loaded!.fingerprint);
 
     expect(result.alreadyApplied).toBe(false);
     expect(mocks.reportClaim).toHaveBeenCalledWith({
@@ -182,7 +187,7 @@ describe("daily progress impact DB commit", () => {
       }
     });
 
-    const result = await applyDailyProgressImpact("report-1", user);
+    const result = await applyDailyProgressImpact("report-1", user, "stale-retry");
     expect(result.alreadyApplied).toBe(true);
     expect(result.actionId).toBe("action-1");
     expect(mocks.reportClaim).not.toHaveBeenCalled();
@@ -192,9 +197,20 @@ describe("daily progress impact DB commit", () => {
 
   it("does not retroactively apply legacy approved reports", async () => {
     mocks.reportFind.mockResolvedValue({ ...baseReport, impactStatus: "not_applicable" });
-    await expect(applyDailyProgressImpact("report-1", user)).rejects.toEqual(
+    await expect(applyDailyProgressImpact("report-1", user, "legacy")).rejects.toEqual(
       expect.objectContaining<Partial<DailyProgressImpactError>>({ status: 409 })
     );
     expect(mocks.reportClaim).not.toHaveBeenCalled();
+  });
+
+  it("rejects a stale preview before claiming or writing facts", async () => {
+    const loaded = await loadDailyProgressImpact("report-1");
+    mocks.scheduleFind.mockResolvedValue([{ ...schedule, actualQty: 75 }]);
+
+    await expect(applyDailyProgressImpact("report-1", user, loaded!.fingerprint)).rejects.toEqual(
+      expect.objectContaining<Partial<DailyProgressImpactError>>({ status: 409 })
+    );
+    expect(mocks.reportClaim).not.toHaveBeenCalled();
+    expect(mocks.progressCreateMany).not.toHaveBeenCalled();
   });
 });

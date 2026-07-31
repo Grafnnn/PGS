@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { writeAudit } from "@/lib/audit";
 import type { AppUser } from "@/lib/auth/permissions";
@@ -20,6 +21,7 @@ export interface LoadedDailyProgressImpact {
   projectId: string;
   report: DailyReport;
   preview: DailyProgressImpactPreview;
+  fingerprint: string;
 }
 
 export interface AppliedDailyProgressImpact extends LoadedDailyProgressImpact {
@@ -37,6 +39,10 @@ function actor(user: AppUser) {
   };
 }
 
+function impactFingerprint(preview: DailyProgressImpactPreview) {
+  return createHash("sha256").update(JSON.stringify(preview)).digest("hex");
+}
+
 async function loadWithClient(client: Prisma.TransactionClient | typeof prisma, reportId: string) {
   const report = await client.dailyReport.findUnique({ where: { id: reportId } });
   if (!report) return null;
@@ -47,6 +53,7 @@ async function loadWithClient(client: Prisma.TransactionClient | typeof prisma, 
   const serializedReport = serializeDailyReport(report);
   const serializedSchedule = scheduleItems.map(serializeScheduleItem);
   const serializedMaterials = materials.map(serializeMaterial);
+  const preview = buildDailyProgressImpact(serializedReport, serializedSchedule, serializedMaterials);
   return {
     projectId: report.projectId,
     organizationId: report.organizationId,
@@ -54,7 +61,8 @@ async function loadWithClient(client: Prisma.TransactionClient | typeof prisma, 
     report: serializedReport,
     scheduleItems: serializedSchedule,
     materials: serializedMaterials,
-    preview: buildDailyProgressImpact(serializedReport, serializedSchedule, serializedMaterials)
+    preview,
+    fingerprint: impactFingerprint(preview)
   };
 }
 
@@ -65,10 +73,14 @@ export async function findDailyProgressProjectId(reportId: string) {
 export async function loadDailyProgressImpact(reportId: string): Promise<LoadedDailyProgressImpact | null> {
   const loaded = await loadWithClient(prisma, reportId);
   if (!loaded) return null;
-  return { projectId: loaded.projectId, report: loaded.report, preview: loaded.preview };
+  return { projectId: loaded.projectId, report: loaded.report, preview: loaded.preview, fingerprint: loaded.fingerprint };
 }
 
-export async function applyDailyProgressImpact(reportId: string, user: AppUser): Promise<AppliedDailyProgressImpact> {
+export async function applyDailyProgressImpact(
+  reportId: string,
+  user: AppUser,
+  expectedFingerprint: string
+): Promise<AppliedDailyProgressImpact> {
   return prisma.$transaction(async (tx) => {
     const loaded = await loadWithClient(tx, reportId);
     if (!loaded) throw new DailyProgressImpactError("Daily report not found", 404);
@@ -83,11 +95,15 @@ export async function applyDailyProgressImpact(reportId: string, user: AppUser):
         projectId: loaded.projectId,
         report: loaded.report,
         preview: loaded.preview,
+        fingerprint: loaded.fingerprint,
         alreadyApplied: true,
         scheduleItems: [],
         materials: [],
         actionId: loaded.report.impactSummary?.actionId ?? null
       };
+    }
+    if (loaded.fingerprint !== expectedFingerprint) {
+      throw new DailyProgressImpactError("Связанные данные изменились. Повторно откройте предпросмотр перед применением факта.", 409);
     }
     if (loaded.preview.blockers.length) {
       throw new DailyProgressImpactError(loaded.preview.blockers[0], 409);
@@ -105,6 +121,7 @@ export async function applyDailyProgressImpact(reportId: string, user: AppUser):
           projectId: loaded.projectId,
           report: currentReport,
           preview: { ...loaded.preview, status: "applied" },
+          fingerprint: loaded.fingerprint,
           alreadyApplied: true,
           scheduleItems: [],
           materials: [],
@@ -227,6 +244,7 @@ export async function applyDailyProgressImpact(reportId: string, user: AppUser):
       projectId: loaded.projectId,
       report,
       preview: { ...loaded.preview, status: "applied", summary },
+      fingerprint: loaded.fingerprint,
       alreadyApplied: false,
       scheduleItems: changedSchedule.map(serializeScheduleItem),
       materials: changedMaterials.map(serializeMaterial),

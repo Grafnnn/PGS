@@ -16,10 +16,18 @@ export const dailyReportMaterialActualSchema = z.object({
 export const dailyReportEquipmentActualSchema = z.object({
   name: z.string().trim().min(2).max(180),
   quantity: z.coerce.number().int().positive().max(10_000),
-  hours: z.coerce.number().positive().max(100_000),
+  hours: z.coerce.number().nonnegative().max(100_000),
   downtimeHours: z.coerce.number().nonnegative().max(100_000).default(0),
   note: z.string().trim().max(500).optional()
-}).strict();
+}).strict().superRefine((item, context) => {
+  if (item.hours === 0 && item.downtimeHours === 0) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Рабочие часы или простой должны быть больше нуля",
+      path: ["hours"]
+    });
+  }
+});
 
 export const dailyReportMaterialActualsSchema = z.array(dailyReportMaterialActualSchema).max(60);
 export const dailyReportEquipmentActualsSchema = z.array(dailyReportEquipmentActualSchema).max(30);
@@ -66,8 +74,9 @@ export function dailyReportEquipmentActualsComplete(actuals: DailyReportEquipmen
     Number.isInteger(item.quantity) &&
     item.quantity > 0 &&
     Number.isFinite(item.hours) &&
-    item.hours > 0 &&
+    item.hours >= 0 &&
     Number.isFinite(item.downtimeHours) &&
-    item.downtimeHours >= 0
+    item.downtimeHours >= 0 &&
+    (item.hours > 0 || item.downtimeHours > 0)
   );
 }

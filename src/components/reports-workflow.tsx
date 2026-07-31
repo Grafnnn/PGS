@@ -130,6 +130,7 @@ export function ReportsWorkflow({
   const [publishConfirmed, setPublishConfirmed] = useState(false);
   const [copied, setCopied] = useState(false);
   const [impactByReport, setImpactByReport] = useState<Record<string, DailyProgressImpactPreview>>({});
+  const [impactFingerprintByReport, setImpactFingerprintByReport] = useState<Record<string, string>>({});
   const [impactConfirmedId, setImpactConfirmedId] = useState<string | null>(null);
 
   const role = currentUser?.role;
@@ -281,8 +282,9 @@ export function ReportsWorkflow({
     try {
       const response = await fetch(`/api/daily-reports/${item.id}/impact`, { cache: "no-store" });
       if (!response.ok) throw new Error(await responseError(response, "Не удалось рассчитать влияние рапорта."));
-      const body = (await response.json()) as { preview: DailyProgressImpactPreview };
+      const body = (await response.json()) as { preview: DailyProgressImpactPreview; fingerprint: string };
       setImpactByReport((current) => ({ ...current, [item.id]: body.preview }));
+      setImpactFingerprintByReport((current) => ({ ...current, [item.id]: body.fingerprint }));
       setImpactConfirmedId(null);
     } catch (impactError) {
       setError(impactError instanceof Error ? impactError.message : "Не удалось рассчитать влияние рапорта.");
@@ -292,14 +294,15 @@ export function ReportsWorkflow({
   }
 
   async function applyImpact(item: DailyReport) {
-    if (impactConfirmedId !== item.id) return;
+    const fingerprint = impactFingerprintByReport[item.id];
+    if (impactConfirmedId !== item.id || !fingerprint) return;
     setBusy(`impact-apply-${item.id}`);
     setError("");
     try {
       const response = await fetch(`/api/daily-reports/${item.id}/impact`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ confirmed: true })
+        body: JSON.stringify({ confirmed: true, fingerprint })
       });
       if (!response.ok) throw new Error(await responseError(response, "Не удалось применить утвержденный факт."));
       const body = (await response.json()) as {
@@ -513,7 +516,7 @@ export function ReportsWorkflow({
                 {item.status === "approved" && item.impactStatus !== "applied" && canEdit && impactByReport[item.id].status !== "blocked" ? (
                   <div className="daily-progress-impact-commit">
                     <label><input checked={impactConfirmedId === item.id} type="checkbox" onChange={(event) => setImpactConfirmedId(event.target.checked ? item.id : null)} /> Подтверждаю запись факта в график, материалы и связанные расчеты</label>
-                    <button className="button primary compact-button" disabled={impactConfirmedId !== item.id || busy === `impact-apply-${item.id}`} type="button" onClick={() => void applyImpact(item)}><CheckCircle2 size={15} /> {busy === `impact-apply-${item.id}` ? "Применяю..." : "Применить факт"}</button>
+                    <button className="button primary compact-button" disabled={impactConfirmedId !== item.id || !impactFingerprintByReport[item.id] || busy === `impact-apply-${item.id}`} type="button" onClick={() => void applyImpact(item)}><CheckCircle2 size={15} /> {busy === `impact-apply-${item.id}` ? "Применяю..." : "Применить факт"}</button>
                   </div>
                 ) : null}
               </div>

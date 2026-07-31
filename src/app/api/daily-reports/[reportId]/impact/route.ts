@@ -10,7 +10,10 @@ import {
   loadDailyProgressImpact
 } from "@/lib/daily-progress-impact-db";
 
-const applySchema = z.object({ confirmed: z.literal(true) }).strict();
+const applySchema = z.object({
+  confirmed: z.literal(true),
+  fingerprint: z.string().regex(/^[a-f0-9]{64}$/)
+}).strict();
 
 async function authorizedProject(reportId: string, action: "view" | "edit") {
   const user = await getCurrentUser();
@@ -40,8 +43,8 @@ export async function POST(request: NextRequest, { params }: { params: { reportI
     const access = await authorizedProject(params.reportId, "edit");
     if (access.status === 403 || !access.user) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     if (access.status === 404) return NextResponse.json({ error: "Daily report not found" }, { status: 404 });
-    applySchema.parse(await request.json().catch(() => ({})));
-    const applied = await applyDailyProgressImpact(params.reportId, access.user);
+    const data = applySchema.parse(await request.json().catch(() => ({})));
+    const applied = await applyDailyProgressImpact(params.reportId, access.user, data.fingerprint);
     return NextResponse.json(applied, { status: applied.alreadyApplied ? 200 : 201 });
   } catch (error) {
     if (error instanceof DailyProgressImpactError) return NextResponse.json({ error: error.message }, { status: error.status });

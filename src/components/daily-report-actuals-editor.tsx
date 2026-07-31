@@ -84,8 +84,8 @@ export function DailyReportActualsEditor({
               <div className="daily-report-equipment-row" key={index}>
                 <label className="field actual-name"><span>Техника</span><input required minLength={2} value={actual.name} onChange={(event) => updateEquipment(index, { name: event.target.value })} placeholder="Экскаватор" /></label>
                 <label className="field"><span>Единиц</span><input min={1} required step={1} type="number" value={actual.quantity || ""} onChange={(event) => updateEquipment(index, { quantity: Number(event.target.value) })} /></label>
-                <label className="field"><span>Маш.-ч</span><input min={0.1} required step="0.1" type="number" value={actual.hours || ""} onChange={(event) => updateEquipment(index, { hours: Number(event.target.value) })} /></label>
-                <label className="field"><span>Простой, ч</span><input min={0} step="0.1" type="number" value={actual.downtimeHours || ""} onChange={(event) => updateEquipment(index, { downtimeHours: Number(event.target.value) })} /></label>
+                <label className="field"><span>Маш.-ч</span><input min={0} required step="0.1" type="number" value={actual.hours} onChange={(event) => updateEquipment(index, { hours: Number(event.target.value) })} /></label>
+                <label className="field"><span>Простой, ч</span><input min={0} step="0.1" type="number" value={actual.downtimeHours} onChange={(event) => updateEquipment(index, { downtimeHours: Number(event.target.value) })} /></label>
                 <label className="field actual-note"><span>Комментарий</span><input maxLength={500} value={actual.note ?? ""} onChange={(event) => updateEquipment(index, { note: event.target.value })} /></label>
                 <button className="icon-button danger" title="Удалить строку техники" type="button" onClick={() => onEquipmentChange(equipmentActuals.filter((_, itemIndex) => itemIndex !== index))}><Trash2 size={16} /></button>
               </div>

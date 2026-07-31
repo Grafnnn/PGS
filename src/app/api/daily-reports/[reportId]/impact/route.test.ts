@@ -22,7 +22,8 @@ vi.mock("@/lib/daily-progress-impact-db", () => ({
 const preview = {
   projectId: "project-1",
   report: { id: "report-1", impactStatus: "pending" },
-  preview: { reportId: "report-1", status: "ready", blockers: [], warnings: [] }
+  preview: { reportId: "report-1", status: "ready", blockers: [], warnings: [] },
+  fingerprint: "a".repeat(64)
 };
 
 describe("daily progress impact route", () => {
@@ -65,9 +66,9 @@ describe("daily progress impact route", () => {
     const response = await POST(new Request("https://pgs.local", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ confirmed: true })
+      body: JSON.stringify({ confirmed: true, fingerprint: preview.fingerprint })
     }) as never, { params: { reportId: "report-1" } });
     expect(response.status).toBe(201);
-    expect(applyDailyProgressImpact).toHaveBeenCalledWith("report-1", expect.objectContaining({ id: "manager-1" }));
+    expect(applyDailyProgressImpact).toHaveBeenCalledWith("report-1", expect.objectContaining({ id: "manager-1" }), preview.fingerprint);
   });
 });
