@@ -434,6 +434,8 @@ async function createProjectResource(projectId: string, resource: string | undef
         data: {
           ...data,
           workOutputs: data.workOutputs as unknown as Prisma.InputJsonValue,
+          materialActuals: data.materialActuals as unknown as Prisma.InputJsonValue,
+          equipmentActuals: data.equipmentActuals as unknown as Prisma.InputJsonValue,
           status: "draft",
           organizationId: project.organizationId,
           projectId,
@@ -598,6 +600,12 @@ async function updateResource(resource: string, id: string, body: unknown) {
           ...data,
           ...(data.workOutputs !== undefined
             ? { workOutputs: data.workOutputs as unknown as Prisma.InputJsonValue }
+            : {}),
+          ...(data.materialActuals !== undefined
+            ? { materialActuals: data.materialActuals as unknown as Prisma.InputJsonValue }
+            : {}),
+          ...(data.equipmentActuals !== undefined
+            ? { equipmentActuals: data.equipmentActuals as unknown as Prisma.InputJsonValue }
             : {})
         }
       });

@@ -7,7 +7,8 @@ export const inboxSourceTypes = [
   "commitment",
   "payment_application",
   "closeout_package",
-  "warranty_obligation"
+  "warranty_obligation",
+  "daily_report"
 ] as const;
 
 export type InboxSourceType = (typeof inboxSourceTypes)[number];
@@ -23,7 +24,8 @@ export type InboxDecision =
   | { type: "change_order"; changeOrderId: string; actions: InboxDecisionAction[] }
   | { type: "commitment"; commitmentId: string; actions: InboxDecisionAction[] }
   | { type: "payment_application"; commitmentId: string; applicationId: string; actions: Array<"approve" | "reject"> }
-  | { type: "closeout_package"; packageId: string; actions: InboxDecisionAction[] };
+  | { type: "closeout_package"; packageId: string; actions: InboxDecisionAction[] }
+  | { type: "daily_report"; reportId: string; actions: ["approve"] };
 
 export interface InboxItemStateValue {
   readAt: string | null;
@@ -155,6 +157,12 @@ export function inboxDecisionRequest(item: ApprovalInboxItem, action: InboxDecis
         status,
         decisionComment: comment || (action === "approve" ? "Пакет принят через Approval Inbox." : "Пакет возвращён через Approval Inbox.")
       }
+    };
+  }
+  if (item.decision.type === "daily_report") {
+    return {
+      url: `/api/daily-reports/${encodeURIComponent(item.decision.reportId)}`,
+      body: { status: "approved" }
     };
   }
   return {

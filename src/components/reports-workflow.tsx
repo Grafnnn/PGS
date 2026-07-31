@@ -1,10 +1,15 @@
 "use client";
 
 import {
+  Activity,
+  AlertOctagon,
   Check,
+  CheckCircle2,
   ClipboardCopy,
+  Eye,
   FileDown,
   FilePlus2,
+  Link2,
   Pencil,
   Plus,
   RefreshCw,
@@ -15,11 +20,24 @@ import {
   X
 } from "lucide-react";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { DailyReportActualsEditor } from "@/components/daily-report-actuals-editor";
 import { DailyReportWorkOutputEditor } from "@/components/daily-report-work-output-editor";
+import {
+  dailyReportEquipmentActualsComplete,
+  dailyReportMaterialActualsComplete
+} from "@/lib/daily-report-actuals";
+import type { DailyProgressImpactPreview } from "@/lib/daily-progress-impact";
 import { dailyReportWorkOutputNorm, dailyReportWorkOutputsComplete } from "@/lib/daily-report-work-outputs";
 import { dailyReportStatusLabel } from "@/lib/daily-reports";
 import type { SerializedExecutiveReport } from "@/lib/executive-reports";
-import type { DailyReport, DailyReportWorkOutput } from "@/lib/types";
+import type {
+  DailyReport,
+  DailyReportEquipmentActual,
+  DailyReportMaterialActual,
+  DailyReportWorkOutput,
+  Material,
+  ScheduleItem
+} from "@/lib/types";
 
 type UserContext = {
   role?: "OWNER" | "ADMIN" | "MANAGER" | "VIEWER";
@@ -30,13 +48,31 @@ type UserContext = {
 type Props = {
   projectId: string;
   reports: DailyReport[];
+  scheduleItems: ScheduleItem[];
+  materials: Material[];
   currentUser: UserContext | null;
   currentUserLoaded: boolean;
   onReportsChange: (items: DailyReport[]) => void;
+  onScheduleItemsChange: (items: ScheduleItem[]) => void;
+  onMaterialsChange: (items: Material[]) => void;
 };
 
-type ReportForm = Omit<DailyReport, "id" | "projectId" | "status" | "workOutputs"> & {
+type ReportForm = Omit<
+  DailyReport,
+  | "id"
+  | "projectId"
+  | "status"
+  | "workOutputs"
+  | "materialActuals"
+  | "equipmentActuals"
+  | "impactStatus"
+  | "impactAppliedAt"
+  | "impactAppliedBy"
+  | "impactSummary"
+> & {
   workOutputs: DailyReportWorkOutput[];
+  materialActuals: DailyReportMaterialActual[];
+  equipmentActuals: DailyReportEquipmentActual[];
 };
 
 const emptyReport = (author = "Прораб"): ReportForm => ({
@@ -51,11 +87,13 @@ const emptyReport = (author = "Прораб"): ReportForm => ({
   materialsConsumed: "",
   downtime: "",
   issues: "",
-  workOutputs: []
+  workOutputs: [],
+  materialActuals: [],
+  equipmentActuals: []
 });
 
 function tone(status: string) {
-  if (status === "approved" || status === "published") return "green";
+  if (status === "approved" || status === "published" || status === "ready" || status === "applied") return "green";
   if (status === "checked") return "blue";
   if (status === "submitted" || status === "partial") return "yellow";
   if (status === "blocked" || status === "no_data") return "red";
@@ -68,7 +106,17 @@ async function responseError(response: Response, fallback: string) {
   return body.error ?? fallback;
 }
 
-export function ReportsWorkflow({ projectId, reports, currentUser, currentUserLoaded, onReportsChange }: Props) {
+export function ReportsWorkflow({
+  projectId,
+  reports,
+  scheduleItems,
+  materials,
+  currentUser,
+  currentUserLoaded,
+  onReportsChange,
+  onScheduleItemsChange,
+  onMaterialsChange
+}: Props) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [form, setForm] = useState<ReportForm>(() => emptyReport(currentUser?.name));
@@ -81,6 +129,8 @@ export function ReportsWorkflow({ projectId, reports, currentUser, currentUserLo
   const [executiveLoaded, setExecutiveLoaded] = useState(false);
   const [publishConfirmed, setPublishConfirmed] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [impactByReport, setImpactByReport] = useState<Record<string, DailyProgressImpactPreview>>({});
+  const [impactConfirmedId, setImpactConfirmedId] = useState<string | null>(null);
 
   const role = currentUser?.role;
   const canEdit = role === "OWNER" || role === "ADMIN" || role === "MANAGER";
@@ -90,7 +140,9 @@ export function ReportsWorkflow({ projectId, reports, currentUser, currentUserLo
   const missingRequiredFields = [
     !form.author.trim() ? "автор" : "",
     !form.completedWorks.trim() ? "выполненные работы" : "",
-    !dailyReportWorkOutputsComplete(form.workOutputs) ? "полные строки фактической выработки" : ""
+    !dailyReportWorkOutputsComplete(form.workOutputs) ? "полные строки фактической выработки" : "",
+    !dailyReportMaterialActualsComplete(form.materialActuals) ? "полные строки движения материалов" : "",
+    !dailyReportEquipmentActualsComplete(form.equipmentActuals) ? "полные строки техники" : ""
   ].filter(Boolean);
 
   const loadDailyReports = useCallback(async () => {
@@ -160,7 +212,9 @@ export function ReportsWorkflow({ projectId, reports, currentUser, currentUserLo
       materialsConsumed: item.materialsConsumed,
       downtime: item.downtime,
       issues: item.issues,
-      workOutputs: item.workOutputs ?? []
+      workOutputs: item.workOutputs ?? [],
+      materialActuals: item.materialActuals ?? [],
+      equipmentActuals: item.equipmentActuals ?? []
     });
     setFormOpen(true);
     setError("");
@@ -216,6 +270,53 @@ export function ReportsWorkflow({ projectId, reports, currentUser, currentUserLo
       onReportsChange(reports.filter((current) => current.id !== item.id));
     } catch (deleteError) {
       setError(deleteError instanceof Error ? deleteError.message : "Не удалось удалить рапорт.");
+    } finally {
+      setBusy("");
+    }
+  }
+
+  async function previewImpact(item: DailyReport) {
+    setBusy(`impact-preview-${item.id}`);
+    setError("");
+    try {
+      const response = await fetch(`/api/daily-reports/${item.id}/impact`, { cache: "no-store" });
+      if (!response.ok) throw new Error(await responseError(response, "Не удалось рассчитать влияние рапорта."));
+      const body = (await response.json()) as { preview: DailyProgressImpactPreview };
+      setImpactByReport((current) => ({ ...current, [item.id]: body.preview }));
+      setImpactConfirmedId(null);
+    } catch (impactError) {
+      setError(impactError instanceof Error ? impactError.message : "Не удалось рассчитать влияние рапорта.");
+    } finally {
+      setBusy("");
+    }
+  }
+
+  async function applyImpact(item: DailyReport) {
+    if (impactConfirmedId !== item.id) return;
+    setBusy(`impact-apply-${item.id}`);
+    setError("");
+    try {
+      const response = await fetch(`/api/daily-reports/${item.id}/impact`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ confirmed: true })
+      });
+      if (!response.ok) throw new Error(await responseError(response, "Не удалось применить утвержденный факт."));
+      const body = (await response.json()) as {
+        report: DailyReport;
+        preview: DailyProgressImpactPreview;
+        scheduleItems: ScheduleItem[];
+        materials: Material[];
+      };
+      onReportsChange(reports.map((current) => current.id === item.id ? body.report : current));
+      const changedSchedule = new Map(body.scheduleItems.map((current) => [current.id, current]));
+      const changedMaterials = new Map(body.materials.map((current) => [current.id, current]));
+      onScheduleItemsChange(scheduleItems.map((current) => changedSchedule.get(current.id) ?? current));
+      onMaterialsChange(materials.map((current) => changedMaterials.get(current.id) ?? current));
+      setImpactByReport((current) => ({ ...current, [item.id]: body.preview }));
+      setImpactConfirmedId(null);
+    } catch (impactError) {
+      setError(impactError instanceof Error ? impactError.message : "Не удалось применить утвержденный факт.");
     } finally {
       setBusy("");
     }
@@ -331,7 +432,14 @@ export function ReportsWorkflow({ projectId, reports, currentUser, currentUserLo
             <label>Простои<textarea rows={2} value={form.downtime} onChange={(event) => setForm({ ...form, downtime: event.target.value })} /></label>
             <label>Проблемы / замечания<textarea rows={2} value={form.issues} onChange={(event) => setForm({ ...form, issues: event.target.value })} /></label>
           </div>
-          <DailyReportWorkOutputEditor outputs={form.workOutputs} onChange={(workOutputs) => setForm({ ...form, workOutputs })} />
+          <DailyReportWorkOutputEditor outputs={form.workOutputs} scheduleItems={scheduleItems} onChange={(workOutputs) => setForm({ ...form, workOutputs })} />
+          <DailyReportActualsEditor
+            materials={materials}
+            materialActuals={form.materialActuals}
+            equipmentActuals={form.equipmentActuals}
+            onMaterialsChange={(materialActuals) => setForm({ ...form, materialActuals })}
+            onEquipmentChange={(equipmentActuals) => setForm({ ...form, equipmentActuals })}
+          />
           {missingRequiredFields.length ? <p className="form-hint" role="status">Для сохранения заполните: {missingRequiredFields.join(", ")}.</p> : null}
           <div className="form-actions">
             <button className="button primary" disabled={busy === "daily-save" || missingRequiredFields.length > 0} type="button" onClick={() => void saveReport()}>
@@ -360,9 +468,16 @@ export function ReportsWorkflow({ projectId, reports, currentUser, currentUserLo
                       <strong>{output.profession} · {output.workName}</strong>
                       {output.quantity.toLocaleString("ru-RU", { maximumFractionDigits: 3 })} {output.unit}
                       {actual ? ` · ${actual.norm.toLocaleString("ru-RU", { maximumFractionDigits: 3 })} ${actual.unit}` : ""}
+                      {output.scheduleItemId ? " · график связан" : " · только ФОТ"}
                     </span>
                   );
                 })}
+              </div>
+            ) : null}
+            {item.materialActuals?.length || item.equipmentActuals?.length ? (
+              <div className="daily-report-structured-facts">
+                {item.materialActuals?.length ? <span><Link2 size={14} /> Материалы: {item.materialActuals.length}</span> : null}
+                {item.equipmentActuals?.length ? <span><Activity size={14} /> Техника: {item.equipmentActuals.length}</span> : null}
               </div>
             ) : null}
             {item.issues || item.downtime ? <div className="daily-report-alert">{item.issues || item.downtime}</div> : null}
@@ -371,8 +486,38 @@ export function ReportsWorkflow({ projectId, reports, currentUser, currentUserLo
               {item.status === "draft" && canEdit ? <button className="button primary compact-button" disabled={busy === `daily-${item.id}`} type="button" onClick={() => void transitionReport(item, "submitted")}><Send size={15} /> Отправить</button> : null}
               {item.status === "submitted" && canEdit ? <button className="button primary compact-button" disabled={busy === `daily-${item.id}`} type="button" onClick={() => void transitionReport(item, "checked")}><Check size={15} /> Проверить</button> : null}
               {item.status === "checked" && canApprove ? <button className="button primary compact-button" disabled={busy === `daily-${item.id}`} type="button" onClick={() => void transitionReport(item, "approved")}><ShieldCheck size={15} /> Утвердить</button> : null}
+              {(item.status === "checked" || (item.status === "approved" && item.impactStatus !== "not_applicable")) ? <button className="button secondary compact-button" disabled={busy === `impact-preview-${item.id}`} type="button" onClick={() => void previewImpact(item)}><Eye size={15} /> {item.impactStatus === "applied" ? "Показать применение" : "Проверить влияние"}</button> : null}
               {item.status === "draft" && canApprove ? <button className="icon-button danger" type="button" title="Удалить черновик" onClick={() => void removeReport(item)}><Trash2 size={16} /></button> : null}
+              {item.status === "approved" ? <span className={`badge ${item.impactStatus === "applied" ? "green" : item.impactStatus === "not_applicable" ? "gray" : "yellow"}`}>{item.impactStatus === "applied" ? "Факт применен" : item.impactStatus === "not_applicable" ? "Архивный рапорт" : "Ожидает применения"}</span> : null}
             </div>
+            {impactByReport[item.id] ? (
+              <div className={`daily-progress-impact state-${impactByReport[item.id].status}`}>
+                <div className="daily-progress-impact-heading">
+                  <div>
+                    {impactByReport[item.id].status === "blocked" ? <AlertOctagon size={18} /> : <CheckCircle2 size={18} />}
+                    <span><strong>Влияние утвержденного факта</strong><small>{impactByReport[item.id].status === "applied" ? "Изменения уже записаны и повторно не применяются." : "Предпросмотр не меняет данные проекта."}</small></span>
+                  </div>
+                  <span className={`badge ${tone(impactByReport[item.id].status)}`}>{impactByReport[item.id].status}</span>
+                </div>
+                <div className="daily-progress-impact-metrics">
+                  <span><small>График</small><strong>{impactByReport[item.id].summary.scheduleItemCount}</strong></span>
+                  <span><small>Факт работ</small><strong>{impactByReport[item.id].summary.progressEntryCount}</strong></span>
+                  <span><small>Материалы</small><strong>{impactByReport[item.id].summary.materialUpdateCount}</strong></span>
+                  <span><small>Труд</small><strong>{impactByReport[item.id].summary.laborHours.toLocaleString("ru-RU")} ч</strong></span>
+                  <span><small>КС-кандидаты</small><strong>{impactByReport[item.id].summary.acceptanceCandidateCount}</strong></span>
+                </div>
+                {impactByReport[item.id].scheduleUpdates.length ? <div className="daily-progress-impact-lines">{impactByReport[item.id].scheduleUpdates.map((update) => <span key={update.scheduleItemId}><strong>{update.name}</strong>{update.beforeActualQty.toLocaleString("ru-RU")} → {update.afterActualQty.toLocaleString("ru-RU")} · {update.nextStatus}</span>)}</div> : null}
+                {impactByReport[item.id].materialUpdates.length ? <div className="daily-progress-impact-lines">{impactByReport[item.id].materialUpdates.map((update) => <span key={update.materialId}><strong>{update.name}</strong>+{update.receivedQty.toLocaleString("ru-RU")} получено · +{update.consumedQty.toLocaleString("ru-RU")} расход</span>)}</div> : null}
+                {impactByReport[item.id].warnings.length ? <div className="daily-progress-impact-notes warn">{impactByReport[item.id].warnings.map((message) => <span key={message}>{message}</span>)}</div> : null}
+                {impactByReport[item.id].blockers.length ? <div className="daily-progress-impact-notes bad">{impactByReport[item.id].blockers.map((message) => <span key={message}>{message}</span>)}</div> : null}
+                {item.status === "approved" && item.impactStatus !== "applied" && canEdit && impactByReport[item.id].status !== "blocked" ? (
+                  <div className="daily-progress-impact-commit">
+                    <label><input checked={impactConfirmedId === item.id} type="checkbox" onChange={(event) => setImpactConfirmedId(event.target.checked ? item.id : null)} /> Подтверждаю запись факта в график, материалы и связанные расчеты</label>
+                    <button className="button primary compact-button" disabled={impactConfirmedId !== item.id || busy === `impact-apply-${item.id}`} type="button" onClick={() => void applyImpact(item)}><CheckCircle2 size={15} /> {busy === `impact-apply-${item.id}` ? "Применяю..." : "Применить факт"}</button>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
           </article>
         )) : <div className="reports-empty">Рапортов пока нет. Первый рапорт создаётся только после заполнения и сохранения формы.</div>}
       </div>

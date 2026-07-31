@@ -72,7 +72,8 @@ const sourceOptions: Array<{ value: InboxSourceType | "all"; label: string }> = 
   { value: "commitment", label: "Обязательства" },
   { value: "payment_application", label: "Заявки на оплату" },
   { value: "closeout_package", label: "Сдача объекта" },
-  { value: "warranty_obligation", label: "Гарантии" }
+  { value: "warranty_obligation", label: "Гарантии" },
+  { value: "daily_report", label: "Рапорты площадки" }
 ];
 
 const decisionLabels: Record<InboxDecisionAction, string> = {

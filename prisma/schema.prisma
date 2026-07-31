@@ -316,21 +316,26 @@ model ScheduleItem {
 }
 
 model WorkProgressEntry {
-  id             String   @id @default(cuid())
-  organizationId String   @map("organization_id")
-  projectId      String   @map("project_id")
-  scheduleItemId String?  @map("schedule_item_id")
-  date           DateTime
-  qty            Decimal  @db.Decimal(14, 3)
-  performer      String
-  documentId     String?  @map("document_id")
-  comment        String?
-  status         String   @default("draft")
-  createdBy      String?  @map("created_by")
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
-  project        Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  id                  String       @id @default(cuid())
+  organizationId      String       @map("organization_id")
+  projectId           String       @map("project_id")
+  scheduleItemId      String?      @map("schedule_item_id")
+  sourceDailyReportId String?      @map("source_daily_report_id")
+  sourceOutputIndex   Int?         @map("source_output_index")
+  date                DateTime
+  qty                 Decimal      @db.Decimal(14, 3)
+  performer           String
+  documentId          String?      @map("document_id")
+  comment             String?
+  status              String       @default("draft")
+  createdBy           String?      @map("created_by")
+  createdAt           DateTime     @default(now()) @map("created_at")
+  updatedAt           DateTime     @updatedAt @map("updated_at")
+  project             Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  sourceDailyReport   DailyReport? @relation(fields: [sourceDailyReportId], references: [id], onDelete: SetNull)
 
+  @@unique([sourceDailyReportId, sourceOutputIndex])
+  @@index([sourceDailyReportId])
   @@map("work_progress_entries")
 }
 
@@ -567,14 +572,22 @@ model DailyReport {
   downtime          String
   issues            String
   workOutputs       Json?                 @map("work_outputs")
+  materialActuals   Json?                 @map("material_actuals")
+  equipmentActuals  Json?                 @map("equipment_actuals")
   status            String
+  impactStatus      String                @default("pending") @map("impact_status")
+  impactAppliedAt   DateTime?             @map("impact_applied_at")
+  impactAppliedBy   String?               @map("impact_applied_by")
+  impactSummary     Json?                 @map("impact_summary")
   createdBy         String?               @map("created_by")
   createdAt         DateTime              @default(now()) @map("created_at")
   updatedAt         DateTime              @updatedAt @map("updated_at")
   project           Project               @relation(fields: [projectId], references: [id], onDelete: Cascade)
   qualityIssues     ProjectQualityIssue[]
+  progressEntries   WorkProgressEntry[]
 
   @@index([organizationId, status, date])
+  @@index([projectId, impactStatus, date])
   @@map("daily_reports")
 }
 

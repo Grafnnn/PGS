@@ -1,5 +1,9 @@
 import { z } from "zod";
 import { dailyReportWorkOutputsSchema } from "@/lib/daily-report-work-outputs";
+import {
+  dailyReportEquipmentActualsSchema,
+  dailyReportMaterialActualsSchema
+} from "@/lib/daily-report-actuals";
 
 export const projectSchema = z.object({
   name: z.string().min(2),
@@ -107,6 +111,8 @@ export const dailyReportSchema = z.object({
   downtime: z.string().default(""),
   issues: z.string().default(""),
   workOutputs: dailyReportWorkOutputsSchema.default([]),
+  materialActuals: dailyReportMaterialActualsSchema.default([]),
+  equipmentActuals: dailyReportEquipmentActualsSchema.default([]),
   status: z.enum(["draft", "submitted", "checked", "approved"]).default("draft")
 });
 

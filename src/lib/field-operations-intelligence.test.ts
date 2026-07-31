@@ -17,6 +17,16 @@ const reports: DailyReport[] = [
     materialsConsumed: "Металл",
     downtime: "Простой крана 2 часа из-за дождя",
     issues: "Не хватает металла на следующий фронт",
+    workOutputs: [{
+      profession: "Монтажник",
+      workName: "Монтаж каркаса",
+      quantity: 4,
+      unit: "т",
+      laborHours: 32,
+      scheduleItemId: "schedule-1"
+    }],
+    materialActuals: [{ materialId: "mat-1", kind: "consumed", quantity: 3, unit: "т" }],
+    equipmentActuals: [{ name: "Кран", quantity: 1, hours: 6, downtimeHours: 2 }],
     status: "submitted"
   }
 ];
@@ -101,6 +111,7 @@ describe("field operations intelligence", () => {
     expect(model.summary.totalEngineers).toBe(2);
     expect(model.summary.downtimeReports).toBe(1);
     expect(model.summary.issueReports).toBe(1);
+    expect(model.summary.equipmentMentions).toBe(1);
     expect(model.summary.linkedScheduleItems).toBe(1);
     expect(model.summary.materialSignals).toBe(1);
     expect(model.signals.some((signal) => signal.targetTab === "График")).toBe(true);

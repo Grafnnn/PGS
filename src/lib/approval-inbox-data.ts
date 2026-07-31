@@ -123,7 +123,7 @@ export async function loadApprovalInbox(user: AppUser, now = new Date()): Promis
   const projectIds = projects.map((project) => project.id);
   if (!projectIds.length) return { items: [], summary: summarizeApprovalInbox([]), projects: [], scopeByKey: new Map() };
 
-  const [workflowRuns, actionItems, changeOrders, commitments, paymentApplications, closeoutPackages, warrantyObligations] = await Promise.all([
+  const [workflowRuns, actionItems, changeOrders, commitments, paymentApplications, closeoutPackages, warrantyObligations, dailyReports] = await Promise.all([
     prisma.projectWorkflowRun.findMany({
       where: { projectId: { in: projectIds }, status: "active", steps: { some: { status: "active" } } },
       orderBy: { updatedAt: "desc" },
@@ -251,6 +251,30 @@ export async function loadApprovalInbox(user: AppUser, now = new Date()): Promis
         noticeDays: true,
         retentionAmount: true,
         retentionReleaseAt: true,
+        createdAt: true,
+        updatedAt: true
+      }
+    }),
+    prisma.dailyReport.findMany({
+      where: {
+        projectId: { in: projectIds },
+        OR: [
+          { status: "checked" },
+          { status: "approved", impactStatus: "pending" }
+        ]
+      },
+      orderBy: { updatedAt: "desc" },
+      take: 250,
+      select: {
+        id: true,
+        projectId: true,
+        date: true,
+        author: true,
+        workers: true,
+        engineers: true,
+        completedWorks: true,
+        status: true,
+        impactStatus: true,
         createdAt: true,
         updatedAt: true
       }
@@ -437,6 +461,33 @@ export async function loadApprovalInbox(user: AppUser, now = new Date()): Promis
         createdAt: warranty.createdAt,
         updatedAt: warranty.updatedAt,
         decision: null
+      })
+    );
+  });
+
+  dailyReports.forEach((report) => {
+    const project = projectById.get(report.projectId);
+    if (!project?.role || project.role === "VIEWER") return;
+    const awaitingApproval = report.status === "checked";
+    if (awaitingApproval && project.role !== "OWNER" && project.role !== "ADMIN") return;
+    rawItems.push(
+      baseItem({
+        project,
+        sourceType: "daily_report",
+        sourceId: report.id,
+        kind: awaitingApproval ? "approval" : "attention",
+        status: "pending",
+        priority: awaitingApproval ? "high" : "medium",
+        title: awaitingApproval
+          ? `Утвердить рапорт за ${report.date.toLocaleDateString("ru-RU")}`
+          : `Применить факт рапорта за ${report.date.toLocaleDateString("ru-RU")}`,
+        description: `${report.author} · ${report.workers} рабочих / ${report.engineers} ИТР · ${report.completedWorks || "без описания работ"}`,
+        sourceModule: "daily-progress",
+        sourceLabel: awaitingApproval ? "Рапорт проверен и ждёт утверждения" : "Утверждённый факт ещё не применён",
+        targetTab: "Рапорты",
+        createdAt: report.createdAt,
+        updatedAt: report.updatedAt,
+        decision: awaitingApproval ? { type: "daily_report", reportId: report.id, actions: ["approve"] } : null
       })
     );
   });
