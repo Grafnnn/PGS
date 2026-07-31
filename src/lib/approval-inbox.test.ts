@@ -88,6 +88,14 @@ describe("approval inbox model", () => {
         decisionComment: "Добавить исполнительную схему"
       }
     });
+    const dailyReport = item({
+      sourceType: "daily_report",
+      decision: { type: "daily_report", reportId: "report-1", actions: ["approve"] }
+    });
+    expect(inboxDecisionRequest(dailyReport, "approve", "")).toEqual({
+      url: "/api/daily-reports/report-1",
+      body: { status: "approved" }
+    });
     expect(() => inboxDecisionRequest(payment, "request_revision", "Исправить")).toThrow("Решение для этого элемента недоступно");
   });
 

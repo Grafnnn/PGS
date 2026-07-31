@@ -12,6 +12,7 @@ vi.mock("@/lib/prisma", () => ({
     projectPaymentApplication: { findMany: vi.fn() },
     projectCloseoutPackage: { findMany: vi.fn() },
     projectWarrantyObligation: { findMany: vi.fn() },
+    dailyReport: { findMany: vi.fn() },
     inboxItemState: { findMany: vi.fn() }
   }
 }));
@@ -88,6 +89,7 @@ describe("approval inbox data loader", () => {
     vi.mocked(prisma.projectPaymentApplication.findMany).mockResolvedValue([]);
     vi.mocked(prisma.projectCloseoutPackage.findMany).mockResolvedValue([]);
     vi.mocked(prisma.projectWarrantyObligation.findMany).mockResolvedValue([]);
+    vi.mocked(prisma.dailyReport.findMany).mockResolvedValue([]);
     vi.mocked(prisma.inboxItemState.findMany).mockResolvedValue([
       { itemKey: "project_action:action-1", readAt: now, snoozedUntil: null, archivedAt: null }
     ] as never);
@@ -154,5 +156,53 @@ describe("approval inbox data loader", () => {
     const inbox = await loadApprovalInbox(manager, now);
     expect(inbox.items.map((item) => item.key)).toEqual(["project_action:action-1"]);
     expect(inbox.summary).toMatchObject({ active: 1, approvals: 0, blocked: 1 });
+  });
+
+  it("adds checked reports for owner approval and approved facts for manager attention", async () => {
+    vi.mocked(prisma.projectWorkflowRun.findMany).mockResolvedValue([]);
+    vi.mocked(prisma.projectActionItem.findMany).mockResolvedValue([]);
+    vi.mocked(prisma.projectChangeOrder.findMany).mockResolvedValue([]);
+    vi.mocked(prisma.dailyReport.findMany).mockResolvedValue([
+      {
+        id: "report-checked",
+        projectId: "project-1",
+        date: new Date("2026-07-30T12:00:00.000Z"),
+        author: "Прораб",
+        workers: 8,
+        engineers: 1,
+        completedWorks: "Кладка стен",
+        status: "checked",
+        impactStatus: "pending",
+        createdAt: new Date("2026-07-30T15:00:00.000Z"),
+        updatedAt: new Date("2026-07-30T17:00:00.000Z")
+      },
+      {
+        id: "report-approved",
+        projectId: "project-1",
+        date: new Date("2026-07-29T12:00:00.000Z"),
+        author: "Прораб",
+        workers: 6,
+        engineers: 1,
+        completedWorks: "Армирование",
+        status: "approved",
+        impactStatus: "pending",
+        createdAt: new Date("2026-07-29T15:00:00.000Z"),
+        updatedAt: new Date("2026-07-30T16:00:00.000Z")
+      }
+    ] as never);
+
+    const ownerInbox = await loadApprovalInbox(owner, now);
+    expect(ownerInbox.items.find((item) => item.key === "daily_report:report-checked")).toMatchObject({
+      kind: "approval",
+      decision: { type: "daily_report", actions: ["approve"] }
+    });
+    expect(ownerInbox.items.find((item) => item.key === "daily_report:report-approved")).toMatchObject({
+      kind: "attention",
+      decision: null
+    });
+
+    vi.mocked(prisma.project.findMany).mockResolvedValue([{ ...project, members: [{ role: "MANAGER" }] }] as never);
+    const managerInbox = await loadApprovalInbox(manager, now);
+    expect(managerInbox.items.map((item) => item.key)).toEqual(["daily_report:report-approved"]);
   });
 });

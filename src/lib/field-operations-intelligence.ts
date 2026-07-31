@@ -106,15 +106,21 @@ function reportTone(report: DailyReport): FieldOpsTone {
 }
 
 function scheduleLinksFromReports(reports: DailyReport[], scheduleItems: ScheduleItem[]) {
+  const explicitIds = new Set(
+    reports.flatMap((report) => (report.workOutputs ?? []).map((output) => output.scheduleItemId).filter((value): value is string => Boolean(value)))
+  );
   return scheduleItems.filter((item) => {
+    if (explicitIds.has(item.id)) return true;
     const name = item.name.toLowerCase();
     return reports.some((report) => report.completedWorks.toLowerCase().includes(name) || report.issues.toLowerCase().includes(name));
   });
 }
 
 function materialSignalsFromReports(reports: DailyReport[], materials: Material[]) {
+  const explicitIds = new Set(reports.flatMap((report) => (report.materialActuals ?? []).map((actual) => actual.materialId)));
   const source = reports.map((report) => `${report.materialsReceived} ${report.materialsConsumed} ${report.issues}`).join(" ").toLowerCase();
   return materials.filter((material) => {
+    if (explicitIds.has(material.id)) return true;
     const name = material.name.toLowerCase();
     return source.includes(name) || (material.requiredQty > material.deliveredQty && source.includes("материал"));
   });
@@ -140,7 +146,10 @@ export function buildFieldOperationsIntelligence(input: FieldOperationsInput): F
   const uncheckedReports = reports.filter((report) => report.status === "draft" || report.status === "submitted").length;
   const totalWorkers = reports.reduce((sum, report) => sum + Math.max(0, report.workers), 0);
   const totalEngineers = reports.reduce((sum, report) => sum + Math.max(0, report.engineers), 0);
-  const equipmentMentions = reports.reduce((sum, report) => sum + splitMentions(report.equipment).length, 0);
+  const equipmentMentions = reports.reduce((sum, report) => {
+    const structured = report.equipmentActuals?.reduce((count, item) => count + item.quantity, 0) ?? 0;
+    return sum + (structured || splitMentions(report.equipment).length);
+  }, 0);
   const linkedScheduleItems = scheduleLinksFromReports(reports, scheduleItems);
   const materialSignals = materialSignalsFromReports(reports, materials);
   const openFieldRisks = risks.filter((risk) => risk.status !== "closed" && /площад|рапорт|простой|техника|бригада|замечан|факт|погода|исполн/i.test(`${risk.title} ${risk.reason}`));
@@ -186,7 +195,9 @@ export function buildFieldOperationsIntelligence(input: FieldOperationsInput): F
     title: `${readableDate(report.date)} · ${report.author}`,
     workforce: `${report.workers} рабочих / ${report.engineers} ИТР`,
     weather: report.weather || "Погода не указана",
-    equipment: report.equipment || "Техника не указана",
+    equipment: report.equipmentActuals?.length
+      ? report.equipmentActuals.map((item) => `${item.name}: ${item.quantity} ед. / ${item.hours} маш.-ч`).join("; ")
+      : report.equipment || "Техника не указана",
     completedWorks: report.completedWorks || "Выполненные объемы не заполнены",
     downtime: report.downtime || "Простоев не указано",
     issues: report.issues || "Замечаний не указано",
@@ -238,7 +249,7 @@ export function buildFieldOperationsIntelligence(input: FieldOperationsInput): F
       : makeAction("Проверить последний рапорт", latest ? `${readableDate(latest.date)} · ${latest.author}` : "Рапорт не найден.", "РП", uncheckedReports ? "high" : "medium", "Рапорты"),
     downtimeReports
       ? makeAction("Разобрать простои", `${downtimeReports} рапорт(ов) с простоями нужно связать с графиком и восстановительным планом.`, "РП", "high", "График")
-      : makeAction("Сверить факт с графиком", `${linkedScheduleItems.length} работ имеют текстовую связь с рапортами.`, "ПТО", "medium", "График"),
+      : makeAction("Сверить факт с графиком", `${linkedScheduleItems.length} работ связаны с рапортами явно или по legacy-тексту.`, "ПТО", "medium", "График"),
     issueReports
       ? makeAction("Назначить владельцев замечаний", `${issueReports} рапорт(ов) содержат замечания площадки.`, "ИТР", "high", "Риски")
       : makeAction("Проверить замечания площадки", "Замечания не указаны; подтвердите это на планерке.", "ИТР", "low", "Рапорты"),
@@ -261,8 +272,8 @@ export function buildFieldOperationsIntelligence(input: FieldOperationsInput): F
 
   const limitations = [
     "Модель использует текст ежедневных рапортов и не выполняет OCR/анализ фотографий.",
-    "Связка рапортов с графиком и материалами выполняется эвристически по тексту и названиям.",
-    "Факт площадки не записывается автоматически в график, КС или риски без явного действия пользователя."
+    "Для новых рапортов используются явные связи с графиком и материалами; текстовая эвристика сохраняется только для legacy-записей.",
+    "Утвержденный факт записывается в связанные модули только после отдельного preview и явного подтверждения пользователя."
   ];
   if (!fieldDocuments.length) limitations.push("Документы/фото площадки не найдены в текущем срезе документов.");
 

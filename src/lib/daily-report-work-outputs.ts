@@ -7,7 +7,8 @@ export const dailyReportWorkOutputSchema = z.object({
   workName: z.string().trim().min(2).max(240),
   quantity: z.coerce.number().positive().max(1_000_000_000),
   unit: z.string().trim().min(1).max(40),
-  laborHours: z.coerce.number().positive().max(10_000_000)
+  laborHours: z.coerce.number().positive().max(10_000_000),
+  scheduleItemId: z.string().trim().min(1).max(160).nullable().optional()
 }).strict();
 
 export const dailyReportWorkOutputsSchema = z.array(dailyReportWorkOutputSchema).max(40);

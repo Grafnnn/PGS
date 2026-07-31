@@ -270,6 +270,9 @@ async function main() {
         create: {
           ...item,
           workOutputs: item.workOutputs as unknown as Prisma.InputJsonValue | undefined,
+          materialActuals: item.materialActuals as unknown as Prisma.InputJsonValue | undefined,
+          equipmentActuals: item.equipmentActuals as unknown as Prisma.InputJsonValue | undefined,
+          impactSummary: item.impactSummary as unknown as Prisma.InputJsonValue | undefined,
           organizationId: org.id,
           date: new Date(item.date),
           createdBy: user.id

@@ -36,6 +36,7 @@
 - Prisma CRUD API для ключевых сущностей проекта.
 - Excel import preview для ВОР/сметы без автосохранения непроверенных данных.
 - Workforce & Payroll Intelligence: штат, ИТР, рабочие и бригады, плановые начисления, потребность из листов ФОТ, распределение трудозатрат по ВОР и помесячный план комплектования.
+- Field Operations & Daily Progress: offline-рапорт, структурированный факт работ/материалов/техники и явное идемпотентное применение утвержденного факта в график, материалы, ФОТ, КС и действия по отклонениям.
 - Транзакционный commit импорта в `BudgetSection`, `BudgetItem`, `Material`, `ScheduleItem`.
 - Inline edit/delete для ВОР, материалов и графика.
 - Audit trail для импорта и ключевых CRUD-операций.
@@ -91,6 +92,9 @@
 - `src/lib/excel/import-parser.ts` - чтение `.xlsx/.xls` и сбор preview.
 - `src/lib/excel/import-classifier.ts` - deterministic-классификация строк.
 - `src/lib/excel/import-normalizer.ts` - распознавание заголовков, чисел и дат.
+- `src/lib/daily-progress-impact.ts` - чистый preview влияния утвержденного сменного факта.
+- `src/lib/daily-progress-impact-db.ts` - транзакционное идемпотентное применение факта.
+- `docs/daily_progress_impact_v1.md` - workflow, safety gates и ограничения Field Operations & Daily Progress v1.
 - `src/lib/demo-data.ts` - demo seed для UI/API.
 - `prisma/schema.prisma` - PostgreSQL модель данных.
 - `prisma/seed.ts` - загрузка demo данных в БД.

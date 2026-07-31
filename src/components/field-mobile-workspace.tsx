@@ -23,10 +23,23 @@ import {
   syncFieldQueue,
   type FieldQueueItem
 } from "@/lib/field-offline-queue";
+import { DailyReportActualsEditor } from "@/components/daily-report-actuals-editor";
 import { DailyReportWorkOutputEditor } from "@/components/daily-report-work-output-editor";
+import {
+  dailyReportEquipmentActualsComplete,
+  dailyReportMaterialActualsComplete
+} from "@/lib/daily-report-actuals";
 import { dailyReportWorkOutputsComplete } from "@/lib/daily-report-work-outputs";
 import { fieldSyncKindLabel } from "@/lib/field-sync";
-import type { DailyReport, DailyReportWorkOutput, ProjectDocument } from "@/lib/types";
+import type {
+  DailyReport,
+  DailyReportEquipmentActual,
+  DailyReportMaterialActual,
+  DailyReportWorkOutput,
+  Material,
+  ProjectDocument,
+  ScheduleItem
+} from "@/lib/types";
 
 type UserContext = {
   role?: "OWNER" | "ADMIN" | "MANAGER" | "VIEWER";
@@ -37,6 +50,8 @@ type UserContext = {
 type Props = {
   projectId: string;
   projectName: string;
+  scheduleItems: ScheduleItem[];
+  materials: Material[];
   currentUser: UserContext | null;
   currentUserLoaded: boolean;
   onReportSynced: (item: DailyReport) => void;
@@ -45,8 +60,22 @@ type Props = {
 
 type Mode = "daily_report" | "field_issue" | "photo_evidence";
 
-type FieldReportDraft = Omit<DailyReport, "id" | "projectId" | "status" | "workOutputs"> & {
+type FieldReportDraft = Omit<
+  DailyReport,
+  | "id"
+  | "projectId"
+  | "status"
+  | "workOutputs"
+  | "materialActuals"
+  | "equipmentActuals"
+  | "impactStatus"
+  | "impactAppliedAt"
+  | "impactAppliedBy"
+  | "impactSummary"
+> & {
   workOutputs: DailyReportWorkOutput[];
+  materialActuals: DailyReportMaterialActual[];
+  equipmentActuals: DailyReportEquipmentActual[];
 };
 
 const emptyReport = (author = "Прораб"): FieldReportDraft => ({
@@ -61,7 +90,9 @@ const emptyReport = (author = "Прораб"): FieldReportDraft => ({
   materialsConsumed: "",
   downtime: "",
   issues: "",
-  workOutputs: []
+  workOutputs: [],
+  materialActuals: [],
+  equipmentActuals: []
 });
 
 const emptyIssue = { title: "", description: "", priority: "medium" as const, assignee: "", dueAt: "" };
@@ -82,13 +113,24 @@ function queueItemTitle(item: FieldQueueItem) {
 function queueItemDetail(item: FieldQueueItem) {
   if (item.kind === "daily_report") {
     const outputs = item.payload.workOutputs?.length ?? 0;
-    return `${item.payload.workers} рабочих · ${item.payload.engineers} ИТР${outputs ? ` · ${outputs} факт. ${outputs === 1 ? "работа" : "работы"}` : ""}`;
+    const materials = item.payload.materialActuals?.length ?? 0;
+    const equipment = item.payload.equipmentActuals?.length ?? 0;
+    return `${item.payload.workers} рабочих · ${item.payload.engineers} ИТР${outputs ? ` · работ: ${outputs}` : ""}${materials ? ` · материалов: ${materials}` : ""}${equipment ? ` · техники: ${equipment}` : ""}`;
   }
   if (item.kind === "field_issue") return `${item.payload.priority} · ${item.payload.assignee || "без ответственного"}`;
   return `${item.payload.category} · ${(item.payload.file.size / 1024 / 1024).toLocaleString("ru-RU", { maximumFractionDigits: 1 })} МБ`;
 }
 
-export function FieldMobileWorkspace({ projectId, projectName, currentUser, currentUserLoaded, onReportSynced, onDocumentSynced }: Props) {
+export function FieldMobileWorkspace({
+  projectId,
+  projectName,
+  scheduleItems,
+  materials,
+  currentUser,
+  currentUserLoaded,
+  onReportSynced,
+  onDocumentSynced
+}: Props) {
   const [mode, setMode] = useState<Mode>("daily_report");
   const [online, setOnline] = useState(true);
   const [queue, setQueue] = useState<FieldQueueItem[]>([]);
@@ -171,6 +213,10 @@ export function FieldMobileWorkspace({ projectId, projectName, currentUser, curr
     event.preventDefault();
     if (!dailyReportWorkOutputsComplete(report.workOutputs)) {
       setError("Заполните профессию, работу, объём, единицу и человеко-часы во всех строках фактической выработки.");
+      return;
+    }
+    if (!dailyReportMaterialActualsComplete(report.materialActuals) || !dailyReportEquipmentActualsComplete(report.equipmentActuals)) {
+      setError("Заполните все обязательные поля в строках материалов и техники.");
       return;
     }
     setBusy("queue-report");
@@ -326,8 +372,15 @@ export function FieldMobileWorkspace({ projectId, projectName, currentUser, curr
                   </div>
                 </details>
               </div>
-              <DailyReportWorkOutputEditor outputs={report.workOutputs} onChange={(workOutputs) => setReport({ ...report, workOutputs })} />
-              <button className="button primary" disabled={busy === "queue-report" || !dailyReportWorkOutputsComplete(report.workOutputs)} type="submit"><HardDrive size={16} /> Сохранить на устройстве</button>
+              <DailyReportWorkOutputEditor outputs={report.workOutputs} scheduleItems={scheduleItems} onChange={(workOutputs) => setReport({ ...report, workOutputs })} />
+              <DailyReportActualsEditor
+                materials={materials}
+                materialActuals={report.materialActuals}
+                equipmentActuals={report.equipmentActuals}
+                onMaterialsChange={(materialActuals) => setReport({ ...report, materialActuals })}
+                onEquipmentChange={(equipmentActuals) => setReport({ ...report, equipmentActuals })}
+              />
+              <button className="button primary" disabled={busy === "queue-report" || !dailyReportWorkOutputsComplete(report.workOutputs) || !dailyReportMaterialActualsComplete(report.materialActuals) || !dailyReportEquipmentActualsComplete(report.equipmentActuals)} type="submit"><HardDrive size={16} /> Сохранить на устройстве</button>
             </form>
           )}
 
