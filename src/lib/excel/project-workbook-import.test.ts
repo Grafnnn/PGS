@@ -148,6 +148,74 @@ describe("project workbook import", () => {
     expect(demand.allocations.reduce((sum, item) => sum + item.sharePercent, 0)).toBe(100);
   });
 
+  it("maps labor to VOR by operation id without unrelated cost-based fallback", () => {
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([
+      ["Монолитные работы"],
+      [],
+      ["Источник / группа", "№", "Наименование работ", "Ед.", "Кол-во", "Ставка без НДС, ₽", "Стоимость работ без НДС, ₽", "Примечание"],
+      ["ВОР", 1, "Установка арматуры", "т", 4, 10_000, 40_000, "код графика: K-15 | ID: K-15.1, K-15.2"],
+      ["ВОР", 2, "Устройство кровли", "м2", 100, 500, 50_000, "код графика: R-09 | ID: R-09.1, R-09.2"]
+    ]), "Р01_Монолит");
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([
+      ["ФОТ рабочих"],
+      ["Профессия", "Функция", "Месячная зарплата", "Чел-Мес всего", "M1", "Примечание"],
+      ["Арматурное звено З1", "Армирование монолитных участков", 120_000, 1, 1, "ID K-15.1"],
+      ["Разнорабочий", "Нераспределенные вспомогательные работы", 80_000, 1, 1, "Связь с ВОР не задана"]
+    ]), "24_Рабочие_ФОТ");
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([
+      ["Календарный график"],
+      ["Код", "Раздел", "Этап", "M1"],
+      ["K-15", "Монолит", "Армирование", 40_000]
+    ]), "13_Календарь");
+    const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" }) as Buffer;
+
+    const preview = parseProjectWorkbookBuffer(buffer, "labor-ids.xlsx", "project", { startsAt: "2026-07-01" });
+    const rebar = preview.laborDemands?.find((item) => item.profession === "Арматурное звено З1");
+    const helper = preview.laborDemands?.find((item) => item.profession === "Разнорабочий");
+
+    expect(rebar?.allocations).toEqual([
+      expect.objectContaining({
+        budgetName: "Установка арматуры",
+        sharePercent: 100,
+        reason: "Распределено по точному коду операции из ФОТ и строки ВОР."
+      })
+    ]);
+    expect(helper?.allocations).toEqual([]);
+  });
+
+  it("reconciles database precision rounding to the source direct cost", () => {
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([
+      ["Сводная стоимость проекта"],
+      ["Раздел", "Итого без НДС, ₽", "НДС, ₽", "Итого с НДС, ₽"],
+      ["ИТОГО прямые затраты", 58_748.05, 12_924.57, 71_672.62],
+      ["ИТОГОВАЯ ЦЕНА ГЕНПОДРЯДА", 70_000]
+    ]), "01_ССР_КП");
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([
+      ["Монолитные работы"],
+      [],
+      ["Источник / группа", "№", "Наименование работ", "Ед.", "Кол-во", "Ставка без НДС, ₽", "Стоимость работ без НДС, ₽", "Примечание"],
+      ["ВОР", 1, "Установка арматуры", "т", 4.1227, 14_250.0006064, 58_748.05, "ID: K-15.1"]
+    ]), "Р01_Монолит");
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([
+      ["Календарный график"],
+      ["Код", "Раздел", "Этап", "M1", "M2", "M3"],
+      ["K-15", "Монолит", "Армирование", 58_748.05, 0, 0]
+    ]), "13_Календарь");
+    const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" }) as Buffer;
+
+    const analysis = analyzeProjectWorkbookBuffer(buffer, "rounding.xlsx", "project", { startsAt: "2026-07-01" });
+    const preview = parseProjectWorkbookBuffer(buffer, "rounding.xlsx", "project", { startsAt: "2026-07-01" });
+    const adjustment = preview.budgetItems.find((item) => item.code === "ROUNDING-ADJUSTMENT");
+
+    expect(analysis.summary).toMatchObject({ budgetItems: 2, sourceDirectCost: 58_748.05, reconciliationGap: 0 });
+    expect(analysis.summary.estimatedDirectCost).toBeCloseTo(58_748.05, 2);
+    expect(adjustment).toMatchObject({ qty: 1, kind: "overhead" });
+    expect(adjustment?.plannedUnitPrice).toBeLessThan(0);
+    expect(preview.warnings).toContainEqual(expect.stringContaining("корректировка округления"));
+  });
+
   it("keeps sparse resource rows for review and classifies summary and control before broad work heuristics", () => {
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([
