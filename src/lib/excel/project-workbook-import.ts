@@ -333,7 +333,8 @@ function buildProjectWorkbook(buffer: Buffer, fileName: string, projectId: strin
   const duplicateRows = selectedBudgetItems.length - uniqueBudgetItems.length;
   const sourceDirectCost = extractDirectCost(enabledSheetData);
   const parsedDirectCost = sumCost(uniqueBudgetItems);
-  const reconciliationGap = sourceDirectCost ? sourceDirectCost - parsedDirectCost : 0;
+  const rawReconciliationGap = sourceDirectCost ? sourceDirectCost - parsedDirectCost : 0;
+  const reconciliationGap = Math.abs(rawReconciliationGap) < 0.01 ? 0 : rawReconciliationGap;
   if (sourceDirectCost && reconciliationGap > Math.max(1, sourceDirectCost * 0.01)) {
     const sourceSheet = enabledSheetData.find((sheet) => sheet.role === "summary")?.name ?? "ССР";
     uniqueBudgetItems = [
@@ -460,20 +461,20 @@ function classifySheet(name: string, rows: unknown[][]): Pick<SheetData, "role" 
   if (/материал/.test(normalizedName) && /позици|наименован/.test(sample) && /кол.*во|количество|объем/.test(sample)) {
     return { role: "materials", confidence: 0.94, reason: "Распознана детализация материалов, количества и цены." };
   }
+  if (/контрол|проверк|исключ|желт|дорасчет/.test(normalizedName)) {
+    return { role: "control", confidence: 0.86, reason: "Контрольный лист сохранен как источник, но не создает рабочие строки." };
+  }
+  if (/сср|итог|свод/.test(normalizedName) || /итого.*прям.*затрат|итогов.*цена/.test(sample)) {
+    return { role: "summary", confidence: 0.9, reason: "Сводный лист используется для сверки итогов, но не для повторного импорта." };
+  }
   if (/расценк|ставк.*мск/.test(normalizedName)) {
     return { role: "reference", confidence: 0.92, reason: "Справочник расценок используется как источник, но не импортируется повторно поверх детальных ВОР." };
   }
   if (/^р\d{1,2}/.test(normalizedName) || (/наименован.*работ/.test(sample) && /ставк|стоимост.*работ/.test(sample))) {
     return { role: "works", confidence: 0.96, reason: "Распознан детальный ВОР/пакет работ." };
   }
-  if (/сср|итог|свод/.test(normalizedName) || /итого.*прям.*затрат|итогов.*цена/.test(sample)) {
-    return { role: "summary", confidence: 0.9, reason: "Сводный лист используется для сверки итогов, но не для повторного импорта." };
-  }
   if (/источник|ставк|методик|раздел/.test(normalizedName)) {
     return { role: "reference", confidence: 0.86, reason: "Справочный лист/источник ставок." };
-  }
-  if (/контрол|проверк|исключ|желт|дорасчет/.test(normalizedName)) {
-    return { role: "control", confidence: 0.86, reason: "Контрольный лист сохранен как источник, но не создает рабочие строки." };
   }
   return { role: "unknown", confidence: 0.35, reason: "Назначение листа не определено автоматически." };
 }
@@ -574,10 +575,10 @@ function parseMaterials(sheet: SheetData, startsAt: Date, vatPercent: number): P
     const row = sheet.rows[index];
     const name = textAt(row, nameCol);
     const unit = textAt(row, unitCol);
-    const qty = numberAt(row, qtyCol);
+    const qty = numberAt(row, qtyCol) ?? 0;
     const price = moneyAt(row, priceCol);
     const total = moneyAt(row, totalCol);
-    if (!name || !unit || !qty || qty <= 0 || (!price && !total) || isTotal(name)) continue;
+    if (!name || !unit || isTotal(name)) continue;
     const vatFactor = vatPercent > 0 ? 1 + vatPercent / 100 : 1;
     const normalizedTotal = total && total > 0 ? total / (totalIncludesVat ? vatFactor : 1) : 0;
     const normalizedPrice = price && price > 0 ? price / (priceIncludesVat ? vatFactor : 1) : 0;
@@ -638,8 +639,8 @@ function parsePayroll(sheet: SheetData, startsAt: Date): ParsedSheetItems {
     const row = sheet.rows[index];
     if (budgetItems.length && row.some((value) => /^итого$/i.test(normalizeText(value)) || /^итого фот/i.test(normalizeText(value)))) break;
     const name = textAt(row, nameCol);
-    const salary = moneyAt(row, salaryCol);
-    if (!name || !salary || salary <= 0 || isTotal(name)) continue;
+    const salary = moneyAt(row, salaryCol) ?? 0;
+    if (!name || isTotal(name)) continue;
     const monthly = monthCols.map((column) => ({ label: column.label, value: numberAt(row, column.index) ?? 0 }));
     const monthlyPersonMonths = monthly.reduce((sum, item) => sum + item.value, 0);
     const total = moneyAt(row, totalCol);
@@ -652,7 +653,7 @@ function parsePayroll(sheet: SheetData, startsAt: Date): ParsedSheetItems {
       : monthlyPersonMonths > 0
         ? monthlyPersonMonths
         : total && total > 0
-          ? total / salary
+          ? salary > 0 ? total / salary : 0
           : norm && norm > 0 && volume && volume > 0
             ? volume / norm
             : headcount && headcount > 0
@@ -660,6 +661,7 @@ function parsePayroll(sheet: SheetData, startsAt: Date): ParsedSheetItems {
               : 0;
     if (personMonths <= 0) continue;
     const unitPrice = total && total > 0 ? total / personMonths : salary;
+    const effectiveSalary = salary > 0 ? salary : unitPrice;
     const monthlyNote = monthly.filter((item) => item.value > 0).map((item) => `${item.label}: ${item.value}`).join("; ");
     budgetItems.push({
       section: /итр|управлен/.test(normalizeHeader(sheet.name)) ? "ИТР / ФОТ" : "Рабочие / ФОТ",
@@ -673,7 +675,7 @@ function parsePayroll(sheet: SheetData, startsAt: Date): ParsedSheetItems {
       kind: "payroll",
       source: `Project workbook · ${sheet.name}`,
       comment: joinComment(
-        `Месячная ставка: ${Math.round(salary)} ₽`,
+        salary > 0 ? `Месячная ставка: ${Math.round(salary)} ₽` : "Месячная ставка не указана",
         headcount ? `Численность: ${headcount}` : "",
         norm ? `Норма выработки: ${norm}` : "",
         volume ? `Объем для расчета: ${volume}` : "",
@@ -702,7 +704,7 @@ function parsePayroll(sheet: SheetData, startsAt: Date): ParsedSheetItems {
       category: classifyLaborCategory(name, functionText, sheet.name),
       profession: name,
       function: functionText || undefined,
-      grossMonthlySalary: salary,
+      grossMonthlySalary: effectiveSalary,
       peakHeadcount,
       personMonths,
       plannedHours: personMonths * 160,
@@ -745,11 +747,11 @@ function parseEquipment(sheet: SheetData): ParsedSheetItems {
     const row = sheet.rows[index];
     if (budgetItems.length && row.some((value) => /^итого$/i.test(normalizeText(value)) || /^итого.*маш/i.test(normalizeText(value)))) break;
     const name = textAt(row, nameCol);
-    const qty = numberAt(row, qtyCol);
+    const qty = numberAt(row, qtyCol) ?? 0;
     const price = moneyAt(row, priceCol);
     const total = moneyAt(row, totalCol);
-    if (!name || !qty || qty <= 0 || (!price && !total) || isTotal(name)) continue;
-    const unitPrice = total && total > 0 ? total / qty : price ?? 0;
+    if (!name || isTotal(name)) continue;
+    const unitPrice = total && total > 0 && qty > 0 ? total / qty : price ?? 0;
     const monthly = monthCols.map((column) => `${column.label}: ${numberAt(row, column.index) ?? 0}`).join("; ");
     budgetItems.push({
       section: "Машины и механизмы",
@@ -960,6 +962,11 @@ function buildAnalysis(
     scheduleItems: scheduleItems.length,
     payrollItems: payrollItems.length,
     equipmentItems: equipmentItems.length,
+    unpricedMaterials: materials.filter((item) => item.plannedUnitPrice <= 0).length,
+    unquantifiedMaterials: materials.filter((item) => item.requiredQty <= 0).length,
+    unpricedPayroll: payrollItems.filter((item) => item.plannedUnitPrice <= 0).length,
+    unpricedEquipment: equipmentItems.filter((item) => item.plannedUnitPrice <= 0).length,
+    unquantifiedEquipment: equipmentItems.filter((item) => item.qty <= 0).length,
     estimatedDirectCost,
     sourceDirectCost,
     reconciliationGap,

@@ -148,6 +148,76 @@ describe("project workbook import", () => {
     expect(demand.allocations.reduce((sum, item) => sum + item.sharePercent, 0)).toBe(100);
   });
 
+  it("keeps sparse resource rows for review and classifies summary and control before broad work heuristics", () => {
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([
+      ["Название проекта", "Кровля лабораторного корпуса"],
+      ["ИТОГОВАЯ ЦЕНА ГЕНПОДРЯДА", 1_220_000],
+      ["Ставка НДС", 0.22],
+      ["Раздел", "Итого без НДС, ₽"],
+      ["ИТОГО прямые затраты", 1_000_000]
+    ]), "01_ССР_КП");
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([
+      ["№", "Наименование работ", "Ед.", "Кол-во", "Ставка без НДС, ₽"],
+      [1, "Устройство кровли", "м2", 100, 10_000]
+    ]), "Р01_Кровля");
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([
+      ["Раздел", "№", "Позиция", "Ед. мат.", "Кол-во мат.", "Цена без НДС, ₽", "Стоимость без НДС, ₽", "Источник/основание"],
+      ["Кровля", 1, "Мембрана", "м2", 120, "", "", "Ведомость"],
+      ["Кровля", 2, "Крепеж", "шт", "", "", "", "Требует уточнения"]
+    ]), "05_Материалы");
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([
+      ["№", "Профессия", "Функция", "Месячная зарплата", "Численность", "Чел-Мес всего", "M1"],
+      [1, "Кровельщик", "Устройство кровли", "", 4, 4, 4]
+    ]), "24_Рабочие_ФОТ");
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([
+      ["№", "Техника / механизм", "Вид работ / этап", "Ед.", "Кол-во ед.", "Смен всего", "Расценка без НДС, ₽/смена", "Итого без НДС, ₽"],
+      [1, "Кран", "Подъем материалов", "смена", "", "", "", ""]
+    ]), "22_Машины_механизмы");
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([
+      ["Тип проверки", "Описание"],
+      ["ВОР", "Наименование работ и стоимость работ требуют проверки"],
+      ["Прямые затраты", "ИТОГО прямые затраты нужно сверить"]
+    ]), "18_Контроль");
+    const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" }) as Buffer;
+
+    const analysis = analyzeProjectWorkbookBuffer(buffer, "sparse.xlsx");
+    const preview = parseProjectWorkbookBuffer(buffer, "sparse.xlsx", "project");
+
+    expect(analysis.sheets.find((sheet) => sheet.sheetName === "01_ССР_КП")?.role).toBe("summary");
+    expect(analysis.sheets.find((sheet) => sheet.sheetName === "18_Контроль")?.role).toBe("control");
+    expect(analysis.summary).toMatchObject({
+      sourceDirectCost: 1_000_000,
+      reconciliationGap: 0,
+      materials: 2,
+      payrollItems: 1,
+      workforceDemandRows: 1,
+      equipmentItems: 1
+    });
+    expect(preview.materials).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: "Мембрана", requiredQty: 120, plannedUnitPrice: 0 }),
+      expect.objectContaining({ name: "Крепеж", requiredQty: 0, plannedUnitPrice: 0 })
+    ]));
+    expect(preview.laborDemands?.[0]).toMatchObject({ profession: "Кровельщик", grossMonthlySalary: 0, personMonths: 4 });
+    expect(analysis.quality).toMatchObject({
+      status: "review_required",
+      acknowledgementRequired: true,
+      metrics: {
+        unpricedMaterials: 2,
+        unquantifiedMaterials: 1,
+        unpricedPayroll: 1,
+        unpricedEquipment: 1,
+        unquantifiedEquipment: 1
+      }
+    });
+    expect(analysis.quality.issues.map((issue) => issue.id)).toEqual(expect.arrayContaining([
+      "materials-missing-price",
+      "materials-missing-quantity",
+      "payroll-missing-salary",
+      "equipment-missing-inputs"
+    ]));
+  });
+
   it("fills a missing worker norm from a reliable workbook average", () => {
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([

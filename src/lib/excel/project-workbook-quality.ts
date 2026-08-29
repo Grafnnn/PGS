@@ -32,6 +32,11 @@ export interface ProjectWorkbookQualityGate {
     blockers: number;
     warnings: number;
     information: number;
+    unpricedMaterials: number;
+    unquantifiedMaterials: number;
+    unpricedPayroll: number;
+    unpricedEquipment: number;
+    unquantifiedEquipment: number;
   };
 }
 
@@ -53,6 +58,11 @@ export interface ProjectWorkbookQualityInput {
   scheduleItems: number;
   payrollItems: number;
   equipmentItems: number;
+  unpricedMaterials?: number;
+  unquantifiedMaterials?: number;
+  unpricedPayroll?: number;
+  unpricedEquipment?: number;
+  unquantifiedEquipment?: number;
   estimatedDirectCost: number;
   sourceDirectCost?: number;
   reconciliationGap: number;
@@ -193,6 +203,54 @@ export function buildProjectWorkbookQualityGate(input: ProjectWorkbookQualityInp
     });
   }
 
+  if ((input.unpricedMaterials ?? 0) > 0) {
+    push({
+      id: "materials-missing-price",
+      severity: "warning",
+      category: "financial",
+      resolution: "acknowledgement",
+      title: "Часть материалов не имеет цены",
+      detail: `Без цены импортируется позиций: ${input.unpricedMaterials}. Они сохранятся как потребность, но не увеличат расчетную себестоимость.`,
+      action: "Заполните плановые цены в модуле материалов или подтвердите импорт с неполной стоимостной оценкой."
+    });
+  }
+
+  if ((input.unquantifiedMaterials ?? 0) > 0) {
+    push({
+      id: "materials-missing-quantity",
+      severity: "warning",
+      category: "coverage",
+      resolution: "acknowledgement",
+      title: "Часть материалов не имеет количества",
+      detail: `Без количества импортируется позиций: ${input.unquantifiedMaterials}. Наименования и источники сохранятся для последующего уточнения.`,
+      action: "Уточните объемы до формирования закупочных заявок."
+    });
+  }
+
+  if ((input.unpricedPayroll ?? 0) > 0) {
+    push({
+      id: "payroll-missing-salary",
+      severity: "warning",
+      category: "financial",
+      resolution: "acknowledgement",
+      title: "Для части трудовых ресурсов не задана зарплата",
+      detail: `Без месячной ставки импортируется строк ФОТ: ${input.unpricedPayroll}. Потребность в людях сохранится, а стоимость ФОТ останется нулевой до уточнения.`,
+      action: "Заполните месячные ставки и налоговую политику до окончательной оценки рентабельности."
+    });
+  }
+
+  if ((input.unpricedEquipment ?? 0) > 0 || (input.unquantifiedEquipment ?? 0) > 0) {
+    push({
+      id: "equipment-missing-inputs",
+      severity: "warning",
+      category: "financial",
+      resolution: "acknowledgement",
+      title: "По технике не хватает смен или расценок",
+      detail: `Без расценки: ${input.unpricedEquipment ?? 0}; без количества смен: ${input.unquantifiedEquipment ?? 0}. Перечень техники сохранится для планирования.`,
+      action: "Уточните сменность и ставки до фиксации расходного плана."
+    });
+  }
+
   if (input.scheduleItems === 0) {
     push({
       id: "schedule-not-found",
@@ -231,7 +289,12 @@ export function buildProjectWorkbookQualityGate(input: ProjectWorkbookQualityInp
       coveragePercent,
       blockers,
       warnings,
-      information
+      information,
+      unpricedMaterials: input.unpricedMaterials ?? 0,
+      unquantifiedMaterials: input.unquantifiedMaterials ?? 0,
+      unpricedPayroll: input.unpricedPayroll ?? 0,
+      unpricedEquipment: input.unpricedEquipment ?? 0,
+      unquantifiedEquipment: input.unquantifiedEquipment ?? 0
     }
   };
 }
