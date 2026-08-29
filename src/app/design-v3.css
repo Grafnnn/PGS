@@ -1852,28 +1852,87 @@ body[data-design="v3"] details[open] > summary .production-disclosure-chevron {
   transform: rotate(180deg);
 }
 
-body[data-design="v3"] .production-scale {
-  align-items: center;
-  color: var(--muted);
-  display: grid;
-  font-family: var(--font-mono);
-  font-size: 10px;
-  gap: 10px;
-  grid-template-columns: auto minmax(40px, 1fr) auto;
-  padding: 0 8px;
-}
-
-body[data-design="v3"] .production-scale i {
-  background: var(--line-strong);
-  height: 1px;
-}
-
 body[data-design="v3"] .production-phase-list {
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 6px;
   min-width: 0;
   overflow: hidden;
+}
+
+body[data-design="v3"] .production-gantt-axis {
+  align-items: end;
+  background: var(--panel-muted);
+  border-bottom: 1px solid var(--line-strong);
+  color: var(--muted);
+  display: grid;
+  font-size: 10px;
+  font-weight: 700;
+  gap: 12px;
+  grid-template-columns: 38px minmax(190px, 0.72fr) minmax(260px, 1.28fr) minmax(94px, auto) 22px;
+  min-height: 46px;
+  padding: 7px 12px;
+  text-transform: uppercase;
+}
+
+body[data-design="v3"] .production-gantt-axis-title {
+  grid-column: 1 / 3;
+}
+
+body[data-design="v3"] .production-gantt-axis-dates {
+  align-self: stretch;
+  grid-column: 3;
+  min-width: 0;
+  position: relative;
+}
+
+body[data-design="v3"] .production-gantt-axis-dates::after {
+  background: var(--line-strong);
+  bottom: 1px;
+  content: "";
+  height: 1px;
+  left: 0;
+  position: absolute;
+  right: 0;
+}
+
+body[data-design="v3"] .production-gantt-axis-dates > span {
+  bottom: 7px;
+  font-family: var(--font-mono);
+  font-weight: 500;
+  position: absolute;
+  text-transform: none;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+body[data-design="v3"] .production-gantt-axis-dates > span:first-child {
+  transform: none;
+}
+
+body[data-design="v3"] .production-gantt-axis-dates > span:last-of-type {
+  transform: translateX(-100%);
+}
+
+body[data-design="v3"] .production-gantt-axis-dates > b {
+  background: var(--accent);
+  border-radius: 3px;
+  bottom: 4px;
+  color: var(--panel);
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 3px 4px;
+  position: absolute;
+  text-transform: none;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  z-index: 2;
+}
+
+body[data-design="v3"] .production-gantt-axis-status {
+  grid-column: 4;
+  text-align: right;
 }
 
 body[data-design="v3"] .production-phase + .production-phase {
@@ -1885,10 +1944,10 @@ body[data-design="v3"] .production-phase > summary {
   cursor: pointer;
   display: grid;
   gap: 12px;
-  grid-template-columns: 38px minmax(210px, 1fr) minmax(130px, 0.45fr) minmax(100px, auto) 22px;
+  grid-template-columns: 38px minmax(190px, 0.72fr) minmax(260px, 1.28fr) minmax(94px, auto) 22px;
   list-style: none;
-  min-height: 62px;
-  padding: 8px 12px;
+  min-height: 72px;
+  padding: 10px 12px;
 }
 
 body[data-design="v3"] .production-phase > summary:hover,
@@ -1938,38 +1997,6 @@ body[data-design="v3"] .production-work-title small {
   font-size: 11px;
 }
 
-body[data-design="v3"] .production-phase-progress,
-body[data-design="v3"] .production-work-progress {
-  align-items: center;
-  display: grid;
-  gap: 8px;
-  grid-template-columns: minmax(44px, 1fr) auto;
-  min-width: 0;
-}
-
-body[data-design="v3"] .production-phase-progress > i,
-body[data-design="v3"] .production-work-progress > i {
-  background: var(--bg-soft);
-  border-radius: 3px;
-  display: block;
-  height: 6px;
-  overflow: hidden;
-}
-
-body[data-design="v3"] .production-phase-progress > i > em,
-body[data-design="v3"] .production-work-progress > i > em {
-  background: var(--blue);
-  display: block;
-  height: 100%;
-}
-
-body[data-design="v3"] .production-phase-progress b,
-body[data-design="v3"] .production-work-progress b {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  white-space: nowrap;
-}
-
 body[data-design="v3"] .production-phase-state {
   color: var(--muted);
   font-size: 11px;
@@ -1991,8 +2018,8 @@ body[data-design="v3"] .production-phase.tone-good > summary {
 }
 
 body[data-design="v3"] .production-phase-body {
+  background: var(--panel-muted);
   border-top: 1px solid var(--line);
-  padding-left: 42px;
 }
 
 body[data-design="v3"] .production-work-row + .production-work-row {
@@ -2003,11 +2030,17 @@ body[data-design="v3"] .production-work-row > summary {
   align-items: center;
   cursor: pointer;
   display: grid;
-  gap: 10px;
-  grid-template-columns: 10px minmax(210px, 1fr) minmax(150px, auto) minmax(110px, 0.35fr) minmax(96px, auto) 22px;
+  gap: 12px;
+  grid-template-columns: 38px minmax(190px, 0.72fr) minmax(260px, 1.28fr) minmax(104px, auto) 22px;
   list-style: none;
-  min-height: 54px;
-  padding: 7px 12px;
+  min-height: 68px;
+  padding: 9px 12px;
+}
+
+body[data-design="v3"] .production-work-marker {
+  align-items: center;
+  display: flex;
+  justify-content: center;
 }
 
 body[data-design="v3"] .production-status-dot {
@@ -2021,13 +2054,6 @@ body[data-design="v3"] .production-status-dot.tone-good { background: var(--gree
 body[data-design="v3"] .production-status-dot.tone-warn { background: var(--yellow); }
 body[data-design="v3"] .production-status-dot.tone-bad { background: var(--red); }
 body[data-design="v3"] .production-status-dot.tone-info { background: var(--blue); }
-
-body[data-design="v3"] .production-work-dates {
-  color: var(--muted);
-  font-family: var(--font-mono);
-  font-size: 10px;
-  white-space: nowrap;
-}
 
 body[data-design="v3"] .production-status-label {
   border-radius: 4px;
@@ -2051,11 +2077,14 @@ body[data-design="v3"] .production-work-body {
   padding: 14px 14px 16px 22px;
 }
 
-body[data-design="v3"] .production-work-timeline {
+body[data-design="v3"] .production-gantt-track {
   background: var(--panel);
+  background-image: linear-gradient(to right, var(--line) 1px, transparent 1px);
+  background-size: calc(100% / 6) 100%;
   border: 1px solid var(--line);
   border-radius: 5px;
-  height: 34px;
+  height: 38px;
+  min-width: 0;
   overflow: hidden;
   position: relative;
 }
@@ -2069,28 +2098,48 @@ body[data-design="v3"] .production-today-line {
   z-index: 2;
 }
 
-body[data-design="v3"] .production-work-bar {
+body[data-design="v3"] .production-gantt-bar {
+  align-items: center;
   background: var(--blue-soft);
   border: 1px solid rgba(23, 105, 130, 0.32);
   border-radius: 4px;
-  height: 18px;
+  color: var(--blue);
+  display: flex;
+  height: 22px;
   overflow: hidden;
   position: absolute;
   top: 7px;
 }
 
-body[data-design="v3"] .production-work-bar > b {
+body[data-design="v3"] .production-gantt-bar > b {
   background: var(--blue);
+  bottom: 0;
   display: block;
   height: 100%;
+  left: 0;
+  opacity: 0.3;
+  position: absolute;
+  top: 0;
 }
 
-body[data-design="v3"] .production-work-bar.tone-good { background: var(--green-soft); border-color: rgba(23, 113, 88, 0.3); }
-body[data-design="v3"] .production-work-bar.tone-good > b { background: var(--green); }
-body[data-design="v3"] .production-work-bar.tone-warn { background: var(--yellow-soft); border-color: rgba(148, 96, 0, 0.3); }
-body[data-design="v3"] .production-work-bar.tone-warn > b { background: var(--yellow); }
-body[data-design="v3"] .production-work-bar.tone-bad { background: var(--red-soft); border-color: rgba(180, 58, 50, 0.3); }
-body[data-design="v3"] .production-work-bar.tone-bad > b { background: var(--red); }
+body[data-design="v3"] .production-gantt-bar > small {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  overflow: hidden;
+  padding: 0 6px;
+  position: relative;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  z-index: 1;
+}
+
+body[data-design="v3"] .production-gantt-bar.tone-good { background: var(--green-soft); border-color: rgba(23, 113, 88, 0.3); color: var(--green); }
+body[data-design="v3"] .production-gantt-bar.tone-good > b { background: var(--green); }
+body[data-design="v3"] .production-gantt-bar.tone-warn { background: var(--yellow-soft); border-color: rgba(148, 96, 0, 0.3); color: var(--yellow); }
+body[data-design="v3"] .production-gantt-bar.tone-warn > b { background: var(--yellow); }
+body[data-design="v3"] .production-gantt-bar.tone-bad { background: var(--red-soft); border-color: rgba(180, 58, 50, 0.3); color: var(--red); }
+body[data-design="v3"] .production-gantt-bar.tone-bad > b { background: var(--red); }
 
 body[data-design="v3"] .production-work-facts {
   display: grid;
@@ -2369,12 +2418,13 @@ body[data-design="v3"] .production-draft-rows span {
     border-top: 1px solid var(--line);
   }
 
+  body[data-design="v3"] .production-gantt-axis,
   body[data-design="v3"] .production-phase > summary {
-    grid-template-columns: 38px minmax(180px, 1fr) minmax(90px, 0.4fr) minmax(84px, auto) 22px;
+    grid-template-columns: 38px minmax(150px, 0.65fr) minmax(180px, 1fr) minmax(84px, auto) 22px;
   }
 
   body[data-design="v3"] .production-work-row > summary {
-    grid-template-columns: 10px minmax(150px, 1fr) minmax(105px, auto) minmax(80px, 0.3fr) minmax(76px, auto) 22px;
+    grid-template-columns: 38px minmax(150px, 0.65fr) minmax(180px, 1fr) minmax(84px, auto) 22px;
   }
 
   body[data-design="v3"] .production-work-facts {
@@ -2425,6 +2475,27 @@ body[data-design="v3"] .production-draft-rows span {
     min-height: 42px;
   }
 
+  body[data-design="v3"] .production-gantt-axis {
+    gap: 0;
+    grid-template-columns: 1fr;
+    min-height: 40px;
+    padding: 6px 10px;
+  }
+
+  body[data-design="v3"] .production-gantt-axis-title,
+  body[data-design="v3"] .production-gantt-axis-status {
+    display: none;
+  }
+
+  body[data-design="v3"] .production-gantt-axis-dates {
+    grid-column: 1;
+    min-height: 28px;
+  }
+
+  body[data-design="v3"] .production-gantt-axis-dates > span:not(:first-child):not(:last-of-type) {
+    display: none;
+  }
+
   body[data-design="v3"] .production-phase > summary {
     gap: 7px 10px;
     grid-template-columns: 32px minmax(0, 1fr) 22px;
@@ -2446,8 +2517,8 @@ body[data-design="v3"] .production-draft-rows span {
     grid-row: 1;
   }
 
-  body[data-design="v3"] .production-phase-progress {
-    grid-column: 2 / -1;
+  body[data-design="v3"] .production-phase > summary > .production-gantt-track {
+    grid-column: 1 / -1;
     grid-row: 2;
   }
 
@@ -2458,18 +2529,14 @@ body[data-design="v3"] .production-draft-rows span {
     text-align: left;
   }
 
-  body[data-design="v3"] .production-phase-body {
-    padding-left: 0;
-  }
-
   body[data-design="v3"] .production-work-row > summary {
     gap: 6px 9px;
-    grid-template-columns: 10px minmax(0, 1fr) 22px;
-    min-height: 70px;
+    grid-template-columns: 32px minmax(0, 1fr) 22px;
+    min-height: 104px;
     padding: 9px 10px;
   }
 
-  body[data-design="v3"] .production-status-dot {
+  body[data-design="v3"] .production-work-marker {
     grid-column: 1;
     grid-row: 1;
   }
@@ -2484,21 +2551,15 @@ body[data-design="v3"] .production-draft-rows span {
     grid-row: 1;
   }
 
-  body[data-design="v3"] .production-work-dates {
-    grid-column: 2;
-    grid-row: 3;
-    white-space: normal;
-  }
-
   body[data-design="v3"] .production-status-label {
     grid-column: 2 / -1;
-    grid-row: 2;
+    grid-row: 3;
     justify-self: start;
   }
 
-  body[data-design="v3"] .production-work-progress {
-    grid-column: 2 / -1;
-    grid-row: 4;
+  body[data-design="v3"] .production-work-row > summary > .production-gantt-track {
+    grid-column: 1 / -1;
+    grid-row: 2;
   }
 
   body[data-design="v3"] .production-work-body {

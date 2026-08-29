@@ -132,6 +132,19 @@ describe("ProductionScheduleWorkspace", () => {
     expect(props.onCashflowPreview).not.toHaveBeenCalled();
   });
 
+  it("renders a visual gantt with expandable phases and nested work bars", () => {
+    const html = renderToStaticMarkup(createElement(ProductionScheduleWorkspace, workspaceProps()));
+    const trackCount = html.match(/production-gantt-track/g)?.length ?? 0;
+
+    expect(html).toContain("production-gantt-axis");
+    expect(html).toContain("production-phase tone-");
+    expect(html).toContain("production-work-row tone-");
+    expect(html).toContain("role=\"img\"");
+    expect(html).toContain("Период:");
+    expect(trackCount).toBeGreaterThanOrEqual(5);
+    expect(html).not.toContain("NaN%");
+  });
+
   it("renders a safe empty state without false progress or secret-like values", () => {
     const html = renderToStaticMarkup(createElement(ProductionScheduleWorkspace, {
       ...workspaceProps(),

@@ -229,6 +229,30 @@ function timelineScale(items: ScheduleItem[], projectStartsAt?: string, projectE
   };
 }
 
+function timelineTicks(scale: ReturnType<typeof timelineScale>, count = 7) {
+  const longRange = scale.span > 120 * DAY;
+  return Array.from({ length: count }, (_, index) => {
+    const ratio = count === 1 ? 0 : index / (count - 1);
+    const value = scale.start + scale.span * ratio;
+    return {
+      id: `${Math.round(value)}-${index}`,
+      label: new Date(value).toLocaleDateString("ru-RU", longRange ? { month: "short", year: "2-digit" } : { day: "2-digit", month: "short" }),
+      left: ratio * 100
+    };
+  });
+}
+
+function timelinePosition(startsAt: string, endsAt: string, scale: ReturnType<typeof timelineScale>) {
+  const start = timestamp(startsAt);
+  const end = timestamp(endsAt);
+  if (!Number.isFinite(start) || !Number.isFinite(end)) return { left: 0, width: 2 };
+  const left = clamp(((start - scale.start) / scale.span) * 100);
+  return {
+    left,
+    width: clamp(((Math.max(end, start + DAY) - start) / scale.span) * 100, 2, 100 - left)
+  };
+}
+
 function durationDays(item: ScheduleItem) {
   const start = timestamp(item.startsAt);
   const end = timestamp(item.endsAt);
@@ -352,18 +376,29 @@ function ScheduleForm({
   );
 }
 
-function WorkTimeline({ item, scale }: { item: ScheduleItem; scale: ReturnType<typeof timelineScale> }) {
-  const start = timestamp(item.startsAt);
-  const end = timestamp(item.endsAt);
-  const left = clamp(((start - scale.start) / scale.span) * 100);
-  const width = clamp(((Math.max(end, start + DAY) - start) / scale.span) * 100, 2, 100 - left);
-  const progress = itemProgress(item);
+function TimelineBar({
+  startsAt,
+  endsAt,
+  progress,
+  scale,
+  tone,
+  label
+}: {
+  startsAt: string;
+  endsAt: string;
+  progress: number;
+  scale: ReturnType<typeof timelineScale>;
+  tone: string;
+  label?: string;
+}) {
+  const position = timelinePosition(startsAt, endsAt, scale);
 
   return (
-    <div className="production-work-timeline" aria-label={`Период работы: ${formatDate(item.startsAt)} — ${formatDate(item.endsAt)}`}>
+    <div className="production-gantt-track" role="img" aria-label={`Период: ${formatDate(startsAt)} — ${formatDate(endsAt)}, выполнено ${Math.round(progress)}%`}>
       {scale.todayLeft !== null ? <i className="production-today-line" style={{ left: `${scale.todayLeft}%` }} /> : null}
-      <span className={`production-work-bar tone-${statusMeta[item.status].tone}`} style={{ left: `${left}%`, width: `${width}%` }}>
+      <span className={`production-gantt-bar tone-${tone}`} style={{ left: `${position.left}%`, width: `${position.width}%` }}>
         <b style={{ width: `${progress}%` }} />
+        {label ? <small>{label}</small> : null}
       </span>
     </div>
   );
@@ -401,21 +436,16 @@ function WorkRow({
   return (
     <details className={`production-work-row tone-${rowTone}`}>
       <summary>
-        <span className={`production-status-dot tone-${rowTone}`} aria-hidden="true" />
+        <span className="production-work-marker"><i className={`production-status-dot tone-${rowTone}`} aria-hidden="true" /></span>
         <span className="production-work-title">
           <strong>{item.name}</strong>
-          <small>{item.owner || "Ответственный не назначен"}</small>
+          <small>{item.owner || "Ответственный не назначен"} · {formatShortDate(item.startsAt)} — {formatShortDate(item.endsAt)}</small>
         </span>
-        <span className="production-work-dates">{formatShortDate(item.startsAt)} — {formatShortDate(item.endsAt)}</span>
-        <span className="production-work-progress">
-          <b>{Math.round(progress)}%</b>
-          <i><em style={{ width: `${progress}%` }} /></i>
-        </span>
+        <TimelineBar endsAt={item.endsAt} label={`${Math.round(progress)}%`} progress={progress} scale={scale} startsAt={item.startsAt} tone={rowTone} />
         <span className={`production-status-label tone-${rowTone}`}>{rowStatus}</span>
         <ChevronDown className="production-disclosure-chevron" size={17} aria-hidden="true" />
       </summary>
       <div className="production-work-body">
-        <WorkTimeline item={item} scale={scale} />
         <div className="production-work-facts">
           <span><small>План / факт</small><strong>{formatQty(item.plannedQty)} / {formatQty(item.actualQty)}</strong></span>
           <span><small>Длительность</small><strong>{durationDays(item)} дн.</strong></span>
@@ -514,6 +544,7 @@ export function ProductionScheduleWorkspace({
     importHistory
   }), [budgetItems, contractAmount, importHistory, materials, payments, procurementRequests, projectEndsAt, projectName, projectStartsAt, scheduleItems]);
   const scale = useMemo(() => timelineScale(scheduleItems, projectStartsAt, projectEndsAt), [projectEndsAt, projectStartsAt, scheduleItems]);
+  const ticks = useMemo(() => timelineTicks(scale), [scale]);
   const visibleItems = useMemo(() => scheduleItems.filter((item) => {
     if (filter === "active" && item.status !== "in_progress") return false;
     if (filter === "delayed" && !isDelayed(item)) return false;
@@ -590,19 +621,21 @@ export function ProductionScheduleWorkspace({
         </details>
       ) : null}
 
-      <div className="production-scale" aria-hidden="true">
-        <span>{formatShortDate(new Date(scale.start).toISOString().slice(0, 10))}</span>
-        <i />
-        <span>{formatShortDate(new Date(scale.end).toISOString().slice(0, 10))}</span>
-      </div>
-
-      <div className="production-phase-list">
+      <div className="production-phase-list" id="production-gantt">
+        <div className="production-gantt-axis" aria-hidden="true">
+          <span className="production-gantt-axis-title">Этап / работа</span>
+          <div className="production-gantt-axis-dates">
+            {ticks.map((tick) => <span key={tick.id} style={{ left: `${tick.left}%` }}>{tick.label}</span>)}
+            {scale.todayLeft !== null ? <b style={{ left: `${scale.todayLeft}%` }}>Сегодня</b> : null}
+          </div>
+          <span className="production-gantt-axis-status">Статус</span>
+        </div>
         {groups.map((group, groupIndex) => (
           <details className={`production-phase tone-${group.tone}`} key={group.id} open={groupIndex === 0 && !normalizedQuery && filter === "all"}>
             <summary>
               <span className="production-phase-index">{String(groupIndex + 1).padStart(2, "0")}</span>
               <span className="production-phase-title"><strong>{group.title}</strong><small>{workCountLabel(group.items.length)} · {formatShortDate(group.startsAt)} — {formatShortDate(group.endsAt)}</small></span>
-              <span className="production-phase-progress"><i><em style={{ width: `${group.progress}%` }} /></i><b>{group.done}/{group.items.length}</b></span>
+              <TimelineBar endsAt={group.endsAt} label={`${Math.round(group.progress)}%`} progress={group.progress} scale={scale} startsAt={group.startsAt} tone={group.tone} />
               <span className="production-phase-state">{group.delayed ? `${group.delayed} откл.` : group.active ? `${group.active} в работе` : group.done === group.items.length ? "завершено" : "по плану"}</span>
               <ChevronDown className="production-disclosure-chevron" size={18} aria-hidden="true" />
             </summary>
