@@ -16,7 +16,7 @@ import { enrichLaborDemandsWithAverageProductivity } from "@/lib/workforce-produ
 
 export type { ProjectWorkbookQualityGate, ProjectWorkbookQualityIssue, ProjectWorkbookQualityStatus } from "./project-workbook-quality";
 
-export const PROJECT_WORKBOOK_PARSER_VERSION = "project_workbook_v1";
+export const PROJECT_WORKBOOK_PARSER_VERSION = "project_workbook_v2";
 
 export type ProjectWorkbookSheetRole =
   | "works"
@@ -316,10 +316,10 @@ function buildProjectWorkbook(buffer: Buffer, fileName: string, projectId: strin
     }
   }
 
-  const uniqueMaterials = dedupeMaterials(materials);
+  const uniqueMaterials = normalizeMaterialsForPersistence(dedupeMaterials(materials));
   const selectedMaterialRows = new Set(uniqueMaterials.map((item) => rowKey(item.sheetName, item.rowNumber)));
   const selectedBudgetItems = budgetItems.filter((item) => item.kind !== "material" || selectedMaterialRows.has(rowKey(item.sheetName, item.rowNumber)));
-  let uniqueBudgetItems = dedupeBudgetItems(selectedBudgetItems);
+  let uniqueBudgetItems = normalizeBudgetItemsForPersistence(dedupeBudgetItems(selectedBudgetItems));
   const productivityEnrichment = enrichLaborDemandsWithAverageProductivity(parsedLaborDemands);
   const laborDemands = productivityEnrichment.items.map((item) => ({
     ...item,
@@ -334,8 +334,31 @@ function buildProjectWorkbook(buffer: Buffer, fileName: string, projectId: strin
   const sourceDirectCost = extractDirectCost(enabledSheetData);
   const parsedDirectCost = sumCost(uniqueBudgetItems);
   const rawReconciliationGap = sourceDirectCost ? sourceDirectCost - parsedDirectCost : 0;
-  const reconciliationGap = Math.abs(rawReconciliationGap) < 0.01 ? 0 : rawReconciliationGap;
-  if (sourceDirectCost && reconciliationGap > Math.max(1, sourceDirectCost * 0.01)) {
+  let reconciliationGap = Math.abs(rawReconciliationGap) < 0.01 ? 0 : rawReconciliationGap;
+  if (sourceDirectCost && reconciliationGap && Math.abs(reconciliationGap) <= 100) {
+    const sourceSheet = enabledSheetData.find((sheet) => sheet.role === "summary")?.name ?? "ССР";
+    const adjustment = roundTo(reconciliationGap, 2);
+    uniqueBudgetItems = [
+      ...uniqueBudgetItems,
+      {
+        section: "Сверка / округление",
+        code: "ROUNDING-ADJUSTMENT",
+        name: "Корректировка округления при сохранении ВОР",
+        unit: "компл.",
+        qty: 1,
+        plannedUnitPrice: adjustment,
+        actualUnitPrice: 0,
+        forecastUnitPrice: adjustment,
+        kind: "overhead",
+        source: `Project workbook · ${sourceSheet}`,
+        comment: "Техническая корректировка компенсирует округление количества до 3 знаков и цены до 2 знаков в рабочем бюджете.",
+        sheetName: sourceSheet,
+        rowNumber: 1
+      }
+    ];
+    reconciliationGap = Math.abs(sourceDirectCost - sumCost(uniqueBudgetItems)) < 0.01 ? 0 : sourceDirectCost - sumCost(uniqueBudgetItems);
+    warnings.push(`Добавлена прозрачная корректировка округления ${adjustment.toFixed(2)} ₽, чтобы рабочий бюджет совпал со сводом прямых затрат.`);
+  } else if (sourceDirectCost && reconciliationGap > Math.max(1, sourceDirectCost * 0.01)) {
     const sourceSheet = enabledSheetData.find((sheet) => sheet.role === "summary")?.name ?? "ССР";
     uniqueBudgetItems = [
       ...uniqueBudgetItems,
@@ -848,6 +871,7 @@ function laborStems(value: string) {
     normalizeHeader(value)
       .split(/[^a-zа-я0-9]+/i)
       .filter((token) => token.length >= 4)
+      .filter((token) => !/^(?:работ|рабоч|вспомог|нераспредел|звено|бригад|команд|участок|проект)/.test(token))
       .map((token) => token.slice(0, Math.min(token.length, 7)))
   ));
 }
@@ -864,36 +888,64 @@ function roundLabor(value: number, precision = 3) {
   return Math.round(value * factor) / factor;
 }
 
+function operationIds(value: string) {
+  const matches = value.toUpperCase().match(/\b(?:T-[A-ZА-Я]{1,3}-?\d{1,3}(?:\.\d+)?|[A-ZА-Я]{1,3}-\d{1,6}(?:\.\d+)?)\b/gu) ?? [];
+  return Array.from(new Set(matches.map((match) => match
+    .replace(/^T-/, "")
+    .replace(/^([A-ZА-Я]{1,3})(\d)/u, "$1-$2"))));
+}
+
+function relatedOperationId(left: string, right: string) {
+  if (left === right) return true;
+  const leftBase = left.replace(/\.\d+$/, "");
+  const rightBase = right.replace(/\.\d+$/, "");
+  return leftBase === rightBase && (left === leftBase || right === rightBase);
+}
+
 function buildLaborAllocations(demand: ImportLaborDemand, budgetItems: ImportBudgetItem[]): ImportLaborDemand["allocations"] {
   const works = budgetItems.filter((item) => item.kind === "work" && item.qty > 0);
   if (!works.length) return [];
-  const demandText = `${demand.profession} ${demand.function ?? ""} ${demand.notes ?? ""}`;
-  const projectWideEngineer = demand.category === "engineer" && /руковод|главн.*инженер|начальник участка|пто|сметчик|экономист|охрана труд|от пб|кладовщик|снабжен|логист|качест|лаборатор|геодез/.test(normalizeHeader(demandText));
-  if (projectWideEngineer) return [];
+  const demandText = `${demand.profession} ${demand.function ?? ""}`;
+  const demandOperationIds = operationIds(`${demandText} ${demand.notes ?? ""}`);
+  const directMatches = works.map((item) => {
+    const ids = operationIds(`${item.code} ${item.comment ?? ""}`);
+    const matches = demandOperationIds.filter((demandId) => ids.some((workId) => relatedOperationId(demandId, workId))).length;
+    return { item, matches, amount: Math.max(1, item.qty * item.plannedUnitPrice) };
+  }).filter((entry) => entry.matches > 0);
+  const siteSupervisor = demand.category === "engineer" && /мастер|прораб/.test(normalizeHeader(demandText));
+  if (!directMatches.length && demand.category === "engineer" && !siteSupervisor) return [];
   const demandStems = laborStems(demandText);
   const demandFamilies = laborFamilyPatterns.filter((item) => item.pattern.test(demandText)).map((item) => item.id);
   const scored = works.map((item) => {
-    const workText = `${item.section} ${item.name} ${item.comment ?? ""}`;
+    const workText = `${item.section} ${item.name}`;
     const workStems = laborStems(workText);
     const lexicalMatches = demandStems.filter((stem) => workStems.some((candidate) => candidate.startsWith(stem) || stem.startsWith(candidate))).length;
     const workFamilies = laborFamilyPatterns.filter((family) => family.pattern.test(workText)).map((family) => family.id);
     const familyMatches = demandFamilies.filter((family) => workFamilies.includes(family)).length;
     const score = lexicalMatches * 4 + familyMatches * 7;
     const amount = Math.max(1, item.qty * item.plannedUnitPrice);
-    return { item, score, amount, weight: Math.max(0, score) * Math.sqrt(amount) };
+    return { item, score, amount, weight: Math.max(0, score) * Math.sqrt(amount), direct: false };
   });
-  let selected = scored.filter((item) => item.score > 0).sort((left, right) => right.weight - left.weight).slice(0, 24);
-  let fallback = false;
-  if (!selected.length) {
-    fallback = true;
-    selected = scored.sort((left, right) => right.amount - left.amount).slice(0, 24).map((item) => ({ ...item, weight: item.amount }));
+  let selected = directMatches.length
+    ? directMatches
+      .map(({ item, matches, amount }) => ({ item, score: matches * 100, amount, weight: matches * Math.sqrt(amount), direct: true }))
+      .sort((left, right) => right.weight - left.weight)
+    : scored
+      .filter((item) => item.score >= 4)
+      .sort((left, right) => right.weight - left.weight)
+      .slice(0, 8);
+  if (!selected.length && siteSupervisor) {
+    selected = scored
+      .sort((left, right) => right.amount - left.amount)
+      .slice(0, 8)
+      .map((item) => ({ ...item, weight: item.amount }));
   }
   if (!selected.length) return [];
   const totalWeight = selected.reduce((sum, item) => sum + item.weight, 0);
   if (totalWeight <= 0) return [];
   const duration = monthSpan(demand.startsAt, demand.endsAt);
   let remainingShare = 100;
-  const allocations = selected.map(({ item, score, weight }, index) => {
+  const allocations = selected.map(({ item, score, weight, direct }, index) => {
     const share = index === selected.length - 1
       ? remainingShare
       : Math.min(remainingShare, roundLabor(weight / totalWeight * 100));
@@ -906,10 +958,12 @@ function buildLaborAllocations(demand: ImportLaborDemand, budgetItems: ImportBud
       personMonths: roundLabor(personMonths),
       plannedHours: roundLabor(demand.plannedHours * share / 100, 2),
       requiredHeadcount: roundLabor(personMonths / duration),
-      confidence: roundLabor(Math.min(0.98, demand.confidence * (fallback ? 0.5 : Math.min(0.95, 0.7 + score * 0.03))), 4),
-      reason: fallback
-        ? "Распределено по стоимости работ: явная связь профессии с ВОР не найдена, требуется проверка."
-        : "Распределено по совпадению профессии/функции с разделом и наименованием ВОР."
+      confidence: roundLabor(Math.min(0.99, demand.confidence * (direct ? 1 : Math.min(0.95, 0.7 + score * 0.03))), 4),
+      reason: direct
+        ? "Распределено по точному коду операции из ФОТ и строки ВОР."
+        : siteSupervisor
+          ? "Распределено на основные работы как производственный мастер/прораб; требуется подтвердить охват."
+          : "Распределено по совпадению профессии/функции с разделом и наименованием ВОР."
     };
   });
   return allocations.filter((item) => item.sharePercent > 0);
@@ -1344,6 +1398,33 @@ function dedupeMaterials(items: ImportMaterial[]) {
     if (!current || preferredMaterialSource(item.sheetName, current.sheetName)) result.set(key, item);
   }
   return Array.from(result.values());
+}
+
+function roundTo(value: number, precision: number) {
+  const factor = 10 ** precision;
+  return Math.round((value + Number.EPSILON) * factor) / factor;
+}
+
+function normalizeBudgetItemsForPersistence(items: ImportBudgetItem[]) {
+  return items.map((item) => ({
+    ...item,
+    qty: roundTo(item.qty, 3),
+    plannedUnitPrice: roundTo(item.plannedUnitPrice, 2),
+    actualUnitPrice: roundTo(item.actualUnitPrice, 2),
+    forecastUnitPrice: roundTo(item.forecastUnitPrice, 2)
+  }));
+}
+
+function normalizeMaterialsForPersistence(items: ImportMaterial[]) {
+  return items.map((item) => ({
+    ...item,
+    requiredQty: roundTo(item.requiredQty, 3),
+    orderedQty: roundTo(item.orderedQty, 3),
+    deliveredQty: roundTo(item.deliveredQty, 3),
+    consumedQty: roundTo(item.consumedQty, 3),
+    plannedUnitPrice: roundTo(item.plannedUnitPrice, 2),
+    actualUnitPrice: roundTo(item.actualUnitPrice, 2)
+  }));
 }
 
 function preferredMaterialSource(candidate: string, current: string) {
