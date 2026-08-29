@@ -336,28 +336,12 @@ function buildProjectWorkbook(buffer: Buffer, fileName: string, projectId: strin
   const rawReconciliationGap = sourceDirectCost ? sourceDirectCost - parsedDirectCost : 0;
   let reconciliationGap = Math.abs(rawReconciliationGap) < 0.01 ? 0 : rawReconciliationGap;
   if (sourceDirectCost && reconciliationGap && Math.abs(reconciliationGap) <= 100) {
-    const sourceSheet = enabledSheetData.find((sheet) => sheet.role === "summary")?.name ?? "ССР";
-    const adjustment = roundTo(reconciliationGap, 2);
-    uniqueBudgetItems = [
-      ...uniqueBudgetItems,
-      {
-        section: "Сверка / округление",
-        code: "ROUNDING-ADJUSTMENT",
-        name: "Корректировка округления при сохранении ВОР",
-        unit: "компл.",
-        qty: 1,
-        plannedUnitPrice: adjustment,
-        actualUnitPrice: 0,
-        forecastUnitPrice: adjustment,
-        kind: "overhead",
-        source: `Project workbook · ${sourceSheet}`,
-        comment: "Техническая корректировка компенсирует округление количества до 3 знаков и цены до 2 знаков в рабочем бюджете.",
-        sheetName: sourceSheet,
-        rowNumber: 1
-      }
-    ];
-    reconciliationGap = Math.abs(sourceDirectCost - sumCost(uniqueBudgetItems)) < 0.01 ? 0 : sourceDirectCost - sumCost(uniqueBudgetItems);
-    warnings.push(`Добавлена прозрачная корректировка округления ${adjustment.toFixed(2)} ₽, чтобы рабочий бюджет совпал со сводом прямых затрат.`);
+    const adjustment = reconcilePersistenceRounding(uniqueBudgetItems, reconciliationGap);
+    if (adjustment) {
+      uniqueBudgetItems = adjustment.items;
+      reconciliationGap = Math.abs(sourceDirectCost - sumCost(uniqueBudgetItems)) < 0.01 ? 0 : sourceDirectCost - sumCost(uniqueBudgetItems);
+      warnings.push(`Скорректировано округление цены позиции «${adjustment.itemName}» на ${adjustment.amount.toFixed(2)} ₽, чтобы рабочий бюджет совпал со сводом прямых затрат.`);
+    }
   } else if (sourceDirectCost && reconciliationGap > Math.max(1, sourceDirectCost * 0.01)) {
     const sourceSheet = enabledSheetData.find((sheet) => sheet.role === "summary")?.name ?? "ССР";
     uniqueBudgetItems = [
@@ -1425,6 +1409,30 @@ function normalizeMaterialsForPersistence(items: ImportMaterial[]) {
     plannedUnitPrice: roundTo(item.plannedUnitPrice, 2),
     actualUnitPrice: roundTo(item.actualUnitPrice, 2)
   }));
+}
+
+function reconcilePersistenceRounding(items: ImportBudgetItem[], gap: number) {
+  const candidates = items
+    .map((item, index) => {
+      if (item.kind !== "work" || item.qty <= 0 || item.plannedUnitPrice <= 0) return null;
+      const plannedUnitPrice = roundTo(item.plannedUnitPrice + gap / item.qty, 2);
+      if (plannedUnitPrice < 0) return null;
+      const amount = item.qty * (plannedUnitPrice - item.plannedUnitPrice);
+      return { index, item, plannedUnitPrice, amount, remaining: gap - amount };
+    })
+    .filter((item): item is NonNullable<typeof item> => item !== null)
+    .sort((left, right) => Math.abs(left.remaining) - Math.abs(right.remaining));
+  const best = candidates[0];
+  if (!best || Math.abs(best.remaining) >= 0.01) return null;
+  const itemsWithAdjustment = items.map((item, index) => index === best.index
+    ? {
+        ...item,
+        plannedUnitPrice: best.plannedUnitPrice,
+        forecastUnitPrice: best.plannedUnitPrice,
+        comment: joinComment(item.comment, `Корректировка округления при сохранении: ${best.amount.toFixed(2)} ₽.`)
+      }
+    : item);
+  return { items: itemsWithAdjustment, amount: best.amount, itemName: best.item.name };
 }
 
 function preferredMaterialSource(candidate: string, current: string) {
