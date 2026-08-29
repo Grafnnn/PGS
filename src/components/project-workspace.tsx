@@ -29,6 +29,7 @@ import { DocumentTransmittalsWorkspace } from "@/components/document-transmittal
 import { PhotoEvidenceWorkspace } from "@/components/photo-evidence-workspace";
 import { ProjectIntelligenceDrilldown } from "@/components/project-intelligence-drilldown";
 import { ProcurementIntelligenceWorkspace } from "@/components/procurement-intelligence-workspace";
+import { ProductionScheduleWorkspace } from "@/components/production-schedule-workspace";
 import { QualityIssuesWorkspace } from "@/components/quality-issues-workspace";
 import { QualityManagementWorkspace } from "@/components/quality-management-workspace";
 import { ResourcesEquipmentWorkspace } from "@/components/resources-equipment-workspace";
@@ -175,7 +176,6 @@ export function ProjectWorkspace({
   const [materialTableFilter, setMaterialTableFilter] = useState("all");
   const [editingBudget, setEditingBudget] = useState<BudgetItem | null>(null);
   const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
-  const [editingSchedule, setEditingSchedule] = useState<ScheduleItem | null>(null);
   const [auditEvents, setAuditEvents] = useState<AuditEvent[]>([]);
   const [documents, setDocuments] = useState<ProjectDocument[]>([]);
   const [documentVersions, setDocumentVersions] = useState<Record<string, ProjectDocumentVersion[]>>({});
@@ -961,60 +961,39 @@ export function ProjectWorkspace({
       )}
 
       {activeTab === "График" && (
-        <Panel title="Календарный график работ" icon={<TimerReset size={18} />}>
-          <ScheduleCashflowWorkspace
-            projectName={initialBundle.project.name}
-            projectStartsAt={initialBundle.project.startsAt}
-            projectEndsAt={initialBundle.project.endsAt}
-            contractAmount={initialBundle.project.contractAmount}
-            budgetItems={budgetItems}
-            scheduleItems={scheduleItems}
-            materials={materials}
-            procurementRequests={procurementRequests}
-            payments={payments}
-            importHistory={importHistory}
-            draft={pipelineDraft}
-            loading={pipelineLoading}
-            onSchedulePreview={() => void runPipelineDraft("schedule")}
-            onScheduleCommit={() => void runPipelineDraft("schedule", true)}
-            onCashflowPreview={() => void runPipelineDraft("cashflow")}
-            onCashflowCommit={() => void runPipelineDraft("cashflow", true)}
-            onNavigate={setActiveTab}
-          />
-          <PipelineDraftPanel
-            kind="schedule"
-            draft={pipelineDraft}
-            loading={pipelineLoading}
-            onPreview={() => void runPipelineDraft("schedule")}
-            onCommit={() => void runPipelineDraft("schedule", true)}
-          />
-          <TimelineView items={scheduleItems} />
-          <ScheduleForm
-            onAdd={async (item) => {
-              const saved = await createResource<ScheduleItem>("schedule", { actualQty: 0, status: "not_started", ...item });
-              setScheduleItems((current) => [...current, saved]);
-            }}
-          />
-          {editingSchedule && (
-            <ScheduleEditForm
-              item={editingSchedule}
-              onCancel={() => setEditingSchedule(null)}
-              onSave={async (payload) => {
-                const saved = await updateResource<ScheduleItem>("schedule", editingSchedule.id, payload);
-                setScheduleItems((current) => current.map((item) => (item.id === saved.id ? saved : item)));
-                setEditingSchedule(null);
-              }}
-            />
-          )}
-          <ScheduleTable
-            items={scheduleItems}
-            onEdit={setEditingSchedule}
-            onDelete={async (item) => {
-              await deleteResource("schedule", item.id);
-              setScheduleItems((current) => current.filter((candidate) => candidate.id !== item.id));
-            }}
-          />
-        </Panel>
+        <ProductionScheduleWorkspace
+          budgetItems={budgetItems}
+          busy={saving === "schedule"}
+          canEdit={canEditCurrentProject}
+          contractAmount={initialBundle.project.contractAmount}
+          draft={pipelineDraft}
+          importHistory={importHistory}
+          loading={pipelineLoading}
+          materials={materials}
+          onCashflowCommit={() => void runPipelineDraft("cashflow", true)}
+          onCashflowPreview={() => void runPipelineDraft("cashflow")}
+          onCreate={async (item) => {
+            const saved = await createResource<ScheduleItem>("schedule", { actualQty: 0, status: "not_started", ...item });
+            setScheduleItems((current) => [...current, saved]);
+          }}
+          onDelete={async (item) => {
+            await deleteResource("schedule", item.id);
+            setScheduleItems((current) => current.filter((candidate) => candidate.id !== item.id));
+          }}
+          onNavigate={setActiveTab}
+          onScheduleCommit={() => void runPipelineDraft("schedule", true)}
+          onSchedulePreview={() => void runPipelineDraft("schedule")}
+          onUpdate={async (item, payload) => {
+            const saved = await updateResource<ScheduleItem>("schedule", item.id, payload);
+            setScheduleItems((current) => current.map((candidate) => (candidate.id === saved.id ? saved : candidate)));
+          }}
+          payments={payments}
+          procurementRequests={procurementRequests}
+          projectEndsAt={initialBundle.project.endsAt}
+          projectName={initialBundle.project.name}
+          projectStartsAt={initialBundle.project.startsAt}
+          scheduleItems={scheduleItems}
+        />
       )}
 
       {activeTab === "Материалы" && (
@@ -2658,54 +2637,6 @@ function BudgetForm({ onAdd }: { onAdd: (item: Omit<BudgetItem, "id" | "projectI
   );
 }
 
-function ScheduleForm({ onAdd }: { onAdd: (item: Omit<ScheduleItem, "id" | "projectId" | "actualQty" | "status">) => Promise<void> }) {
-  return (
-    <form
-      className="form-grid form-surface"
-      onSubmit={(event) => {
-        event.preventDefault();
-        const data = new FormData(event.currentTarget);
-        void onAdd({
-          name: String(data.get("name") || "Новая работа"),
-          owner: String(data.get("owner") || "РП"),
-          startsAt: String(data.get("startsAt") || new Date().toISOString().slice(0, 10)),
-          endsAt: String(data.get("endsAt") || new Date().toISOString().slice(0, 10)),
-          plannedQty: Number(data.get("plannedQty") || 1)
-        }).catch(() => undefined);
-        event.currentTarget.reset();
-      }}
-    >
-      <label>
-        Работа
-        <input name="name" placeholder="Монтаж перегородок" />
-      </label>
-      <label>
-        Ответственный
-        <input name="owner" placeholder="ПТО" />
-      </label>
-      <label>
-        Начало
-        <input name="startsAt" type="date" />
-      </label>
-      <label>
-        Окончание
-        <input name="endsAt" type="date" />
-      </label>
-      <label>
-        Плановый объем
-        <input name="plannedQty" type="number" step="0.01" />
-      </label>
-      <label>
-        &nbsp;
-        <button className="button primary" type="submit">
-          <Plus size={18} />
-          Добавить
-        </button>
-      </label>
-    </form>
-  );
-}
-
 function PaymentForm({ onAdd }: { onAdd: (payment: Omit<Payment, "id" | "projectId" | "status">) => Promise<void> }) {
   return (
     <form
@@ -2809,70 +2740,6 @@ function BudgetEditForm({ item, onSave, onCancel }: { item: BudgetItem; onSave: 
       <label>
         Цена прогноз
         <input name="forecastUnitPrice" type="number" step="0.01" defaultValue={item.forecastUnitPrice} />
-      </label>
-      <label>
-        &nbsp;
-        <button className="button primary" type="submit">Сохранить</button>
-      </label>
-      <label>
-        &nbsp;
-        <button className="button secondary" type="button" onClick={onCancel}>Отмена</button>
-      </label>
-    </form>
-  );
-}
-
-function ScheduleEditForm({ item, onSave, onCancel }: { item: ScheduleItem; onSave: (payload: Partial<ScheduleItem>) => Promise<void>; onCancel: () => void }) {
-  return (
-    <form
-      className="form-grid form-surface edit-surface"
-      onSubmit={(event) => {
-        event.preventDefault();
-        const data = new FormData(event.currentTarget);
-        void onSave({
-          name: String(data.get("name") || item.name),
-          owner: String(data.get("owner") || item.owner),
-          startsAt: String(data.get("startsAt") || item.startsAt),
-          endsAt: String(data.get("endsAt") || item.endsAt),
-          plannedQty: Number(data.get("plannedQty") || item.plannedQty),
-          actualQty: Number(data.get("actualQty") || item.actualQty),
-          status: String(data.get("status") || item.status) as ScheduleItem["status"]
-        }).catch(() => undefined);
-      }}
-    >
-      <label>
-        Работа
-        <input name="name" defaultValue={item.name} />
-      </label>
-      <label>
-        Ответственный
-        <input name="owner" defaultValue={item.owner} />
-      </label>
-      <label>
-        Начало
-        <input name="startsAt" type="date" defaultValue={item.startsAt} />
-      </label>
-      <label>
-        Окончание
-        <input name="endsAt" type="date" defaultValue={item.endsAt} />
-      </label>
-      <label>
-        План
-        <input name="plannedQty" type="number" step="0.001" defaultValue={item.plannedQty} />
-      </label>
-      <label>
-        Факт
-        <input name="actualQty" type="number" step="0.001" defaultValue={item.actualQty} />
-      </label>
-      <label>
-        Статус
-        <select name="status" defaultValue={item.status}>
-          <option value="not_started">Не начато</option>
-          <option value="in_progress">В работе</option>
-          <option value="done">Готово</option>
-          <option value="delayed">Просрочено</option>
-          <option value="stopped">Остановлено</option>
-        </select>
       </label>
       <label>
         &nbsp;
@@ -3062,27 +2929,6 @@ function BudgetTable({
         ])}
       />
     </div>
-  );
-}
-
-function ScheduleTable({ items, onEdit, onDelete }: { items: ScheduleItem[]; onEdit: (item: ScheduleItem) => void; onDelete: (item: ScheduleItem) => void }) {
-  return (
-    <DataTable
-      headers={["Работа", "Ответственный", "Начало", "Окончание", "План", "Факт", "Выполнение", "Статус", ""]}
-      numericColumns={[4, 5, 6]}
-      emptyMessage="График пока не заполнен. Добавьте первую работу или импортируйте план."
-      rows={items.map((item) => [
-        item.name,
-        item.owner,
-        item.startsAt,
-        item.endsAt,
-        item.plannedQty,
-        item.actualQty,
-        percent(item.plannedQty ? (item.actualQty / item.plannedQty) * 100 : 0),
-        <StatusBadge key="status" tone={statusTone(item.status)}>{readableStatus(item.status)}</StatusBadge>,
-        <RowActions key="actions" onEdit={() => onEdit(item)} onDelete={() => onDelete(item)} />
-      ])}
-    />
   );
 }
 
@@ -3472,50 +3318,6 @@ function BudgetAnalytics({ items, contractAmount, paid, forecastProfit }: { item
           <span className="warn" style={{ width: `${Math.min(100, (forecastCost / contractAmount) * 100)}%` }}>Затраты</span>
           <span className={forecastProfit > 0 ? "good" : "bad"} style={{ width: `${Math.min(100, (Math.abs(forecastProfit) / contractAmount) * 100)}%` }}>Прибыль</span>
         </div>
-      </div>
-    </div>
-  );
-}
-
-function TimelineView({ items }: { items: ScheduleItem[] }) {
-  const times = items.flatMap((item) => [new Date(item.startsAt).getTime(), new Date(item.endsAt).getTime()]).filter(Number.isFinite);
-  const start = Math.min(...times);
-  const end = Math.max(...times);
-  const span = Math.max(end - start, 86_400_000);
-  const today = Date.now();
-  const todayLeft = Math.max(0, Math.min(100, ((today - start) / span) * 100));
-
-  return (
-    <div className="timeline-panel">
-      <div className="timeline-head">
-        <h3>График работ</h3>
-        <div className="segmented-control">
-          <button className="active" type="button">Неделя</button>
-          <button type="button">Месяц</button>
-          <button type="button">Квартал</button>
-        </div>
-      </div>
-      <div className="gantt" style={{ ["--today-left" as string]: `${todayLeft}%` }}>
-        {items.slice(0, 8).map((item) => {
-          const itemStart = new Date(item.startsAt).getTime();
-          const itemEnd = new Date(item.endsAt).getTime();
-          const left = Math.max(0, ((itemStart - start) / span) * 100);
-          const width = Math.max(8, ((itemEnd - itemStart) / span) * 100);
-          const completion = item.plannedQty ? Math.min(100, (item.actualQty / item.plannedQty) * 100) : 0;
-          return (
-            <div className="gantt-row" key={item.id}>
-              <div>
-                <strong>{item.name}</strong>
-                <span>{item.owner} · {formatDate(item.startsAt)} - {formatDate(item.endsAt)}</span>
-              </div>
-              <div className="gantt-track">
-                <span className={`gantt-bar ${statusTone(item.status)}`} style={{ left: `${left}%`, width: `${width}%` }}>
-                  <i style={{ width: `${completion}%` }} />
-                </span>
-              </div>
-            </div>
-          );
-        })}
       </div>
     </div>
   );
