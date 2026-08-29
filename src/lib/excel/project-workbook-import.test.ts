@@ -207,13 +207,13 @@ describe("project workbook import", () => {
 
     const analysis = analyzeProjectWorkbookBuffer(buffer, "rounding.xlsx", "project", { startsAt: "2026-07-01" });
     const preview = parseProjectWorkbookBuffer(buffer, "rounding.xlsx", "project", { startsAt: "2026-07-01" });
-    const adjustment = preview.budgetItems.find((item) => item.code === "ROUNDING-ADJUSTMENT");
+    const work = preview.budgetItems.find((item) => item.kind === "work");
 
-    expect(analysis.summary).toMatchObject({ budgetItems: 2, sourceDirectCost: 58_748.05, reconciliationGap: 0 });
+    expect(analysis.summary).toMatchObject({ budgetItems: 1, sourceDirectCost: 58_748.05, reconciliationGap: 0 });
     expect(analysis.summary.estimatedDirectCost).toBeCloseTo(58_748.05, 2);
-    expect(adjustment).toMatchObject({ qty: 1, kind: "overhead" });
-    expect(adjustment?.plannedUnitPrice).toBeLessThan(0);
-    expect(preview.warnings).toContainEqual(expect.stringContaining("корректировка округления"));
+    expect(work?.plannedUnitPrice).toBeGreaterThan(0);
+    expect(work?.comment).toContain("Корректировка округления при сохранении");
+    expect(preview.warnings).toContainEqual(expect.stringContaining("Скорректировано округление"));
   });
 
   it("keeps sparse resource rows for review and classifies summary and control before broad work heuristics", () => {
