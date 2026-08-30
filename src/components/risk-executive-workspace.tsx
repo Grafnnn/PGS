@@ -1,7 +1,7 @@
 "use client";
 
 import { AlertTriangle, ClipboardList, FileText, ListChecks, ShieldAlert } from "lucide-react";
-import React from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   buildRiskExecutiveIntelligence,
   type ActionItem,
@@ -40,6 +40,8 @@ type RiskExecutiveWorkspaceProps = {
   aiLoading?: boolean;
   aiInsight?: AiInsightResponse | null;
 };
+
+type RiskExecutiveView = "register" | "decisions" | "actions" | "report";
 
 function severityClass(severity: RiskSeverity) {
   if (severity === "critical" || severity === "high") return "red";
@@ -232,6 +234,12 @@ export function RiskExecutiveWorkspace({
   aiLoading = false,
   aiInsight = null
 }: RiskExecutiveWorkspaceProps) {
+  const [view, setView] = useState<RiskExecutiveView>("register");
+  const workspaceRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    workspaceRef.current?.closest<HTMLElement>(".project-module-view-body")?.scrollTo({ top: 0 });
+  }, [view]);
   const model = buildRiskExecutiveIntelligence({
     project,
     budgetItems,
@@ -251,7 +259,7 @@ export function RiskExecutiveWorkspace({
   const report = model.executiveReport;
 
   return (
-    <section className="risk-executive-workspace" aria-label="Риски и управленческие отчеты">
+    <section className="risk-executive-workspace" aria-label="Риски и управленческие отчеты" ref={workspaceRef}>
       <div className="risk-exec-header">
         <div>
           <div className="eyebrow">Риски и управленческие отчеты</div>
@@ -280,8 +288,19 @@ export function RiskExecutiveWorkspace({
         <SummaryMetric title="Готовность отчета" value={model.summary.reportReadiness} detail={model.summary.missingSources.length ? `Нет: ${model.summary.missingSources.join(", ")}` : "источники присутствуют"} tone={model.summary.reportReadiness === "ready" ? "good" : model.summary.reportReadiness === "blocked" ? "bad" : "warn"} />
       </div>
 
+      <nav className="risk-exec-view-tabs" aria-label="Представления рисков и отчета">
+        {([
+          ["register", "Риск-регистр"],
+          ["decisions", "Решения"],
+          ["actions", "Действия"],
+          ["report", "Отчёт руководителю"]
+        ] as Array<[RiskExecutiveView, string]>).map(([value, label]) => (
+          <button aria-pressed={view === value} className={view === value ? "active" : ""} key={value} onClick={() => setView(value)} type="button">{label}</button>
+        ))}
+      </nav>
+
       <div className="risk-exec-layout">
-        <article className="risk-exec-card risk-register-card">
+        <article className="risk-exec-card risk-register-card" hidden={view !== "register"}>
           <div className="section-title">
             <AlertTriangle size={18} />
             <h3>Реестр рисков</h3>
@@ -289,10 +308,10 @@ export function RiskExecutiveWorkspace({
           {!model.risks.length ? <EmptyRiskState missingSources={model.summary.missingSources} /> : <RiskRegisterTable risks={model.risks} />}
         </article>
 
-        <DecisionRegisterPanel decisions={model.decisions} />
-        <ActionRegisterPanel actions={model.actions} />
+        <div hidden={view !== "decisions"}><DecisionRegisterPanel decisions={model.decisions} /></div>
+        <div hidden={view !== "actions"}><ActionRegisterPanel actions={model.actions} /></div>
 
-        <article className="risk-exec-card executive-report-card">
+        <article className="risk-exec-card executive-report-card" hidden={view !== "report"}>
           <div className="section-title">
             <FileText size={18} />
             <h3>Недельный отчет руководителя</h3>

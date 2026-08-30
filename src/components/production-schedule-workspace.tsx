@@ -31,6 +31,8 @@ type ScheduleDraftState = {
   created?: unknown[];
 } | null;
 
+type ScheduleView = "plan" | "week" | "risks" | "cashflow" | "automation";
+
 export type ScheduleCreateInput = Omit<ScheduleItem, "id" | "projectId" | "actualQty" | "status" | "budgetItemId"> & {
   budgetItemId?: string | null;
 };
@@ -533,6 +535,7 @@ export function ProductionScheduleWorkspace({
   const [filter, setFilter] = useState<Filter>("all");
   const [query, setQuery] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [view, setView] = useState<ScheduleView>("plan");
   const normalizedQuery = query.trim().toLocaleLowerCase("ru-RU");
   const model = useMemo(() => buildScheduleCashflowIntelligenceModel({
     project: { name: projectName, startsAt: projectStartsAt, endsAt: projectEndsAt, contractAmount },
@@ -587,6 +590,19 @@ export function ProductionScheduleWorkspace({
         <article><small>Ближайший срок</small><strong>{nextItem ? formatShortDate(nextItem.endsAt) : "—"}</strong><span>{nextItem?.name ?? "активных работ нет"}</span></article>
       </div>
 
+      <nav className="production-schedule-view-tabs" aria-label="Представления графика">
+        {([
+          ["plan", "Диаграмма"],
+          ["week", "Недельный контроль"],
+          ["risks", "Риски и связи"],
+          ["cashflow", "Cashflow"],
+          ["automation", "Автопланирование"]
+        ] as Array<[ScheduleView, string]>).map(([value, label]) => (
+          <button aria-pressed={view === value} className={view === value ? "active" : ""} key={value} onClick={() => setView(value)} type="button">{label}</button>
+        ))}
+      </nav>
+
+      <div className="production-schedule-plan-view" hidden={view !== "plan"}>
       <div className="production-schedule-toolbar">
         <label className="production-schedule-search">
           <Search size={16} />
@@ -672,9 +688,10 @@ export function ProductionScheduleWorkspace({
           </div>
         ) : null}
       </div>
+      </div>
 
       <div className="production-schedule-disclosures">
-        <details>
+        <details hidden={view !== "week"} open={view === "week"}>
           <summary><span><CalendarDays size={17} /><strong>Недельный контроль</strong><small>по датам подтверждённого графика</small></span><ChevronDown className="production-disclosure-chevron" size={17} /></summary>
           <div className="production-week-list">
             {weeklyControl.map((row) => (
@@ -688,7 +705,7 @@ export function ProductionScheduleWorkspace({
           </div>
         </details>
 
-        <details>
+        <details hidden={view !== "risks"} open={view === "risks"}>
           <summary><span><AlertTriangle size={17} /><strong>Риски и зависимости</strong><small>{model.risks.length + scheduleItems.filter((item) => item.dependency).length} сигналов</small></span><ChevronDown className="production-disclosure-chevron" size={17} /></summary>
           <div className="production-risk-list">
             {model.risks.map((risk) => <div key={`${risk.title}-${risk.detail}`}><span className={`badge ${risk.severity === "high" ? "red" : risk.severity === "medium" ? "yellow" : "blue"}`}>{risk.severity === "high" ? "Высокий" : risk.severity === "medium" ? "Средний" : "Низкий"}</span><strong>{risk.title}</strong><p>{risk.detail}</p></div>)}
@@ -697,7 +714,7 @@ export function ProductionScheduleWorkspace({
           </div>
         </details>
 
-        <details>
+        <details hidden={view !== "cashflow"} open={view === "cashflow"}>
           <summary><span><Landmark size={17} /><strong>Расчётная финансовая нагрузка</strong><small>{model.summary.peakCashNeed ? `оценочный пик ${money(model.summary.peakCashNeed)}` : "нет расчёта"}</small></span><ChevronDown className="production-disclosure-chevron" size={17} /></summary>
           <div className="production-cashflow-section">
             <p className="production-method-note">Оценка строится по ВОР и не заменяет подтверждённый платёжный план.</p>
@@ -717,7 +734,7 @@ export function ProductionScheduleWorkspace({
           </div>
         </details>
 
-        <details className="production-auto-plan">
+        <details className="production-auto-plan" hidden={view !== "automation"} open={view === "automation"}>
           <summary><span><PackageCheck size={17} /><strong>Автопланирование из ВОР</strong><small>{model.summary.packageCount} пакетов · {model.readiness.label}</small></span><ChevronDown className="production-disclosure-chevron" size={17} /></summary>
           <div className="production-auto-plan-body">
             <div className="production-auto-plan-status">
