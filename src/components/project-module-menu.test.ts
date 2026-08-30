@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { countNoun, ProjectModuleMenu, projectTabGroups, projectTabs } from "@/components/project-module-menu";
 
 describe("ProjectModuleMenu", () => {
-  it("shows every project section in the expanded mega-menu", () => {
+  it("shows every project section through six work domains and one service domain", () => {
     const html = renderToStaticMarkup(
       createElement(ProjectModuleMenu, {
         activeTab: "Документы",
@@ -14,8 +14,15 @@ describe("ProjectModuleMenu", () => {
     );
 
     expect(html).toContain('aria-expanded="true"');
-    expect(html).toContain("Все разделы");
-    expect(html).toContain(`${projectTabs.length} рабочих зон`);
+    expect(html).toContain("Рабочие контуры");
+    expect(html).toContain(`${projectTabs.length} модулей доступны через 6 рабочих контуров`);
+    expect(html).toContain("Центр управления");
+    expect(html).toContain("Производство");
+    expect(html).toContain("Ресурсы");
+    expect(html).toContain("Экономика");
+    expect(html).toContain("Документы и контроль");
+    expect(html).toContain("Приёмка");
+    expect(html).toContain("Система проекта");
     expect(html).not.toContain("<select");
     for (const tab of projectTabs) expect(html).toContain(tab);
   });

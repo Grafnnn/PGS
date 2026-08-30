@@ -848,8 +848,8 @@ export function ProjectWorkspace({
       </div>
 
       <div className="workspace-layout workspace-layout-full project-workspace-layout">
-        <div>
-          <ProjectModuleMenu activeTab={activeProjectTab} onSelect={setActiveTab} />
+        <ProjectModuleMenu activeTab={activeProjectTab} onSelect={setActiveTab} />
+        <div className="project-workspace-content">
           {activeTab !== "Обзор" && (
             <ProjectSectionGuide
               activeTab={activeProjectTab}

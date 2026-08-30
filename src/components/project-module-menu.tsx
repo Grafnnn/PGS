@@ -1,31 +1,38 @@
 "use client";
 
-import React, { useEffect, useId, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle,
   BadgeCheck,
   BarChart3,
   Bot,
+  Boxes,
+  Building2,
+  CalendarRange,
   Check,
   ChevronDown,
   ClipboardList,
   DatabaseZap,
+  FileCheck2,
   FileText,
+  FolderKanban,
   HardHat,
   Landmark,
-  LayoutGrid,
+  LayoutDashboard,
   ListChecks,
   MessageSquareText,
   Package,
   ReceiptText,
   Search,
   Send,
+  Settings2,
   Table2,
   TimerReset,
   Trash2,
   Truck,
   Users,
-  Workflow
+  Workflow,
+  X
 } from "lucide-react";
 
 export const projectTabs = [
@@ -58,51 +65,94 @@ export const projectTabs = [
 
 export type ProjectTab = (typeof projectTabs)[number];
 
-export const projectTabGroups: ReadonlyArray<{ label: string; tabs: readonly ProjectTab[] }> = [
+export type ProjectTabGroup = {
+  id: "control" | "production" | "resources" | "economy" | "documents" | "acceptance" | "system";
+  label: string;
+  description: string;
+  icon: React.ReactNode;
+  tabs: readonly ProjectTab[];
+  service?: boolean;
+};
+
+export const projectTabGroups: ReadonlyArray<ProjectTabGroup> = [
   {
-    label: "Управление",
-    tabs: ["Обзор", "Действия", "Аналитика", "Участники", "История", "Настройки", "AI-помощник"]
+    id: "control",
+    label: "Центр управления",
+    description: "Сводка, решения и прогноз",
+    icon: <LayoutDashboard size={18} />,
+    tabs: ["Обзор", "Действия", "Аналитика", "Риски", "AI-помощник"]
   },
   {
-    label: "Контур работ",
-    tabs: ["Площадка", "Рапорты", "Исполнение", "График", "Материалы", "Заявки"]
+    id: "production",
+    label: "Производство",
+    description: "График, площадка и факт",
+    icon: <CalendarRange size={18} />,
+    tabs: ["График", "Площадка", "Рапорты", "Исполнение"]
   },
   {
-    label: "Коммерция",
-    tabs: ["Бюджет / ВОР", "ФОТ", "Финансы", "ERP / Учёт", "Договор / Тендер", "КП / Подача", "КС"]
+    id: "resources",
+    label: "Ресурсы",
+    description: "Люди, материалы и закупки",
+    icon: <Boxes size={18} />,
+    tabs: ["ФОТ", "Материалы", "Заявки"]
   },
   {
-    label: "Контроль",
-    tabs: ["Документы", "RFI / Согласования", "Риски", "Сдача / Гарантия", "Процессы"]
+    id: "economy",
+    label: "Экономика",
+    description: "ВОР, прогноз и денежный поток",
+    icon: <Landmark size={18} />,
+    tabs: ["Бюджет / ВОР", "Финансы", "ERP / Учёт"]
+  },
+  {
+    id: "documents",
+    label: "Документы и контроль",
+    description: "Реестр, договор и согласования",
+    icon: <FolderKanban size={18} />,
+    tabs: ["Документы", "Договор / Тендер", "КП / Подача", "RFI / Согласования"]
+  },
+  {
+    id: "acceptance",
+    label: "Приёмка",
+    description: "КС, сдача и гарантия",
+    icon: <FileCheck2 size={18} />,
+    tabs: ["КС", "Сдача / Гарантия"]
+  },
+  {
+    id: "system",
+    label: "Система проекта",
+    description: "Команда, процессы и аудит",
+    icon: <Settings2 size={18} />,
+    tabs: ["Участники", "Процессы", "История", "Настройки"],
+    service: true
   }
 ];
 
-const tabMeta: Record<ProjectTab, { code: string; icon: React.ReactNode; hint: string }> = {
-  Обзор: { code: "00", icon: <LayoutGrid size={17} />, hint: "Сводка проекта" },
-  "Бюджет / ВОР": { code: "01", icon: <Table2 size={17} />, hint: "Объемы и бюджет" },
-  ФОТ: { code: "PAY", icon: <Users size={17} />, hint: "Люди и начисления" },
-  График: { code: "02", icon: <TimerReset size={17} />, hint: "Сроки и этапы" },
-  Материалы: { code: "03", icon: <Package size={17} />, hint: "Потребность" },
-  Заявки: { code: "04", icon: <Truck size={17} />, hint: "Закупки" },
-  Финансы: { code: "05", icon: <Landmark size={17} />, hint: "Платежи и cash-flow" },
-  "ERP / Учёт": { code: "ERP", icon: <DatabaseZap size={17} />, hint: "Обмен с учетом" },
-  "Договор / Тендер": { code: "06", icon: <Search size={17} />, hint: "Контракт" },
-  "КП / Подача": { code: "07", icon: <Send size={17} />, hint: "Предложение" },
-  КС: { code: "08", icon: <ReceiptText size={17} />, hint: "Закрытие объемов" },
-  "Сдача / Гарантия": { code: "CLS", icon: <BadgeCheck size={17} />, hint: "Передача и гарантия" },
-  Исполнение: { code: "09", icon: <Users size={17} />, hint: "Подрядчики" },
-  Площадка: { code: "FS", icon: <HardHat size={17} />, hint: "Работы на объекте" },
-  Рапорты: { code: "10", icon: <ClipboardList size={17} />, hint: "Ежедневный факт" },
-  Риски: { code: "11", icon: <AlertTriangle size={17} />, hint: "Отклонения" },
-  Документы: { code: "12", icon: <FileText size={17} />, hint: "Файлы и версии" },
-  "RFI / Согласования": { code: "13", icon: <MessageSquareText size={17} />, hint: "Запросы и ответы" },
-  Действия: { code: "14", icon: <ListChecks size={17} />, hint: "Задачи команды" },
-  Процессы: { code: "WF", icon: <Workflow size={17} />, hint: "Маршруты согласования" },
-  Аналитика: { code: "15", icon: <BarChart3 size={17} />, hint: "EVM и KPI" },
-  Участники: { code: "16", icon: <Users size={17} />, hint: "Команда и доступ" },
-  История: { code: "17", icon: <ClipboardList size={17} />, hint: "Аудит изменений" },
-  Настройки: { code: "18", icon: <Trash2 size={17} />, hint: "Параметры проекта" },
-  "AI-помощник": { code: "AI", icon: <Bot size={17} />, hint: "Сценарии анализа" }
+const tabMeta: Record<ProjectTab, { icon: React.ReactNode; hint: string }> = {
+  Обзор: { icon: <LayoutDashboard size={16} />, hint: "Состояние и решения" },
+  "Бюджет / ВОР": { icon: <Table2 size={16} />, hint: "Объёмы и себестоимость" },
+  ФОТ: { icon: <Users size={16} />, hint: "Люди и начисления" },
+  График: { icon: <TimerReset size={16} />, hint: "Сроки и этапы" },
+  Материалы: { icon: <Package size={16} />, hint: "Потребность объекта" },
+  Заявки: { icon: <Truck size={16} />, hint: "Закупки и поставки" },
+  Финансы: { icon: <Landmark size={16} />, hint: "Платежи и cash-flow" },
+  "ERP / Учёт": { icon: <DatabaseZap size={16} />, hint: "Сверка с учётом" },
+  "Договор / Тендер": { icon: <Search size={16} />, hint: "Контракт и условия" },
+  "КП / Подача": { icon: <Send size={16} />, hint: "Коммерческое предложение" },
+  КС: { icon: <ReceiptText size={16} />, hint: "Предъявление объёмов" },
+  "Сдача / Гарантия": { icon: <BadgeCheck size={16} />, hint: "Передача и обязательства" },
+  Исполнение: { icon: <Building2 size={16} />, hint: "Подрядчики и фронты" },
+  Площадка: { icon: <HardHat size={16} />, hint: "Работы на объекте" },
+  Рапорты: { icon: <ClipboardList size={16} />, hint: "Ежедневный факт" },
+  Риски: { icon: <AlertTriangle size={16} />, hint: "Отклонения и меры" },
+  Документы: { icon: <FileText size={16} />, hint: "Файлы и версии" },
+  "RFI / Согласования": { icon: <MessageSquareText size={16} />, hint: "Запросы и ответы" },
+  Действия: { icon: <ListChecks size={16} />, hint: "Задачи команды" },
+  Процессы: { icon: <Workflow size={16} />, hint: "Маршруты согласования" },
+  Аналитика: { icon: <BarChart3 size={16} />, hint: "KPI и прогноз" },
+  Участники: { icon: <Users size={16} />, hint: "Команда и доступ" },
+  История: { icon: <ClipboardList size={16} />, hint: "Аудит изменений" },
+  Настройки: { icon: <Trash2 size={16} />, hint: "Параметры проекта" },
+  "AI-помощник": { icon: <Bot size={16} />, hint: "Контекстный анализ" }
 };
 
 export function countNoun(value: number, forms: readonly [string, string, string]) {
@@ -114,6 +164,10 @@ export function countNoun(value: number, forms: readonly [string, string, string
   return forms[2];
 }
 
+function groupForTab(tab: ProjectTab) {
+  return projectTabGroups.find((group) => group.tabs.includes(tab)) ?? projectTabGroups[0];
+}
+
 export function ProjectModuleMenu({
   activeTab,
   defaultOpen = false,
@@ -123,106 +177,143 @@ export function ProjectModuleMenu({
   defaultOpen?: boolean;
   onSelect: (tab: ProjectTab) => void;
 }) {
-  const [open, setOpen] = useState(defaultOpen);
-  const menuId = useId();
-  const rootRef = useRef<HTMLDivElement>(null);
+  const activeGroup = groupForTab(activeTab);
+  const [expandedGroup, setExpandedGroup] = useState<ProjectTabGroup["id"] | null>(activeGroup.id);
+  const [mobileOpen, setMobileOpen] = useState(defaultOpen);
+  const [query, setQuery] = useState("");
+  const drawerRef = useRef<HTMLElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
-  const activeMeta = tabMeta[activeTab];
+
+  const closeMobile = useCallback(() => {
+    setMobileOpen(false);
+    requestAnimationFrame(() => triggerRef.current?.focus());
+  }, []);
 
   useEffect(() => {
-    if (!open) return;
+    setExpandedGroup(groupForTab(activeTab).id);
+  }, [activeTab]);
 
-    const popover = rootRef.current?.querySelector<HTMLElement>(".project-module-popover");
-    const popoverBounds = popover?.getBoundingClientRect();
-    if (popoverBounds && (popoverBounds.bottom > window.innerHeight || popoverBounds.top < 0)) {
-      rootRef.current?.scrollIntoView({ block: "start" });
-    }
-
-    const closeOutside = (event: PointerEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    requestAnimationFrame(() => searchInputRef.current?.focus());
+    const close = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeMobile();
+        return;
+      }
+      if (event.key !== "Tab" || !drawerRef.current) return;
+      const focusable = Array.from(
+        drawerRef.current.querySelectorAll<HTMLElement>("button:not([disabled]), input:not([disabled]), [href], select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex='-1'])")
+      ).filter((element) => element.offsetParent !== null);
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
     };
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
-      setOpen(false);
-      triggerRef.current?.focus();
-    };
-
-    document.addEventListener("pointerdown", closeOutside);
-    document.addEventListener("keydown", closeOnEscape);
+    document.addEventListener("keydown", close);
     return () => {
-      document.removeEventListener("pointerdown", closeOutside);
-      document.removeEventListener("keydown", closeOnEscape);
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", close);
     };
-  }, [open]);
+  }, [closeMobile, mobileOpen]);
 
-  const selectTab = (tab: ProjectTab) => {
+  const visibleGroups = useMemo(() => {
+    const normalized = query.trim().toLocaleLowerCase("ru-RU");
+    if (!normalized) return projectTabGroups;
+    return projectTabGroups
+      .map((group) => ({
+        ...group,
+        tabs: group.tabs.filter((tab) => `${tab} ${tabMeta[tab].hint}`.toLocaleLowerCase("ru-RU").includes(normalized))
+      }))
+      .filter((group) => group.tabs.length);
+  }, [query]);
+
+  function selectTab(tab: ProjectTab) {
     onSelect(tab);
-    setOpen(false);
-    triggerRef.current?.focus();
-  };
+    setQuery("");
+    if (mobileOpen) closeMobile();
+  }
 
   return (
-    <div className={`project-module-nav ${open ? "is-open" : ""}`} ref={rootRef}>
+    <>
       <button
-        aria-controls={menuId}
-        aria-expanded={open}
-        aria-haspopup="true"
-        className="project-module-trigger"
-        onClick={() => setOpen((current) => !current)}
+        aria-expanded={mobileOpen}
+        aria-label={`Открыть разделы проекта. Текущий раздел: ${activeTab}`}
+        className="project-navigation-mobile-trigger"
+        onClick={() => {
+          setExpandedGroup(activeGroup.id);
+          setMobileOpen(true);
+        }}
         ref={triggerRef}
         type="button"
       >
-        <span className="project-module-trigger-icon" aria-hidden="true">{activeMeta.icon}</span>
-        <span className="project-module-trigger-copy">
-          <small>Раздел проекта</small>
-          <strong>{activeTab}</strong>
-          <span>{activeMeta.hint}</span>
-        </span>
-        <span className="project-module-trigger-count">{projectTabs.length} {countNoun(projectTabs.length, ["раздел", "раздела", "разделов"])}</span>
-        <ChevronDown className="project-module-chevron" size={18} aria-hidden="true" />
+        <span aria-hidden="true">{activeGroup.icon}</span>
+        <span><small>{activeGroup.label}</small><strong>{activeTab}</strong></span>
+        <ChevronDown size={18} aria-hidden="true" />
       </button>
 
-      {open ? (
-        <div aria-label="Все разделы проекта" className="project-module-popover" id={menuId} role="region">
-          <div className="project-module-popover-head">
-            <div>
-              <small>Навигация по проекту</small>
-              <strong>Все разделы</strong>
-            </div>
-            <span>{projectTabs.length} {countNoun(projectTabs.length, ["рабочая зона", "рабочие зоны", "рабочих зон"])}</span>
-          </div>
-          <div className="project-module-grid">
-            {projectTabGroups.map((group) => (
-              <section className="project-module-group" key={group.label}>
-                <h3>{group.label}</h3>
-                <div className="project-module-items">
+      <aside aria-label="Разделы проекта" className={`project-domain-nav ${mobileOpen ? "is-mobile-open" : ""}`} ref={drawerRef}>
+        <header className="project-domain-nav-header">
+          <div><small>Навигация проекта</small><strong>Рабочие контуры</strong></div>
+          <button aria-label="Закрыть разделы проекта" onClick={closeMobile} title="Закрыть" type="button"><X size={18} /></button>
+        </header>
+
+        <label className="project-domain-search">
+          <Search size={16} aria-hidden="true" />
+          <input aria-label="Найти модуль проекта" onChange={(event) => setQuery(event.target.value)} placeholder="Найти модуль" ref={searchInputRef} type="search" value={query} />
+          {query ? <button aria-label="Очистить поиск" onClick={() => setQuery("")} type="button"><X size={14} /></button> : null}
+        </label>
+
+        <div className="project-domain-list">
+          {visibleGroups.map((group) => {
+            const expanded = query ? true : expandedGroup === group.id;
+            const groupActive = group.tabs.includes(activeTab);
+            return (
+              <section className={`project-domain ${group.service ? "is-service" : ""} ${groupActive ? "is-active" : ""}`} key={group.id}>
+                <button
+                  aria-expanded={expanded}
+                  className="project-domain-toggle"
+                  onClick={() => setExpandedGroup(expanded ? null : group.id)}
+                  type="button"
+                >
+                  <span className="project-domain-icon" aria-hidden="true">{group.icon}</span>
+                  <span className="project-domain-copy"><strong>{group.label}</strong><small>{group.description}</small></span>
+                  <ChevronDown className="project-domain-chevron" size={16} aria-hidden="true" />
+                </button>
+                <div className="project-domain-modules" hidden={!expanded}>
                   {group.tabs.map((tab) => {
-                    const meta = tabMeta[tab];
                     const active = tab === activeTab;
                     return (
-                      <button
-                        aria-current={active ? "page" : undefined}
-                        className={`project-module-item ${active ? "active" : ""}`}
-                        key={tab}
-                        onClick={() => selectTab(tab)}
-                        type="button"
-                      >
-                        <span className="project-module-item-icon" aria-hidden="true">{meta.icon}</span>
-                        <span className="project-module-item-copy">
-                          <strong>{tab}</strong>
-                          <small>{meta.hint}</small>
-                        </span>
-                        <span className="project-module-code">{meta.code}</span>
-                        {active ? <Check className="project-module-check" size={16} aria-hidden="true" /> : null}
+                      <button aria-current={active ? "page" : undefined} className={active ? "active" : undefined} key={tab} onClick={() => selectTab(tab)} type="button">
+                        <span aria-hidden="true">{tabMeta[tab].icon}</span>
+                        <span><strong>{tab}</strong><small>{tabMeta[tab].hint}</small></span>
+                        {active ? <Check size={15} aria-hidden="true" /> : null}
                       </button>
                     );
                   })}
                 </div>
               </section>
-            ))}
-          </div>
+            );
+          })}
+          {!visibleGroups.length ? <div className="project-domain-empty">Модуль не найден</div> : null}
         </div>
-      ) : null}
-    </div>
+
+        <footer className="project-domain-footer">
+          <span>{projectTabs.length} модулей доступны через 6 рабочих контуров</span>
+        </footer>
+      </aside>
+
+      {mobileOpen ? <button aria-label="Закрыть разделы проекта" className="project-navigation-backdrop" onClick={closeMobile} type="button" /> : null}
+    </>
   );
 }
