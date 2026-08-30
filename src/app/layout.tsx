@@ -17,7 +17,7 @@ export const viewport: Viewport = { themeColor: "#0b0d0e" };
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="ru">
-      <body className="design-v5 design-v6" data-design="v6">
+      <body className="design-v5 design-v6" data-atlas-version="v6" data-design="v3">
         <AppNav>{children}</AppNav>
       </body>
     </html>
