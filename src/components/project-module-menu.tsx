@@ -29,7 +29,6 @@ import {
   Settings2,
   Table2,
   TimerReset,
-  Trash2,
   Truck,
   Users,
   Workflow,
@@ -74,6 +73,8 @@ export type ProjectTabGroup = {
   tabs: readonly ProjectTab[];
   service?: boolean;
 };
+
+export type ProjectDomainId = Exclude<ProjectTabGroup["id"], "system">;
 
 export const projectTabGroups: ReadonlyArray<ProjectTabGroup> = [
   {
@@ -128,6 +129,10 @@ export const projectTabGroups: ReadonlyArray<ProjectTabGroup> = [
   }
 ];
 
+export const projectDomainGroups = projectTabGroups.filter(
+  (group): group is ProjectTabGroup & { id: ProjectDomainId } => !group.service
+);
+
 const tabMeta: Record<ProjectTab, { icon: React.ReactNode; hint: string }> = {
   Обзор: { icon: <LayoutDashboard size={16} />, hint: "Состояние и решения" },
   "Бюджет / ВОР": { icon: <Table2 size={16} />, hint: "Объёмы и себестоимость" },
@@ -152,7 +157,7 @@ const tabMeta: Record<ProjectTab, { icon: React.ReactNode; hint: string }> = {
   Аналитика: { icon: <BarChart3 size={16} />, hint: "KPI и прогноз" },
   Участники: { icon: <Users size={16} />, hint: "Команда и доступ" },
   История: { icon: <ClipboardList size={16} />, hint: "Аудит изменений" },
-  Настройки: { icon: <Trash2 size={16} />, hint: "Параметры проекта" },
+  Настройки: { icon: <Settings2 size={16} />, hint: "Параметры проекта" },
   "AI-помощник": { icon: <Bot size={16} />, hint: "Контекстный анализ" }
 };
 
@@ -165,6 +170,15 @@ export function countNoun(value: number, forms: readonly [string, string, string
   return forms[2];
 }
 
+export function getMenuArrowTarget(key: string, currentIndex: number, itemCount: number) {
+  if (itemCount <= 0) return null;
+  if (key === "Home") return 0;
+  if (key === "End") return itemCount - 1;
+  if (key === "ArrowDown") return (currentIndex + 1) % itemCount;
+  if (key === "ArrowUp") return (currentIndex - 1 + itemCount) % itemCount;
+  return null;
+}
+
 function groupForTab(tab: ProjectTab) {
   return projectTabGroups.find((group) => group.tabs.includes(tab)) ?? projectTabGroups[0];
 }
@@ -175,37 +189,65 @@ export function ProjectModuleMenu({
   onSelect
 }: {
   activeTab: ProjectTab;
-  defaultOpen?: boolean;
+  defaultOpen?: boolean | ProjectDomainId;
   onSelect: (tab: ProjectTab) => void;
 }) {
   const activeGroup = groupForTab(activeTab);
-  const [menuOpen, setMenuOpen] = useState(defaultOpen);
-  const [groupFilter, setGroupFilter] = useState<ProjectTabGroup["id"] | null>(null);
+  const [openNavigation, setOpenNavigation] = useState<
+    { kind: "all" } | { kind: "domain"; domainId: ProjectDomainId } | null
+  >(defaultOpen === true ? { kind: "all" } : typeof defaultOpen === "string" ? { kind: "domain", domainId: defaultOpen } : null);
   const [query, setQuery] = useState("");
+  const navigationRef = useRef<HTMLDivElement>(null);
   const drawerRef = useRef<HTMLElement>(null);
+  const domainPopoverRef = useRef<HTMLDivElement>(null);
+  const domainItemRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const domainTriggerRefs = useRef<Partial<Record<ProjectDomainId, HTMLButtonElement | null>>>({});
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const triggerRef = useRef<HTMLButtonElement>(null);
+  const allModulesTriggerRef = useRef<HTMLButtonElement>(null);
+  const mobileTriggerRef = useRef<HTMLButtonElement>(null);
+  const lastTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const pendingDomainFocusRef = useRef<"first" | "last" | null>(null);
+  const allModulesOpen = openNavigation?.kind === "all";
+  const openDomainId = openNavigation?.kind === "domain" ? openNavigation.domainId : null;
+  const openDomain = openDomainId ? projectDomainGroups.find((group) => group.id === openDomainId) ?? null : null;
+  const openDomainIndex = openDomain ? projectDomainGroups.findIndex((group) => group.id === openDomain.id) : 0;
 
-  const closeMenu = useCallback(() => {
-    setMenuOpen(false);
+  const closeNavigation = useCallback((restoreFocus = true) => {
+    const trigger = lastTriggerRef.current;
+    setOpenNavigation(null);
     setQuery("");
-    setGroupFilter(null);
-    requestAnimationFrame(() => triggerRef.current?.focus());
+    pendingDomainFocusRef.current = null;
+    if (restoreFocus) requestAnimationFrame(() => trigger?.focus());
   }, []);
 
   useEffect(() => {
-    const closeForGlobalNavigation = () => setMenuOpen(false);
+    const closeForGlobalNavigation = () => closeNavigation(false);
     window.addEventListener("pgs:global-navigation-open", closeForGlobalNavigation);
     return () => window.removeEventListener("pgs:global-navigation-open", closeForGlobalNavigation);
+  }, [closeNavigation]);
+
+  useEffect(() => {
+    const mobileViewport = window.matchMedia("(max-width: 820px)");
+    const preserveMobileSwitcher = (event: MediaQueryListEvent | MediaQueryList) => {
+      if (!event.matches) return;
+      setOpenNavigation((current) => {
+        if (current?.kind !== "domain") return current;
+        lastTriggerRef.current = mobileTriggerRef.current ?? lastTriggerRef.current;
+        return { kind: "all" };
+      });
+    };
+    preserveMobileSwitcher(mobileViewport);
+    mobileViewport.addEventListener("change", preserveMobileSwitcher);
+    return () => mobileViewport.removeEventListener("change", preserveMobileSwitcher);
   }, []);
 
   useEffect(() => {
-    if (!menuOpen) return;
+    if (!allModulesOpen) return;
     requestAnimationFrame(() => searchInputRef.current?.focus());
     const close = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         event.preventDefault();
-        closeMenu();
+        closeNavigation();
         return;
       }
       if (event.key !== "Tab" || !drawerRef.current) return;
@@ -227,56 +269,156 @@ export function ProjectModuleMenu({
     return () => {
       document.removeEventListener("keydown", close);
     };
-  }, [closeMenu, menuOpen]);
+  }, [allModulesOpen, closeNavigation]);
+
+  useEffect(() => {
+    if (!openDomainId) return;
+    const focusTarget = pendingDomainFocusRef.current;
+    pendingDomainFocusRef.current = null;
+    if (focusTarget) {
+      requestAnimationFrame(() => {
+        const items = domainItemRefs.current.filter((item): item is HTMLButtonElement => Boolean(item));
+        const target = focusTarget === "last" ? items[items.length - 1] : items[0];
+        target?.focus();
+      });
+    }
+
+    function handlePointerDown(event: PointerEvent) {
+      if (event.target instanceof Node && !navigationRef.current?.contains(event.target)) closeNavigation(false);
+    }
+
+    function handleFocusIn(event: FocusEvent) {
+      if (event.target instanceof Node && !navigationRef.current?.contains(event.target)) closeNavigation(false);
+    }
+
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      closeNavigation();
+    }
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("focusin", handleFocusIn);
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("focusin", handleFocusIn);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [closeNavigation, openDomainId]);
 
   const visibleGroups = useMemo(() => {
     const normalized = query.trim().toLocaleLowerCase("ru-RU");
-    const groups = groupFilter ? projectTabGroups.filter((group) => group.id === groupFilter) : projectTabGroups;
-    if (!normalized) return groups;
-    return groups
+    if (!normalized) return projectTabGroups;
+    return projectTabGroups
       .map((group) => ({
         ...group,
         tabs: group.tabs.filter((tab) => `${tab} ${tabMeta[tab].hint}`.toLocaleLowerCase("ru-RU").includes(normalized))
       }))
       .filter((group) => group.tabs.length);
-  }, [groupFilter, query]);
+  }, [query]);
 
   function selectTab(tab: ProjectTab) {
     onSelect(tab);
-    closeMenu();
+    closeNavigation();
   }
 
-  function openMenu(filter: ProjectTabGroup["id"] | null) {
+  function openDomainMenu(domainId: ProjectDomainId, trigger: HTMLButtonElement, focusTarget: "first" | "last" | null = null) {
     window.dispatchEvent(new Event("pgs:project-navigation-open"));
-    setGroupFilter(filter);
-    setMenuOpen(true);
+    lastTriggerRef.current = trigger;
+    pendingDomainFocusRef.current = focusTarget;
+    domainItemRefs.current = [];
+    setQuery("");
+    setOpenNavigation({ kind: "domain", domainId });
+  }
+
+  function openAllModules(trigger: HTMLButtonElement) {
+    window.dispatchEvent(new Event("pgs:project-navigation-open"));
+    lastTriggerRef.current = trigger;
+    setQuery("");
+    setOpenNavigation({ kind: "all" });
+  }
+
+  function moveDomainTrigger(currentId: ProjectDomainId, offset: -1 | 1) {
+    const currentIndex = projectDomainGroups.findIndex((group) => group.id === currentId);
+    const nextIndex = (currentIndex + offset + projectDomainGroups.length) % projectDomainGroups.length;
+    const nextGroup = projectDomainGroups[nextIndex];
+    const nextTrigger = domainTriggerRefs.current[nextGroup.id];
+    nextTrigger?.focus();
+    if (openDomainId) openDomainMenu(nextGroup.id, nextTrigger ?? lastTriggerRef.current ?? domainTriggerRefs.current[currentId]!);
+  }
+
+  function handleDomainTriggerKeyDown(event: React.KeyboardEvent<HTMLButtonElement>, domainId: ProjectDomainId) {
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault();
+      openDomainMenu(domainId, event.currentTarget, event.key === "ArrowUp" ? "last" : "first");
+      return;
+    }
+    if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+      event.preventDefault();
+      moveDomainTrigger(domainId, event.key === "ArrowLeft" ? -1 : 1);
+      return;
+    }
+    if (event.key === "Escape" && openDomainId === domainId) {
+      event.preventDefault();
+      closeNavigation();
+    }
+  }
+
+  function handleDomainItemKeyDown(event: React.KeyboardEvent<HTMLButtonElement>, index: number, itemCount: number) {
+    const targetIndex = getMenuArrowTarget(event.key, index, itemCount);
+    if (targetIndex === null) {
+      if (event.key === "Tab") closeNavigation(false);
+      return;
+    }
+    event.preventDefault();
+    domainItemRefs.current[targetIndex]?.focus();
   }
 
   return (
-    <div className="project-atlas-navigation">
+    <div
+      className="project-atlas-navigation"
+      data-project-navigation-state={allModulesOpen ? "all" : openDomainId ? "domain" : "closed"}
+      ref={navigationRef}
+    >
       <nav className="project-atlas-domains" aria-label="Рабочие контуры проекта">
-        {projectTabGroups.filter((group) => !group.service).map((group) => {
+        {projectDomainGroups.map((group) => {
           const active = group.tabs.includes(activeTab);
+          const expanded = openDomainId === group.id;
           return (
             <button
+              aria-controls={`project-domain-menu-${group.id}`}
               aria-current={active ? "page" : undefined}
-              aria-expanded={menuOpen && groupFilter === group.id}
+              aria-expanded={expanded}
+              aria-haspopup="menu"
               className={active ? "active" : undefined}
+              data-project-domain-id={group.id}
+              data-project-domain-trigger="true"
+              data-state={expanded ? "open" : "closed"}
+              id={`project-domain-trigger-${group.id}`}
               key={group.id}
-              onClick={() => menuOpen && groupFilter === group.id ? closeMenu() : openMenu(group.id)}
+              onClick={(event) => expanded ? closeNavigation() : openDomainMenu(group.id, event.currentTarget)}
+              onKeyDown={(event) => handleDomainTriggerKeyDown(event, group.id)}
+              ref={(element) => {
+                domainTriggerRefs.current[group.id] = element;
+              }}
               type="button"
             >
               <span aria-hidden="true">{group.icon}</span>
               <strong>{group.label}</strong>
+              <ChevronDown className="project-domain-chevron" size={14} aria-hidden="true" />
               {active ? <small>{activeTab}</small> : null}
             </button>
           );
         })}
         <button
-          aria-expanded={menuOpen && groupFilter === null}
+          aria-controls="project-all-modules-dialog"
+          aria-expanded={allModulesOpen}
+          aria-haspopup="dialog"
           className="project-atlas-all"
-          onClick={() => menuOpen && groupFilter === null ? closeMenu() : openMenu(null)}
-          ref={triggerRef}
+          data-project-all-modules-trigger="true"
+          onClick={(event) => allModulesOpen ? closeNavigation() : openAllModules(event.currentTarget)}
+          ref={allModulesTriggerRef}
           type="button"
         >
           <LayoutGrid size={17} />
@@ -285,11 +427,60 @@ export function ProjectModuleMenu({
         </button>
       </nav>
 
+      {openDomain ? (
+        <div
+          aria-labelledby={`project-domain-trigger-${openDomain.id}`}
+          className="project-domain-popover"
+          data-bounded="true"
+          data-project-domain-id={openDomain.id}
+          data-project-domain-popover="true"
+          id={`project-domain-menu-${openDomain.id}`}
+          ref={domainPopoverRef}
+          role="menu"
+          style={{ "--project-domain-anchor": `${((openDomainIndex + 0.5) / 7) * 100}%` } as React.CSSProperties}
+        >
+          <header className="project-domain-popover-header">
+            <span className="project-domain-icon" aria-hidden="true">{openDomain.icon}</span>
+            <span><strong>{openDomain.label}</strong><small>{openDomain.description}</small></span>
+          </header>
+          <div className="project-domain-modules">
+            {openDomain.tabs.map((tab, index) => {
+              const active = tab === activeTab;
+              return (
+                <button
+                  aria-current={active ? "page" : undefined}
+                  className={active ? "active" : undefined}
+                  data-current={active ? "true" : "false"}
+                  data-project-module={tab}
+                  key={tab}
+                  onClick={() => selectTab(tab)}
+                  onKeyDown={(event) => handleDomainItemKeyDown(event, index, openDomain.tabs.length)}
+                  ref={(element) => {
+                    domainItemRefs.current[index] = element;
+                  }}
+                  role="menuitem"
+                  tabIndex={-1}
+                  type="button"
+                >
+                  <span aria-hidden="true">{tabMeta[tab].icon}</span>
+                  <span><strong>{tab}</strong><small>{tabMeta[tab].hint}</small></span>
+                  {active ? <Check size={15} aria-hidden="true" /> : null}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
+
       <button
-        aria-expanded={menuOpen}
+        aria-controls="project-all-modules-dialog"
+        aria-expanded={allModulesOpen}
+        aria-haspopup="dialog"
         aria-label={`Открыть разделы проекта. Текущий раздел: ${activeTab}`}
         className="project-navigation-mobile-trigger"
-        onClick={() => openMenu(null)}
+        data-project-mobile-switcher-trigger="true"
+        onClick={(event) => allModulesOpen ? closeNavigation() : openAllModules(event.currentTarget)}
+        ref={mobileTriggerRef}
         type="button"
       >
         <span aria-hidden="true">{activeGroup.icon}</span>
@@ -297,19 +488,28 @@ export function ProjectModuleMenu({
         <LayoutGrid size={18} aria-hidden="true" />
       </button>
 
-      {menuOpen ? (
+      {allModulesOpen ? (
         <>
-          <button aria-label="Закрыть разделы проекта" className="project-navigation-backdrop" onClick={closeMenu} type="button" />
-          <aside aria-label="Разделы проекта" aria-modal="true" className="project-atlas-mega" ref={drawerRef} role="dialog">
+          <button aria-label="Закрыть разделы проекта" className="project-navigation-backdrop" onClick={() => closeNavigation()} type="button" />
+          <aside
+            aria-label="Разделы проекта"
+            aria-modal="true"
+            className="project-atlas-mega"
+            data-project-all-modules="true"
+            data-project-mobile-switcher="true"
+            id="project-all-modules-dialog"
+            ref={drawerRef}
+            role="dialog"
+          >
             <header className="project-domain-nav-header">
-              <div><small>Карта проекта</small><strong>{groupFilter ? projectTabGroups.find((group) => group.id === groupFilter)?.label : "Все рабочие модули"}</strong></div>
-              <button aria-label="Закрыть разделы проекта" onClick={closeMenu} title="Закрыть" type="button"><X size={18} /></button>
+              <div><small>Карта проекта</small><strong>Все рабочие модули</strong></div>
+              <button aria-label="Закрыть разделы проекта" onClick={() => closeNavigation()} title="Закрыть" type="button"><X size={18} /></button>
             </header>
 
             <label className="project-domain-search">
               <Search size={17} aria-hidden="true" />
               <input aria-label="Найти модуль проекта" onChange={(event) => setQuery(event.target.value)} placeholder="Название модуля или действие" ref={searchInputRef} type="search" value={query} />
-              {query ? <button aria-label="Очистить поиск" onClick={() => setQuery("")} type="button"><X size={14} /></button> : <kbd>⌘ K</kbd>}
+              {query ? <button aria-label="Очистить поиск" onClick={() => setQuery("")} type="button"><X size={14} /></button> : <span className="project-domain-search-count">{projectTabs.length}</span>}
             </label>
 
             <div className="project-atlas-mega-grid">

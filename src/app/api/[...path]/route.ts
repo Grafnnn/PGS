@@ -7,7 +7,12 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { canDeleteDocument, canDeleteProject, canEditProject, canViewAudit, canViewProject, type AppUser } from "@/lib/auth/permissions";
 import { canProject, getEffectiveProjectRole, type ProjectAction } from "@/lib/auth/project-permissions";
 import { budgetTotals, deriveAutoRisks, financeTotals, materialTotals, workTotals } from "@/lib/calculations";
-import { canTransitionDailyReport } from "@/lib/daily-reports";
+import {
+  canTransitionDailyReport,
+  dailyReportDraftIssues,
+  dailyReportSubmissionIssues,
+  normalizeDailyReportFields
+} from "@/lib/daily-reports";
 import { demoState } from "@/lib/demo-data";
 import { getDemoContext, getProjectBundleFromDb, listProjectsFromDb } from "@/lib/project-data";
 import { deleteProjectWithConfirmation, ProjectDeleteError } from "@/lib/project-delete";
@@ -102,7 +107,7 @@ export async function GET(request: NextRequest, { params }: { params: { path?: s
         return json({ items: items.map(serializeDocument) });
       }
       if (resource === "daily-reports") {
-        const items = await prisma.dailyReport.findMany({ where: { projectId }, orderBy: { date: "desc" } });
+        const items = await prisma.dailyReport.findMany({ where: { projectId }, orderBy: [{ date: "desc" }, { createdAt: "desc" }] });
         return json({ items: items.map(serializeDailyReport) });
       }
       if (resource === "risks") {
@@ -250,7 +255,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { path?:
     if (direct) return await updateResource(direct.resource, direct.id, body);
 
     if (path[0] === "projects" && path[1] && path[2] && path[3]) {
-      return await updateResource(path[2], path[3], body);
+      return await updateResource(path[2], path[3], body, path[1]);
     }
 
     return json({ error: "Endpoint not found", path }, 404);
@@ -275,7 +280,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { path?
     if (direct) return await deleteResource(direct.resource, direct.id);
 
     if (path[0] === "projects" && path[1] && path[2] && path[3]) {
-      return await deleteResource(path[2], path[3]);
+      return await deleteResource(path[2], path[3], path[1]);
     }
 
     return json({ error: "Endpoint not found", path }, 404);
@@ -428,7 +433,9 @@ async function createProjectResource(projectId: string, resource: string | undef
   }
 
   if (resource === "daily-reports") {
-    const data = dailyReportSchema.parse(body);
+    const data = normalizeDailyReportFields(dailyReportSchema.parse(body));
+    const issues = dailyReportDraftIssues(data);
+    if (issues.length) return json({ error: `Рапорт не сохранён: ${issues[0].message}`, issues }, 400);
     const item = await prisma.$transaction(async (tx) => {
       const created = await tx.dailyReport.create({
         data: {
@@ -487,9 +494,12 @@ async function createProjectResource(projectId: string, resource: string | undef
   return json({ error: "Endpoint not found", resource }, 404);
 }
 
-async function updateResource(resource: string, id: string, body: unknown) {
+async function updateResource(resource: string, id: string, body: unknown, expectedProjectId?: string) {
   const user = await getCurrentUser();
   const scopedProjectId = await projectIdForResource(resource, id);
+  if (resource === "daily-reports" && (!scopedProjectId || (expectedProjectId && scopedProjectId !== expectedProjectId))) {
+    return json({ error: "Daily report not found in project" }, 404);
+  }
   if (scopedProjectId ? !(await canProject(user, scopedProjectId, "edit")) : !canEditProject(user)) return json({ error: "Forbidden" }, 403);
   if (resource === "budget") {
     const data = partial(budgetItemSchema).parse(body);
@@ -577,7 +587,7 @@ async function updateResource(resource: string, id: string, body: unknown) {
     return json({ item: serializePayment(item) });
   }
   if (resource === "daily-reports") {
-    const data = partial(dailyReportSchema).parse(body);
+    const data = normalizeDailyReportFields(partial(dailyReportSchema).parse(body));
     const before = await prisma.dailyReport.findUniqueOrThrow({ where: { id } });
     if (!Object.keys(data).length || (data.status === before.status && Object.keys(data).length === 1)) {
       return json({ error: "No daily report changes requested" }, 409);
@@ -590,6 +600,17 @@ async function updateResource(resource: string, id: string, body: unknown) {
     }
     if (before.status !== "draft" && Object.keys(data).some((key) => key !== "status")) {
       return json({ error: "Only draft reports can be edited" }, 409);
+    }
+    const candidate = { ...serializeDailyReport(before), ...data };
+    const contentChanged = Object.keys(data).some((key) => key !== "status");
+    const issues = data.status && ["submitted", "checked", "approved"].includes(data.status)
+      ? dailyReportSubmissionIssues(candidate)
+      : contentChanged
+        ? dailyReportDraftIssues(candidate)
+        : [];
+    if (issues.length) {
+      const action = data.status ? "не готов к отправке" : "не обновлён";
+      return json({ error: `Рапорт ${action}: ${issues[0].message}`, issues }, data.status ? 409 : 400);
     }
     const item = await prisma.$transaction(async (tx) => {
       const updated = await tx.dailyReport.update({
@@ -644,9 +665,12 @@ async function updateResource(resource: string, id: string, body: unknown) {
   return json({ error: "Endpoint not found", resource }, 404);
 }
 
-async function deleteResource(resource: string, id: string) {
+async function deleteResource(resource: string, id: string, expectedProjectId?: string) {
   const user = await getCurrentUser();
   const scopedProjectId = await projectIdForResource(resource, id);
+  if (resource === "daily-reports" && (!scopedProjectId || (expectedProjectId && scopedProjectId !== expectedProjectId))) {
+    return json({ error: "Daily report not found in project" }, 404);
+  }
   const deleteAction: ProjectAction = resource === "documents" ? "delete_document" : "delete";
   if (scopedProjectId ? !(await canProject(user, scopedProjectId, deleteAction)) : resource === "documents" ? !canDeleteDocument(user) : !canDeleteProject(user)) {
     return json({ error: "Forbidden" }, 403);

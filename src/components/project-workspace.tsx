@@ -867,15 +867,15 @@ export function ProjectWorkspace({
           </div>
         </div>
         {activeTab === "Обзор" && <div className="page-header-actions">
-          <button className="button secondary" type="button" onClick={() => navigateProjectTab("Бюджет / ВОР")}>
+          <button aria-label="Импортировать ВОР" className="button secondary" title="Импортировать ВОР" type="button" onClick={() => navigateProjectTab("Бюджет / ВОР")}>
             <Table2 size={18} />
             Импорт ВОР
           </button>
-          <button className="button secondary" type="button" onClick={() => navigateProjectTab("Рапорты")}>
+          <button aria-label="Добавить ежедневный рапорт" className="button secondary" title="Добавить ежедневный рапорт" type="button" onClick={() => navigateProjectTab("Рапорты")}>
             <ClipboardList size={18} />
             Добавить рапорт
           </button>
-          <button className="button primary" type="button" onClick={() => navigateProjectTab("AI-помощник")}>
+          <button aria-label="Открыть AI-анализ" className="button primary" title="Открыть AI-анализ" type="button" onClick={() => navigateProjectTab("AI-помощник")}>
             <Bot size={18} />
             AI-анализ
           </button>

@@ -134,6 +134,71 @@ type NavigationUser = {
   role: string;
 };
 
+type SystemHealth = {
+  state: "checking" | "ok" | "degraded" | "unavailable";
+  checkedAt?: string;
+  detail?: string;
+};
+
+function SystemStatusIndicator() {
+  const [health, setHealth] = useState<SystemHealth>({ state: "checking" });
+
+  useEffect(() => {
+    let active = true;
+    async function refresh() {
+      try {
+        const response = await fetch("/api/health", { cache: "no-store" });
+        const body = (await response.json().catch(() => ({}))) as {
+          status?: string;
+          database?: string;
+          storage?: { writable?: boolean };
+          timestamp?: string;
+        };
+        if (!active) return;
+        const state = response.ok && body.status === "ok" ? "ok" : "degraded";
+        const detail = [
+          `API ${response.status}`,
+          body.database ? `DB ${body.database}` : "",
+          typeof body.storage?.writable === "boolean" ? `storage ${body.storage.writable ? "ok" : "unavailable"}` : ""
+        ].filter(Boolean).join(" · ");
+        setHealth({ state, checkedAt: body.timestamp, detail });
+      } catch {
+        if (active) setHealth({ state: "unavailable", detail: "Проверка health недоступна" });
+      }
+    }
+    void refresh();
+    window.addEventListener("focus", refresh);
+    return () => {
+      active = false;
+      window.removeEventListener("focus", refresh);
+    };
+  }, []);
+
+  const label = health.state === "ok"
+    ? "Система в норме"
+    : health.state === "checking"
+      ? "Проверяю систему"
+      : health.state === "degraded"
+        ? "Система требует внимания"
+        : "Статус недоступен";
+  const checked = health.checkedAt
+    ? new Date(health.checkedAt).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })
+    : "";
+
+  return (
+    <span
+      aria-live="polite"
+      className={`topbar-context status-${health.state}`}
+      role="status"
+      title={[label, health.detail, checked ? `Проверено ${checked}` : ""].filter(Boolean).join(". ")}
+    >
+      <i aria-hidden="true" />
+      <span>{label}</span>
+      {checked ? <time dateTime={health.checkedAt}>на {checked}</time> : null}
+    </span>
+  );
+}
+
 function userInitials(name: string) {
   return name
     .split(/\s+/)
@@ -343,12 +408,8 @@ export function AppNav({ children }: { children: ReactNode }) {
             <kbd>⌘ K</kbd>
           </button>
           <div className="topbar-actions">
-            <span className="topbar-context"><i /> Система в норме</span>
+            <SystemStatusIndicator />
             <InboxBell />
-            <button aria-expanded={navigationOpen} className="atlas-all-sections" onClick={openNavigation} type="button">
-              <Menu size={16} />
-              <span>Все разделы</span>
-            </button>
             <Link className="button primary" href="/projects#create-project" title="Создать проект">
               <Plus size={17} />
               <span>Создать</span>
