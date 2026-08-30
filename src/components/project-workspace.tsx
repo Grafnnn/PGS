@@ -24,6 +24,7 @@ import { ProjectActionCenter, type ProjectActionSuggestion } from "@/components/
 import { ProjectControlsWorkspace } from "@/components/project-controls-workspace";
 import { ProjectCloseoutOverview, ProjectCloseoutWorkspace } from "@/components/project-closeout-workspace";
 import { ProjectModuleMenu, projectTabs, type ProjectTab } from "@/components/project-module-menu";
+import { ProjectModuleWorkspace } from "@/components/project-module-workspace";
 import { ProjectSectionGuide, projectSectionGuides, type ProjectSectionSignal, type ProjectSignalKey } from "@/components/project-section-guide";
 import { DocumentComplianceWorkspace } from "@/components/document-compliance-workspace";
 import { DocumentTransmittalsWorkspace } from "@/components/document-transmittals-workspace";
@@ -816,8 +817,8 @@ export function ProjectWorkspace({
   }
 
   return (
-    <main className="page">
-      <div className={`page-header project-header ${activeTab === "Обзор" ? "" : "project-header-compact"}`}>
+    <main className={`page project-workspace-page ${activeTab === "Обзор" ? "is-overview" : "is-module"}`}>
+      <div className="page-header project-header project-header-compact">
         <div className="page-header-main">
           <div className="eyebrow">{initialBundle.project.customer}</div>
           <div className="project-title-row">
@@ -846,14 +847,7 @@ export function ProjectWorkspace({
         </div>}
       </div>
 
-      {activeTab === "Обзор" && <section className="grid grid-4 project-global-kpis">
-        <Kpi title="Договор" value={compactMoney(initialBundle.project.contractAmount)} />
-        <Kpi title="Прогнозная прибыль" value={compactMoney(budget.forecastProfit)} tone={budget.forecastProfit > 0 ? "good" : "bad"} />
-        <Kpi title="Готовность" value={percent(works.completionPercent)} />
-        <Kpi title="Кассовый разрыв" value={compactMoney(finance.cashGap)} tone={finance.cashGap < 0 ? "bad" : "good"} />
-      </section>}
-
-      <div className="workspace-layout workspace-layout-full project-workspace-layout" style={{ marginTop: 18 }}>
+      <div className="workspace-layout workspace-layout-full project-workspace-layout">
         <div>
           <ProjectModuleMenu activeTab={activeProjectTab} onSelect={setActiveTab} />
           {activeTab !== "Обзор" && (
@@ -871,10 +865,12 @@ export function ProjectWorkspace({
             </div>
           )}
 
+          <div className={`project-module-stage ${activeTab === "Обзор" ? "is-overview" : "is-focused"}`}>
           {activeTab === "Обзор" && (
-            <section className="stack">
-              {showOnboardingPanel && <ProjectWorkspaceOnboardingPanel created={createdFromOnboarding} onNavigate={setActiveTab} plan={onboardingPlan} />}
-              <ProjectCommandCenter
+            <ProjectModuleWorkspace moduleKey="overview" title="Командный центр проекта" icon={<BarChart3 size={18} />} views={[
+              { id: "command", label: "Сводка", description: "Главные показатели, приоритеты и ближайшие управленческие действия.", content: <>
+                {showOnboardingPanel && <ProjectWorkspaceOnboardingPanel created={createdFromOnboarding} onNavigate={setActiveTab} plan={onboardingPlan} />}
+                <ProjectCommandCenter
                 project={initialBundle.project}
                 budgetItems={budgetItems}
                 scheduleItems={scheduleItems}
@@ -896,10 +892,8 @@ export function ProjectWorkspace({
                   void runAiCommandScenario("summary");
                 }}
               />
-              <ProjectCloseoutOverview projectId={initialBundle.project.id} onOpen={() => setActiveTab("Сдача / Гарантия")} />
-              <details className="panel compact-details overview-intelligence-details">
-                <summary>Подробная аналитика по модулям <span>открыть drill-down</span></summary>
-                <ProjectIntelligenceDrilldown
+              </> },
+              { id: "intelligence", label: "Project Intelligence", description: "Подробная аналитика по связанным модулям.", content: <ProjectIntelligenceDrilldown
                   project={initialBundle.project}
                   budgetItems={budgetItems}
                   scheduleItems={scheduleItems}
@@ -920,97 +914,129 @@ export function ProjectWorkspace({
                   onRunAiScenario={(scenario) => {
                     void runAiCommandScenario(scenario);
                   }}
-                />
-              </details>
-            </section>
+                /> },
+              { id: "closeout", label: "Сдача и гарантия", description: "Готовность передачи объекта и гарантийные обязательства.", content: <ProjectCloseoutOverview projectId={initialBundle.project.id} onOpen={() => setActiveTab("Сдача / Гарантия")} /> }
+            ]} />
           )}
       {activeTab === "Бюджет / ВОР" && (
-        <Panel title="Бюджет, ВОР и классификация затрат" icon={<Table2 size={18} />}>
-          <BudgetAnalytics items={budgetItems} contractAmount={initialBundle.project.contractAmount} paid={finance.incomingPayments} forecastProfit={budget.forecastProfit} />
-          <WorkspaceTools title="Коды затрат и изменения" description="Классификация бюджета, обязательства и согласованные изменения">
-            <CostCodeWorkspace
-              projectId={initialBundle.project.id}
-              canEdit={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN" || currentUser?.role === "MANAGER"}
-              canManage={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN"}
-            />
-            <ChangeOrderManagementWorkspace
-              projectId={initialBundle.project.id}
-              project={initialBundle.project}
-              budgetItems={budgetItems}
-              scheduleItems={scheduleItems}
-              materials={materials}
-              procurementRequests={procurementRequests}
-              payments={payments}
-              risks={risks}
-              documents={documents}
-              canEdit={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN" || currentUser?.role === "MANAGER"}
-              canApprove={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN"}
-              onNavigate={setActiveTab}
-            />
-          </WorkspaceTools>
-          <ImportPanel
-            file={importFile}
-            mode={importMode}
-            preview={importPreview}
-            explanation={importExplanation}
-            history={importHistory}
-            result={importResult}
-            previewFilter={importPreviewFilter}
-            confirmed={importConfirmed}
-            loading={saving.startsWith("import-")}
-            onFileChange={(file) => {
-              setImportFile(file);
-              setImportPreview(null);
-              setImportExplanation(null);
-              setImportResult(null);
-              setImportConfirmed(false);
-            }}
-            onModeChange={setImportMode}
-            onPreviewFilterChange={setImportPreviewFilter}
-            onPreview={() => void previewImport()}
-            onRemap={(mapping) => void remapImport(mapping)}
-            onExplain={() => void explainImport()}
-            onConfirmChange={setImportConfirmed}
-            onCommit={() => void commitImport()}
-            onNavigate={setActiveTab}
-          />
-          <PostImportActionPanel actions={postImportActions} result={importResult} onNavigate={setActiveTab} />
-          <WorkspaceTools title="Добавить строку вручную" description="Используйте для единичной позиции вне Excel-импорта">
-            <BudgetForm
-              onAdd={async (item) => {
-                const saved = await createResource<BudgetItem>("budget", {
-                  source: "Ручной ввод",
-                  actualUnitPrice: item.plannedUnitPrice,
-                  forecastUnitPrice: item.plannedUnitPrice,
-                  ...item
-                });
-                setBudgetItems((current) => [...current, saved]);
-              }}
-            />
-          </WorkspaceTools>
-          {editingBudget && (
-            <BudgetEditForm
-              item={editingBudget}
-              onCancel={() => setEditingBudget(null)}
-              onSave={async (payload) => {
-                const saved = await updateResource<BudgetItem>("budget", editingBudget.id, payload);
-                setBudgetItems((current) => current.map((item) => (item.id === saved.id ? saved : item)));
-                setEditingBudget(null);
-              }}
-            />
-          )}
-          <BudgetTable
-            items={budgetItems}
-            importHistory={importHistory}
-            filter={budgetTableFilter}
-            onFilterChange={setBudgetTableFilter}
-            onEdit={setEditingBudget}
-            onDelete={async (item) => {
-              await deleteResource("budget", item.id);
-              setBudgetItems((current) => current.filter((candidate) => candidate.id !== item.id));
-            }}
-          />
-        </Panel>
+        <ProjectModuleWorkspace
+          moduleKey="budget"
+          title="Бюджет и ВОР"
+          icon={<Table2 size={18} />}
+          views={[
+            {
+              id: "summary",
+              label: "Сводка",
+              description: "Ключевые суммы и структура себестоимости без операционных форм.",
+              content: <BudgetAnalytics items={budgetItems} contractAmount={initialBundle.project.contractAmount} paid={finance.incomingPayments} forecastProfit={budget.forecastProfit} />
+            },
+            {
+              id: "register",
+              label: "Реестр ВОР",
+              description: "Строки ВОР, фильтры и точечное редактирование.",
+              content: <>
+                {editingBudget && (
+                  <BudgetEditForm
+                    item={editingBudget}
+                    onCancel={() => setEditingBudget(null)}
+                    onSave={async (payload) => {
+                      const saved = await updateResource<BudgetItem>("budget", editingBudget.id, payload);
+                      setBudgetItems((current) => current.map((item) => (item.id === saved.id ? saved : item)));
+                      setEditingBudget(null);
+                    }}
+                  />
+                )}
+                <BudgetTable
+                  items={budgetItems}
+                  importHistory={importHistory}
+                  filter={budgetTableFilter}
+                  onFilterChange={setBudgetTableFilter}
+                  onEdit={setEditingBudget}
+                  onDelete={async (item) => {
+                    await deleteResource("budget", item.id);
+                    setBudgetItems((current) => current.filter((candidate) => candidate.id !== item.id));
+                  }}
+                />
+              </>
+            },
+            {
+              id: "import",
+              label: "Импорт Excel",
+              description: "Загрузка, проверка исключений и явное подтверждение импорта.",
+              content: <>
+                <ImportPanel
+                  file={importFile}
+                  mode={importMode}
+                  preview={importPreview}
+                  explanation={importExplanation}
+                  history={importHistory}
+                  result={importResult}
+                  previewFilter={importPreviewFilter}
+                  confirmed={importConfirmed}
+                  loading={saving.startsWith("import-")}
+                  onFileChange={(file) => {
+                    setImportFile(file);
+                    setImportPreview(null);
+                    setImportExplanation(null);
+                    setImportResult(null);
+                    setImportConfirmed(false);
+                  }}
+                  onModeChange={setImportMode}
+                  onPreviewFilterChange={setImportPreviewFilter}
+                  onPreview={() => void previewImport()}
+                  onRemap={(mapping) => void remapImport(mapping)}
+                  onExplain={() => void explainImport()}
+                  onConfirmChange={setImportConfirmed}
+                  onCommit={() => void commitImport()}
+                  onNavigate={setActiveTab}
+                />
+                <PostImportActionPanel actions={postImportActions} result={importResult} onNavigate={setActiveTab} />
+              </>
+            },
+            {
+              id: "changes",
+              label: "Коды и изменения",
+              description: "Классификация затрат, обязательства и согласованные изменения.",
+              content: <>
+                <CostCodeWorkspace
+                  projectId={initialBundle.project.id}
+                  canEdit={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN" || currentUser?.role === "MANAGER"}
+                  canManage={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN"}
+                />
+                <ChangeOrderManagementWorkspace
+                  projectId={initialBundle.project.id}
+                  project={initialBundle.project}
+                  budgetItems={budgetItems}
+                  scheduleItems={scheduleItems}
+                  materials={materials}
+                  procurementRequests={procurementRequests}
+                  payments={payments}
+                  risks={risks}
+                  documents={documents}
+                  canEdit={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN" || currentUser?.role === "MANAGER"}
+                  canApprove={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN"}
+                  onNavigate={setActiveTab}
+                />
+              </>
+            },
+            {
+              id: "manual",
+              label: "Добавить строку",
+              description: "Ручной ввод единичной позиции вне Excel-импорта.",
+              content: <BudgetForm
+                onAdd={async (item) => {
+                  const saved = await createResource<BudgetItem>("budget", {
+                    source: "Ручной ввод",
+                    actualUnitPrice: item.plannedUnitPrice,
+                    forecastUnitPrice: item.plannedUnitPrice,
+                    ...item
+                  });
+                  setBudgetItems((current) => [...current, saved]);
+                }}
+              />
+            }
+          ]}
+        />
       )}
 
       {activeTab === "График" && (
@@ -1050,83 +1076,97 @@ export function ProjectWorkspace({
       )}
 
       {activeTab === "Материалы" && (
-        <Panel title="Материалы и снабжение" icon={<Package size={18} />}>
-          <ProcurementIntelligenceWorkspace
-            projectName={initialBundle.project.name}
-            materials={materials}
-            procurementRequests={procurementRequests}
-            importHistory={importHistory}
-            draft={pipelineDraft}
-            loading={pipelineLoading}
-            onPreview={() => void runPipelineDraft("procurement")}
-            onCommit={() => void runPipelineDraft("procurement", true)}
-            onNavigate={setActiveTab}
-          />
-          <MaterialHealth items={materials} />
-          {editingMaterial && (
-            <MaterialEditForm
-              item={editingMaterial}
-              onCancel={() => setEditingMaterial(null)}
-              onSave={async (payload) => {
-                const saved = await updateResource<Material>("materials", editingMaterial.id, payload);
-                setMaterials((current) => current.map((item) => (item.id === saved.id ? saved : item)));
-                setEditingMaterial(null);
-              }}
-            />
-          )}
-          <MaterialTable
-            items={materials}
-            filter={materialTableFilter}
-            onFilterChange={setMaterialTableFilter}
-            onEdit={setEditingMaterial}
-            onDelete={async (item) => {
-              await deleteResource("materials", item.id);
-              setMaterials((current) => current.filter((candidate) => candidate.id !== item.id));
-            }}
-          />
-          <button
-            className="button primary"
-            style={{ marginTop: 14 }}
-            onClick={async () => {
-              const saved = await createResource<Material>("materials", {
-                name: "Кабель",
-                unit: "м",
-                requiredQty: 500,
-                orderedQty: 0,
-                deliveredQty: 0,
-                consumedQty: 0,
-                plannedUnitPrice: 240,
-                actualUnitPrice: 0,
-                supplier: "Не выбран",
-                neededAt: new Date().toISOString().slice(0, 10),
-                status: "required"
-              });
-              setMaterials((current) => [...current, saved]);
-            }}
-          >
-            <Plus size={18} />
-            Добавить материал
-          </button>
-        </Panel>
+        <ProjectModuleWorkspace
+          moduleKey="materials"
+          title="Материалы и снабжение"
+          icon={<Package size={18} />}
+          views={[
+            {
+              id: "summary",
+              label: "Сводка",
+              description: "Дефициты, стоимость и готовность снабжения.",
+              content: <><MaterialHealth items={materials} /><ProcurementIntelligenceWorkspace
+                projectName={initialBundle.project.name}
+                materials={materials}
+                procurementRequests={procurementRequests}
+                importHistory={importHistory}
+                draft={pipelineDraft}
+                loading={pipelineLoading}
+                onPreview={() => void runPipelineDraft("procurement")}
+                onCommit={() => void runPipelineDraft("procurement", true)}
+                onNavigate={setActiveTab}
+              /></>
+            },
+            {
+              id: "registry",
+              label: "Реестр",
+              description: "Потребность, заказ, поставка и расход материалов.",
+              content: <>
+                {editingMaterial && (
+                  <MaterialEditForm
+                    item={editingMaterial}
+                    onCancel={() => setEditingMaterial(null)}
+                    onSave={async (payload) => {
+                      const saved = await updateResource<Material>("materials", editingMaterial.id, payload);
+                      setMaterials((current) => current.map((item) => (item.id === saved.id ? saved : item)));
+                      setEditingMaterial(null);
+                    }}
+                  />
+                )}
+                <MaterialTable
+                  items={materials}
+                  filter={materialTableFilter}
+                  onFilterChange={setMaterialTableFilter}
+                  onEdit={setEditingMaterial}
+                  onDelete={async (item) => {
+                    await deleteResource("materials", item.id);
+                    setMaterials((current) => current.filter((candidate) => candidate.id !== item.id));
+                  }}
+                />
+              </>
+            },
+            {
+              id: "add",
+              label: "Добавить",
+              description: "Создать единичную потребность вручную.",
+              content: <button
+                className="button primary"
+                onClick={async () => {
+                  const saved = await createResource<Material>("materials", {
+                    name: "Кабель",
+                    unit: "м",
+                    requiredQty: 500,
+                    orderedQty: 0,
+                    deliveredQty: 0,
+                    consumedQty: 0,
+                    plannedUnitPrice: 240,
+                    actualUnitPrice: 0,
+                    supplier: "Не выбран",
+                    neededAt: new Date().toISOString().slice(0, 10),
+                    status: "required"
+                  });
+                  setMaterials((current) => [...current, saved]);
+                }}
+                type="button"
+              ><Plus size={18} />Добавить материал</button>
+            }
+          ]}
+        />
       )}
 
       {activeTab === "Заявки" && (
-        <Panel title="Заявки снабжению" icon={<Truck size={18} />}>
-          <PipelineDraftPanel
-            kind="procurement"
-            draft={pipelineDraft}
-            loading={pipelineLoading}
-            onPreview={() => void runPipelineDraft("procurement")}
-            onCommit={() => void runPipelineDraft("procurement", true)}
-          />
-          <ProcurementPipeline items={procurementRequests} />
-          <RequestTable items={procurementRequests} />
-        </Panel>
+        <ProjectModuleWorkspace moduleKey="procurement" title="Заявки снабжению" icon={<Truck size={18} />} views={[
+          { id: "pipeline", label: "Воронка", description: "Статусы заявок и узкие места снабжения.", content: <ProcurementPipeline items={procurementRequests} /> },
+          { id: "registry", label: "Реестр", description: "Полный список заявок с текущими статусами.", content: <RequestTable items={procurementRequests} /> },
+          { id: "draft", label: "Черновик из ВОР", description: "Предварительное формирование заявок без скрытой записи.", content: <PipelineDraftPanel kind="procurement" draft={pipelineDraft} loading={pipelineLoading} onPreview={() => void runPipelineDraft("procurement")} onCommit={() => void runPipelineDraft("procurement", true)} /> }
+        ]} />
       )}
 
       {activeTab === "ФОТ" && (
-        <Panel title="ФОТ, штат и трудовая потребность" icon={<Users size={18} />}>
-          <ResourcesEquipmentWorkspace
+        <ProjectModuleWorkspace moduleKey="payroll" title="ФОТ, штат и трудовая потребность" icon={<Users size={18} />} views={[{
+          id: "workforce",
+          label: "Рабочая сила",
+          content: <ResourcesEquipmentWorkspace
             projectId={initialBundle.project.id}
             project={initialBundle.project}
             budgetItems={budgetItems}
@@ -1134,75 +1174,39 @@ export function ProjectWorkspace({
             scheduleItems={scheduleItems}
             onNavigate={setActiveTab}
           />
-        </Panel>
+        }]} />
       )}
 
       {activeTab === "Финансы" && (
-        <Panel title="Платежи и кассовый план" icon={<Landmark size={18} />}>
-          <div className="accounting-bridge-entry">
-            <div><DatabaseZap size={18} /><span><strong>ERP / Бухгалтерия</strong><small>Экспорт, dry-run импорт и сверка платежей</small></span></div>
-            <button className="button secondary compact-button" onClick={() => setActiveTab("ERP / Учёт")} type="button">Открыть учёт</button>
-          </div>
-          <CostToCompleteWorkspace
-            project={initialBundle.project}
-            budgetItems={budgetItems}
-            scheduleItems={scheduleItems}
-            materials={materials}
-            procurementRequests={procurementRequests}
-            payments={payments}
-            risks={risks}
-            onNavigate={setActiveTab}
-          />
-          <FinanceCommand payments={payments} contractAmount={initialBundle.project.contractAmount} forecastProfit={budget.forecastProfit} />
-          <PaymentTable items={payments} />
-          <WorkspaceTools title="Прогнозы, сверка и детализация" description="Прогноз по кодам, счета, календарный cash-flow и черновики">
-            <CostForecastByCodeWorkspace projectId={initialBundle.project.id} />
-            <InvoiceReconciliationWorkspace
-              projectId={initialBundle.project.id}
-              canEdit={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN" || currentUser?.role === "MANAGER"}
-              canDelete={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN"}
-            />
-            <ScheduleCashflowWorkspace
-              projectName={initialBundle.project.name}
-              projectStartsAt={initialBundle.project.startsAt}
-              projectEndsAt={initialBundle.project.endsAt}
-              contractAmount={initialBundle.project.contractAmount}
-              budgetItems={budgetItems}
-              scheduleItems={scheduleItems}
-              materials={materials}
-              procurementRequests={procurementRequests}
-              payments={payments}
-              importHistory={importHistory}
-              draft={pipelineDraft}
-              loading={pipelineLoading}
-              onSchedulePreview={() => void runPipelineDraft("schedule")}
-              onScheduleCommit={() => void runPipelineDraft("schedule", true)}
-              onCashflowPreview={() => void runPipelineDraft("cashflow")}
-              onCashflowCommit={() => void runPipelineDraft("cashflow", true)}
-              onNavigate={setActiveTab}
-            />
-            <PipelineDraftPanel
-              kind="cashflow"
-              draft={pipelineDraft}
-              loading={pipelineLoading}
-              onPreview={() => void runPipelineDraft("cashflow")}
-              onCommit={() => void runPipelineDraft("cashflow", true)}
-            />
-          </WorkspaceTools>
-          <WorkspaceTools title="Добавить платеж" description="Ручная запись входящего или исходящего платежа">
-            <PaymentForm
-              onAdd={async (payment) => {
-                const saved = await createResource<Payment>("finance", { status: "planned", ...payment });
-                setPayments((current) => [...current, saved]);
-              }}
-            />
-          </WorkspaceTools>
-        </Panel>
+        <ProjectModuleWorkspace moduleKey="finance" title="Платежи и кассовый план" icon={<Landmark size={18} />} views={[
+          {
+            id: "summary",
+            label: "Сводка",
+            description: "Прогноз завершения, маржа и текущая финансовая позиция.",
+            content: <><CostToCompleteWorkspace project={initialBundle.project} budgetItems={budgetItems} scheduleItems={scheduleItems} materials={materials} procurementRequests={procurementRequests} payments={payments} risks={risks} onNavigate={setActiveTab} /><FinanceCommand payments={payments} contractAmount={initialBundle.project.contractAmount} forecastProfit={budget.forecastProfit} /></>
+          },
+          { id: "payments", label: "Платежи", description: "Входящие и исходящие платежи проекта.", content: <PaymentTable items={payments} /> },
+          {
+            id: "forecast",
+            label: "Прогноз и cashflow",
+            description: "Прогноз по кодам и календарная финансовая нагрузка.",
+            content: <><CostForecastByCodeWorkspace projectId={initialBundle.project.id} /><ScheduleCashflowWorkspace projectName={initialBundle.project.name} projectStartsAt={initialBundle.project.startsAt} projectEndsAt={initialBundle.project.endsAt} contractAmount={initialBundle.project.contractAmount} budgetItems={budgetItems} scheduleItems={scheduleItems} materials={materials} procurementRequests={procurementRequests} payments={payments} importHistory={importHistory} draft={pipelineDraft} loading={pipelineLoading} onSchedulePreview={() => void runPipelineDraft("schedule")} onScheduleCommit={() => void runPipelineDraft("schedule", true)} onCashflowPreview={() => void runPipelineDraft("cashflow")} onCashflowCommit={() => void runPipelineDraft("cashflow", true)} onNavigate={setActiveTab} /><PipelineDraftPanel kind="cashflow" draft={pipelineDraft} loading={pipelineLoading} onPreview={() => void runPipelineDraft("cashflow")} onCommit={() => void runPipelineDraft("cashflow", true)} /></>
+          },
+          {
+            id: "reconciliation",
+            label: "Сверка",
+            description: "Счета, сопоставление платежей и переход в ERP-контур.",
+            content: <><div className="accounting-bridge-entry"><div><DatabaseZap size={18} /><span><strong>ERP / Бухгалтерия</strong><small>Экспорт, dry-run импорт и сверка платежей</small></span></div><button className="button secondary compact-button" onClick={() => setActiveTab("ERP / Учёт")} type="button">Открыть учёт</button></div><InvoiceReconciliationWorkspace projectId={initialBundle.project.id} canEdit={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN" || currentUser?.role === "MANAGER"} canDelete={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN"} /></>
+          },
+          { id: "add", label: "Добавить платеж", description: "Ручная запись входящего или исходящего платежа.", content: <PaymentForm onAdd={async (payment) => { const saved = await createResource<Payment>("finance", { status: "planned", ...payment }); setPayments((current) => [...current, saved]); }} /> }
+        ]} />
       )}
 
       {activeTab === "ERP / Учёт" && (
-        <Panel title="ERP, бухгалтерия и сверка платежей" icon={<DatabaseZap size={18} />}>
-          <AccountingBridgeWorkspace
+        <ProjectModuleWorkspace moduleKey="erp" title="ERP, бухгалтерия и сверка платежей" icon={<DatabaseZap size={18} />} views={[{
+          id: "accounting",
+          label: "Учёт",
+          content: <AccountingBridgeWorkspace
             projectId={initialBundle.project.id}
             onPaymentsChanged={async () => {
               const response = await fetch(`/api/projects/${initialBundle.project.id}/finance`, { cache: "no-store" });
@@ -1211,12 +1215,12 @@ export function ProjectWorkspace({
               setPayments(body.payments);
             }}
           />
-        </Panel>
+        }]} />
       )}
 
       {activeTab === "Договор / Тендер" && (
-        <Panel title="Договор, тендер и КП" icon={<Search size={18} />}>
-          <ContractTenderWorkspace
+        <ProjectModuleWorkspace moduleKey="contract" title="Договор и тендер" icon={<Search size={18} />} views={[
+          { id: "analysis", label: "Анализ", description: "Коммерческие условия, риски договора и готовность предложения.", content: <ContractTenderWorkspace
             project={initialBundle.project}
             budgetItems={budgetItems}
             scheduleItems={scheduleItems}
@@ -1227,9 +1231,8 @@ export function ProjectWorkspace({
             documents={documents}
             documentChecklist={documentChecklist}
             onNavigate={setActiveTab}
-          />
-          <WorkspaceTools title="Обязательства, уведомления и претензии" description="Контроль исполнения условий договора и защита позиции проекта">
-            <ContractCommitmentsWorkspace
+          /> },
+          { id: "commitments", label: "Обязательства", description: "Контроль исполнения договорных обязательств.", content: <ContractCommitmentsWorkspace
               projectId={initialBundle.project.id}
               budgetItems={budgetItems}
               procurementRequests={procurementRequests}
@@ -1238,8 +1241,8 @@ export function ProjectWorkspace({
               canEdit={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN" || currentUser?.role === "MANAGER"}
               canApprove={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN"}
               onNavigate={setActiveTab}
-            />
-            <ClaimsNoticesWorkspace
+            /> },
+          { id: "claims", label: "Уведомления", description: "Основания для уведомлений, претензий и защита позиции проекта.", content: <ClaimsNoticesWorkspace
               project={initialBundle.project}
               budgetItems={budgetItems}
               scheduleItems={scheduleItems}
@@ -1250,14 +1253,15 @@ export function ProjectWorkspace({
               documents={documents}
               documentChecklist={documentChecklist}
               onNavigate={setActiveTab}
-            />
-          </WorkspaceTools>
-        </Panel>
+            /> }
+        ]} />
       )}
 
       {activeTab === "КП / Подача" && (
-        <Panel title="КП, коммерческое предложение и тендерная подача" icon={<Send size={18} />}>
-          <CommercialProposalWorkspace
+        <ProjectModuleWorkspace moduleKey="proposal" title="КП и тендерная подача" icon={<Send size={18} />} views={[{
+          id: "proposal",
+          label: "Коммерческое предложение",
+          content: <CommercialProposalWorkspace
             project={initialBundle.project}
             budgetItems={budgetItems}
             scheduleItems={scheduleItems}
@@ -1272,12 +1276,12 @@ export function ProjectWorkspace({
             importHistory={importHistory}
             onNavigate={setActiveTab}
           />
-        </Panel>
+        }]} />
       )}
 
       {activeTab === "КС" && (
-        <Panel title="КС, закрытие и предъявление заказчику" icon={<ReceiptText size={18} />}>
-          <AcceptanceBillingWorkspace
+        <ProjectModuleWorkspace moduleKey="acceptance" title="КС, закрытие и предъявление" icon={<ReceiptText size={18} />} views={[
+          { id: "billing", label: "Готовность КС", description: "Объёмы, суммы и комплект предъявления заказчику.", content: <AcceptanceBillingWorkspace
             project={initialBundle.project}
             budgetItems={budgetItems}
             scheduleItems={scheduleItems}
@@ -1289,9 +1293,8 @@ export function ProjectWorkspace({
             documentChecklist={documentChecklist}
             importHistory={importHistory}
             onNavigate={setActiveTab}
-          />
-          <WorkspaceTools title="Подтверждения объемов" description="Фотофиксация и замечания качества для комплекта КС">
-            <PhotoEvidenceWorkspace
+          /> },
+          { id: "evidence", label: "Фотофиксация", description: "Подтверждения выполненных объёмов для комплекта КС.", content: <PhotoEvidenceWorkspace
               project={initialBundle.project}
               budgetItems={budgetItems}
               scheduleItems={scheduleItems}
@@ -1303,8 +1306,8 @@ export function ProjectWorkspace({
               documents={documents}
               documentChecklist={documentChecklist}
               onNavigate={setActiveTab}
-            />
-            <QualityIssuesWorkspace
+            /> },
+          { id: "quality", label: "Замечания", description: "Проблемы качества, блокирующие закрытие объёмов.", content: <QualityIssuesWorkspace
               project={initialBundle.project}
               budgetItems={budgetItems}
               scheduleItems={scheduleItems}
@@ -1316,24 +1319,25 @@ export function ProjectWorkspace({
               documents={documents}
               documentChecklist={documentChecklist}
               onNavigate={setActiveTab}
-            />
-          </WorkspaceTools>
-        </Panel>
+            /> }
+        ]} />
       )}
 
       {activeTab === "Сдача / Гарантия" && (
-        <Panel title="Сдача объекта, передача и гарантия" icon={<BadgeCheck size={18} />}>
-          <ProjectCloseoutWorkspace
+        <ProjectModuleWorkspace moduleKey="closeout" title="Сдача объекта и гарантия" icon={<BadgeCheck size={18} />} views={[{
+          id: "closeout",
+          label: "Сдача и гарантия",
+          content: <ProjectCloseoutWorkspace
             projectId={initialBundle.project.id}
             canEdit={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN" || currentUser?.role === "MANAGER"}
             canApprove={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN"}
           />
-        </Panel>
+        }]} />
       )}
 
       {activeTab === "Исполнение" && (
-        <Panel title="Подрядчики, фронты и контроль исполнения" icon={<Users size={18} />}>
-          <SubcontractorExecutionWorkspace
+        <ProjectModuleWorkspace moduleKey="execution" title="Подрядчики и контроль исполнения" icon={<Users size={18} />} views={[
+          { id: "contractors", label: "Подрядчики", description: "Фронты, обязательства и производственный статус исполнителей.", content: <SubcontractorExecutionWorkspace
             project={initialBundle.project}
             budgetItems={budgetItems}
             scheduleItems={scheduleItems}
@@ -1344,9 +1348,8 @@ export function ProjectWorkspace({
             documents={documents}
             documentChecklist={documentChecklist}
             onNavigate={setActiveTab}
-          />
-          <WorkspaceTools title="Качество и безопасность" description="Контроль замечаний, допусков и разрешений на производство работ">
-            <QualityManagementWorkspace
+          /> },
+          { id: "quality", label: "Качество", description: "Замечания, проверки и приемка результата.", content: <QualityManagementWorkspace
               projectId={initialBundle.project.id}
               scheduleItems={scheduleItems}
               dailyReports={reports}
@@ -1354,8 +1357,8 @@ export function ProjectWorkspace({
               canEdit={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN" || currentUser?.role === "MANAGER"}
               canApprove={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN"}
               onNavigate={setActiveTab}
-            />
-            <HseSafetyPermitWorkspace
+            /> },
+          { id: "hse", label: "Допуски и HSE", description: "Безопасность и разрешения на производство работ.", content: <HseSafetyPermitWorkspace
               project={initialBundle.project}
               scheduleItems={scheduleItems}
               dailyReports={reports}
@@ -1363,22 +1366,20 @@ export function ProjectWorkspace({
               documents={documents}
               documentChecklist={documentChecklist}
               onNavigate={setActiveTab}
-            />
-          </WorkspaceTools>
-        </Panel>
+            /> }
+        ]} />
       )}
 
       {activeTab === "Рапорты" && (
-        <Panel title="Ежедневные рапорты стройплощадки" icon={<ClipboardList size={18} />}>
-          <ReportsWorkflow
+        <ProjectModuleWorkspace moduleKey="reports" title="Рапорты и производственный факт" icon={<ClipboardList size={18} />} views={[
+          { id: "reports", label: "Рапорты", description: "Создание, загрузка и журнал ежедневных рапортов.", content: <ReportsWorkflow
             currentUser={currentUser}
             currentUserLoaded={currentUserLoaded}
             projectId={initialBundle.project.id}
             reports={reports}
             onReportsChange={setReports}
-          />
-          <WorkspaceTools title="Аналитика рапортов и подтверждения" description="Производственный факт, качество, фото и управленческий отчет">
-            <FieldOperationsWorkspace
+          /> },
+          { id: "operations", label: "Производственный факт", description: "Сводка факта, смен и отклонений по площадке.", content: <FieldOperationsWorkspace
               project={initialBundle.project}
               budgetItems={budgetItems}
               scheduleItems={scheduleItems}
@@ -1390,8 +1391,8 @@ export function ProjectWorkspace({
               documents={documents}
               documentChecklist={documentChecklist}
               onNavigate={setActiveTab}
-            />
-            <QualityIssuesWorkspace
+            /> },
+          { id: "quality", label: "Качество", description: "Замечания и несоответствия, выявленные по рапортам.", content: <QualityIssuesWorkspace
               project={initialBundle.project}
               budgetItems={budgetItems}
               scheduleItems={scheduleItems}
@@ -1403,8 +1404,8 @@ export function ProjectWorkspace({
               documents={documents}
               documentChecklist={documentChecklist}
               onNavigate={setActiveTab}
-            />
-            <PhotoEvidenceWorkspace
+            /> },
+          { id: "photos", label: "Фото", description: "Фотофиксация производственного факта.", content: <PhotoEvidenceWorkspace
               project={initialBundle.project}
               budgetItems={budgetItems}
               scheduleItems={scheduleItems}
@@ -1416,8 +1417,8 @@ export function ProjectWorkspace({
               documents={documents}
               documentChecklist={documentChecklist}
               onNavigate={setActiveTab}
-            />
-            <RiskExecutiveWorkspace
+            /> },
+          { id: "executive", label: "Отчёт руководителю", description: "Управленческая сводка на основе подтвержденного факта.", content: <RiskExecutiveWorkspace
               project={initialBundle.project}
               budgetItems={budgetItems}
               scheduleItems={scheduleItems}
@@ -1435,14 +1436,15 @@ export function ProjectWorkspace({
               aiInsight={aiResults["executive-report"] ?? null}
               onNavigate={setActiveTab}
               onRunExecutiveAi={() => void runAiCommandScenario("executive-report")}
-            />
-          </WorkspaceTools>
-        </Panel>
+            /> }
+        ]} />
       )}
 
       {activeTab === "Площадка" && (
-        <Panel title="Мобильная работа стройплощадки" icon={<HardHat size={18} />}>
-          <FieldMobileWorkspace
+        <ProjectModuleWorkspace moduleKey="site" title="Мобильная работа стройплощадки" icon={<HardHat size={18} />} views={[{
+          id: "mobile",
+          label: "Площадка",
+          content: <FieldMobileWorkspace
             currentUser={currentUser}
             currentUserLoaded={currentUserLoaded}
             projectId={initialBundle.project.id}
@@ -1450,12 +1452,12 @@ export function ProjectWorkspace({
             onReportSynced={(item) => setReports((items) => items.some((current) => current.id === item.id) ? items : [item, ...items])}
             onDocumentSynced={(item) => setDocuments((items) => items.some((current) => current.id === item.id) ? items : [item, ...items])}
           />
-        </Panel>
+        }]} />
       )}
 
       {activeTab === "Риски" && (
-        <Panel title="Риски и отклонения" icon={<AlertTriangle size={18} />}>
-          <RiskExecutiveWorkspace
+        <ProjectModuleWorkspace moduleKey="risks" title="Риски и отклонения" icon={<AlertTriangle size={18} />} views={[
+          { id: "register", label: "Риск-регистр", description: "Риски, решения, действия и отчет руководству.", content: <RiskExecutiveWorkspace
             project={initialBundle.project}
             budgetItems={budgetItems}
             scheduleItems={scheduleItems}
@@ -1473,9 +1475,8 @@ export function ProjectWorkspace({
             aiInsight={aiResults["executive-report"] ?? null}
             onNavigate={setActiveTab}
             onRunExecutiveAi={() => void runAiCommandScenario("executive-report")}
-          />
-          <WorkspaceTools title="Связанные замечания качества" description="Проблемы исполнения, которые повышают риск проекта">
-            <QualityIssuesWorkspace
+          /> },
+          { id: "quality", label: "Замечания", description: "Проблемы исполнения, повышающие риск проекта.", content: <QualityIssuesWorkspace
               project={initialBundle.project}
               budgetItems={budgetItems}
               scheduleItems={scheduleItems}
@@ -1487,10 +1488,9 @@ export function ProjectWorkspace({
               documents={documents}
               documentChecklist={documentChecklist}
               onNavigate={setActiveTab}
-            />
-          </WorkspaceTools>
-          <RiskMatrix items={allRisks} />
-          <button
+            /> },
+          { id: "matrix", label: "Матрица", description: "Приоритеты рисков и полный реестр карточек.", content: <><RiskMatrix items={allRisks} /><RiskTable items={allRisks} /></> },
+          { id: "add", label: "Добавить", description: "Создать риск вручную и назначить владельца.", content: <button
             className="button primary"
             onClick={async () => {
               const saved = await createResource<Risk>("risks", {
@@ -1503,24 +1503,30 @@ export function ProjectWorkspace({
               });
               setRisks((current) => [...current, saved]);
             }}
+            type="button"
           >
             <Plus size={18} />
             Добавить риск
-          </button>
-          <RiskTable items={allRisks} />
-        </Panel>
+          </button> }
+        ]} />
       )}
 
       {activeTab === "Документы" && (
-        <Panel title="Документы проекта" icon={<FileText size={18} />}>
-          <DocumentTransmittalsWorkspace
+        <ProjectModuleWorkspace moduleKey="documents" title="Документы проекта" icon={<FileText size={18} />} views={[
+          { id: "registry", label: "Реестр", description: "Передачи, версии и текущие документы проекта.", content: <><DocumentTransmittalsWorkspace
             projectId={initialBundle.project.id}
             documents={documents}
             canEdit={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN" || currentUser?.role === "MANAGER"}
             canDelete={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN"}
-          />
-          <WorkspaceTools title="Комплектность и подтверждения" description="Чеклист, исполнительный пакет, фото и документы безопасности">
-            <DocumentComplianceWorkspace
+          /><DocumentTable
+            items={documents}
+            projectId={initialBundle.project.id}
+            versions={documentVersions}
+            onLoadVersions={(document) => { void loadDocumentVersions(document); }}
+            onUploadVersion={(document, file) => { void uploadDocumentVersion(document, file); }}
+            onDelete={(document) => { void deleteDocument(document); }}
+          /></> },
+          { id: "compliance", label: "Комплектность", description: "Чеклист и исполнительный пакет проекта.", content: <><DocumentComplianceWorkspace
               project={initialBundle.project}
               budgetItems={budgetItems}
               scheduleItems={scheduleItems}
@@ -1532,8 +1538,8 @@ export function ProjectWorkspace({
               documentChecklist={documentChecklist}
               importHistory={importHistory}
               onNavigate={setActiveTab}
-            />
-            <PhotoEvidenceWorkspace
+            /><DocumentChecklistPanel items={documentChecklist} /></> },
+          { id: "evidence", label: "Фото и допуски", description: "Фотофиксация и документы безопасности.", content: <><PhotoEvidenceWorkspace
               project={initialBundle.project}
               budgetItems={budgetItems}
               scheduleItems={scheduleItems}
@@ -1545,8 +1551,7 @@ export function ProjectWorkspace({
               documents={documents}
               documentChecklist={documentChecklist}
               onNavigate={setActiveTab}
-            />
-            <HseSafetyPermitWorkspace
+            /><HseSafetyPermitWorkspace
               project={initialBundle.project}
               scheduleItems={scheduleItems}
               dailyReports={reports}
@@ -1554,10 +1559,8 @@ export function ProjectWorkspace({
               documents={documents}
               documentChecklist={documentChecklist}
               onNavigate={setActiveTab}
-            />
-            <DocumentChecklistPanel items={documentChecklist} />
-          </WorkspaceTools>
-          <div className="form-grid form-surface">
+            /></> },
+          { id: "upload", label: "Загрузить", description: "Добавить новый файл в выбранную категорию.", content: <div className="form-grid form-surface">
             <label>
               Категория
               <select value={documentCategory} onChange={(event) => setDocumentCategory(event.target.value)}>
@@ -1580,75 +1583,66 @@ export function ProjectWorkspace({
                 Загрузить
               </button>
             </label>
-          </div>
-          <DocumentTable
-            items={documents}
-            projectId={initialBundle.project.id}
-            versions={documentVersions}
-            onLoadVersions={(document) => {
-              void loadDocumentVersions(document);
-            }}
-            onUploadVersion={(document, file) => {
-              void uploadDocumentVersion(document, file);
-            }}
-            onDelete={(document) => {
-              void deleteDocument(document);
-            }}
-          />
-          <DocumentCards items={documents} projectId={initialBundle.project.id} />
-        </Panel>
+          </div> },
+          { id: "cards", label: "Карточки", description: "Визуальное представление документов по категориям.", content: <DocumentCards items={documents} projectId={initialBundle.project.id} /> }
+        ]} />
       )}
 
       {activeTab === "RFI / Согласования" && (
-        <>
-          <RfiSubmittalsWorkspace
+        <ProjectModuleWorkspace moduleKey="rfi" title="RFI и согласования" icon={<ClipboardList size={18} />} views={[
+          { id: "rfi", label: "RFI / Submittals", description: "Запросы, согласования и связанные документы.", content: <RfiSubmittalsWorkspace
             projectId={initialBundle.project.id}
             documents={documents}
             canEdit={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN" || currentUser?.role === "MANAGER"}
             canDelete={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN"}
-          />
-          <WorkspaceTools title="Внешние участники" description="Гостевой доступ и контур взаимодействия с контрагентами">
-            <ExternalCollaborationWorkspace
+          /> },
+          { id: "external", label: "Внешний доступ", description: "Гостевой контур взаимодействия с контрагентами.", content: <ExternalCollaborationWorkspace
               projectId={initialBundle.project.id}
               canManage={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN"}
-            />
-          </WorkspaceTools>
-        </>
+            /> }
+        ]} />
       )}
 
       {activeTab === "Аналитика" && (
-        <Panel title="Проектный контроль и аналитика" icon={<BarChart3 size={18} />}>
-          <ProjectControlsWorkspace projectId={initialBundle.project.id} role={currentUser?.role} onNavigate={setActiveTab} />
-          <WorkspaceTools title="Готовность данных и рекомендации" description="Полнота исходных данных и следующие действия по модулям">
-            <ProjectIntelligencePanel readiness={readiness} intelligence={intelligence} actions={postImportActions} onNavigate={setActiveTab} />
-          </WorkspaceTools>
-        </Panel>
+        <ProjectModuleWorkspace moduleKey="analytics" title="Проектный контроль и аналитика" icon={<BarChart3 size={18} />} views={[
+          { id: "control", label: "Контроль", description: "Показатели проекта и управленческие отклонения.", content: <ProjectControlsWorkspace projectId={initialBundle.project.id} role={currentUser?.role} onNavigate={setActiveTab} /> },
+          { id: "readiness", label: "Готовность данных", description: "Полнота исходных данных и следующие действия по модулям.", content: <ProjectIntelligencePanel readiness={readiness} intelligence={intelligence} actions={postImportActions} onNavigate={setActiveTab} /> }
+        ]} />
       )}
 
       {activeTab === "Действия" && (
-        <>
-          <AiControlAgentWorkspace
+        <ProjectModuleWorkspace moduleKey="actions" title="Действия и согласования" icon={<BadgeCheck size={18} />} views={[
+          { id: "agent", label: "AI-контроль", description: "Подсказки и контроль исполнения без автоматической записи.", content: <AiControlAgentWorkspace
             projectId={initialBundle.project.id}
             canEdit={canEditCurrentProject}
             onNavigate={setActiveTab}
-          />
-          <ProjectActionCenter
+          /> },
+          { id: "register", label: "Реестр действий", description: "Задачи, согласования и ответственные.", content: <ProjectActionCenter
             projectId={initialBundle.project.id}
             canEdit={canEditCurrentProject}
             canApprove={canDeleteCurrentProject}
             onNavigate={setActiveTab}
             suggestions={actionSuggestions}
-          />
-        </>
+          /> }
+        ]} />
       )}
 
       {activeTab === "Процессы" && (
-        <WorkflowDesignerWorkspace projectId={initialBundle.project.id} role={currentUser?.role} onNavigate={setActiveTab} />
+        <ProjectModuleWorkspace moduleKey="workflows" title="Процессы проекта" icon={<ClipboardList size={18} />} views={[{
+          id: "designer",
+          label: "Конструктор",
+          content: <WorkflowDesignerWorkspace projectId={initialBundle.project.id} role={currentUser?.role} onNavigate={setActiveTab} />
+        }]} />
       )}
 
       {activeTab === "Участники" && (
-        <Panel title="Участники проекта" icon={<Users size={18} />}>
-          <div className="form-grid form-surface">
+        <ProjectModuleWorkspace moduleKey="members" title="Участники проекта" icon={<Users size={18} />} views={[
+          { id: "members", label: "Состав", description: "Участники проекта и назначенные роли.", content: <ProjectMembersTable
+            items={members}
+            onRoleChange={(member, role) => { void updateProjectMember(member.id, role); }}
+            onRemove={(member) => { void removeProjectMember(member.id); }}
+          /> },
+          { id: "add", label: "Добавить", description: "Предоставить пользователю доступ к проекту.", content: <div className="form-grid form-surface">
             <label>
               Email пользователя
               <input value={memberEmail} placeholder="manager@company.ru" onChange={(event) => setMemberEmail(event.target.value)} />
@@ -1669,36 +1663,30 @@ export function ProjectWorkspace({
                 Добавить
               </button>
             </label>
-          </div>
-          <ProjectMembersTable
-            items={members}
-            onRoleChange={(member, role) => {
-              void updateProjectMember(member.id, role);
-            }}
-            onRemove={(member) => {
-              void removeProjectMember(member.id);
-            }}
-          />
-        </Panel>
+          </div> }
+        ]} />
       )}
 
       {activeTab === "История" && (
-        <Panel title="Журнал изменений" icon={<ClipboardList size={18} />}>
-          <div className="toolbar">
+        <ProjectModuleWorkspace moduleKey="history" title="Журнал изменений" icon={<ClipboardList size={18} />} views={[{
+          id: "audit",
+          label: "События",
+          content: <><div className="toolbar">
             <a className="button secondary" href={`/api/projects/${initialBundle.project.id}/export/json`}>
               Экспорт проекта JSON
             </a>
             <a className="button secondary" href={`/api/projects/${initialBundle.project.id}/audit/export/json`}>
               Экспорт истории JSON
             </a>
-          </div>
-          <AuditTable items={auditEvents} />
-        </Panel>
+          </div><AuditTable items={auditEvents} /></>
+        }]} />
       )}
 
       {activeTab === "Настройки" && (
-        <Panel title="Настройки проекта" icon={<Trash2 size={18} />}>
-          <ProjectDeleteDangerZone
+        <ProjectModuleWorkspace moduleKey="settings" title="Настройки проекта" icon={<Trash2 size={18} />} views={[{
+          id: "danger",
+          label: "Удаление проекта",
+          content: <ProjectDeleteDangerZone
             projectName={initialBundle.project.name}
             canDelete={canDeleteCurrentProject}
             roleLoaded={currentUserLoaded}
@@ -1711,12 +1699,12 @@ export function ProjectWorkspace({
             onConfirmChange={setDeleteProjectConfirm}
             onDelete={() => void deleteProject()}
           />
-        </Panel>
+        }]} />
       )}
 
       {activeTab === "AI-помощник" && (
-        <Panel title="AI-помощник проекта" icon={<Bot size={18} />} className="ai-panel">
-          <div className="ai-source-row">
+        <ProjectModuleWorkspace moduleKey="ai" title="AI-помощник проекта" icon={<Bot size={18} />} className="ai-panel" views={[
+          { id: "scenarios", label: "Сценарии", description: "AI запускается только по явной команде пользователя.", content: <><div className="ai-source-row">
             <StatusBadge tone="info">Источник: ВОР</StatusBadge>
             <StatusBadge tone="info">График</StatusBadge>
             <StatusBadge tone="info">Материалы</StatusBadge>
@@ -1740,16 +1728,15 @@ export function ProjectWorkspace({
                 onRun={() => void runAiCommandScenario(scenario.scenario)}
               />
             ))}
-          </div>
-          <WorkspaceTools title="История AI-анализов" description="Предыдущие запуски, результаты и созданные действия">
-            <AiRunJournal
+          </div></> },
+          { id: "history", label: "История", description: "Предыдущие анализы, результаты и созданные действия.", content: <AiRunJournal
               projectId={initialBundle.project.id}
               refreshToken={aiRunHistoryRefresh}
               canCreateActions={canEditCurrentProject}
-            />
-          </WorkspaceTools>
-        </Panel>
+            /> }
+        ]} />
       )}
+          </div>
         </div>
       </div>
     </main>
@@ -2515,30 +2502,6 @@ function Panel({ title, icon, children, className = "" }: { title: string; icon:
       </div>
       {children}
     </section>
-  );
-}
-
-function WorkspaceTools({
-  title,
-  description,
-  children,
-  defaultOpen = false
-}: {
-  title: string;
-  description: string;
-  children: React.ReactNode;
-  defaultOpen?: boolean;
-}) {
-  return (
-    <details className="workspace-tools" open={defaultOpen || undefined}>
-      <summary>
-        <span>
-          <strong>{title}</strong>
-          <small>{description}</small>
-        </span>
-      </summary>
-      <div className="workspace-tools-body stack">{children}</div>
-    </details>
   );
 }
 

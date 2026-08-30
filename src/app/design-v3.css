@@ -943,12 +943,70 @@ body[data-design="v3"] .workspace-layout {
 body[data-design="v3"] .project-header-compact {
   background: rgba(255, 255, 255, 0.72);
   box-shadow: none;
+  margin-bottom: 0;
+  padding: 0 0 10px;
+}
+
+body[data-design="v3"] .project-header-compact h1 {
+  font-size: 22px;
+}
+
+body[data-design="v3"] .project-header-compact .project-summary {
+  font-size: 10px;
 }
 
 body[data-design="v3"] .project-section-guide {
   background: #f5f8f8;
   border-color: #d5dfe1;
   box-shadow: none;
+}
+
+body[data-design="v3"] .project-module-workspace {
+  background: rgba(255, 255, 255, 0.94);
+  border-color: #d5dfe1;
+  box-shadow: 0 8px 24px rgba(18, 29, 34, 0.06);
+}
+
+body[data-design="v3"] .project-workspace-page .project-module-nav {
+  margin-bottom: 10px;
+  position: static;
+  top: auto;
+}
+
+body[data-design="v3"] .project-workspace-page .project-module-trigger {
+  min-height: 54px;
+  padding-block: 6px;
+}
+
+body[data-design="v3"] .project-workspace-page .project-section-guide-main {
+  padding: 8px 12px;
+}
+
+body[data-design="v3"] .project-workspace-page .project-section-focus h2 {
+  font-size: 14px;
+}
+
+body[data-design="v3"] .project-module-workspace-header {
+  background: rgba(255, 255, 255, 0.96);
+  border-color: #d8e0e2;
+}
+
+body[data-design="v3"] .project-module-workspace-title > span {
+  background: #17262c;
+}
+
+body[data-design="v3"] .project-module-view-tabs button.active {
+  background: #17262c;
+  border-color: #17262c;
+}
+
+body[data-design="v3"] .project-module-view-context {
+  background: #f5f8f8;
+  border-color: #d8e0e2;
+}
+
+body[data-design="v3"] .project-module-view-body {
+  background: #fbfcfc;
 }
 
 body[data-design="v3"] .project-section-context > summary:hover,
@@ -1637,6 +1695,21 @@ body[data-design="v3"] :where(
   }
 }
 
+@media (max-width: 680px) {
+  body[data-design="v3"] .production-schedule-view-tabs,
+  body[data-design="v3"] .risk-exec-view-tabs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    overflow: visible;
+  }
+
+  body[data-design="v3"] .production-schedule-view-tabs button,
+  body[data-design="v3"] .risk-exec-view-tabs button {
+    min-width: 0;
+    white-space: normal;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   body[data-design="v3"] *,
   body[data-design="v3"] *::before,
@@ -1747,6 +1820,52 @@ body[data-design="v3"] .production-schedule-toolbar {
   gap: 10px;
   justify-content: space-between;
   min-width: 0;
+}
+
+body[data-design="v3"] .production-schedule-view-tabs {
+  align-items: center;
+  background: #eef3f3;
+  border: 1px solid #d8e0e2;
+  border-radius: 6px;
+  display: flex;
+  gap: 3px;
+  margin: 0 0 12px;
+  overflow-x: auto;
+  padding: 4px;
+  scrollbar-width: none;
+}
+
+body[data-design="v3"] .production-schedule-view-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+body[data-design="v3"] .production-schedule-view-tabs button {
+  background: transparent;
+  border: 0;
+  border-radius: 4px;
+  color: var(--muted);
+  cursor: pointer;
+  flex: 0 0 auto;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 750;
+  min-height: 32px;
+  padding: 6px 10px;
+  white-space: nowrap;
+}
+
+body[data-design="v3"] .production-schedule-view-tabs button.active {
+  background: #17262c;
+  color: #fff;
+}
+
+body[data-design="v3"] .production-schedule-plan-view[hidden],
+body[data-design="v3"] .production-schedule-disclosures > details[hidden] {
+  display: none;
+}
+
+body[data-design="v3"] .production-schedule-disclosures > details[open] {
+  margin-bottom: 0;
 }
 
 body[data-design="v3"] .production-schedule-search {
