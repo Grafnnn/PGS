@@ -36,7 +36,7 @@ describe("ContractTenderWorkspace", () => {
       })
     );
 
-    expect(html).toContain("Contract &amp; Tender Intelligence");
+    expect(html).toContain("Аналитика договора и тендера");
     expect(html).toContain("Договор / тендер / КП");
     expect(html).toContain("Ключевые условия");
     expect(html).toContain("Пакет документов");

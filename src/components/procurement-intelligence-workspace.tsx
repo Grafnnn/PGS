@@ -76,7 +76,7 @@ export function ProcurementIntelligenceWorkspace({
     <section className="procurement-intelligence-workspace" aria-label="Procurement & Materials Intelligence">
       <div className="procurement-intelligence-header">
         <div>
-          <div className="eyebrow">Procurement & Materials Intelligence</div>
+          <div className="eyebrow">Аналитика снабжения и материалов</div>
           <h3>Материалы из ВОР → заявка снабжению</h3>
           <p className="muted">Позиции группируются по разделам и категориям. Preview не пишет рабочие данные проекта, commit остается явным действием.</p>
         </div>
@@ -246,7 +246,7 @@ export function ProcurementIntelligenceWorkspace({
       <div className="procurement-shortcuts">
         <button className="button secondary compact-button" type="button" onClick={() => onNavigate("Бюджет / ВОР")}>Открыть ВОР</button>
         <button className="button secondary compact-button" type="button" onClick={() => onNavigate("Заявки")}>Открыть заявки</button>
-        <button className="button secondary compact-button" type="button" onClick={() => onNavigate("Аналитика")}>Project Intelligence</button>
+        <button className="button secondary compact-button" type="button" onClick={() => onNavigate("Аналитика")}>Аналитика проекта</button>
       </div>
     </section>
   );

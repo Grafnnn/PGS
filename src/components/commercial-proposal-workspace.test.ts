@@ -26,14 +26,14 @@ describe("CommercialProposalWorkspace", () => {
       })
     );
 
-    expect(html).toContain("Commercial Proposal &amp; Tender Submission");
+    expect(html).toContain("Коммерческое предложение и тендерная подача");
     expect(html).toContain("КП / Подача");
     expect(html).toContain("Proposal readiness");
     expect(html).toContain("Price structure");
     expect(html).toContain("Work/material split");
     expect(html).toContain("Customer-facing proposal draft");
     expect(html).toContain("Internal approval memo");
-    expect(html).toContain("Tender submission checklist");
+    expect(html).toContain("Чеклист тендерной подачи");
     expect(html).not.toContain("OPENAI_API_KEY");
     expect(html).not.toContain("DATABASE_URL");
     expect(onNavigate).not.toHaveBeenCalled();

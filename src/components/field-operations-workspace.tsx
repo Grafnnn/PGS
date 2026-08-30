@@ -86,10 +86,10 @@ export function FieldOperationsWorkspace({
   });
 
   return (
-    <section className="field-ops-workspace" aria-label="Field Operations & Daily Reports">
+    <section className="field-ops-workspace" aria-label="Стройплощадка и ежедневные рапорты">
       <div className={`field-ops-header tone-${model.summary.tone}`}>
         <div>
-          <div className="eyebrow">Field Operations & Daily Reports</div>
+          <div className="eyebrow">Стройплощадка и ежедневные рапорты</div>
           <h3>Площадка / Рапорты</h3>
           <p>Ежедневный факт стройплощадки: люди, техника, объемы, материалы, простои, замечания и связь с графиком, КС, рисками и снабжением.</p>
           <div className="field-ops-badges">
@@ -115,17 +115,17 @@ export function FieldOperationsWorkspace({
       </div>
 
       <div className="field-ops-grid metrics">
-        <Metric title="Daily site facts" value={model.summary.status} detail={model.summary.nextStep} tone={model.summary.tone} />
-        <Metric title="Workforce & equipment" value={`${model.summary.totalWorkers}/${model.summary.totalEngineers}`} detail={`${model.summary.equipmentMentions} единиц/упоминаний техники`} tone={model.summary.reportCount ? "info" : "neutral"} />
-        <Metric title="Downtime / issues" value={`${model.summary.downtimeReports}/${model.summary.issueReports}`} detail="простои / замечания" tone={model.summary.downtimeReports || model.summary.issueReports ? "bad" : model.summary.reportCount ? "good" : "info"} />
-        <Metric title="Fact-to-system links" value={`${model.summary.linkedScheduleItems}/${model.summary.materialSignals}`} detail="график / материалы" tone={model.summary.linkedScheduleItems || model.summary.materialSignals ? "warn" : "info"} />
+        <Metric title="Факт стройплощадки" value={model.summary.status} detail={model.summary.nextStep} tone={model.summary.tone} />
+        <Metric title="Люди и техника" value={`${model.summary.totalWorkers}/${model.summary.totalEngineers}`} detail={`${model.summary.equipmentMentions} единиц/упоминаний техники`} tone={model.summary.reportCount ? "info" : "neutral"} />
+        <Metric title="Простои / замечания" value={`${model.summary.downtimeReports}/${model.summary.issueReports}`} detail="простои / замечания" tone={model.summary.downtimeReports || model.summary.issueReports ? "bad" : model.summary.reportCount ? "good" : "info"} />
+        <Metric title="Связи факта с системой" value={`${model.summary.linkedScheduleItems}/${model.summary.materialSignals}`} detail="график / материалы" tone={model.summary.linkedScheduleItems || model.summary.materialSignals ? "warn" : "info"} />
       </div>
 
       <div className="field-ops-grid">
         <article className="field-ops-card wide">
           <div className="section-title">
             <ClipboardList size={18} />
-            <h4>Daily report snapshots</h4>
+            <h4>Сводки ежедневных рапортов</h4>
           </div>
           <div className="field-ops-snapshot-grid">
             {model.snapshots.length ? model.snapshots.map((snapshot) => <SnapshotCard key={snapshot.id} snapshot={snapshot} />) : <span className="muted">Рапорты появятся после первого ежедневного факта площадки.</span>}
@@ -135,7 +135,7 @@ export function FieldOperationsWorkspace({
         <article className="field-ops-card">
           <div className="section-title">
             <AlertTriangle size={18} />
-            <h4>Field signals</h4>
+            <h4>Сигналы стройплощадки</h4>
           </div>
           <div className="field-ops-signal-list">
             {model.signals.length ? model.signals.map((signal) => (
@@ -150,7 +150,7 @@ export function FieldOperationsWorkspace({
         <article className="field-ops-card">
           <div className="section-title">
             <Users size={18} />
-            <h4>Action register</h4>
+            <h4>Реестр действий</h4>
           </div>
           <div className="field-ops-action-list">
             {model.actions.map((action) => (

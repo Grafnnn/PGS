@@ -296,7 +296,7 @@ export function ReportsWorkflow({ projectId, reports, currentUser, currentUserLo
 
       <div className="reports-workflow-heading">
         <div>
-          <div className="eyebrow">Daily report workflow</div>
+          <div className="eyebrow">Процесс ежедневного рапорта</div>
           <h3>Ежедневные рапорты</h3>
           <p className="muted">Черновик → отправка → проверка → утверждение. Рабочие данные не создаются до сохранения формы.</p>
         </div>
@@ -379,7 +379,7 @@ export function ReportsWorkflow({ projectId, reports, currentUser, currentUserLo
 
       <div className="reports-workflow-heading executive-heading">
         <div>
-          <div className="eyebrow">Versioned executive reporting</div>
+          <div className="eyebrow">Версионная управленческая отчетность</div>
           <h3>Управленческие отчеты</h3>
           <p className="muted">Каждый выпуск сохраняет собственную версию и снимок источников. Формирование выполняется только по явной команде, опубликованная версия неизменяема.</p>
         </div>

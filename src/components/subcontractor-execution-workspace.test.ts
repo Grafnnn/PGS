@@ -23,11 +23,11 @@ describe("SubcontractorExecutionWorkspace", () => {
       })
     );
 
-    expect(html).toContain("Subcontractor &amp; Execution Control");
+    expect(html).toContain("Подрядчики и контроль исполнения");
     expect(html).toContain("Подрядчики / Исполнение");
-    expect(html).toContain("Contractors &amp; owners");
-    expect(html).toContain("Execution fronts");
-    expect(html).toContain("Action register");
+    expect(html).toContain("Подрядчики и ответственные");
+    expect(html).toContain("Фронты работ");
+    expect(html).toContain("Реестр действий");
     expect(html).toContain("Execution handoff");
     expect(html).not.toContain("OPENAI_API_KEY");
     expect(html).not.toContain("DATABASE_URL");

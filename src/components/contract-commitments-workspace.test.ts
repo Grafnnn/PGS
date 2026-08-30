@@ -16,7 +16,7 @@ describe("ContractCommitmentsWorkspace", () => {
       canApprove: true,
       onNavigate: () => undefined
     }));
-    expect(html).toContain("Contract Commitments v1");
+    expect(html).toContain("Договорные обязательства v1");
     expect(html).toContain("Договорные обязательства");
     expect(html).toContain("Обязательство");
     expect(html).toContain("Система не создаёт платежи");

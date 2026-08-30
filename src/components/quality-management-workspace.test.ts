@@ -20,7 +20,7 @@ describe("QualityManagementWorkspace", () => {
       onNavigate: vi.fn()
     }));
 
-    expect(html).toContain("Quality Management v2");
+    expect(html).toContain("Управление качеством v2");
     expect(html).toContain("Инспекции, NCR и Punch List");
     expect(html).toContain("Открытые NCR / Punch");
     expect(html).toContain("Инспекции");
@@ -44,7 +44,7 @@ describe("QualityManagementWorkspace", () => {
       onNavigate: vi.fn()
     }));
 
-    expect(html).toContain("Quality Management v2");
+    expect(html).toContain("Управление качеством v2");
     expect(html).not.toContain("<button class=\"button primary compact-button\"");
   });
 });

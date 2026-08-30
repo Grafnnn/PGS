@@ -196,7 +196,7 @@ export function CostCodeWorkspace({ projectId, canEdit, canManage }: { projectId
     <section className="cost-code-workspace" aria-label="Cost Codes CBS-WBS">
       <header className="cost-code-header">
         <div>
-          <div className="eyebrow">Cost Codes / CBS-WBS v1</div>
+          <div className="eyebrow">Коды затрат / CBS-WBS v1</div>
           <h3>Единая классификация стоимости и работ</h3>
           <p>Общий код связывает ВОР, график, материалы, закупки, платежи и изменения. Автоматизация всегда начинается с dry-run.</p>
         </div>

@@ -394,7 +394,7 @@ export function ProjectCloseoutWorkspace({
                   <div className="closeout-package-meta">
                     <span>Ответственный: <strong>{closeoutPackage.responsibleParty || "не назначен"}</strong></span>
                     <span>Срок: <strong>{dateLabel(closeoutPackage.dueAt)}</strong></span>
-                    <span>Checklist: <strong>{complete}/{required.length}</strong></span>
+                    <span>Чеклист: <strong>{complete}/{required.length}</strong></span>
                   </div>
                   <div className="closeout-progress"><span style={{ width: `${required.length ? Math.round((complete / required.length) * 100) : 0}%` }} /></div>
 

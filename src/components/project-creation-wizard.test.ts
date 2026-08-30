@@ -16,7 +16,7 @@ describe("ProjectCreationWizard", () => {
     const fetchMock = vi.spyOn(globalThis, "fetch" as never);
     const html = renderToStaticMarkup(React.createElement(ProjectCreationWizard));
 
-    expect(html).toContain("Project Creation &amp; Onboarding");
+    expect(html).toContain("Создание и запуск проекта");
     expect(html).toContain("Создать проект и запустить baseline");
     expect(html).toContain("Создать проект из Excel");
     expect(html).toContain("Загрузить Excel проекта");
@@ -34,7 +34,7 @@ describe("ProjectCreationWizard", () => {
     expect(html).toContain("Проект");
     expect(html).toContain("Договор");
     expect(html).toContain("Контур");
-    expect(html).toContain("Onboarding baseline");
+    expect(html).toContain("Стартовый базовый план");
     expect(html).toContain("Выбранный шаблон");
     expect(html).toContain("Бюджет / ВОР");
     expect(html).toContain("Название проекта");

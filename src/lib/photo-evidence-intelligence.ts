@@ -221,7 +221,7 @@ export function buildPhotoEvidenceIntelligence(input: PhotoEvidenceInput): Photo
     items,
     actions,
     handoff: {
-      title: "Evidence handoff",
+      title: "Передача доказательной базы",
       copyText
     },
     limitations: [

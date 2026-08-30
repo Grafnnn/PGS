@@ -227,11 +227,11 @@ export function ProjectControlsWorkspace({ projectId, role, onNavigate }: Props)
       <section className="project-controls-step">
         <div className="section-title"><CalendarClock size={18} /><h4>2. Выпустить отчётный период</h4></div>
         <div className="form-grid form-surface compact-form-grid">
-          <label>Baseline<select value={selectedBaselineId} onChange={(event) => { setSelectedBaselineId(event.target.value); setPeriodPreview(null); }}>
+          <label>Базовый план<select value={selectedBaselineId} onChange={(event) => { setSelectedBaselineId(event.target.value); setPeriodPreview(null); }}>
             <option value="">Выберите baseline</option>
             {data?.baselines.map((baseline) => <option key={baseline.id} value={baseline.id}>#{baseline.sequence} · {baseline.name} · {baseline.status}</option>)}
           </select></label>
-          <label>Data date<input type="date" value={reportDate} onChange={(event) => setReportDate(event.target.value)} disabled={!canEdit} /></label>
+          <label>Дата отчета<input type="date" value={reportDate} onChange={(event) => setReportDate(event.target.value)} disabled={!canEdit} /></label>
           <label>&nbsp;<button className="button secondary" type="button" disabled={!canEdit || !selectedBaselineId || Boolean(loading)} onClick={() => void periodRequest("preview")}><Gauge size={16} />Рассчитать</button></label>
           <label>&nbsp;<button className="button primary" type="button" disabled={!canEdit || !periodPreview || selectedBaseline?.status !== "active" || Boolean(loading)} onClick={() => void periodRequest("publish")}><CheckCheck size={16} />Опубликовать</button></label>
         </div>

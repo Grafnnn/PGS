@@ -124,7 +124,7 @@ export default async function DashboardPage() {
             <h2>Портфельная аналитика</h2>
           </div>
           <div className="mini-chart-grid">
-            <MiniBars title="Cash-flow" items={cashFlowSeries} />
+            <MiniBars title="Денежный поток" items={cashFlowSeries} />
             <MiniBars title="Структура затрат" items={costStructure} />
           </div>
         </div>

@@ -6,7 +6,7 @@ import { CostCodeWorkspace } from "./cost-code-workspace";
 describe("CostCodeWorkspace", () => {
   it("renders the guarded dry-run and mapping workspace without adding navigation", () => {
     const html = renderToStaticMarkup(createElement(CostCodeWorkspace, { projectId: "project-1", canEdit: true, canManage: true }));
-    expect(html).toContain("Cost Codes / CBS-WBS v1");
+    expect(html).toContain("Коды затрат / CBS-WBS v1");
     expect(html).toContain("Построить dry-run");
     expect(html).toContain("Baseline из ВОР");
     expect(html).toContain("Ручной код");

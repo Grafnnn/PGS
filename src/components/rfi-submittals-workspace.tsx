@@ -159,7 +159,7 @@ export function RfiSubmittalsWorkspace({ projectId, documents, canEdit, canDelet
   return (
     <section className="rfi-workspace" aria-label="RFI и согласования">
       <header className="rfi-workspace-header">
-        <div><div className="eyebrow">Formal project communication</div><h3>RFI & Submittals</h3><p>Нумерованные запросы информации, ответы, подача документов и история согласований.</p></div>
+        <div><div className="eyebrow">Формальные коммуникации проекта</div><h3>RFI и согласования</h3><p>Нумерованные запросы информации, ответы, подача документов и история согласований.</p></div>
         <div className="rfi-health">
           <span className={summary.rfiOverdue ? "bad" : "good"}><Clock3 size={15} /> RFI просрочено: {summary.rfiOverdue}</span>
           <span className={summary.submittalOverdue ? "bad" : "good"}><AlertTriangle size={15} /> Подач просрочено: {summary.submittalOverdue}</span>
@@ -167,7 +167,7 @@ export function RfiSubmittalsWorkspace({ projectId, documents, canEdit, canDelet
       </header>
       <div className="rfi-metrics">
         <article><small>Открытые RFI</small><strong>{summary.rfiOpen}</strong><span>ожидают ответа</span></article>
-        <article><small>На рассмотрении</small><strong>{summary.submittalPending}</strong><span>submittals</span></article>
+        <article><small>На рассмотрении</small><strong>{summary.submittalPending}</strong><span>подач</span></article>
         <article><small>На доработку</small><strong>{summary.revisionsRequired}</strong><span>нужна новая ревизия</span></article>
       </div>
       <div className="rfi-mode-switch" role="tablist" aria-label="Тип реестра">

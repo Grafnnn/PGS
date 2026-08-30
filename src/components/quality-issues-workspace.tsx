@@ -85,7 +85,7 @@ export function QualityIssuesWorkspace(props: QualityIssuesWorkspaceProps) {
         <article className="quality-issues-card wide">
           <div className="section-title">
             <ShieldAlert size={18} />
-            <h4>Issue register</h4>
+            <h4>Реестр замечаний</h4>
           </div>
           <div className="quality-issues-list">
             {model.issues.length ? model.issues.map((item) => (
@@ -102,7 +102,7 @@ export function QualityIssuesWorkspace(props: QualityIssuesWorkspaceProps) {
         <article className="quality-issues-card">
           <div className="section-title">
             <AlertTriangle size={18} />
-            <h4>Punch actions</h4>
+            <h4>Действия по устранению</h4>
           </div>
           <div className="quality-issues-action-list">
             {model.actions.map((item) => (

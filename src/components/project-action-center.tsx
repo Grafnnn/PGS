@@ -122,7 +122,7 @@ export function ProjectActionCenter({ projectId, canEdit, canApprove = false, on
     <section className="project-action-center" aria-label="Центр действий проекта">
       <header className="project-action-header">
         <div>
-          <div className="eyebrow">Project workflow</div>
+          <div className="eyebrow">Рабочий процесс проекта</div>
           <h3>Центр действий</h3>
           <p>Назначайте ответственных, сроки и согласование для решений из всех модулей проекта.</p>
         </div>

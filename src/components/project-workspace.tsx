@@ -24,6 +24,7 @@ import { ProjectActionCenter, type ProjectActionSuggestion } from "@/components/
 import { ProjectControlsWorkspace } from "@/components/project-controls-workspace";
 import { ProjectCloseoutOverview, ProjectCloseoutWorkspace } from "@/components/project-closeout-workspace";
 import { ProjectModuleMenu, projectTabs, type ProjectTab } from "@/components/project-module-menu";
+import { ProjectSectionGuide, projectSectionGuides, type ProjectSectionSignal, type ProjectSignalKey } from "@/components/project-section-guide";
 import { DocumentComplianceWorkspace } from "@/components/document-compliance-workspace";
 import { DocumentTransmittalsWorkspace } from "@/components/document-transmittals-workspace";
 import { PhotoEvidenceWorkspace } from "@/components/photo-evidence-workspace";
@@ -253,6 +254,46 @@ export function ProjectWorkspace({
     }));
   }, [postImportActions]);
 
+  const signalCatalog: Record<ProjectSignalKey, ProjectSectionSignal> = {
+    contract: { key: "contract", label: "Договор", value: compactMoney(initialBundle.project.contractAmount), tone: "neutral" },
+    profit: { key: "profit", label: "Прогноз прибыли", value: compactMoney(budget.forecastProfit), tone: budget.forecastProfit > 0 ? "good" : "bad" },
+    completion: {
+      key: "completion",
+      label: "Готовность",
+      value: percent(works.completionPercent),
+      tone: works.completionPercent >= 80 ? "good" : works.completionPercent >= 45 ? "warn" : "info"
+    },
+    cash: { key: "cash", label: "Кассовый разрыв", value: compactMoney(finance.cashGap), tone: finance.cashGap < 0 ? "bad" : "good" },
+    budgetVariance: { key: "budgetVariance", label: "Отклонение бюджета", value: compactMoney(budgetDeviation), tone: budgetDeviation > 0 ? "bad" : "good" },
+    delayed: { key: "delayed", label: "Просрочено работ", value: String(delayedWorks.length), tone: delayedWorks.length ? "bad" : "good" },
+    materialDeficit: { key: "materialDeficit", label: "Дефициты", value: String(materialStats.deficitItems.length), tone: materialStats.deficitItems.length ? "bad" : "good" },
+    requests: { key: "requests", label: "Активные заявки", value: String(activeRequests.length), tone: activeRequests.length ? "warn" : "good" },
+    reports: { key: "reports", label: "Рапорты", value: String(reports.length), tone: reports.length ? "info" : "warn" },
+    risks: { key: "risks", label: "Открытые риски", value: String(activeRisks.length), tone: activeRisks.length ? "warn" : "good" },
+    documents: { key: "documents", label: "Документы", value: String(documents.length), tone: documents.length ? "info" : "warn" },
+    members: { key: "members", label: "Участники", value: String(members.length), tone: members.length ? "info" : "warn" },
+    readiness: {
+      key: "readiness",
+      label: "Готовность данных",
+      value: `${readiness?.score ?? 0}%`,
+      tone: (readiness?.score ?? 0) >= 70 ? "good" : (readiness?.score ?? 0) >= 40 ? "warn" : "bad"
+    },
+    payments: { key: "payments", label: "Платежные операции", value: String(payments.length), tone: payments.length ? "info" : "neutral" },
+    audit: { key: "audit", label: "События аудита", value: String(auditEvents.length), tone: auditEvents.length ? "info" : "neutral" }
+  };
+  const activeProjectTab = activeTab as ProjectTab;
+  const sectionSignals = projectSectionGuides[activeProjectTab].signalKeys.map((key) => signalCatalog[key]);
+  const sectionPriorities = [
+    delayedWorks[0]?.name ? `Вернуть в план: ${delayedWorks[0].name}` : "Подтвердить отсутствие новых просрочек по графику",
+    urgentMaterial ? `Закрыть дефицит: ${urgentMaterial.name}` : "Сверить материалы для ближайшего фронта работ",
+    activeRisks[0]?.title ? `Разобрать риск: ${activeRisks[0].title}` : "Обновить риски и решения после планерки"
+  ];
+  const lastProjectEvent = latestAudit
+    ? `${new Date(latestAudit.createdAt).toLocaleString("ru-RU")} · ${latestAudit.summary ?? latestAudit.action}`
+    : latestReport
+      ? `${formatDate(latestReport.date)} · ${latestReport.completedWorks}`
+      : "Событий пока нет. Первое изменение появится в журнале проекта.";
+
   useEffect(() => {
     let active = true;
     fetch("/api/auth/me")
@@ -354,9 +395,8 @@ export function ProjectWorkspace({
   }, [initialBundle.project.id]);
 
   useEffect(() => {
-    if (!["Обзор", "Бюджет / ВОР", "ФОТ", "Материалы", "Заявки", "График", "Финансы", "Договор / Тендер", "КП / Подача", "КС", "Исполнение", "Документы", "Действия", "Аналитика", "AI-помощник"].includes(activeTab)) return;
     void loadPipeline();
-  }, [activeTab, loadPipeline]);
+  }, [loadPipeline]);
 
   async function askAi(prompt = aiPrompt) {
     setAiLoading(true);
@@ -777,7 +817,7 @@ export function ProjectWorkspace({
 
   return (
     <main className="page">
-      <div className="page-header project-header">
+      <div className={`page-header project-header ${activeTab === "Обзор" ? "" : "project-header-compact"}`}>
         <div className="page-header-main">
           <div className="eyebrow">{initialBundle.project.customer}</div>
           <div className="project-title-row">
@@ -790,7 +830,7 @@ export function ProjectWorkspace({
             <span>РП: {initialBundle.project.manager}</span>
           </div>
         </div>
-        <div className="page-header-actions">
+        {activeTab === "Обзор" && <div className="page-header-actions">
           <button className="button secondary" type="button" onClick={() => setActiveTab("Бюджет / ВОР")}>
             <Table2 size={18} />
             Импорт ВОР
@@ -803,19 +843,28 @@ export function ProjectWorkspace({
             <Bot size={18} />
             AI-анализ
           </button>
-        </div>
+        </div>}
       </div>
 
-      <section className="grid grid-4">
+      {activeTab === "Обзор" && <section className="grid grid-4 project-global-kpis">
         <Kpi title="Договор" value={compactMoney(initialBundle.project.contractAmount)} />
         <Kpi title="Прогнозная прибыль" value={compactMoney(budget.forecastProfit)} tone={budget.forecastProfit > 0 ? "good" : "bad"} />
         <Kpi title="Готовность" value={percent(works.completionPercent)} />
         <Kpi title="Кассовый разрыв" value={compactMoney(finance.cashGap)} tone={finance.cashGap < 0 ? "bad" : "good"} />
-      </section>
+      </section>}
 
-      <div className={`workspace-layout ${activeTab === "Обзор" ? "workspace-layout-full" : ""}`} style={{ marginTop: 18 }}>
+      <div className="workspace-layout workspace-layout-full project-workspace-layout" style={{ marginTop: 18 }}>
         <div>
-          <ProjectModuleMenu activeTab={activeTab as ProjectTab} onSelect={setActiveTab} />
+          <ProjectModuleMenu activeTab={activeProjectTab} onSelect={setActiveTab} />
+          {activeTab !== "Обзор" && (
+            <ProjectSectionGuide
+              activeTab={activeProjectTab}
+              signals={sectionSignals}
+              priorities={sectionPriorities}
+              lastEvent={lastProjectEvent}
+              onNavigate={setActiveTab}
+            />
+          )}
           {(saving || error) && (
             <div className={`panel ${error ? "delta-bad" : "muted"}`} style={{ marginBottom: 16 }}>
               {error || `Сохраняю: ${saving}`}
@@ -878,25 +927,27 @@ export function ProjectWorkspace({
       {activeTab === "Бюджет / ВОР" && (
         <Panel title="Бюджет, ВОР и классификация затрат" icon={<Table2 size={18} />}>
           <BudgetAnalytics items={budgetItems} contractAmount={initialBundle.project.contractAmount} paid={finance.incomingPayments} forecastProfit={budget.forecastProfit} />
-          <CostCodeWorkspace
-            projectId={initialBundle.project.id}
-            canEdit={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN" || currentUser?.role === "MANAGER"}
-            canManage={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN"}
-          />
-          <ChangeOrderManagementWorkspace
-            projectId={initialBundle.project.id}
-            project={initialBundle.project}
-            budgetItems={budgetItems}
-            scheduleItems={scheduleItems}
-            materials={materials}
-            procurementRequests={procurementRequests}
-            payments={payments}
-            risks={risks}
-            documents={documents}
-            canEdit={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN" || currentUser?.role === "MANAGER"}
-            canApprove={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN"}
-            onNavigate={setActiveTab}
-          />
+          <WorkspaceTools title="Коды затрат и изменения" description="Классификация бюджета, обязательства и согласованные изменения">
+            <CostCodeWorkspace
+              projectId={initialBundle.project.id}
+              canEdit={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN" || currentUser?.role === "MANAGER"}
+              canManage={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN"}
+            />
+            <ChangeOrderManagementWorkspace
+              projectId={initialBundle.project.id}
+              project={initialBundle.project}
+              budgetItems={budgetItems}
+              scheduleItems={scheduleItems}
+              materials={materials}
+              procurementRequests={procurementRequests}
+              payments={payments}
+              risks={risks}
+              documents={documents}
+              canEdit={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN" || currentUser?.role === "MANAGER"}
+              canApprove={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN"}
+              onNavigate={setActiveTab}
+            />
+          </WorkspaceTools>
           <ImportPanel
             file={importFile}
             mode={importMode}
@@ -924,17 +975,19 @@ export function ProjectWorkspace({
             onNavigate={setActiveTab}
           />
           <PostImportActionPanel actions={postImportActions} result={importResult} onNavigate={setActiveTab} />
-          <BudgetForm
-            onAdd={async (item) => {
-              const saved = await createResource<BudgetItem>("budget", {
-                source: "Ручной ввод",
-                actualUnitPrice: item.plannedUnitPrice,
-                forecastUnitPrice: item.plannedUnitPrice,
-                ...item
-              });
-              setBudgetItems((current) => [...current, saved]);
-            }}
-          />
+          <WorkspaceTools title="Добавить строку вручную" description="Используйте для единичной позиции вне Excel-импорта">
+            <BudgetForm
+              onAdd={async (item) => {
+                const saved = await createResource<BudgetItem>("budget", {
+                  source: "Ручной ввод",
+                  actualUnitPrice: item.plannedUnitPrice,
+                  forecastUnitPrice: item.plannedUnitPrice,
+                  ...item
+                });
+                setBudgetItems((current) => [...current, saved]);
+              }}
+            />
+          </WorkspaceTools>
           {editingBudget && (
             <BudgetEditForm
               item={editingBudget}
@@ -1100,46 +1153,50 @@ export function ProjectWorkspace({
             risks={risks}
             onNavigate={setActiveTab}
           />
-          <CostForecastByCodeWorkspace projectId={initialBundle.project.id} />
-          <InvoiceReconciliationWorkspace
-            projectId={initialBundle.project.id}
-            canEdit={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN" || currentUser?.role === "MANAGER"}
-            canDelete={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN"}
-          />
-          <ScheduleCashflowWorkspace
-            projectName={initialBundle.project.name}
-            projectStartsAt={initialBundle.project.startsAt}
-            projectEndsAt={initialBundle.project.endsAt}
-            contractAmount={initialBundle.project.contractAmount}
-            budgetItems={budgetItems}
-            scheduleItems={scheduleItems}
-            materials={materials}
-            procurementRequests={procurementRequests}
-            payments={payments}
-            importHistory={importHistory}
-            draft={pipelineDraft}
-            loading={pipelineLoading}
-            onSchedulePreview={() => void runPipelineDraft("schedule")}
-            onScheduleCommit={() => void runPipelineDraft("schedule", true)}
-            onCashflowPreview={() => void runPipelineDraft("cashflow")}
-            onCashflowCommit={() => void runPipelineDraft("cashflow", true)}
-            onNavigate={setActiveTab}
-          />
-          <PipelineDraftPanel
-            kind="cashflow"
-            draft={pipelineDraft}
-            loading={pipelineLoading}
-            onPreview={() => void runPipelineDraft("cashflow")}
-            onCommit={() => void runPipelineDraft("cashflow", true)}
-          />
           <FinanceCommand payments={payments} contractAmount={initialBundle.project.contractAmount} forecastProfit={budget.forecastProfit} />
-          <PaymentForm
-            onAdd={async (payment) => {
-              const saved = await createResource<Payment>("finance", { status: "planned", ...payment });
-              setPayments((current) => [...current, saved]);
-            }}
-          />
           <PaymentTable items={payments} />
+          <WorkspaceTools title="Прогнозы, сверка и детализация" description="Прогноз по кодам, счета, календарный cash-flow и черновики">
+            <CostForecastByCodeWorkspace projectId={initialBundle.project.id} />
+            <InvoiceReconciliationWorkspace
+              projectId={initialBundle.project.id}
+              canEdit={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN" || currentUser?.role === "MANAGER"}
+              canDelete={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN"}
+            />
+            <ScheduleCashflowWorkspace
+              projectName={initialBundle.project.name}
+              projectStartsAt={initialBundle.project.startsAt}
+              projectEndsAt={initialBundle.project.endsAt}
+              contractAmount={initialBundle.project.contractAmount}
+              budgetItems={budgetItems}
+              scheduleItems={scheduleItems}
+              materials={materials}
+              procurementRequests={procurementRequests}
+              payments={payments}
+              importHistory={importHistory}
+              draft={pipelineDraft}
+              loading={pipelineLoading}
+              onSchedulePreview={() => void runPipelineDraft("schedule")}
+              onScheduleCommit={() => void runPipelineDraft("schedule", true)}
+              onCashflowPreview={() => void runPipelineDraft("cashflow")}
+              onCashflowCommit={() => void runPipelineDraft("cashflow", true)}
+              onNavigate={setActiveTab}
+            />
+            <PipelineDraftPanel
+              kind="cashflow"
+              draft={pipelineDraft}
+              loading={pipelineLoading}
+              onPreview={() => void runPipelineDraft("cashflow")}
+              onCommit={() => void runPipelineDraft("cashflow", true)}
+            />
+          </WorkspaceTools>
+          <WorkspaceTools title="Добавить платеж" description="Ручная запись входящего или исходящего платежа">
+            <PaymentForm
+              onAdd={async (payment) => {
+                const saved = await createResource<Payment>("finance", { status: "planned", ...payment });
+                setPayments((current) => [...current, saved]);
+              }}
+            />
+          </WorkspaceTools>
         </Panel>
       )}
 
@@ -1171,28 +1228,30 @@ export function ProjectWorkspace({
             documentChecklist={documentChecklist}
             onNavigate={setActiveTab}
           />
-          <ContractCommitmentsWorkspace
-            projectId={initialBundle.project.id}
-            budgetItems={budgetItems}
-            procurementRequests={procurementRequests}
-            payments={payments}
-            documents={documents}
-            canEdit={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN" || currentUser?.role === "MANAGER"}
-            canApprove={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN"}
-            onNavigate={setActiveTab}
-          />
-          <ClaimsNoticesWorkspace
-            project={initialBundle.project}
-            budgetItems={budgetItems}
-            scheduleItems={scheduleItems}
-            materials={materials}
-            procurementRequests={procurementRequests}
-            payments={payments}
-            risks={risks}
-            documents={documents}
-            documentChecklist={documentChecklist}
-            onNavigate={setActiveTab}
-          />
+          <WorkspaceTools title="Обязательства, уведомления и претензии" description="Контроль исполнения условий договора и защита позиции проекта">
+            <ContractCommitmentsWorkspace
+              projectId={initialBundle.project.id}
+              budgetItems={budgetItems}
+              procurementRequests={procurementRequests}
+              payments={payments}
+              documents={documents}
+              canEdit={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN" || currentUser?.role === "MANAGER"}
+              canApprove={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN"}
+              onNavigate={setActiveTab}
+            />
+            <ClaimsNoticesWorkspace
+              project={initialBundle.project}
+              budgetItems={budgetItems}
+              scheduleItems={scheduleItems}
+              materials={materials}
+              procurementRequests={procurementRequests}
+              payments={payments}
+              risks={risks}
+              documents={documents}
+              documentChecklist={documentChecklist}
+              onNavigate={setActiveTab}
+            />
+          </WorkspaceTools>
         </Panel>
       )}
 
@@ -1231,32 +1290,34 @@ export function ProjectWorkspace({
             importHistory={importHistory}
             onNavigate={setActiveTab}
           />
-          <PhotoEvidenceWorkspace
-            project={initialBundle.project}
-            budgetItems={budgetItems}
-            scheduleItems={scheduleItems}
-            materials={materials}
-            procurementRequests={procurementRequests}
-            payments={payments}
-            dailyReports={reports}
-            risks={risks}
-            documents={documents}
-            documentChecklist={documentChecklist}
-            onNavigate={setActiveTab}
-          />
-          <QualityIssuesWorkspace
-            project={initialBundle.project}
-            budgetItems={budgetItems}
-            scheduleItems={scheduleItems}
-            materials={materials}
-            procurementRequests={procurementRequests}
-            payments={payments}
-            dailyReports={reports}
-            risks={risks}
-            documents={documents}
-            documentChecklist={documentChecklist}
-            onNavigate={setActiveTab}
-          />
+          <WorkspaceTools title="Подтверждения объемов" description="Фотофиксация и замечания качества для комплекта КС">
+            <PhotoEvidenceWorkspace
+              project={initialBundle.project}
+              budgetItems={budgetItems}
+              scheduleItems={scheduleItems}
+              materials={materials}
+              procurementRequests={procurementRequests}
+              payments={payments}
+              dailyReports={reports}
+              risks={risks}
+              documents={documents}
+              documentChecklist={documentChecklist}
+              onNavigate={setActiveTab}
+            />
+            <QualityIssuesWorkspace
+              project={initialBundle.project}
+              budgetItems={budgetItems}
+              scheduleItems={scheduleItems}
+              materials={materials}
+              procurementRequests={procurementRequests}
+              payments={payments}
+              dailyReports={reports}
+              risks={risks}
+              documents={documents}
+              documentChecklist={documentChecklist}
+              onNavigate={setActiveTab}
+            />
+          </WorkspaceTools>
         </Panel>
       )}
 
@@ -1272,15 +1333,6 @@ export function ProjectWorkspace({
 
       {activeTab === "Исполнение" && (
         <Panel title="Подрядчики, фронты и контроль исполнения" icon={<Users size={18} />}>
-          <QualityManagementWorkspace
-            projectId={initialBundle.project.id}
-            scheduleItems={scheduleItems}
-            dailyReports={reports}
-            documents={documents}
-            canEdit={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN" || currentUser?.role === "MANAGER"}
-            canApprove={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN"}
-            onNavigate={setActiveTab}
-          />
           <SubcontractorExecutionWorkspace
             project={initialBundle.project}
             budgetItems={budgetItems}
@@ -1293,15 +1345,26 @@ export function ProjectWorkspace({
             documentChecklist={documentChecklist}
             onNavigate={setActiveTab}
           />
-          <HseSafetyPermitWorkspace
-            project={initialBundle.project}
-            scheduleItems={scheduleItems}
-            dailyReports={reports}
-            risks={risks}
-            documents={documents}
-            documentChecklist={documentChecklist}
-            onNavigate={setActiveTab}
-          />
+          <WorkspaceTools title="Качество и безопасность" description="Контроль замечаний, допусков и разрешений на производство работ">
+            <QualityManagementWorkspace
+              projectId={initialBundle.project.id}
+              scheduleItems={scheduleItems}
+              dailyReports={reports}
+              documents={documents}
+              canEdit={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN" || currentUser?.role === "MANAGER"}
+              canApprove={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN"}
+              onNavigate={setActiveTab}
+            />
+            <HseSafetyPermitWorkspace
+              project={initialBundle.project}
+              scheduleItems={scheduleItems}
+              dailyReports={reports}
+              risks={risks}
+              documents={documents}
+              documentChecklist={documentChecklist}
+              onNavigate={setActiveTab}
+            />
+          </WorkspaceTools>
         </Panel>
       )}
 
@@ -1314,64 +1377,66 @@ export function ProjectWorkspace({
             reports={reports}
             onReportsChange={setReports}
           />
-          <FieldOperationsWorkspace
-            project={initialBundle.project}
-            budgetItems={budgetItems}
-            scheduleItems={scheduleItems}
-            materials={materials}
-            procurementRequests={procurementRequests}
-            payments={payments}
-            dailyReports={reports}
-            risks={risks}
-            documents={documents}
-            documentChecklist={documentChecklist}
-            onNavigate={setActiveTab}
-          />
-          <QualityIssuesWorkspace
-            project={initialBundle.project}
-            budgetItems={budgetItems}
-            scheduleItems={scheduleItems}
-            materials={materials}
-            procurementRequests={procurementRequests}
-            payments={payments}
-            dailyReports={reports}
-            risks={risks}
-            documents={documents}
-            documentChecklist={documentChecklist}
-            onNavigate={setActiveTab}
-          />
-          <PhotoEvidenceWorkspace
-            project={initialBundle.project}
-            budgetItems={budgetItems}
-            scheduleItems={scheduleItems}
-            materials={materials}
-            procurementRequests={procurementRequests}
-            payments={payments}
-            dailyReports={reports}
-            risks={risks}
-            documents={documents}
-            documentChecklist={documentChecklist}
-            onNavigate={setActiveTab}
-          />
-          <RiskExecutiveWorkspace
-            project={initialBundle.project}
-            budgetItems={budgetItems}
-            scheduleItems={scheduleItems}
-            materials={materials}
-            procurementRequests={procurementRequests}
-            payments={payments}
-            dailyReports={reports}
-            risks={risks}
-            documents={documents}
-            readiness={readiness}
-            documentChecklist={documentChecklist}
-            intelligence={intelligence}
-            importHistory={importHistory}
-            aiLoading={aiScenarioLoading === "executive-report"}
-            aiInsight={aiResults["executive-report"] ?? null}
-            onNavigate={setActiveTab}
-            onRunExecutiveAi={() => void runAiCommandScenario("executive-report")}
-          />
+          <WorkspaceTools title="Аналитика рапортов и подтверждения" description="Производственный факт, качество, фото и управленческий отчет">
+            <FieldOperationsWorkspace
+              project={initialBundle.project}
+              budgetItems={budgetItems}
+              scheduleItems={scheduleItems}
+              materials={materials}
+              procurementRequests={procurementRequests}
+              payments={payments}
+              dailyReports={reports}
+              risks={risks}
+              documents={documents}
+              documentChecklist={documentChecklist}
+              onNavigate={setActiveTab}
+            />
+            <QualityIssuesWorkspace
+              project={initialBundle.project}
+              budgetItems={budgetItems}
+              scheduleItems={scheduleItems}
+              materials={materials}
+              procurementRequests={procurementRequests}
+              payments={payments}
+              dailyReports={reports}
+              risks={risks}
+              documents={documents}
+              documentChecklist={documentChecklist}
+              onNavigate={setActiveTab}
+            />
+            <PhotoEvidenceWorkspace
+              project={initialBundle.project}
+              budgetItems={budgetItems}
+              scheduleItems={scheduleItems}
+              materials={materials}
+              procurementRequests={procurementRequests}
+              payments={payments}
+              dailyReports={reports}
+              risks={risks}
+              documents={documents}
+              documentChecklist={documentChecklist}
+              onNavigate={setActiveTab}
+            />
+            <RiskExecutiveWorkspace
+              project={initialBundle.project}
+              budgetItems={budgetItems}
+              scheduleItems={scheduleItems}
+              materials={materials}
+              procurementRequests={procurementRequests}
+              payments={payments}
+              dailyReports={reports}
+              risks={risks}
+              documents={documents}
+              readiness={readiness}
+              documentChecklist={documentChecklist}
+              intelligence={intelligence}
+              importHistory={importHistory}
+              aiLoading={aiScenarioLoading === "executive-report"}
+              aiInsight={aiResults["executive-report"] ?? null}
+              onNavigate={setActiveTab}
+              onRunExecutiveAi={() => void runAiCommandScenario("executive-report")}
+            />
+          </WorkspaceTools>
         </Panel>
       )}
 
@@ -1409,19 +1474,21 @@ export function ProjectWorkspace({
             onNavigate={setActiveTab}
             onRunExecutiveAi={() => void runAiCommandScenario("executive-report")}
           />
-          <QualityIssuesWorkspace
-            project={initialBundle.project}
-            budgetItems={budgetItems}
-            scheduleItems={scheduleItems}
-            materials={materials}
-            procurementRequests={procurementRequests}
-            payments={payments}
-            dailyReports={reports}
-            risks={risks}
-            documents={documents}
-            documentChecklist={documentChecklist}
-            onNavigate={setActiveTab}
-          />
+          <WorkspaceTools title="Связанные замечания качества" description="Проблемы исполнения, которые повышают риск проекта">
+            <QualityIssuesWorkspace
+              project={initialBundle.project}
+              budgetItems={budgetItems}
+              scheduleItems={scheduleItems}
+              materials={materials}
+              procurementRequests={procurementRequests}
+              payments={payments}
+              dailyReports={reports}
+              risks={risks}
+              documents={documents}
+              documentChecklist={documentChecklist}
+              onNavigate={setActiveTab}
+            />
+          </WorkspaceTools>
           <RiskMatrix items={allRisks} />
           <button
             className="button primary"
@@ -1452,42 +1519,44 @@ export function ProjectWorkspace({
             canEdit={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN" || currentUser?.role === "MANAGER"}
             canDelete={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN"}
           />
-          <DocumentComplianceWorkspace
-            project={initialBundle.project}
-            budgetItems={budgetItems}
-            scheduleItems={scheduleItems}
-            materials={materials}
-            procurementRequests={procurementRequests}
-            payments={payments}
-            risks={risks}
-            documents={documents}
-            documentChecklist={documentChecklist}
-            importHistory={importHistory}
-            onNavigate={setActiveTab}
-          />
-          <PhotoEvidenceWorkspace
-            project={initialBundle.project}
-            budgetItems={budgetItems}
-            scheduleItems={scheduleItems}
-            materials={materials}
-            procurementRequests={procurementRequests}
-            payments={payments}
-            dailyReports={reports}
-            risks={risks}
-            documents={documents}
-            documentChecklist={documentChecklist}
-            onNavigate={setActiveTab}
-          />
-          <HseSafetyPermitWorkspace
-            project={initialBundle.project}
-            scheduleItems={scheduleItems}
-            dailyReports={reports}
-            risks={risks}
-            documents={documents}
-            documentChecklist={documentChecklist}
-            onNavigate={setActiveTab}
-          />
-          <DocumentChecklistPanel items={documentChecklist} />
+          <WorkspaceTools title="Комплектность и подтверждения" description="Чеклист, исполнительный пакет, фото и документы безопасности">
+            <DocumentComplianceWorkspace
+              project={initialBundle.project}
+              budgetItems={budgetItems}
+              scheduleItems={scheduleItems}
+              materials={materials}
+              procurementRequests={procurementRequests}
+              payments={payments}
+              risks={risks}
+              documents={documents}
+              documentChecklist={documentChecklist}
+              importHistory={importHistory}
+              onNavigate={setActiveTab}
+            />
+            <PhotoEvidenceWorkspace
+              project={initialBundle.project}
+              budgetItems={budgetItems}
+              scheduleItems={scheduleItems}
+              materials={materials}
+              procurementRequests={procurementRequests}
+              payments={payments}
+              dailyReports={reports}
+              risks={risks}
+              documents={documents}
+              documentChecklist={documentChecklist}
+              onNavigate={setActiveTab}
+            />
+            <HseSafetyPermitWorkspace
+              project={initialBundle.project}
+              scheduleItems={scheduleItems}
+              dailyReports={reports}
+              risks={risks}
+              documents={documents}
+              documentChecklist={documentChecklist}
+              onNavigate={setActiveTab}
+            />
+            <DocumentChecklistPanel items={documentChecklist} />
+          </WorkspaceTools>
           <div className="form-grid form-surface">
             <label>
               Категория
@@ -1532,23 +1601,27 @@ export function ProjectWorkspace({
 
       {activeTab === "RFI / Согласования" && (
         <>
-          <ExternalCollaborationWorkspace
-            projectId={initialBundle.project.id}
-            canManage={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN"}
-          />
           <RfiSubmittalsWorkspace
             projectId={initialBundle.project.id}
             documents={documents}
             canEdit={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN" || currentUser?.role === "MANAGER"}
             canDelete={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN"}
           />
+          <WorkspaceTools title="Внешние участники" description="Гостевой доступ и контур взаимодействия с контрагентами">
+            <ExternalCollaborationWorkspace
+              projectId={initialBundle.project.id}
+              canManage={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN"}
+            />
+          </WorkspaceTools>
         </>
       )}
 
       {activeTab === "Аналитика" && (
-        <Panel title="Project Controls & Intelligence" icon={<BarChart3 size={18} />}>
+        <Panel title="Проектный контроль и аналитика" icon={<BarChart3 size={18} />}>
           <ProjectControlsWorkspace projectId={initialBundle.project.id} role={currentUser?.role} onNavigate={setActiveTab} />
-          <ProjectIntelligencePanel readiness={readiness} intelligence={intelligence} actions={postImportActions} onNavigate={setActiveTab} />
+          <WorkspaceTools title="Готовность данных и рекомендации" description="Полнота исходных данных и следующие действия по модулям">
+            <ProjectIntelligencePanel readiness={readiness} intelligence={intelligence} actions={postImportActions} onNavigate={setActiveTab} />
+          </WorkspaceTools>
         </Panel>
       )}
 
@@ -1642,7 +1715,7 @@ export function ProjectWorkspace({
       )}
 
       {activeTab === "AI-помощник" && (
-        <Panel title="AI Command Layer" icon={<Bot size={18} />} className="ai-panel">
+        <Panel title="AI-помощник проекта" icon={<Bot size={18} />} className="ai-panel">
           <div className="ai-source-row">
             <StatusBadge tone="info">Источник: ВОР</StatusBadge>
             <StatusBadge tone="info">График</StatusBadge>
@@ -1668,72 +1741,16 @@ export function ProjectWorkspace({
               />
             ))}
           </div>
-          <AiRunJournal
-            projectId={initialBundle.project.id}
-            refreshToken={aiRunHistoryRefresh}
-            canCreateActions={canEditCurrentProject}
-          />
+          <WorkspaceTools title="История AI-анализов" description="Предыдущие запуски, результаты и созданные действия">
+            <AiRunJournal
+              projectId={initialBundle.project.id}
+              refreshToken={aiRunHistoryRefresh}
+              canCreateActions={canEditCurrentProject}
+            />
+          </WorkspaceTools>
         </Panel>
       )}
         </div>
-
-        {activeTab !== "Обзор" && <aside className="panel stack context-panel">
-          <div>
-            <div className="eyebrow">Контекст проекта</div>
-            <h2>Что проверить</h2>
-            <p className="muted">Короткая панель для РП и ПТО: риски, сроки, снабжение и финансовые отклонения.</p>
-          </div>
-          <div className="attention-list">
-            <ContextItem title="Бюджет / факт" value={compactMoney(budgetDeviation)} tone={budgetDeviation > 0 ? "bad" : "good"} />
-            <ContextItem title="Просроченные работы" value={String(delayedWorks.length)} tone={delayedWorks.length ? "bad" : "good"} />
-            <ContextItem title="Открытые риски" value={String(activeRisks.length)} tone={activeRisks.length ? "warn" : "good"} />
-            <ContextItem title="Заявки снабжению" value={String(activeRequests.length)} tone={activeRequests.length ? "warn" : "good"} />
-          </div>
-          <div className="context-block">
-            <h3>Что сделать сегодня</h3>
-            <ul className="action-list">
-              <li>{delayedWorks[0]?.name ?? "Проверить график и подтвердить отсутствие новых просрочек"}</li>
-              <li>{urgentMaterial ? `Закрыть дефицит: ${urgentMaterial.name}` : "Сверить потребность материалов на ближайшие работы"}</li>
-              <li>{activeRisks[0]?.title ?? "Обновить реестр рисков после планерки"}</li>
-            </ul>
-          </div>
-          <div className="context-block">
-            <h3>Последнее событие</h3>
-            <p className="muted">{latestReport ? `${formatDate(latestReport.date)} · ${latestReport.completedWorks}` : "Рапортов пока нет. Добавьте ежедневный рапорт после смены."}</p>
-          </div>
-          <div className="context-block audit-glimpse">
-            <h3>След аудита</h3>
-            <p className="muted">
-              {latestAudit
-                ? `${new Date(latestAudit.createdAt).toLocaleString("ru-RU")} · ${latestAudit.actorName ?? "local-user"} · ${latestAudit.summary ?? latestAudit.action}`
-                : "История изменений появится после первого действия по проекту."}
-            </p>
-            <button className="button secondary" type="button" onClick={() => setActiveTab("История")}>
-              Открыть журнал
-            </button>
-          </div>
-          <div className="stack">
-            <h3>AI-рекомендации</h3>
-            <button className="button secondary" type="button" onClick={() => {
-              setActiveTab("AI-помощник");
-              void runAiCommandScenario("risk-review");
-            }}>
-              Проверить риски проекта
-            </button>
-            <button className="button secondary" type="button" onClick={() => {
-              setActiveTab("AI-помощник");
-              void runAiCommandScenario("budget-review");
-            }}>
-              Сравнить бюджет и факт
-            </button>
-            <button className="button secondary" type="button" onClick={() => {
-              setActiveTab("AI-помощник");
-              void runAiCommandScenario("executive-report");
-            }}>
-              Подготовить записку
-            </button>
-          </div>
-        </aside>}
       </div>
     </main>
   );
@@ -1929,7 +1946,7 @@ function ProjectIntelligencePanel({
         <>
           <div className="grid grid-2">
             <div className="panel">
-              <h3>Top risks</h3>
+              <h3>Ключевые риски</h3>
               <div className="stack">
                 {intelligence.topRisks.slice(0, 6).map((risk) => (
                   <div className="attention-item" key={risk.id}>
@@ -1942,7 +1959,7 @@ function ProjectIntelligencePanel({
               </div>
             </div>
             <div className="panel">
-              <h3>Missing data</h3>
+              <h3>Недостающие данные</h3>
               <ul className="action-list">
                 {intelligence.missingData.slice(0, 10).map((item) => (
                   <li key={item}>{item}</li>
@@ -2203,13 +2220,13 @@ function ImportPanel({
               </div>
               <select value={previewFilter} onChange={(event) => onPreviewFilterChange(event.target.value)}>
                 <option value="all">Все</option>
-                <option value="ready">Ready</option>
-                <option value="warnings">Warnings</option>
-                <option value="errors">Errors</option>
-                <option value="skipped">Skipped</option>
-                <option value="works">Works</option>
-                <option value="materials">Materials</option>
-                <option value="unknown">Unknown</option>
+                <option value="ready">Готово</option>
+                <option value="warnings">Предупреждения</option>
+                <option value="errors">Ошибки</option>
+                <option value="skipped">Пропущено</option>
+                <option value="works">Работы</option>
+                <option value="materials">Материалы</option>
+                <option value="unknown">Не распознано</option>
               </select>
             </div>
             <DataTable
@@ -2239,7 +2256,7 @@ function ImportPanel({
             <section className="wizard-section">
               <div className="toolbar" style={{ marginBottom: 0 }}>
                 <div>
-                  <h3>Unknown / skipped review</h3>
+                  <h3>Проверка нераспознанных и пропущенных строк</h3>
                   <p className="muted">Эти строки не попадут в рабочий ВОР как реальные позиции. Проверьте их вручную или поправьте mapping.</p>
                 </div>
                 <StatusBadge tone="warn">{preview.unknownRows.length} строк</StatusBadge>
@@ -2501,6 +2518,30 @@ function Panel({ title, icon, children, className = "" }: { title: string; icon:
   );
 }
 
+function WorkspaceTools({
+  title,
+  description,
+  children,
+  defaultOpen = false
+}: {
+  title: string;
+  description: string;
+  children: React.ReactNode;
+  defaultOpen?: boolean;
+}) {
+  return (
+    <details className="workspace-tools" open={defaultOpen || undefined}>
+      <summary>
+        <span>
+          <strong>{title}</strong>
+          <small>{description}</small>
+        </span>
+      </summary>
+      <div className="workspace-tools-body stack">{children}</div>
+    </details>
+  );
+}
+
 function Kpi({ title, value, tone }: { title: string; value: string; tone?: "good" | "warn" | "bad" }) {
   return (
     <div className="kpi">
@@ -2517,15 +2558,6 @@ function StatusBadge({ tone, children }: { tone: "good" | "warn" | "bad" | "info
 
 function EmptyState({ text }: { text: string }) {
   return <div className="empty-state">{text}</div>;
-}
-
-function ContextItem({ title, value, tone }: { title: string; value: string; tone: "good" | "warn" | "bad" }) {
-  return (
-    <div className="attention-item">
-      <div className="kpi-label">{title}</div>
-      <div className={`kpi-value ${tone === "good" ? "delta-good" : tone === "warn" ? "delta-warn" : "delta-bad"}`}>{value}</div>
-    </div>
-  );
 }
 
 function readableStatus(value: string) {
@@ -3239,7 +3271,7 @@ function AiScenarioResult({ result }: { result: AiInsightResponse }) {
       )}
       {result.draftText && (
         <details open>
-          <summary>Draft text</summary>
+          <summary>Черновик текста</summary>
           <pre className="ai-draft-text">{result.draftText}</pre>
         </details>
       )}
@@ -3385,7 +3417,7 @@ function FinanceCommand({ payments, contractAmount, forecastProfit }: { payments
         <Kpi title="Просрочено" value={compactMoney(overdue)} tone={overdue ? "bad" : "good"} />
       </div>
       <div className="waterfall">
-        <h3>Cash-flow</h3>
+        <h3>Денежный поток</h3>
         <div className="cashflow-bars">
           {payments.slice(0, 8).map((payment) => (
             <span className={payment.direction === "incoming" ? "good" : "bad"} key={payment.id} title={`${payment.title}: ${compactMoney(payment.amount)}`}>
@@ -3469,7 +3501,7 @@ function ProjectWorkspaceOnboardingPanel({
       </div>
       <div className="project-baseline-banner">
         <div>
-          <small>Template baseline</small>
+          <small>Базовый план шаблона</small>
           <strong>{plan.template.title}</strong>
           <span>{plan.template.description}</span>
         </div>
@@ -3553,7 +3585,7 @@ export function ProjectDeleteDangerZone({
     <div className="danger-zone">
       <div className="danger-zone-card">
         <div>
-          <div className="eyebrow">Danger zone</div>
+          <div className="eyebrow">Опасная зона</div>
           <h3>Удаление проекта</h3>
           <p className="muted">
             Операция удалит проект и связанные рабочие данные: ВОР, график, материалы, заявки, платежи, документы, рапорты, риски, импорт и AI-историю. Пользователи организации не удаляются.

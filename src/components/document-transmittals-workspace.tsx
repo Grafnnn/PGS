@@ -177,10 +177,10 @@ export function DocumentTransmittalsWorkspace({ projectId, documents, canEdit, c
   }
 
   return (
-    <section className="transmittal-workspace" aria-label="Document Transmittals & Approval">
+    <section className="transmittal-workspace" aria-label="Выдача и согласование документов">
       <header className="transmittal-header">
         <div>
-          <div className="eyebrow">Document Transmittals & Approval</div>
+          <div className="eyebrow">Выдача и согласование документов</div>
           <h3>Выдача пакетов и формальные решения</h3>
           <p>Версии файлов фиксируются в момент выдачи. Получение, решение, повторная выдача и закрытие сохраняются в истории.</p>
         </div>

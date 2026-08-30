@@ -418,7 +418,7 @@ export function QualityManagementWorkspace(props: Props) {
     <section className="quality-management-workspace" aria-label="Quality Management">
       <header className="quality-management-header">
         <div>
-          <div className="eyebrow">Quality Management v2</div>
+          <div className="eyebrow">Управление качеством v2</div>
           <h3>Инспекции, NCR и Punch List</h3>
           <p>План контроля, ответственные, сроки, evidence и проверка устранения с полной историей решений.</p>
         </div>
@@ -524,7 +524,7 @@ function InspectionCreateForm(props: {
         <label className="field"><span>Инспектор</span><input onChange={(event) => setForm({ ...form, inspector: event.target.value })} value={form.inspector} /></label>
         <label className="field"><span>Ответственный</span><input onChange={(event) => setForm({ ...form, responsibleParty: event.target.value })} value={form.responsibleParty} /></label>
         <label className="field"><span>Работа графика</span><select onChange={(event) => setForm({ ...form, linkedScheduleItemId: event.target.value })} value={form.linkedScheduleItemId}><option value="">Без связи</option>{props.scheduleItems.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
-        <label className="field"><span>Cost Code</span><select onChange={(event) => setForm({ ...form, costCodeId: event.target.value })} value={form.costCodeId}><option value="">Наследовать / без кода</option>{props.costCodes.map((item) => <option key={item.id} value={item.id}>{item.code} · {item.name}</option>)}</select></label>
+        <label className="field"><span>Код затрат</span><select onChange={(event) => setForm({ ...form, costCodeId: event.target.value })} value={form.costCodeId}><option value="">Наследовать / без кода</option>{props.costCodes.map((item) => <option key={item.id} value={item.id}>{item.code} · {item.name}</option>)}</select></label>
         <label className="field field-wide"><span>ITP / документ</span><select onChange={(event) => setForm({ ...form, linkedDocumentId: event.target.value })} value={form.linkedDocumentId}><option value="">Без документа</option>{props.documents.map((item) => <option key={item.id} value={item.id}>{item.title} · v{item.version}</option>)}</select></label>
       </div>
       <div className="quality-check-editor">
@@ -624,7 +624,7 @@ function IssueCreateForm(props: {
         <label className="field"><span>Влияние, дней</span><input min="0" onChange={(event) => setForm({ ...form, scheduleImpactDays: Number(event.target.value) })} type="number" value={form.scheduleImpactDays} /></label>
         <label className="field checkbox-field"><input checked={form.acceptanceBlocker} onChange={(event) => setForm({ ...form, acceptanceBlocker: event.target.checked })} type="checkbox" /><span>Блокирует КС / приемку</span></label>
         <label className="field"><span>Работа графика</span><select onChange={(event) => setForm({ ...form, linkedScheduleItemId: event.target.value })} value={form.linkedScheduleItemId}><option value="">Без связи</option>{props.scheduleItems.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
-        <label className="field"><span>Cost Code</span><select onChange={(event) => setForm({ ...form, costCodeId: event.target.value })} value={form.costCodeId}><option value="">Наследовать / без кода</option>{props.costCodes.map((item) => <option key={item.id} value={item.id}>{item.code} · {item.name}</option>)}</select></label>
+        <label className="field"><span>Код затрат</span><select onChange={(event) => setForm({ ...form, costCodeId: event.target.value })} value={form.costCodeId}><option value="">Наследовать / без кода</option>{props.costCodes.map((item) => <option key={item.id} value={item.id}>{item.code} · {item.name}</option>)}</select></label>
         <label className="field"><span>Рапорт-источник</span><select onChange={(event) => setForm({ ...form, sourceDailyReportId: event.target.value })} value={form.sourceDailyReportId}><option value="">Без рапорта</option>{props.reports.map((item) => <option key={item.id} value={item.id}>{formatDate(item.date)} · {item.author}</option>)}</select></label>
         <label className="field"><span>Исходный документ</span><select onChange={(event) => setForm({ ...form, linkedDocumentId: event.target.value })} value={form.linkedDocumentId}><option value="">Без документа</option>{props.documents.map((item) => <option key={item.id} value={item.id}>{item.title} · v{item.version}</option>)}</select></label>
       </div>
@@ -674,7 +674,7 @@ function IssueRow(props: {
             <select aria-label={`Фаза evidence ${item.number}`} onChange={(event) => props.onDraft({ evidencePhase: event.target.value as IssueDraft["evidencePhase"] })} value={draft.evidencePhase}><option value="opening">Исходное</option><option value="corrective">Устранение</option><option value="closure">Закрытие</option></select>
             <select aria-label={`Документ evidence ${item.number}`} onChange={(event) => props.onDraft({ evidenceDocumentId: event.target.value })} value={draft.evidenceDocumentId}><option value="">Выберите документ</option>{props.documents.map((document) => <option key={document.id} value={document.id}>{document.title} · v{document.version}</option>)}</select>
             <input aria-label={`Комментарий evidence ${item.number}`} onChange={(event) => props.onDraft({ evidenceNote: event.target.value })} placeholder="Что подтверждает документ" value={draft.evidenceNote} />
-            <button className="button secondary compact-button" disabled={!draft.evidenceDocumentId || props.loading === `evidence-${item.id}`} onClick={props.onAddEvidence} type="button"><Plus size={14} />Evidence</button>
+            <button className="button secondary compact-button" disabled={!draft.evidenceDocumentId || props.loading === `evidence-${item.id}`} onClick={props.onAddEvidence} type="button"><Plus size={14} />Доказательство</button>
           </div>
         ) : null}
         <div className="quality-event-list">{item.events.slice(0, 8).map((event) => <div key={event.id}><strong>{event.eventType}</strong><span>{event.createdByName || "Система"} · {new Date(event.createdAt).toLocaleString("ru-RU")}</span><small>{event.comment || `${event.statusBefore || "—"} → ${event.statusAfter || "—"}`}</small></div>)}</div>

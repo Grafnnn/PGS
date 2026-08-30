@@ -74,9 +74,9 @@ describe("AcceptanceBillingWorkspace", () => {
     expect(html).toContain("Acceptance &amp; Billing Workflow");
     expect(html).toContain("КС package draft");
     expect(html).toContain("Ready to bill");
-    expect(html).toContain("Billing cashflow impact");
-    expect(html).toContain("Acceptance risks");
-    expect(html).toContain("Next actions");
+    expect(html).toContain("Влияние закрытия на денежный поток");
+    expect(html).toContain("Риски приемки");
+    expect(html).toContain("Следующие действия");
     expect(html).not.toContain("OPENAI_API_KEY");
     expect(html).not.toContain("DATABASE_URL");
     expect(onNavigate).not.toHaveBeenCalled();
