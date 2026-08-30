@@ -7,6 +7,8 @@ import {
   type FieldOpsSnapshot,
   type FieldOpsTone
 } from "@/lib/field-operations-intelligence";
+import { dailyReportWorkOutputTotals } from "@/lib/daily-report-work-outputs";
+import { dailyReportStatusLabel } from "@/lib/daily-reports";
 import type { DocumentChecklistItem } from "@/lib/project-pipeline";
 import type { BudgetItem, DailyReport, Material, Payment, ProcurementRequest, Project, ProjectDocument, Risk, ScheduleItem } from "@/lib/types";
 
@@ -42,18 +44,20 @@ function Metric({ title, value, detail, tone }: { title: string; value: string; 
   );
 }
 
-function SnapshotCard({ snapshot }: { snapshot: FieldOpsSnapshot }) {
+function SnapshotCard({ report, snapshot }: { report?: DailyReport; snapshot: FieldOpsSnapshot }) {
+  const outputTotals = dailyReportWorkOutputTotals(report?.workOutputs ?? []);
   return (
     <article className={`field-ops-snapshot tone-${snapshot.tone}`}>
       <div>
         <strong>{snapshot.title}</strong>
-        <span>{snapshot.status} · {snapshot.workforce}</span>
+        <span>{dailyReportStatusLabel(snapshot.status)} · {snapshot.workforce}</span>
       </div>
       <dl>
         <div><dt>Погода</dt><dd>{snapshot.weather}</dd></div>
         <div><dt>Техника</dt><dd>{snapshot.equipment}</dd></div>
       </dl>
       <p>{snapshot.completedWorks}</p>
+      {outputTotals.rows ? <small>Измеримая выработка: {outputTotals.rows} стр. · {outputTotals.laborHours.toLocaleString("ru-RU", { maximumFractionDigits: 3 })} чел.-ч</small> : null}
       <small>{snapshot.downtime !== "Простоев не указано" ? snapshot.downtime : snapshot.issues}</small>
     </article>
   );
@@ -84,6 +88,12 @@ export function FieldOperationsWorkspace({
     documents,
     documentChecklist
   });
+  const reportsById = new Map(dailyReports.map((report) => [report.id, report]));
+  const approvedReports = dailyReports.filter((report) => report.status === "approved").length;
+  const pendingReports = dailyReports.length - approvedReports;
+  const evidenceDocuments = documents.filter((document) =>
+    /фото|photo|рапорт|исполн|акт|журнал|evidence/i.test(`${document.category} ${document.title} ${document.fileName ?? ""}`)
+  );
 
   return (
     <section className="field-ops-workspace" aria-label="Стройплощадка и ежедневные рапорты">
@@ -95,6 +105,8 @@ export function FieldOperationsWorkspace({
           <div className="field-ops-badges">
             <span className={`badge ${badgeClass(model.summary.tone)}`}>{model.summary.headline}</span>
             <span className="badge blue">{model.summary.reportCount} рапортов</span>
+            <span className={`badge ${approvedReports ? "green" : "gray"}`}>{approvedReports} утверждено</span>
+            {pendingReports ? <span className="badge yellow">{pendingReports} ожидают проверки</span> : null}
             <span className="badge gray">{model.summary.totalWorkers} рабочих</span>
           </div>
         </div>
@@ -115,9 +127,9 @@ export function FieldOperationsWorkspace({
       </div>
 
       <div className="field-ops-grid metrics">
-        <Metric title="Факт стройплощадки" value={model.summary.status} detail={model.summary.nextStep} tone={model.summary.tone} />
         <Metric title="Люди и техника" value={`${model.summary.totalWorkers}/${model.summary.totalEngineers}`} detail={`${model.summary.equipmentMentions} единиц/упоминаний техники`} tone={model.summary.reportCount ? "info" : "neutral"} />
         <Metric title="Простои / замечания" value={`${model.summary.downtimeReports}/${model.summary.issueReports}`} detail="простои / замечания" tone={model.summary.downtimeReports || model.summary.issueReports ? "bad" : model.summary.reportCount ? "good" : "info"} />
+        <Metric title="Проверка рапортов" value={`${approvedReports}/${pendingReports}`} detail="утверждено / в работе" tone={pendingReports ? "warn" : approvedReports ? "good" : "info"} />
         <Metric title="Связи факта с системой" value={`${model.summary.linkedScheduleItems}/${model.summary.materialSignals}`} detail="график / материалы" tone={model.summary.linkedScheduleItems || model.summary.materialSignals ? "warn" : "info"} />
       </div>
 
@@ -128,7 +140,7 @@ export function FieldOperationsWorkspace({
             <h4>Сводки ежедневных рапортов</h4>
           </div>
           <div className="field-ops-snapshot-grid">
-            {model.snapshots.length ? model.snapshots.map((snapshot) => <SnapshotCard key={snapshot.id} snapshot={snapshot} />) : <span className="muted">Рапорты появятся после первого ежедневного факта площадки.</span>}
+            {model.snapshots.length ? model.snapshots.map((snapshot) => <SnapshotCard key={snapshot.id} report={reportsById.get(snapshot.id)} snapshot={snapshot} />) : <span className="muted">Рапорты появятся после первого ежедневного факта площадки.</span>}
           </div>
         </article>
 
@@ -173,7 +185,13 @@ export function FieldOperationsWorkspace({
         <article className="field-ops-card wide">
           <div className="section-title">
             <Camera size={18} />
-            <h4>Фото / исполнительская связь</h4>
+            <h4>Фото / evidence · {evidenceDocuments.length}</h4>
+          </div>
+          <p className="muted">Фото, акты и исполнительские файлы хранятся в разделе «Документы». Прямой связи файла с конкретным ежедневным рапортом в текущей модели данных нет.</p>
+          <div className="field-ops-actions">
+            <button className="button secondary compact-button" type="button" onClick={() => onNavigate("Документы")}>
+              <FileText size={16} /> Открыть документы площадки
+            </button>
           </div>
           <ul className="field-ops-limitations">
             {model.limitations.map((item) => <li key={item}>{item}</li>)}

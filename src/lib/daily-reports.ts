@@ -1,4 +1,9 @@
 import type { AppRole } from "@/lib/auth/permissions";
+import {
+  dailyReportWorkOutputTotals,
+  dailyReportWorkOutputsComplete,
+  parseDailyReportWorkOutputs
+} from "@/lib/daily-report-work-outputs";
 import type { DailyReport } from "@/lib/types";
 
 export const dailyReportStatuses = ["draft", "submitted", "checked", "approved"] as const;
@@ -29,4 +34,101 @@ export function dailyReportStatusLabel(status: DailyReport["status"]) {
     approved: "Утвержден"
   };
   return labels[status];
+}
+
+type DailyReportValidationInput = {
+  date: Date | string;
+  author: string;
+  weather?: string;
+  workers: number;
+  engineers: number;
+  equipment?: string;
+  completedWorks: string;
+  materialsReceived?: string;
+  materialsConsumed?: string;
+  downtime?: string;
+  issues?: string;
+  workOutputs?: unknown;
+};
+
+export type DailyReportValidationIssue = {
+  field: string;
+  message: string;
+};
+
+const reportTextLimits: Array<[keyof DailyReportValidationInput, number, string]> = [
+  ["author", 160, "Автор"],
+  ["weather", 500, "Погода"],
+  ["equipment", 4_000, "Техника"],
+  ["completedWorks", 8_000, "Выполненные работы"],
+  ["materialsReceived", 8_000, "Полученные материалы"],
+  ["materialsConsumed", 8_000, "Израсходованные материалы"],
+  ["downtime", 8_000, "Простои"],
+  ["issues", 8_000, "Замечания"]
+];
+
+const singleLineFields = new Set(["author", "weather"]);
+
+function normalizeReportText(value: string, singleLine: boolean) {
+  const normalized = value.trim().replace(/[ \t]+/g, " ");
+  return singleLine
+    ? normalized.replace(/\s*\n\s*/g, " ")
+    : normalized.replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n");
+}
+
+export function normalizeDailyReportFields<T extends object>(input: T): T {
+  const normalized = { ...input } as Record<string, unknown>;
+  for (const [field] of reportTextLimits) {
+    const value = normalized[field];
+    if (typeof value === "string") normalized[field] = normalizeReportText(value, singleLineFields.has(field));
+  }
+  if (typeof normalized.weather === "string" && !normalized.weather) normalized.weather = "Не указано";
+  return normalized as T;
+}
+
+export function dailyReportDraftIssues(report: DailyReportValidationInput): DailyReportValidationIssue[] {
+  const issues: DailyReportValidationIssue[] = [];
+  const date = report.date instanceof Date ? report.date : new Date(report.date);
+  if (Number.isNaN(date.getTime())) issues.push({ field: "date", message: "Укажите корректную дату рапорта." });
+  if (report.author.trim().length < 2) issues.push({ field: "author", message: "Укажите автора рапорта." });
+  if (report.completedWorks.trim().length < 3) issues.push({ field: "completedWorks", message: "Опишите выполненные работы или явно укажите, что работы не выполнялись." });
+  if (!Number.isInteger(report.workers) || report.workers < 0) issues.push({ field: "workers", message: "Количество рабочих должно быть целым неотрицательным числом." });
+  if (!Number.isInteger(report.engineers) || report.engineers < 0) issues.push({ field: "engineers", message: "Количество ИТР должно быть целым неотрицательным числом." });
+
+  for (const [field, limit, label] of reportTextLimits) {
+    const value = report[field];
+    if (typeof value === "string" && value.length > limit) issues.push({ field, message: `${label}: максимум ${limit.toLocaleString("ru-RU")} символов.` });
+  }
+
+  if (report.workOutputs !== undefined && report.workOutputs !== null) {
+    if (!Array.isArray(report.workOutputs)) {
+      issues.push({ field: "workOutputs", message: "Фактическая выработка должна быть списком строк." });
+    } else {
+      const outputs = parseDailyReportWorkOutputs(report.workOutputs);
+      if (outputs.length !== report.workOutputs.length || !dailyReportWorkOutputsComplete(outputs)) {
+        issues.push({ field: "workOutputs", message: "Заполните или удалите незавершённые строки фактической выработки." });
+      }
+    }
+  }
+  return issues;
+}
+
+export function dailyReportSubmissionIssues(report: DailyReportValidationInput): DailyReportValidationIssue[] {
+  const issues = dailyReportDraftIssues(report);
+  const personnel = Math.max(0, report.workers) + Math.max(0, report.engineers);
+  const outputs = parseDailyReportWorkOutputs(report.workOutputs);
+  const totals = dailyReportWorkOutputTotals(outputs);
+
+  if (personnel === 0 && !report.downtime?.trim() && !report.issues?.trim()) {
+    issues.push({ field: "workers", message: "Укажите людей на смене либо зафиксируйте причину отсутствия работ в простоях/замечаниях." });
+  }
+  if (outputs.length && personnel === 0) {
+    issues.push({ field: "workOutputs", message: "Нельзя отправить выработку без указанного персонала смены." });
+  } else if (outputs.length && totals.laborHours > personnel * 24) {
+    issues.push({
+      field: "workOutputs",
+      message: `Трудозатраты ${totals.laborHours.toLocaleString("ru-RU")} ч превышают физический максимум для ${personnel} чел. за сутки.`
+    });
+  }
+  return issues;
 }

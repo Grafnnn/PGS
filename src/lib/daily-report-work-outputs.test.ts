@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   approvedDailyReportProductivitySamples,
+  dailyReportWorkOutputIssues,
   dailyReportWorkOutputNorm,
+  dailyReportWorkOutputTotals,
   parseDailyReportWorkOutputs
 } from "@/lib/daily-report-work-outputs";
 
@@ -26,7 +28,29 @@ describe("daily report work outputs", () => {
       output,
       { ...output, quantity: 0 },
       "invalid"
-    ])).toEqual([output]);
+    ])).toEqual([{ ...output, unit: "м²" }]);
+  });
+
+  it("normalizes common units and whitespace before persistence and analytics", () => {
+    expect(parseDailyReportWorkOutputs([{
+      ...output,
+      profession: "  Каменщик   4 разряда ",
+      workName: " Кладка   наружных стен ",
+      unit: " м2 "
+    }])).toEqual([{
+      ...output,
+      profession: "Каменщик 4 разряда",
+      workName: "Кладка наружных стен",
+      unit: "м²"
+    }]);
+  });
+
+  it("reports incomplete rows and totals only finite positive labor", () => {
+    expect(dailyReportWorkOutputIssues({ ...output, profession: "", laborHours: 0 })).toEqual(expect.objectContaining({
+      profession: expect.any(String),
+      laborHours: expect.any(String)
+    }));
+    expect(dailyReportWorkOutputTotals([output, { ...output, laborHours: Number.NaN }])).toEqual({ rows: 2, laborHours: 32 });
   });
 
   it("uses only approved reports as actual productivity evidence", () => {
@@ -39,7 +63,7 @@ describe("daily report work outputs", () => {
       profession: "Каменщик",
       function: "Кладка стен",
       norm: 100,
-      unit: "м2/чел.-мес.",
+      unit: "м²/чел.-мес.",
       source: "daily-report"
     })]);
   });

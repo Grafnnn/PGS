@@ -27,9 +27,13 @@ describe("FieldOperationsWorkspace", () => {
     expect(html).toContain("Стройплощадка и ежедневные рапорты");
     expect(html).toContain("Площадка / Рапорты");
     expect(html).toContain("Сводки ежедневных рапортов");
+    expect(html).toContain("утверждено");
+    expect(html).toContain("Проверка рапортов");
     expect(html).toContain("Сигналы стройплощадки");
     expect(html).toContain("Реестр действий");
     expect(html).toContain("Weekly field handoff");
+    expect(html).toContain("Прямой связи файла с конкретным ежедневным рапортом");
+    expect(html).toContain("Открыть документы площадки");
     expect(html).not.toContain("OPENAI_API_KEY");
     expect(html).not.toContain("DATABASE_URL");
     expect(onNavigate).not.toHaveBeenCalled();
