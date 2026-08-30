@@ -118,7 +118,7 @@ function MissingDocumentsPanel({ items }: { items: RequiredDocument[] }) {
     <article className="doc-compliance-card">
       <div className="section-title">
         <FileWarning size={18} />
-        <h3>Missing Documents</h3>
+        <h3>Недостающие документы</h3>
       </div>
       {!items.length ? (
         <div className="doc-compliance-empty-state">
@@ -148,7 +148,7 @@ function WeeklyPlan({ items }: { items: WeeklyDocumentAction[] }) {
     <article className="doc-compliance-card">
       <div className="section-title">
         <ListChecks size={18} />
-        <h3>Weekly Document Collection Plan</h3>
+        <h3>Недельный план сбора документов</h3>
       </div>
       {!items.length ? (
         <div className="doc-compliance-empty-state">
@@ -218,37 +218,37 @@ export function DocumentComplianceWorkspace({
   }, {});
 
   return (
-    <section className="document-compliance-workspace" aria-label="Documents & Executive Compliance">
+    <section className="document-compliance-workspace" aria-label="Комплектность документов и отчетность">
       <div className="doc-compliance-header">
         <div>
-          <div className="eyebrow">Documents & Executive Compliance</div>
-          <h3>Документы, КС-ready и executive package</h3>
-          <p className="muted">Операционный checklist по ВОР, графику, материалам, рискам и загруженным документам. Это не юридическая гарантия полноты комплекта.</p>
+          <div className="eyebrow">Комплектность документов и отчетность</div>
+          <h3>Документы, готовность КС и пакет руководителя</h3>
+          <p className="muted">Операционный чеклист по ВОР, графику, материалам, рискам и загруженным документам. Это не юридическая гарантия полноты комплекта.</p>
         </div>
         <div className="doc-compliance-actions">
           <span className={`badge ${statusTone(model.summary.readiness)}`}>readiness: {model.summary.readiness}</span>
           <button className="button secondary compact-button" type="button" onClick={() => onNavigate("Аналитика")}>
-            Project Intelligence
+            Аналитика проекта
           </button>
           <button className="button secondary compact-button" type="button" onClick={() => onNavigate("Рапорты")}>
-            Executive report
+            Отчет руководителю
           </button>
         </div>
       </div>
 
       <div className="doc-compliance-summary-grid">
-        <ComplianceMetric title="Required docs" value={String(model.summary.totalRequired)} detail="операционный checklist" tone="blue" />
-        <ComplianceMetric title="Missing" value={String(model.summary.missing)} detail={`${model.summary.urgentHigh} urgent/high`} tone={model.summary.urgentHigh ? "red" : model.summary.missing ? "yellow" : "green"} />
-        <ComplianceMetric title="КС / closeout" value={model.closeoutReadiness.readyForKs} detail={`${model.closeoutReadiness.blockingDocuments.length} document blockers`} tone={model.closeoutReadiness.readyForKs === "yes" ? "green" : model.closeoutReadiness.readyForKs === "partial" ? "yellow" : "red"} />
-        <ComplianceMetric title="Executive package" value={model.executivePackage.readiness} detail={`${model.executivePackage.items.length} items`} tone={model.executivePackage.readiness === "ready" ? "green" : model.executivePackage.readiness === "partial" ? "yellow" : "red"} />
-        <ComplianceMetric title="Uploaded / verified" value={String(model.summary.verifiedUploaded)} detail={`${model.summary.unknownStatus} unknown`} tone={model.summary.verifiedUploaded ? "green" : "gray"} />
+        <ComplianceMetric title="Обязательные документы" value={String(model.summary.totalRequired)} detail="операционный чеклист" tone="blue" />
+        <ComplianceMetric title="Отсутствуют" value={String(model.summary.missing)} detail={`${model.summary.urgentHigh} срочных / важных`} tone={model.summary.urgentHigh ? "red" : model.summary.missing ? "yellow" : "green"} />
+        <ComplianceMetric title="КС / закрытие" value={model.closeoutReadiness.readyForKs} detail={`${model.closeoutReadiness.blockingDocuments.length} блокирующих документов`} tone={model.closeoutReadiness.readyForKs === "yes" ? "green" : model.closeoutReadiness.readyForKs === "partial" ? "yellow" : "red"} />
+        <ComplianceMetric title="Пакет руководителя" value={model.executivePackage.readiness} detail={`${model.executivePackage.items.length} позиций`} tone={model.executivePackage.readiness === "ready" ? "green" : model.executivePackage.readiness === "partial" ? "yellow" : "red"} />
+        <ComplianceMetric title="Загружено / проверено" value={String(model.summary.verifiedUploaded)} detail={`${model.summary.unknownStatus} без статуса`} tone={model.summary.verifiedUploaded ? "green" : "gray"} />
       </div>
 
       <div className="doc-compliance-layout">
         <article className="doc-compliance-card doc-compliance-wide">
           <div className="section-title">
             <ClipboardCheck size={18} />
-            <h3>Required Documents Checklist</h3>
+            <h3>Чеклист обязательных документов</h3>
           </div>
           <div className="doc-compliance-groups">
             {Object.entries(grouped).map(([group, items]) => (
@@ -265,7 +265,7 @@ export function DocumentComplianceWorkspace({
         <article className="doc-compliance-card doc-compliance-wide">
           <div className="section-title">
             <PackageCheck size={18} />
-            <h3>Work Package Document Map</h3>
+            <h3>Карта документов по пакетам работ</h3>
           </div>
           <div className="table-wrap doc-compliance-table-wrap">
             <table>
@@ -273,8 +273,8 @@ export function DocumentComplianceWorkspace({
                 <tr>
                   <th>Пакет</th>
                   <th>Тип</th>
-                  <th>Readiness</th>
-                  <th>Docs</th>
+                  <th>Готовность</th>
+                  <th>Документы</th>
                   <th>Блокеры</th>
                 </tr>
               </thead>
@@ -301,11 +301,11 @@ export function DocumentComplianceWorkspace({
         <article className="doc-compliance-card">
           <div className="section-title">
             <FileCheck2 size={18} />
-            <h3>КС / Closeout Readiness</h3>
+            <h3>Готовность КС и закрытия</h3>
           </div>
           <div className="doc-compliance-readiness">
             <span className={`badge ${model.closeoutReadiness.readyForKs === "yes" ? "green" : model.closeoutReadiness.readyForKs === "partial" ? "yellow" : "red"}`}>КС: {model.closeoutReadiness.readyForKs}</span>
-            <span className={`badge ${model.closeoutReadiness.closeoutReady === "yes" ? "green" : model.closeoutReadiness.closeoutReady === "partial" ? "yellow" : "red"}`}>closeout: {model.closeoutReadiness.closeoutReady}</span>
+            <span className={`badge ${model.closeoutReadiness.closeoutReady === "yes" ? "green" : model.closeoutReadiness.closeoutReady === "partial" ? "yellow" : "red"}`}>закрытие: {model.closeoutReadiness.closeoutReady}</span>
           </div>
           <ul className="action-list">
             {model.closeoutReadiness.suggestedNextSteps.map((item) => <li key={item}>{item}</li>)}
@@ -316,7 +316,7 @@ export function DocumentComplianceWorkspace({
         <article className="doc-compliance-card">
           <div className="section-title">
             <FileCheck2 size={18} />
-            <h3>Executive Document Package</h3>
+            <h3>Пакет документов руководителя</h3>
           </div>
           <span className={`badge ${model.executivePackage.readiness === "ready" ? "green" : model.executivePackage.readiness === "partial" ? "yellow" : "red"}`}>{model.executivePackage.readiness}</span>
           <ul className="action-list">
@@ -330,7 +330,7 @@ export function DocumentComplianceWorkspace({
         <article className="doc-compliance-card">
           <div className="section-title">
             <ShieldAlert size={18} />
-            <h3>Compliance Risks</h3>
+            <h3>Риски комплектности</h3>
           </div>
           <div className="doc-compliance-list">
             {model.complianceRisks.slice(0, 8).map((risk) => (
@@ -343,7 +343,7 @@ export function DocumentComplianceWorkspace({
                 </div>
               </div>
             ))}
-            {!model.complianceRisks.length && <div className="doc-compliance-empty-state"><strong>Compliance risks не выявлены</strong><span>Продолжайте обновлять checklist и загруженные документы.</span></div>}
+            {!model.complianceRisks.length && <div className="doc-compliance-empty-state"><strong>Риски комплектности не выявлены</strong><span>Продолжайте обновлять чеклист и загруженные документы.</span></div>}
           </div>
         </article>
 
@@ -351,7 +351,7 @@ export function DocumentComplianceWorkspace({
           <article className="doc-compliance-card">
             <div className="section-title">
               <FileWarning size={18} />
-              <h3>Unmatched uploads</h3>
+              <h3>Нераспознанные загрузки</h3>
             </div>
             <ul className="action-list">
               {model.unmatchedUploads.slice(0, 8).map((item) => (

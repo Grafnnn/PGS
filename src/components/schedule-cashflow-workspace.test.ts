@@ -68,12 +68,12 @@ describe("ScheduleCashflowWorkspace", () => {
       })
     );
 
-    expect(html).toContain("Schedule &amp; Cashflow Intelligence");
+    expect(html).toContain("Аналитика графика и денежного потока");
     expect(html).toContain("График работ");
     expect(html).toContain("Пакеты работ");
     expect(html).toContain("Недельный график");
-    expect(html).toContain("Cashflow по неделям");
-    expect(html).toContain("Executive weekly plan");
+    expect(html).toContain("Денежный поток по неделям");
+    expect(html).toContain("Недельный план руководителя");
     expect(html).toContain("Preview графика");
     expect(html).toContain("Preview cashflow");
     expect(onSchedulePreview).not.toHaveBeenCalled();

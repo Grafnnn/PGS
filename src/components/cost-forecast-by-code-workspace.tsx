@@ -62,7 +62,7 @@ export function CostForecastByCodeWorkspace({ projectId }: { projectId: string }
   return (
     <section className="cost-code-forecast" aria-label="Прогноз затрат по кодам">
       <header className="cost-code-forecast-header">
-        <div><div className="eyebrow">Cost Forecast by Cost Code</div><h3>Прогноз затрат по кодам</h3><p>BAC, обязательства, факт и EAC в одном срезе. Расчёт read-only и не создаёт финансовых операций.</p></div>
+        <div><div className="eyebrow">Прогноз по кодам затрат</div><h3>Прогноз затрат по кодам</h3><p>BAC, обязательства, факт и EAC в одном срезе. Расчёт только для чтения и не создаёт финансовых операций.</p></div>
         <button className="icon-button" aria-label="Обновить прогноз" title="Обновить" type="button" onClick={() => void load()}><RefreshCw size={17} className={loading ? "spin" : ""} /></button>
       </header>
       {summary && (
@@ -85,7 +85,7 @@ export function CostForecastByCodeWorkspace({ projectId }: { projectId: string }
       {!loading && model && (
         <div className="table-wrap cost-code-forecast-table">
           <table>
-            <thead><tr><th>Код затрат</th><th className="numeric">Budget</th><th className="numeric">Факт</th><th className="numeric">Open commitments</th><th className="numeric">EAC</th><th className="numeric">VAC</th><th>CPI</th></tr></thead>
+            <thead><tr><th>Код затрат</th><th className="numeric">Бюджет</th><th className="numeric">Факт</th><th className="numeric">Открытые обязательства</th><th className="numeric">EAC</th><th className="numeric">VAC</th><th>CPI</th></tr></thead>
             <tbody>
               {rows.map((item) => (
                 <tr key={item.costCodeId}>

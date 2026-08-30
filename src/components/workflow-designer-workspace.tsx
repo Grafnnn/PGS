@@ -192,8 +192,8 @@ export function WorkflowDesignerWorkspace({ projectId, role, onNavigate }: { pro
   return (
     <section className="workflow-designer" aria-label="Конструктор процессов и матрица согласований">
       <header className="workflow-designer-header">
-        <div><div className="eyebrow">Workflow Designer & Approval Matrix</div><h2>Процессы согласования</h2><p>Шаблоны маршрутов, ответственные роли, сроки и неизменяемая история решений по проекту.</p></div>
-        <div className="workflow-ball"><CircleDot size={18} /><span>Ball in court</span><strong>{summary.active}</strong></div>
+        <div><div className="eyebrow">Конструктор процессов и матрица согласования</div><h2>Процессы согласования</h2><p>Шаблоны маршрутов, ответственные роли, сроки и неизменяемая история решений по проекту.</p></div>
+        <div className="workflow-ball"><CircleDot size={18} /><span>На чьей стороне действие</span><strong>{summary.active}</strong></div>
       </header>
 
       <div className="workflow-metrics">
@@ -234,7 +234,7 @@ export function WorkflowDesignerWorkspace({ projectId, role, onNavigate }: { pro
         </div>
 
         <section className="workflow-section workflow-runs">
-          <div className="workflow-section-title"><div><small>Контроль исполнения</small><h3>Ball in court</h3></div><span>{summary.total}</span></div>
+          <div className="workflow-section-title"><div><small>Контроль исполнения</small><h3>Текущая ответственность</h3></div><span>{summary.total}</span></div>
           {loading ? <div className="empty-state">Загрузка процессов...</div> : visibleRuns.length ? <div className="workflow-run-list">{visibleRuns.map((run) => {
             const activeStep = run.steps.find((step) => step.sequence === run.currentStep && step.status === "active");
             const canAct = Boolean(activeStep && (role === "OWNER" || role === "ADMIN" || (role === "MANAGER" && activeStep.assigneeRole === "MANAGER")));

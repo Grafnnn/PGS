@@ -13,7 +13,7 @@ export function BrandLogo({ href = "/dashboard", compact = false }: BrandLogoPro
       </span>
       <span className="brand-copy">
         <span className="brand-name">PGS Studio</span>
-        {!compact && <span className="brand-subtitle">Construction command system</span>}
+        {!compact && <span className="brand-subtitle">Система управления строительством</span>}
       </span>
     </>
   );

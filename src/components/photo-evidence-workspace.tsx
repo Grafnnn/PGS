@@ -68,7 +68,7 @@ export function PhotoEvidenceWorkspace({
     <section className="photo-evidence-workspace" aria-label="Photo & Evidence Capture">
       <div className={`photo-evidence-header tone-${model.summary.tone}`}>
         <div>
-          <div className="eyebrow">Photo & Evidence Capture</div>
+          <div className="eyebrow">Фотофиксация и доказательства</div>
           <h3>Фотофиксация / Evidence</h3>
           <p>Доказательная база проекта: фото, акты, журналы и исполнительные материалы, связанные с рапортами, графиком, КС и документами.</p>
           <div className="photo-evidence-badges">
@@ -104,7 +104,7 @@ export function PhotoEvidenceWorkspace({
         <article className="photo-evidence-card wide">
           <div className="section-title">
             <Camera size={18} />
-            <h4>Evidence register</h4>
+            <h4>Реестр доказательств</h4>
           </div>
           <div className="photo-evidence-list">
             {model.items.length ? model.items.map((item) => (
@@ -120,7 +120,7 @@ export function PhotoEvidenceWorkspace({
         <article className="photo-evidence-card">
           <div className="section-title">
             <ShieldCheck size={18} />
-            <h4>Evidence actions</h4>
+            <h4>Действия по доказательствам</h4>
           </div>
           <div className="photo-evidence-action-list">
             {model.actions.map((action) => (

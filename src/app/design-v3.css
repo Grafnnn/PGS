@@ -940,6 +940,37 @@ body[data-design="v3"] .workspace-layout {
   gap: 16px;
 }
 
+body[data-design="v3"] .project-header-compact {
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: none;
+}
+
+body[data-design="v3"] .project-section-guide {
+  background: #f5f8f8;
+  border-color: #d5dfe1;
+  box-shadow: none;
+}
+
+body[data-design="v3"] .project-section-context > summary:hover,
+body[data-design="v3"] .project-section-link:hover {
+  color: var(--accent);
+}
+
+body[data-design="v3"] .workspace-tools {
+  background: rgba(242, 246, 246, 0.46);
+  border-color: #d8e0e2;
+  padding-inline: 12px;
+}
+
+body[data-design="v3"] .workspace-tools > summary:hover strong {
+  color: var(--blue);
+}
+
+body[data-design="v3"] .workspace-tools[open] > summary {
+  border-bottom: 1px solid #d8e0e2;
+  margin-bottom: 12px;
+}
+
 body[data-design="v3"] .context-panel {
   background: #f7f9f9;
   top: 84px;

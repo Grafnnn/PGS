@@ -138,7 +138,7 @@ export function ExternalCollaborationWorkspace({ projectId, canManage }: { proje
     <section className="external-collaboration" aria-label="Внешние согласования">
       <header className="external-collaboration-header">
         <div>
-          <div className="eyebrow">Scoped external response</div>
+          <div className="eyebrow">Внешний ответ с ограниченным доступом</div>
           <h3>Внешние согласования</h3>
           <p>Одноразовая ссылка открывает только выбранный RFI или подачу. Остальные данные проекта недоступны.</p>
         </div>

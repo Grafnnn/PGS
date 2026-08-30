@@ -73,14 +73,14 @@ describe("DocumentComplianceWorkspace", () => {
       })
     );
 
-    expect(html).toContain("Documents &amp; Executive Compliance");
-    expect(html).toContain("Required Documents Checklist");
-    expect(html).toContain("Missing Documents");
-    expect(html).toContain("Work Package Document Map");
-    expect(html).toContain("КС / Closeout Readiness");
-    expect(html).toContain("Executive Document Package");
-    expect(html).toContain("Weekly Document Collection Plan");
-    expect(html).toContain("Compliance Risks");
+    expect(html).toContain("Комплектность документов и отчетность");
+    expect(html).toContain("Чеклист обязательных документов");
+    expect(html).toContain("Недостающие документы");
+    expect(html).toContain("Карта документов по пакетам работ");
+    expect(html).toContain("Готовность КС и закрытия");
+    expect(html).toContain("Пакет документов руководителя");
+    expect(html).toContain("Недельный план сбора документов");
+    expect(html).toContain("Риски комплектности");
     expect(html).toContain("Акт освидетельствования скрытых работ");
     expect(html).not.toContain("OPENAI_API_KEY");
     expect(html).not.toContain("DATABASE_URL");

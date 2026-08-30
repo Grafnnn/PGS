@@ -110,13 +110,13 @@ describe("RiskExecutiveWorkspace", () => {
       })
     );
 
-    expect(html).toContain("Risks &amp; Executive Reports");
-    expect(html).toContain("Risk Register");
-    expect(html).toContain("Decision Register");
-    expect(html).toContain("Recommended Actions");
-    expect(html).toContain("Executive Weekly Report");
-    expect(html).toContain("Copyable report text");
-    expect(html).toContain("не вызывается при рендере");
+    expect(html).toContain("Риски и управленческие отчеты");
+    expect(html).toContain("Реестр рисков");
+    expect(html).toContain("Реестр решений");
+    expect(html).toContain("Рекомендуемые действия");
+    expect(html).toContain("Недельный отчет руководителя");
+    expect(html).toContain("Текст отчета для копирования");
+    expect(html).toContain("только по команде");
     expect(html).toContain("Есть нераспознанные строки ВОР");
     expect(html).not.toContain("DATABASE_URL");
     expect(html).not.toContain("OPENAI_API_KEY");
@@ -143,7 +143,7 @@ describe("RiskExecutiveWorkspace", () => {
     );
 
     expect(html).toContain("Нет ВОР / сметы");
-    expect(html).toContain("Report readiness");
+    expect(html).toContain("Готовность отчета");
     expect(html).toContain("Недостаточно");
     expect(html).not.toContain("Проект без рисков");
   });
@@ -180,7 +180,7 @@ describe("RiskExecutiveWorkspace", () => {
       })
     );
 
-    expect(html).toContain("AI executive polish result");
+    expect(html).toContain("Результат улучшения с AI");
     expect(html).toContain("Проверьте отставание графика");
     expect(html).toContain("Назначить владельца");
     expect(onRunExecutiveAi).not.toHaveBeenCalled();

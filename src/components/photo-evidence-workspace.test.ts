@@ -42,9 +42,9 @@ describe("PhotoEvidenceWorkspace", () => {
 
     expect(html).toContain("Photo &amp; Evidence Capture");
     expect(html).toContain("Фотофиксация / Evidence");
-    expect(html).toContain("Evidence register");
-    expect(html).toContain("Evidence actions");
-    expect(html).toContain("Evidence handoff");
+    expect(html).toContain("Реестр доказательств");
+    expect(html).toContain("Действия по доказательствам");
+    expect(html).toContain("Передача доказательной базы");
     expect(html).toContain("Ограничения v1");
     expect(html).not.toContain("DATABASE_URL");
     expect(html).not.toContain("OPENAI_API_KEY");

@@ -194,7 +194,7 @@ export function buildQualityIssuesIntelligence(input: QualityIssuesInput): Quali
     },
     issues,
     actions,
-    handoff: { title: "Quality handoff", copyText },
+    handoff: { title: "Передача данных по качеству", copyText },
     limitations: [
       "Этот intelligence-срез объединяет рапорты, риски, график и документы; управляемые NCR/Punch записи ведутся в разделе «Исполнение».",
       "Фото и документы учитываются по категории и метаданным; OCR и Computer Vision не выполняются.",

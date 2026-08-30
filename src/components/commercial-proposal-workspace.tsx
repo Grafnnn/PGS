@@ -112,12 +112,12 @@ export function CommercialProposalWorkspace({
     <section className="commercial-proposal-workspace" aria-label="Commercial Proposal & Tender Submission">
       <div className={`commercial-proposal-header tone-${model.readiness.tone}`}>
         <div>
-          <div className="eyebrow">Commercial Proposal & Tender Submission</div>
+          <div className="eyebrow">Коммерческое предложение и тендерная подача</div>
           <h3>КП / Подача</h3>
           <p>Черновик коммерческого предложения, внутреннее согласование и пакет тендерной подачи на основе ВОР, договора, документов, графика и снабжения.</p>
           <div className="commercial-proposal-badges">
             <span className={`badge ${toneClass(model.readiness.tone)}`}>{model.readiness.label}</span>
-            <span className="badge blue">Proposal readiness</span>
+            <span className="badge blue">Готовность предложения</span>
             <span className="badge gray">{model.readiness.canSendToCustomer ? "customer review" : "internal review"}</span>
           </div>
         </div>
@@ -141,14 +141,14 @@ export function CommercialProposalWorkspace({
         <MetricCard title="Proposal readiness" value={model.readiness.label} detail={`${model.readiness.blockers.length} blockers · ${model.readiness.warnings.length} warnings`} tone={model.readiness.tone} />
         <MetricCard title="Price structure" value={money(model.priceSummary.totalAmount)} detail={`работы ${money(model.priceSummary.workAmount)} · материалы ${money(model.priceSummary.materialAmount)}`} tone={model.priceSummary.totalAmount ? "info" : "bad"} />
         <MetricCard title="Work/material split" value={`${model.workMaterialSplit.workCategories.length}/${model.workMaterialSplit.materialCategories.length}`} detail={`${model.workMaterialSplit.unpricedRows.length} unpriced · ${model.workMaterialSplit.unknownRows.length} review`} tone={model.workMaterialSplit.unpricedRows.length ? "warn" : "good"} />
-        <MetricCard title="Tender submission checklist" value={`${model.submissionChecklist.readyCount} ready`} detail={`${model.submissionChecklist.missingCount} missing documents`} tone={model.submissionChecklist.missingCount ? "warn" : "good"} />
+        <MetricCard title="Чеклист тендерной подачи" value={`${model.submissionChecklist.readyCount} готово`} detail={`${model.submissionChecklist.missingCount} документов отсутствует`} tone={model.submissionChecklist.missingCount ? "warn" : "good"} />
       </div>
 
       <div className="commercial-proposal-grid">
         <article className="commercial-proposal-card">
           <div className="section-title">
             <Landmark size={18} />
-            <h4>Price structure</h4>
+            <h4>Структура цены</h4>
           </div>
           <dl className="commercial-detail-list">
             <div><dt>Сумма КП</dt><dd>{money(model.priceSummary.totalAmount)}</dd></div>
@@ -164,7 +164,7 @@ export function CommercialProposalWorkspace({
         <article className="commercial-proposal-card">
           <div className="section-title">
             <PackageCheck size={18} />
-            <h4>Work/material split</h4>
+            <h4>Работы и материалы</h4>
           </div>
           <div className="commercial-split-list">
             {[...model.workMaterialSplit.workCategories.slice(0, 4), ...model.workMaterialSplit.materialCategories.slice(0, 4)].map((item) => (
@@ -211,7 +211,7 @@ export function CommercialProposalWorkspace({
         <article className="commercial-proposal-card wide">
           <div className="section-title">
             <ListChecks size={18} />
-            <h4>Tender submission checklist</h4>
+            <h4>Чеклист тендерной подачи</h4>
           </div>
           <Checklist model={model} />
         </article>

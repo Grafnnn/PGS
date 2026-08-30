@@ -24,11 +24,11 @@ describe("FieldOperationsWorkspace", () => {
       })
     );
 
-    expect(html).toContain("Field Operations &amp; Daily Reports");
+    expect(html).toContain("Стройплощадка и ежедневные рапорты");
     expect(html).toContain("Площадка / Рапорты");
-    expect(html).toContain("Daily report snapshots");
-    expect(html).toContain("Field signals");
-    expect(html).toContain("Action register");
+    expect(html).toContain("Сводки ежедневных рапортов");
+    expect(html).toContain("Сигналы стройплощадки");
+    expect(html).toContain("Реестр действий");
     expect(html).toContain("Weekly field handoff");
     expect(html).not.toContain("OPENAI_API_KEY");
     expect(html).not.toContain("DATABASE_URL");

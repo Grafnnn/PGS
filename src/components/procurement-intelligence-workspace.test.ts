@@ -93,7 +93,7 @@ describe("ProcurementIntelligenceWorkspace", () => {
       })
     );
 
-    expect(html).toContain("Procurement &amp; Materials Intelligence");
+    expect(html).toContain("Аналитика снабжения и материалов");
     expect(html).toContain("Материалы из ВОР");
     expect(html).toContain("Кандидаты в заявку");
     expect(html).toContain("Черновик заявки снабжению");

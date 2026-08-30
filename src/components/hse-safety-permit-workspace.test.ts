@@ -8,9 +8,9 @@ describe("HseSafetyPermitWorkspace", () => {
   it("renders the read-only HSE workspace without provider calls", () => {
     const bundle = getProjectBundle("project-smoke");
     const html = renderToStaticMarkup(createElement(HseSafetyPermitWorkspace, { project: bundle.project, scheduleItems: bundle.scheduleItems, dailyReports: bundle.dailyReports, risks: bundle.risks, documents: [], documentChecklist: [], onNavigate: vi.fn() }));
-    expect(html).toContain("HSE / Safety &amp; Permit Compliance");
+    expect(html).toContain("Охрана труда и разрешения");
     expect(html).toContain("ОТиПБ / Допуски");
-    expect(html).toContain("HSE signal register");
+    expect(html).toContain("Реестр сигналов охраны труда");
     expect(html).not.toContain("OPENAI_API_KEY");
   });
 });

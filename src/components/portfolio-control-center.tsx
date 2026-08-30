@@ -49,7 +49,7 @@ export function PortfolioControlCenter({ model }: { model: PortfolioControlModel
       <div className="page-header portfolio-header">
         <div className="page-header-main">
           <div className="eyebrow">Портфель</div>
-          <h1>Portfolio Control Center</h1>
+          <h1>Управление портфелем проектов</h1>
           <p className="muted">Деньги, сроки, риски и управленческая нагрузка по всем доступным объектам.</p>
           <div className="page-header-meta">
             <span className="badge blue">{model.summary.projectCount} объектов</span>
@@ -113,7 +113,7 @@ export function PortfolioControlCenter({ model }: { model: PortfolioControlModel
         </div>
         <div className="table-wrap portfolio-table-wrap">
           <table className="portfolio-table">
-            <thead><tr><th>Объект</th><th>Состояние</th><th>Готовность</th><th>Прогноз / маржа</th><th>Cash exposure</th><th>Контроль</th><th>Ближайшая веха</th></tr></thead>
+            <thead><tr><th>Объект</th><th>Состояние</th><th>Готовность</th><th>Прогноз / маржа</th><th>Денежная нагрузка</th><th>Контроль</th><th>Ближайшая веха</th></tr></thead>
             <tbody>
               {projects.map((project) => <PortfolioRow key={project.id} project={project} />)}
             </tbody>

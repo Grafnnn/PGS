@@ -346,7 +346,7 @@ export function ContractCommitmentsWorkspace(props: Props) {
     <section className="commitment-workspace" aria-label="Contract Commitments">
       <header className="commitment-header">
         <div>
-          <div className="eyebrow">Contract Commitments v1</div>
+          <div className="eyebrow">Договорные обязательства v1</div>
           <h3>Договорные обязательства и заявки на оплату</h3>
           <p>СОВ, удержание, изменения и фактическая оплата в одном audit-ready реестре. Система не создаёт платежи и проводки автоматически.</p>
         </div>
@@ -382,7 +382,7 @@ export function ContractCommitmentsWorkspace(props: Props) {
             <label className="field field-wide"><span>Условия оплаты</span><textarea onChange={(event) => setForm({ ...form, paymentTerms: event.target.value })} rows={2} value={form.paymentTerms} /></label>
           </div>
           <div className="commitment-lines">
-            <div className="commitment-lines-head"><div><strong>Schedule of Values</strong><span>{form.lines.length} поз. · {money(pricedFormValue)}</span></div><button className="button secondary compact-button" onClick={() => setForm({ ...form, lines: [...form.lines, emptyLine()] })} type="button"><Plus size={15} />Строка</button></div>
+            <div className="commitment-lines-head"><div><strong>Реестр объемов и стоимости</strong><span>{form.lines.length} поз. · {money(pricedFormValue)}</span></div><button className="button secondary compact-button" onClick={() => setForm({ ...form, lines: [...form.lines, emptyLine()] })} type="button"><Plus size={15} />Строка</button></div>
             {form.lines.map((line, index) => (
               <div className="commitment-line" key={index}>
                 <label><span>ВОР</span><select onChange={(event) => { const budget = props.budgetItems.find((item) => item.id === event.target.value); updateLine(index, { budgetItemId: event.target.value, costCodeId: budget?.costCodeId ?? "", code: budget?.code ?? line.code, description: budget?.name ?? line.description, quantity: budget?.qty ?? line.quantity, unit: budget?.unit ?? line.unit, unitPrice: budget?.plannedUnitPrice ?? line.unitPrice }); }} value={line.budgetItemId}><option value="">Без связи</option>{props.budgetItems.map((item) => <option key={item.id} value={item.id}>{item.code} · {item.name}</option>)}</select></label>

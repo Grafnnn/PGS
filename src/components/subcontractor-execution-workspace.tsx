@@ -91,10 +91,10 @@ export function SubcontractorExecutionWorkspace({
   });
 
   return (
-    <section className="execution-control-workspace" aria-label="Subcontractor & Execution Control">
+    <section className="execution-control-workspace" aria-label="Подрядчики и контроль исполнения">
       <div className={`execution-control-header tone-${model.summary.tone}`}>
         <div>
-          <div className="eyebrow">Subcontractor & Execution Control</div>
+          <div className="eyebrow">Подрядчики и контроль исполнения</div>
           <h3>Подрядчики / Исполнение</h3>
           <p>Контроль владельцев фронтов, подрядчиков, задержек, документов, оплат и готовности к КС по данным графика, ВОР, рапортов и рисков.</p>
           <div className="execution-control-badges">
@@ -120,7 +120,7 @@ export function SubcontractorExecutionWorkspace({
       </div>
 
       <div className="execution-control-grid metrics">
-        <Metric title="Execution status" value={model.summary.status} detail={model.summary.nextStep} tone={model.summary.tone} />
+        <Metric title="Статус исполнения" value={model.summary.status} detail={model.summary.nextStep} tone={model.summary.tone} />
         <Metric title="Проблемные фронты" value={String(model.summary.delayedFronts)} detail={`${model.summary.unassignedItems} без владельца`} tone={model.summary.delayedFronts || model.summary.unassignedItems ? "bad" : "good"} />
         <Metric title="Подрядный бюджет" value={money(model.summary.subcontractBudget)} detail={`оплачено ${money(model.summary.paidToSubcontractors)}`} tone={model.summary.subcontractBudget ? "info" : "neutral"} />
         <Metric title="Документы / оплаты" value={`${model.summary.documentBlockers}/${money(model.summary.overduePayments)}`} detail="блокеры / просрочка" tone={model.summary.documentBlockers || model.summary.overduePayments ? "warn" : "good"} />
@@ -130,7 +130,7 @@ export function SubcontractorExecutionWorkspace({
         <article className="execution-control-card wide">
           <div className="section-title">
             <Users size={18} />
-            <h4>Contractors & owners</h4>
+            <h4>Подрядчики и ответственные</h4>
           </div>
           <div className="execution-contractor-grid">
             {model.contractors.length ? model.contractors.map((contractor) => <ContractorCard contractor={contractor} key={contractor.name} />) : <span className="muted">Исполнители появятся после заполнения графика, подрядных платежей или рапортов.</span>}
@@ -140,7 +140,7 @@ export function SubcontractorExecutionWorkspace({
         <article className="execution-control-card">
           <div className="section-title">
             <TimerReset size={18} />
-            <h4>Execution fronts</h4>
+            <h4>Фронты работ</h4>
           </div>
           <div className="execution-front-list">
             {model.fronts.length ? model.fronts.map((front) => (
@@ -156,7 +156,7 @@ export function SubcontractorExecutionWorkspace({
         <article className="execution-control-card">
           <div className="section-title">
             <AlertTriangle size={18} />
-            <h4>Action register</h4>
+            <h4>Реестр действий</h4>
           </div>
           <div className="execution-action-list">
             {model.actions.map((action) => (

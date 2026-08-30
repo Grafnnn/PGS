@@ -97,7 +97,7 @@ export function ContractTenderWorkspace({
     <section className="contract-tender-workspace" aria-label="Contract and tender intelligence">
       <div className={`contract-tender-header tone-${model.summary.tone}`}>
         <div>
-          <div className="eyebrow">Contract & Tender Intelligence</div>
+          <div className="eyebrow">Аналитика договора и тендера</div>
           <h3>Договор / тендер / КП</h3>
           <p>{model.summary.recommendation}</p>
           <div className="contract-tender-badges">

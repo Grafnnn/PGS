@@ -8,6 +8,6 @@ describe("ChangeOrdersWorkspace", () => {
     const html = renderToStaticMarkup(createElement(ChangeOrdersWorkspace, { project: { id: "p", name: "Проект", contractAmount: 1_000_000 }, budgetItems: [], scheduleItems: [], materials: [], procurementRequests: [], payments: [], risks: [], onNavigate: () => undefined }));
     expect(html).toContain("Change Orders &amp; Variations");
     expect(html).toContain("Допработы, изменения ВОР и влияние на проект");
-    expect(html).toContain("Variation register");
+    expect(html).toContain("Реестр изменений");
   });
 });

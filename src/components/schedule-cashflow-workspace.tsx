@@ -102,7 +102,7 @@ function DraftPreview({
                   <th>Раздел</th>
                   <th className="numeric">Сумма</th>
                   <th>Период</th>
-                  <th>Warning</th>
+                  <th>Предупреждение</th>
                 </>
               )}
             </tr>
@@ -177,7 +177,7 @@ export function ScheduleCashflowWorkspace({
     <section className="schedule-cashflow-workspace" aria-label="Schedule & Cashflow Intelligence">
       <div className="schedule-cashflow-header">
         <div>
-          <div className="eyebrow">Schedule & Cashflow Intelligence</div>
+          <div className="eyebrow">Аналитика графика и денежного потока</div>
           <h3>График работ → недельный cashflow → план действий</h3>
           <p className="muted">Пакеты строятся из ВОР и материалов. Preview ничего не меняет, commit остается явным действием пользователя.</p>
         </div>
@@ -289,7 +289,7 @@ export function ScheduleCashflowWorkspace({
         <article className="schedule-cashflow-card">
           <div className="section-title">
             <Landmark size={17} />
-            <h4>Cashflow по неделям</h4>
+            <h4>Денежный поток по неделям</h4>
           </div>
           <div className="cashflow-week-list">
             {model.cashflow.slice(0, 8).map((week) => (
@@ -326,7 +326,7 @@ export function ScheduleCashflowWorkspace({
         <article className="schedule-cashflow-card executive-plan-card wide">
           <div className="section-title">
             <ClipboardList size={17} />
-            <h4>Executive weekly plan</h4>
+            <h4>Недельный план руководителя</h4>
           </div>
           <div className="executive-plan-grid">
             <div>

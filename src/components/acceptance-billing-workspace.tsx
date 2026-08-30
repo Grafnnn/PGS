@@ -182,7 +182,7 @@ export function AcceptanceBillingWorkspace({
         <AcceptanceMetric title="Blocked billing" value={compactMoney(model.summary.blockedAmount)} detail={`${model.summary.blockedItems} строк`} tone={model.summary.blockedItems ? "warn" : "good"} />
         <AcceptanceMetric title="Факт / объемы" value={String(model.summary.missingFactItems)} detail="позиций без подтвержденного факта" tone={model.summary.missingFactItems ? "warn" : "good"} />
         <AcceptanceMetric title="Документы" value={String(model.summary.documentBlockers)} detail="блокеры КС / closeout" tone={model.summary.documentBlockers ? "bad" : "good"} />
-        <AcceptanceMetric title="Cashflow" value={compactMoney(model.cashflowImpact.outstandingAfterReadyBilling)} detail={model.cashflowImpact.note} tone={model.cashflowImpact.outstandingAfterReadyBilling ? "warn" : "info"} />
+        <AcceptanceMetric title="Денежный поток" value={compactMoney(model.cashflowImpact.outstandingAfterReadyBilling)} detail={model.cashflowImpact.note} tone={model.cashflowImpact.outstandingAfterReadyBilling ? "warn" : "info"} />
       </div>
 
       <div className={`acceptance-readiness tone-${model.summary.tone}`}>
@@ -223,7 +223,7 @@ export function AcceptanceBillingWorkspace({
         <article className="acceptance-billing-card">
           <div className="section-title">
             <FileWarning size={18} />
-            <h3>Required package</h3>
+            <h3>Обязательный пакет</h3>
           </div>
           <ul className="action-list">
             {model.packageDraft.customerSubmissionChecklist.map((item) => (
@@ -241,7 +241,7 @@ export function AcceptanceBillingWorkspace({
         <article className="acceptance-billing-card">
           <div className="section-title">
             <Landmark size={18} />
-            <h3>Billing cashflow impact</h3>
+            <h3>Влияние закрытия на денежный поток</h3>
           </div>
           <div className="acceptance-cashflow-grid">
             <AcceptanceMetric title="Ready invoice" value={compactMoney(model.cashflowImpact.readyToInvoice)} detail="не считать поступлением до оплаты" tone={model.cashflowImpact.readyToInvoice ? "good" : "info"} />
@@ -253,7 +253,7 @@ export function AcceptanceBillingWorkspace({
         <article className="acceptance-billing-card">
           <div className="section-title">
             <ShieldAlert size={18} />
-            <h3>Acceptance risks</h3>
+            <h3>Риски приемки</h3>
           </div>
           {!model.risks.length ? (
             <div className="acceptance-empty-state">
@@ -279,7 +279,7 @@ export function AcceptanceBillingWorkspace({
         <article className="acceptance-billing-card">
           <div className="section-title">
             <ListChecks size={18} />
-            <h3>Next actions</h3>
+            <h3>Следующие действия</h3>
           </div>
           <div className="acceptance-action-list">
             {model.actions.map((action) => (

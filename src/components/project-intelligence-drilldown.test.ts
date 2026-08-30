@@ -22,25 +22,25 @@ describe("ProjectIntelligenceDrilldown", () => {
       })
     );
 
-    expect(html).toContain("Project Intelligence");
-    expect(html).toContain("Baseline / Onboarding Intelligence");
-    expect(html).toContain("Documents Intelligence");
-    expect(html).toContain("КС readiness");
-    expect(html).toContain("Executive package");
-    expect(html).toContain("Risk Intelligence");
-    expect(html).toContain("Schedule / График Intelligence");
-    expect(html).toContain("ВОР / Finance Intelligence");
-    expect(html).toContain("Commercial Proposal / КП Submission");
-    expect(html).toContain("Acceptance &amp; Billing / КС Intelligence");
-    expect(html).toContain("Subcontractor / Execution Control");
-    expect(html).toContain("Field Operations / Daily Reports");
-    expect(html).toContain("Resources &amp; Equipment Intelligence");
-    expect(html).toContain("Photo Evidence / Исполнительное подтверждение");
-    expect(html).toContain("Procurement / Снабжение Intelligence");
-    expect(html).toContain("Reports / Executive Output");
-    expect(html).toContain("AI Recommendations Drill-down");
+    expect(html).toContain("Аналитика проекта");
+    expect(html).toContain("Стартовая готовность проекта");
+    expect(html).toContain("Комплектность документов");
+    expect(html).toContain("Готовность КС");
+    expect(html).toContain("Пакет руководителя");
+    expect(html).toContain("Аналитика рисков");
+    expect(html).toContain("Аналитика графика");
+    expect(html).toContain("ВОР и финансовый прогноз");
+    expect(html).toContain("Коммерческое предложение и подача");
+    expect(html).toContain("Готовность КС и предъявления");
+    expect(html).toContain("Контроль подрядчиков и исполнения");
+    expect(html).toContain("Стройплощадка и рапорты");
+    expect(html).toContain("Ресурсы и техника");
+    expect(html).toContain("Фото и исполнительные подтверждения");
+    expect(html).toContain("Аналитика снабжения");
+    expect(html).toContain("Рапорты и управленческий отчет");
+    expect(html).toContain("AI-рекомендации по проекту");
     expect(html).toContain("Открыть документы");
-    expect(html).toContain("Executive report");
+    expect(html).toContain("Отчет руководителю");
     expect(runAiScenario).not.toHaveBeenCalled();
   });
 

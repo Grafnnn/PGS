@@ -48,10 +48,10 @@ function severityClass(severity: RiskSeverity) {
 }
 
 function severityLabel(severity: RiskSeverity) {
-  if (severity === "critical") return "critical";
-  if (severity === "high") return "high";
-  if (severity === "medium") return "medium";
-  return "low";
+  if (severity === "critical") return "критический";
+  if (severity === "high") return "высокий";
+  if (severity === "medium") return "средний";
+  return "низкий";
 }
 
 function executiveStatusClass(status: ExecutiveTone) {
@@ -76,7 +76,7 @@ function ownerRoleLabel(role: string) {
 
 function dueHintLabel(value: ActionItem["dueHint"]) {
   const map: Record<ActionItem["dueHint"], string> = {
-    today_next: "Сегодня / next",
+    today_next: "Сегодня / далее",
     this_week: "На этой неделе",
     before_procurement: "До закупки",
     before_execution: "До производства",
@@ -112,7 +112,7 @@ function RiskRegisterTable({ risks }: { risks: RiskItem[] }) {
         <thead>
           <tr>
             <th>Риск</th>
-            <th>Severity</th>
+            <th>Критичность</th>
             <th>Источник</th>
             <th>Действие</th>
             <th>Решение</th>
@@ -125,7 +125,7 @@ function RiskRegisterTable({ risks }: { risks: RiskItem[] }) {
               <td>
                 <strong>{risk.title}</strong>
                 <small>{risk.description}</small>
-                {risk.evidence.length ? <small>Evidence: {risk.evidence.slice(0, 2).join("; ")}</small> : null}
+                {risk.evidence.length ? <small>Подтверждения: {risk.evidence.slice(0, 2).join("; ")}</small> : null}
               </td>
               <td>
                 <span className={`badge ${severityClass(risk.severity)}`}>{severityLabel(risk.severity)}</span>
@@ -151,7 +151,7 @@ function DecisionRegisterPanel({ decisions }: { decisions: DecisionItem[] }) {
     <article className="risk-exec-card">
       <div className="section-title">
         <ShieldAlert size={18} />
-        <h3>Decision Register</h3>
+        <h3>Реестр решений</h3>
       </div>
       {!decisions.length ? (
         <div className="risk-exec-empty-state">
@@ -166,7 +166,7 @@ function DecisionRegisterPanel({ decisions }: { decisions: DecisionItem[] }) {
               <div>
                 <strong>{decision.title}</strong>
                 <p>{decision.reason}</p>
-                <small>{ownerRoleLabel(decision.decisionOwnerRole)} · {decision.requiredBy} · impact: {decision.impact.join(", ")}</small>
+                <small>{ownerRoleLabel(decision.decisionOwnerRole)} · {decision.requiredBy} · влияние: {decision.impact.join(", ")}</small>
                 <em>{decision.recommendedNextStep}</em>
               </div>
             </div>
@@ -183,7 +183,7 @@ function ActionRegisterPanel({ actions }: { actions: ActionItem[] }) {
     <article className="risk-exec-card">
       <div className="section-title">
         <ListChecks size={18} />
-        <h3>Recommended Actions</h3>
+        <h3>Рекомендуемые действия</h3>
       </div>
       {!actions.length ? (
         <div className="risk-exec-empty-state">
@@ -251,40 +251,40 @@ export function RiskExecutiveWorkspace({
   const report = model.executiveReport;
 
   return (
-    <section className="risk-executive-workspace" aria-label="Risks & Executive Reports">
+    <section className="risk-executive-workspace" aria-label="Риски и управленческие отчеты">
       <div className="risk-exec-header">
         <div>
-          <div className="eyebrow">Risks & Executive Reports</div>
+          <div className="eyebrow">Риски и управленческие отчеты</div>
           <h3>Риски, решения и отчет руководству</h3>
-          <p className="muted">Детерминированный управленческий слой по ВОР, снабжению, графику, cashflow, документам и текущим рискам. AI не вызывается при рендере.</p>
+          <p className="muted">Управленческий слой по ВОР, снабжению, графику, денежному потоку, документам и текущим рискам. AI запускается только по команде.</p>
         </div>
         <div className="risk-exec-actions">
-          <span className={`badge ${executiveStatusClass(report.status)}`}>status: {report.status}</span>
-          <span className={`badge ${report.reportReadiness === "ready" ? "green" : report.reportReadiness === "blocked" ? "red" : "yellow"}`}>report: {report.reportReadiness}</span>
+          <span className={`badge ${executiveStatusClass(report.status)}`}>статус: {report.status}</span>
+          <span className={`badge ${report.reportReadiness === "ready" ? "green" : report.reportReadiness === "blocked" ? "red" : "yellow"}`}>отчет: {report.reportReadiness}</span>
           <button className="button secondary compact-button" type="button" onClick={() => onNavigate("Аналитика")}>
-            Project Intelligence
+            Аналитика проекта
           </button>
           {onRunExecutiveAi && (
             <button className="button primary compact-button" disabled={aiLoading} type="button" onClick={onRunExecutiveAi}>
-              {aiLoading ? "Готовлю..." : "AI executive polish"}
+              {aiLoading ? "Готовлю..." : "Улучшить отчет с AI"}
             </button>
           )}
         </div>
       </div>
 
       <div className="risk-exec-summary-grid">
-        <SummaryMetric title="Открытые риски" value={String(model.summary.totalOpen)} detail={`${model.summary.critical} critical · ${model.summary.high} high`} tone={model.summary.critical ? "bad" : model.summary.high ? "warn" : "good"} />
+        <SummaryMetric title="Открытые риски" value={String(model.summary.totalOpen)} detail={`${model.summary.critical} критических · ${model.summary.high} высоких`} tone={model.summary.critical ? "bad" : model.summary.high ? "warn" : "good"} />
         <SummaryMetric title="Решения" value={String(model.summary.decisionRequired)} detail="решения руководства" tone={model.summary.decisionRequired ? "warn" : "good"} />
-        <SummaryMetric title="Блокеры исполнения" value={String(model.summary.blockedExecution)} detail="schedule / procurement / cashflow" tone={model.summary.blockedExecution ? "bad" : "good"} />
-        <SummaryMetric title="Качество данных" value={String(model.summary.dataQuality)} detail="ВОР/import warnings" tone={model.summary.dataQuality ? "warn" : "good"} />
-        <SummaryMetric title="Report readiness" value={model.summary.reportReadiness} detail={model.summary.missingSources.length ? `Нет: ${model.summary.missingSources.join(", ")}` : "источники присутствуют"} tone={model.summary.reportReadiness === "ready" ? "good" : model.summary.reportReadiness === "blocked" ? "bad" : "warn"} />
+        <SummaryMetric title="Блокеры исполнения" value={String(model.summary.blockedExecution)} detail="график / снабжение / деньги" tone={model.summary.blockedExecution ? "bad" : "good"} />
+        <SummaryMetric title="Качество данных" value={String(model.summary.dataQuality)} detail="предупреждения ВОР / импорта" tone={model.summary.dataQuality ? "warn" : "good"} />
+        <SummaryMetric title="Готовность отчета" value={model.summary.reportReadiness} detail={model.summary.missingSources.length ? `Нет: ${model.summary.missingSources.join(", ")}` : "источники присутствуют"} tone={model.summary.reportReadiness === "ready" ? "good" : model.summary.reportReadiness === "blocked" ? "bad" : "warn"} />
       </div>
 
       <div className="risk-exec-layout">
         <article className="risk-exec-card risk-register-card">
           <div className="section-title">
             <AlertTriangle size={18} />
-            <h3>Risk Register</h3>
+            <h3>Реестр рисков</h3>
           </div>
           {!model.risks.length ? <EmptyRiskState missingSources={model.summary.missingSources} /> : <RiskRegisterTable risks={model.risks} />}
         </article>
@@ -295,7 +295,7 @@ export function RiskExecutiveWorkspace({
         <article className="risk-exec-card executive-report-card">
           <div className="section-title">
             <FileText size={18} />
-            <h3>Executive Weekly Report</h3>
+            <h3>Недельный отчет руководителя</h3>
           </div>
           <div className="executive-status-snapshot">
             <span className={`badge ${executiveStatusClass(report.status)}`}>{model.managementSummary.headline}</span>
@@ -310,10 +310,10 @@ export function RiskExecutiveWorkspace({
               </div>
             ))}
           </div>
-          <div className="copyable-report-block" aria-label="Copyable executive report text">
+          <div className="copyable-report-block" aria-label="Текст управленческого отчета для копирования">
             <div className="section-title">
               <ClipboardList size={16} />
-              <h4>Copyable report text</h4>
+              <h4>Текст отчета для копирования</h4>
             </div>
             <pre>{report.copyText}</pre>
           </div>
@@ -321,7 +321,7 @@ export function RiskExecutiveWorkspace({
             <div className="executive-ai-polish" aria-live="polite">
               <div className="section-title">
                 <ShieldAlert size={16} />
-                <h4>AI executive polish result</h4>
+                <h4>Результат улучшения с AI</h4>
               </div>
               <strong>{aiInsight.subject || aiInsight.title}</strong>
               <p>{aiInsight.summary}</p>

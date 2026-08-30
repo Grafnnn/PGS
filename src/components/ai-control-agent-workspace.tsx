@@ -105,7 +105,7 @@ export function AiControlAgentWorkspace({
     <section className="ai-control-agent" aria-label="AI Control Agent v2">
       <header className="ai-control-agent-header">
         <div>
-          <div className="eyebrow">AI Control Agent v2</div>
+          <div className="eyebrow">AI-агент проектного контроля v2</div>
           <h3>План управленческих действий</h3>
           <p>Собирает отклонения проекта в проверяемый preview. Запись выполняется только после выбора и отдельного подтверждения.</p>
         </div>

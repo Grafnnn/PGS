@@ -25,9 +25,9 @@ describe("QualityIssuesWorkspace", () => {
 
     expect(html).toContain("Quality / Issues &amp; Punch List");
     expect(html).toContain("Качество / Замечания");
-    expect(html).toContain("Issue register");
-    expect(html).toContain("Punch actions");
-    expect(html).toContain("Quality handoff");
+    expect(html).toContain("Реестр замечаний");
+    expect(html).toContain("Действия по устранению");
+    expect(html).toContain("Передача данных по качеству");
     expect(html).toContain("Ограничения v1");
     expect(html).not.toContain("DATABASE_URL");
     expect(html).not.toContain("OPENAI_API_KEY");

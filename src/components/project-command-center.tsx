@@ -178,7 +178,7 @@ export function ProjectCommandCenter({
           <div className="health-ring" style={{ "--score": model.health.score } as CSSProperties}>
             <span>{model.health.score}%</span>
           </div>
-          <small>Project health</small>
+          <small>Состояние проекта</small>
         </div>
       </div>
 
@@ -306,7 +306,7 @@ export function ProjectCommandCenter({
         </details>
 
         <details className="panel compact-details command-action-center">
-          <summary>Action center <span>{model.nextActions.length}</span></summary>
+          <summary>Центр действий <span>{model.nextActions.length}</span></summary>
           <div className="action-center-list">
             {model.nextActions.map((action, index) => (
               <button className={`action-center-item tone-${action.tone}`} key={action.key} type="button" onClick={() => openTabOrDrilldown(action.tab)}>

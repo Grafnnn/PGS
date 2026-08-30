@@ -221,7 +221,7 @@ export function InvoiceReconciliationWorkspace({ projectId, canEdit, canDelete }
   return (
     <section className="invoice-reconciliation" aria-label="Счета AP и AR">
       <header className="invoice-reconciliation-header">
-        <div><div className="eyebrow">Invoice / AP-AR Reconciliation</div><h3>Счета и сверка AP / AR</h3><p>Сопоставление счёта, обязательства или КС, документа и платежа. Платежи автоматически не создаются.</p></div>
+        <div><div className="eyebrow">Сверка счетов и взаиморасчетов</div><h3>Счета и сверка AP / AR</h3><p>Сопоставление счёта, обязательства или КС, документа и платежа. Платежи автоматически не создаются.</p></div>
         <div className="invoice-reconciliation-actions">
           <button className="icon-button" aria-label="Обновить счета" title="Обновить" type="button" onClick={() => void load()}><RefreshCw size={17} className={loading ? "spin" : ""} /></button>
           {canEdit && <button className="button primary compact-button" type="button" onClick={() => { setForm({ ...initialForm, direction: mode }); setShowForm((value) => !value); }}><Plus size={16} /> Новый счёт</button>}

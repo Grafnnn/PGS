@@ -743,7 +743,7 @@ export function ProjectCreationWizard() {
     <section className="panel stack create-project-panel project-onboarding-wizard">
       <div className="toolbar">
         <div>
-          <div className="eyebrow">Project Creation & Onboarding</div>
+          <div className="eyebrow">Создание и запуск проекта</div>
           <h2>Создать проект и запустить baseline</h2>
           <p className="muted">Начните с полной Excel-книги проекта или заполните карточку вручную. Система извлечет реквизиты, проверит листы и подготовит данные для рабочих модулей.</p>
         </div>
@@ -968,7 +968,7 @@ export function ProjectCreationWizard() {
               )}
               <div className="baseline-preview-head">
                 <div>
-                  <div className="eyebrow">Template baseline</div>
+                  <div className="eyebrow">Базовый план шаблона</div>
                   <h3>{templateBaseline.templateTitle}</h3>
                   <p>{selectedTemplate.description} Файлы можно приложить на финальном шаге перед созданием проекта.</p>
                 </div>
@@ -1114,7 +1114,7 @@ export function ProjectCreationWizard() {
         <aside className="onboarding-summary-card">
           <div className="section-title">
             <CheckCircle2 size={18} />
-            <h3>Onboarding baseline</h3>
+            <h3>Стартовый базовый план</h3>
           </div>
           <p>{plan.summary}</p>
           <div className="template-summary-card">
@@ -1305,7 +1305,7 @@ function ProjectWorkbookDistribution({
     <div className="project-workbook-distribution">
       <div className="baseline-preview-head">
         <div>
-          <div className="eyebrow">Workbook distribution</div>
+          <div className="eyebrow">Распределение данных книги</div>
           <h3>Как система заполнит проект</h3>
           <p>{analysis.fileName} · {analysis.summary.totalSheets} листов. Своды, источники и контрольные вкладки не создают дубли.</p>
         </div>
@@ -1334,7 +1334,7 @@ function ProjectWorkbookDistribution({
       <div className="project-workbook-mapping">
         <div className="project-workbook-mapping-head">
           <div>
-            <div className="eyebrow">Import review & mapping</div>
+            <div className="eyebrow">Проверка и сопоставление импорта</div>
             <h3>Проверьте карту листов</h3>
             <p>Роль определена автоматически. Исключённые листы не участвуют ни в импорте, ни в сверке итогов.</p>
           </div>
@@ -1443,7 +1443,7 @@ export function WorkbookQualityGatePanel({
     <section className={`project-workbook-quality tone-${tone}`} aria-label="Workbook import quality gate">
       <div className="project-workbook-quality-head">
         <div>
-          <div className="eyebrow">Workbook import quality gate</div>
+          <div className="eyebrow">Контроль качества импорта книги</div>
           <h3>Проверка качества перед созданием проекта</h3>
           <p>Система показывает, что будет записано, где есть финансовый разрыв и какие решения требуют подтверждения.</p>
         </div>
@@ -1498,7 +1498,7 @@ export function WorkbookQualityGatePanel({
       <div className={`project-workbook-resolution tone-${resolution.status === "ready" ? "good" : resolution.status === "blocked" ? "bad" : "warn"}`}>
         <div className="project-workbook-resolution-head">
           <div>
-            <div className="eyebrow">Import exception resolution</div>
+            <div className="eyebrow">Исправление исключений импорта</div>
             <strong>Финальный план решений</strong>
             <span>{mappingDirty ? "Сначала пересчитайте изменённую карту листов." : resolution.message}</span>
           </div>

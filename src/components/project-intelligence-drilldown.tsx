@@ -116,14 +116,14 @@ export function ProjectIntelligenceDrilldown({
   const aiHasResult = Object.keys(aiResults).length > 0;
 
   return (
-    <section className="project-intelligence-drilldown" aria-label="Project Intelligence Drill-down">
+    <section className="project-intelligence-drilldown" aria-label="Детальная аналитика проекта">
       <div className="intelligence-topline">
         <div>
-          <div className="eyebrow">Drill-down workspace</div>
-          <h2>Project Intelligence</h2>
+          <div className="eyebrow">Детальный анализ проекта</div>
+          <h2>Аналитика проекта</h2>
           <p className="muted">Проваливайтесь из сводки в рабочие зоны: документы, риски, график, ВОР, финансы, снабжение, отчеты и AI-сценарии.</p>
         </div>
-        <div className="intelligence-nav" aria-label="Разделы Project Intelligence">
+        <div className="intelligence-nav" aria-label="Разделы аналитики проекта">
           {model.nav.map((item) => (
             <a className={`intelligence-nav-chip tone-${item.tone}`} href={`#${item.id}`} key={item.id}>
               {item.label}
@@ -135,7 +135,7 @@ export function ProjectIntelligenceDrilldown({
 
       <div className="intelligence-grid">
         <article className="panel intelligence-panel baseline-intelligence-panel">
-          <SectionHeader id="baseline" icon={<ClipboardList size={18} />} title="Baseline / Onboarding Intelligence" tone={model.baseline.tone}>
+          <SectionHeader id="baseline" icon={<ClipboardList size={18} />} title="Стартовая готовность проекта" tone={model.baseline.tone}>
             <button className="button secondary compact-button" type="button" onClick={() => onNavigate(model.baseline.ctaTab)}>
               Открыть обзор
             </button>
@@ -157,7 +157,7 @@ export function ProjectIntelligenceDrilldown({
         </article>
 
         <article className="panel intelligence-panel">
-          <SectionHeader id="documents" icon={<FileText size={18} />} title="Documents Intelligence" tone={model.documents.tone}>
+          <SectionHeader id="documents" icon={<FileText size={18} />} title="Комплектность документов" tone={model.documents.tone}>
             <button className="button secondary compact-button" type="button" onClick={() => onNavigate(model.documents.ctaTab)}>
               Открыть документы
             </button>
@@ -165,8 +165,8 @@ export function ProjectIntelligenceDrilldown({
           <div className="intelligence-metrics">
             <StatusInsightCard title="Готовность пакета" value={`${model.documents.score}%`} detail={`${model.documents.present}/${model.documents.total || 0} закрыто`} tone={model.documents.tone} />
             <StatusInsightCard title="Пробелы" value={String(model.documents.missing.length)} detail="Документы к дозагрузке или проверке" tone={model.documents.missing.length ? "warn" : "good"} />
-            <StatusInsightCard title="Compliance" value={model.documents.complianceReadiness} detail={`${model.documents.missingCritical} urgent/high missing`} tone={model.documents.missingCritical ? "bad" : model.documents.tone} />
-            <StatusInsightCard title="КС readiness" value={model.documents.ksReadiness} detail={`Executive package: ${model.documents.executivePackageReadiness}`} tone={model.documents.ksReadiness === "yes" ? "good" : model.documents.ksReadiness === "partial" ? "warn" : model.documents.ksReadiness === "unknown" ? "info" : "bad"} />
+            <StatusInsightCard title="Комплектность" value={model.documents.complianceReadiness} detail={`${model.documents.missingCritical} срочных отсутствует`} tone={model.documents.missingCritical ? "bad" : model.documents.tone} />
+            <StatusInsightCard title="Готовность КС" value={model.documents.ksReadiness} detail={`Пакет руководителя: ${model.documents.executivePackageReadiness}`} tone={model.documents.ksReadiness === "yes" ? "good" : model.documents.ksReadiness === "partial" ? "warn" : model.documents.ksReadiness === "unknown" ? "info" : "bad"} />
           </div>
           {model.documents.empty ? (
             <EmptyIntelligenceState text="Document checklist пока не загружен. Откройте раздел документов или загрузите ВОР/пакет файлов." />
@@ -185,7 +185,7 @@ export function ProjectIntelligenceDrilldown({
         </article>
 
         <article className="panel intelligence-panel">
-          <SectionHeader id="risks" icon={<AlertTriangle size={18} />} title="Risk Intelligence" tone={model.risks.tone}>
+          <SectionHeader id="risks" icon={<AlertTriangle size={18} />} title="Аналитика рисков" tone={model.risks.tone}>
             <button className="button secondary compact-button" type="button" onClick={() => onNavigate(model.risks.ctaTab)}>
               Открыть риски
             </button>
@@ -193,7 +193,7 @@ export function ProjectIntelligenceDrilldown({
           <div className="intelligence-metrics">
             <StatusInsightCard title="Открытые риски" value={String(model.risks.total)} detail={`Critical ${model.risks.critical} · High ${model.risks.high}`} tone={model.risks.tone} />
             <StatusInsightCard title="Автосигналы" value={model.risks.empty ? "нет" : "есть"} detail="График, материалы и cash gap" tone={model.risks.empty ? "good" : "warn"} />
-            <StatusInsightCard title="Решения" value={String(model.risks.decisionRequired)} detail={`Report ${model.risks.reportReadiness}`} tone={model.risks.decisionRequired ? "warn" : "good"} />
+            <StatusInsightCard title="Решения" value={String(model.risks.decisionRequired)} detail={`Готовность отчета: ${model.risks.reportReadiness}`} tone={model.risks.decisionRequired ? "warn" : "good"} />
           </div>
           <SignalList
             emptyText="Открытых рисков нет. Продолжайте обновлять график, материалы и платежи."
@@ -202,7 +202,7 @@ export function ProjectIntelligenceDrilldown({
         </article>
 
         <article className="panel intelligence-panel">
-          <SectionHeader id="schedule" icon={<TimerReset size={18} />} title="Schedule / График Intelligence" tone={model.schedule.tone}>
+          <SectionHeader id="schedule" icon={<TimerReset size={18} />} title="Аналитика графика" tone={model.schedule.tone}>
             <button className="button secondary compact-button" type="button" onClick={() => onNavigate(model.schedule.ctaTab)}>
               Открыть график
             </button>
@@ -220,7 +220,7 @@ export function ProjectIntelligenceDrilldown({
         </article>
 
         <article className="panel intelligence-panel">
-          <SectionHeader id="finance-vor" icon={<Landmark size={18} />} title="ВОР / Finance Intelligence" tone={model.financeVor.tone}>
+          <SectionHeader id="finance-vor" icon={<Landmark size={18} />} title="ВОР и финансовый прогноз" tone={model.financeVor.tone}>
             <button className="button secondary compact-button" type="button" onClick={() => onNavigate(model.financeVor.ctaTab)}>
               Открыть ВОР
             </button>
@@ -235,14 +235,14 @@ export function ProjectIntelligenceDrilldown({
               <StatusInsightCard title="Плановая себестоимость" value={model.financeVor.plannedCost} detail="по ВОР / бюджету" tone="info" />
               <StatusInsightCard title="Прогнозная себестоимость" value={model.financeVor.forecastCost} detail={`Отклонение ${model.financeVor.budgetDeviation}`} tone={model.financeVor.tone} />
               <StatusInsightCard title="Прогноз прибыли" value={model.financeVor.forecastProfit} detail="контракт минус прогноз" tone={model.financeVor.tone} />
-              <StatusInsightCard title="Cash gap" value={model.financeVor.cashGap} detail={`Потребность ${model.financeVor.financingNeed}`} tone={model.financeVor.tone} />
-              <StatusInsightCard title="Draft cashflow" value={model.financeVor.peakCashNeed} detail={`${model.financeVor.cashflowStatus} · ${model.financeVor.peakCashWeek}`} tone={model.financeVor.peakCashNeed === "0 ₽" ? "good" : "warn"} />
+              <StatusInsightCard title="Кассовый разрыв" value={model.financeVor.cashGap} detail={`Потребность ${model.financeVor.financingNeed}`} tone={model.financeVor.tone} />
+              <StatusInsightCard title="Черновик cash-flow" value={model.financeVor.peakCashNeed} detail={`${model.financeVor.cashflowStatus} · ${model.financeVor.peakCashWeek}`} tone={model.financeVor.peakCashNeed === "0 ₽" ? "good" : "warn"} />
             </div>
           )}
         </article>
 
         <article className="panel intelligence-panel">
-          <SectionHeader id="procurement" icon={<PackageCheck size={18} />} title="Procurement / Снабжение Intelligence" tone={model.procurement.tone}>
+          <SectionHeader id="procurement" icon={<PackageCheck size={18} />} title="Аналитика снабжения" tone={model.procurement.tone}>
             <button className="button secondary compact-button" type="button" onClick={() => onNavigate(model.procurement.ctaTab)}>
               Материалы
             </button>
@@ -270,7 +270,7 @@ export function ProjectIntelligenceDrilldown({
         </article>
 
         <article className="panel intelligence-panel">
-          <SectionHeader id="contract-tender" icon={<Scale size={18} />} title="Contract / Tender Intelligence" tone={model.contractTender.tone}>
+          <SectionHeader id="contract-tender" icon={<Scale size={18} />} title="Аналитика договора и тендера" tone={model.contractTender.tone}>
             <button className="button secondary compact-button" type="button" onClick={() => onNavigate(model.contractTender.ctaTab)}>
               Договор
             </button>
@@ -279,10 +279,10 @@ export function ProjectIntelligenceDrilldown({
             </button>
           </SectionHeader>
           <div className="intelligence-metrics">
-            <StatusInsightCard title="Readiness" value={`${model.contractTender.score}%`} detail={model.contractTender.readiness} tone={model.contractTender.tone} />
+            <StatusInsightCard title="Готовность" value={`${model.contractTender.score}%`} detail={model.contractTender.readiness} tone={model.contractTender.tone} />
             <StatusInsightCard title="Решение" value={model.contractTender.decision} detail={model.contractTender.contractValue} tone={model.contractTender.tone} />
             <StatusInsightCard title="Маржа" value={model.contractTender.forecastProfit} detail="по ВОР / договорной сумме" tone={model.contractTender.forecastProfit.startsWith("-") ? "bad" : "info"} />
-            <StatusInsightCard title="Блокеры" value={`${model.contractTender.criticalRisks}/${model.contractTender.highRisks}`} detail={`${model.contractTender.missingCriticalDocs} critical docs`} tone={model.contractTender.criticalRisks || model.contractTender.missingCriticalDocs ? "bad" : model.contractTender.highRisks ? "warn" : "good"} />
+            <StatusInsightCard title="Блокеры" value={`${model.contractTender.criticalRisks}/${model.contractTender.highRisks}`} detail={`${model.contractTender.missingCriticalDocs} критических документов`} tone={model.contractTender.criticalRisks || model.contractTender.missingCriticalDocs ? "bad" : model.contractTender.highRisks ? "warn" : "good"} />
           </div>
           {model.contractTender.empty ? (
             <EmptyIntelligenceState text="Нет договора, ТЗ, КП или документального пакета для проверки. Загрузите документы и повторите анализ." />
@@ -299,13 +299,13 @@ export function ProjectIntelligenceDrilldown({
         </article>
 
         <article className="panel intelligence-panel">
-          <SectionHeader id="proposal-submission" icon={<Send size={18} />} title="Commercial Proposal / КП Submission" tone={model.proposal.tone}>
+          <SectionHeader id="proposal-submission" icon={<Send size={18} />} title="Коммерческое предложение и подача" tone={model.proposal.tone}>
             <button className="button secondary compact-button" type="button" onClick={() => onNavigate(model.proposal.ctaTab)}>
               Открыть КП
             </button>
           </SectionHeader>
           <div className="intelligence-metrics">
-            <StatusInsightCard title="Proposal readiness" value={model.proposal.readiness} detail={`${model.proposal.blockers} blockers`} tone={model.proposal.tone} />
+            <StatusInsightCard title="Готовность предложения" value={model.proposal.readiness} detail={`${model.proposal.blockers} блокеров`} tone={model.proposal.tone} />
             <StatusInsightCard title="Цена КП" value={model.proposal.price} detail="по ВОР / карточке проекта" tone={model.proposal.price === "не рассчитано" ? "bad" : "info"} />
             <StatusInsightCard title="Данные" value={String(model.proposal.missingData)} detail="missing inputs" tone={model.proposal.missingData ? "warn" : "good"} />
             <StatusInsightCard title="Решения" value={String(model.proposal.decisionRequired)} detail="до отправки заказчику" tone={model.proposal.decisionRequired ? "warn" : "good"} />
@@ -325,7 +325,7 @@ export function ProjectIntelligenceDrilldown({
         </article>
 
         <article className="panel intelligence-panel">
-          <SectionHeader id="acceptance-billing" icon={<ReceiptText size={18} />} title="Acceptance & Billing / КС Intelligence" tone={model.acceptanceBilling.tone}>
+          <SectionHeader id="acceptance-billing" icon={<ReceiptText size={18} />} title="Готовность КС и предъявления" tone={model.acceptanceBilling.tone}>
             <button className="button secondary compact-button" type="button" onClick={() => onNavigate(model.acceptanceBilling.ctaTab)}>
               Открыть КС
             </button>
@@ -357,7 +357,7 @@ export function ProjectIntelligenceDrilldown({
         </article>
 
         <article className="panel intelligence-panel">
-          <SectionHeader id="execution-control" icon={<Users size={18} />} title="Subcontractor / Execution Control" tone={model.executionControl.tone}>
+          <SectionHeader id="execution-control" icon={<Users size={18} />} title="Контроль подрядчиков и исполнения" tone={model.executionControl.tone}>
             <button className="button secondary compact-button" type="button" onClick={() => onNavigate(model.executionControl.ctaTab)}>
               Исполнение
             </button>
@@ -366,10 +366,10 @@ export function ProjectIntelligenceDrilldown({
             </button>
           </SectionHeader>
           <div className="intelligence-metrics">
-            <StatusInsightCard title="Execution status" value={model.executionControl.status} detail={model.executionControl.headline} tone={model.executionControl.tone} />
+            <StatusInsightCard title="Статус исполнения" value={model.executionControl.status} detail={model.executionControl.headline} tone={model.executionControl.tone} />
             <StatusInsightCard title="Исполнители" value={String(model.executionControl.contractorCount)} detail={`${model.executionControl.activeFronts} активных фронтов`} tone={model.executionControl.contractorCount ? "info" : "warn"} />
             <StatusInsightCard title="Проблемные фронты" value={String(model.executionControl.delayedFronts)} detail={`${model.executionControl.unassignedItems} без владельца`} tone={model.executionControl.delayedFronts || model.executionControl.unassignedItems ? "bad" : "good"} />
-            <StatusInsightCard title="Подряд / оплаты" value={model.executionControl.subcontractBudget} detail={`overdue ${model.executionControl.overduePayments}`} tone={model.executionControl.overduePayments !== "0 ₽" ? "warn" : "info"} />
+            <StatusInsightCard title="Подряд / оплаты" value={model.executionControl.subcontractBudget} detail={`просрочено ${model.executionControl.overduePayments}`} tone={model.executionControl.overduePayments !== "0 ₽" ? "warn" : "info"} />
           </div>
           {model.executionControl.empty ? (
             <EmptyIntelligenceState text="Для контроля исполнения нужны график, владельцы фронтов, подрядные платежи или рапорты." />
@@ -389,7 +389,7 @@ export function ProjectIntelligenceDrilldown({
         </article>
 
         <article className="panel intelligence-panel">
-          <SectionHeader id="field-operations" icon={<ClipboardList size={18} />} title="Field Operations / Daily Reports" tone={model.fieldOperations.tone}>
+          <SectionHeader id="field-operations" icon={<ClipboardList size={18} />} title="Стройплощадка и рапорты" tone={model.fieldOperations.tone}>
             <button className="button secondary compact-button" type="button" onClick={() => onNavigate(model.fieldOperations.ctaTab)}>
               Рапорты
             </button>
@@ -400,7 +400,7 @@ export function ProjectIntelligenceDrilldown({
           <div className="intelligence-metrics">
             <StatusInsightCard title="Site facts" value={model.fieldOperations.status} detail={model.fieldOperations.headline} tone={model.fieldOperations.tone} />
             <StatusInsightCard title="Люди" value={`${model.fieldOperations.totalWorkers}/${model.fieldOperations.totalEngineers}`} detail={`${model.fieldOperations.reportCount} рапортов`} tone={model.fieldOperations.reportCount ? "info" : "neutral"} />
-            <StatusInsightCard title="Простои / замечания" value={`${model.fieldOperations.downtimeReports}/${model.fieldOperations.issueReports}`} detail="signals from site" tone={model.fieldOperations.downtimeReports || model.fieldOperations.issueReports ? "bad" : "good"} />
+            <StatusInsightCard title="Простои / замечания" value={`${model.fieldOperations.downtimeReports}/${model.fieldOperations.issueReports}`} detail="сигналы со стройплощадки" tone={model.fieldOperations.downtimeReports || model.fieldOperations.issueReports ? "bad" : "good"} />
             <StatusInsightCard title="Связи" value={`${model.fieldOperations.linkedScheduleItems}/${model.fieldOperations.materialSignals}`} detail="график / материалы" tone={model.fieldOperations.linkedScheduleItems || model.fieldOperations.materialSignals ? "warn" : "info"} />
           </div>
           {model.fieldOperations.empty ? (
@@ -422,7 +422,7 @@ export function ProjectIntelligenceDrilldown({
         </article>
 
         <article className="panel intelligence-panel">
-          <SectionHeader id="resources-equipment" icon={<Wrench size={18} />} title="Resources & Equipment Intelligence" tone={model.resourcesEquipment.tone}>
+          <SectionHeader id="resources-equipment" icon={<Wrench size={18} />} title="Ресурсы и техника" tone={model.resourcesEquipment.tone}>
             <button className="button secondary compact-button" type="button" onClick={() => onNavigate(model.resourcesEquipment.ctaTab)}>
               Рапорты
             </button>
@@ -455,7 +455,7 @@ export function ProjectIntelligenceDrilldown({
         </article>
 
         <article className="panel intelligence-panel">
-          <SectionHeader id="photo-evidence" icon={<FileText size={18} />} title="Photo Evidence / Исполнительное подтверждение" tone={model.photoEvidence.tone}>
+          <SectionHeader id="photo-evidence" icon={<FileText size={18} />} title="Фото и исполнительные подтверждения" tone={model.photoEvidence.tone}>
             <button className="button secondary compact-button" type="button" onClick={() => onNavigate(model.photoEvidence.ctaTab)}>
               Документы
             </button>
@@ -490,7 +490,7 @@ export function ProjectIntelligenceDrilldown({
         </article>
 
         <article className="panel intelligence-panel">
-          <SectionHeader id="quality-issues" icon={<AlertTriangle size={18} />} title="Quality / Issues & Punch List" tone={model.qualityIssues.tone}>
+          <SectionHeader id="quality-issues" icon={<AlertTriangle size={18} />} title="Качество и реестр замечаний" tone={model.qualityIssues.tone}>
             <button className="button secondary compact-button" type="button" onClick={() => onNavigate(model.qualityIssues.ctaTab)}>
               Риски
             </button>
@@ -502,7 +502,7 @@ export function ProjectIntelligenceDrilldown({
             </button>
           </SectionHeader>
           <div className="intelligence-metrics">
-            <StatusInsightCard title="Quality status" value={model.qualityIssues.status} detail={model.qualityIssues.headline} tone={model.qualityIssues.tone} />
+            <StatusInsightCard title="Статус качества" value={model.qualityIssues.status} detail={model.qualityIssues.headline} tone={model.qualityIssues.tone} />
             <StatusInsightCard title="Замечания" value={`${model.qualityIssues.criticalIssues}/${model.qualityIssues.totalIssues}`} detail="critical / всего" tone={model.qualityIssues.criticalIssues ? "bad" : model.qualityIssues.totalIssues ? "warn" : "good"} />
             <StatusInsightCard title="Рапорты / evidence" value={`${model.qualityIssues.reportIssues}/${model.qualityIssues.evidenceDocuments}`} detail="site signals / подтверждения" tone={model.qualityIssues.reportIssues || model.qualityIssues.evidenceDocuments ? "info" : "neutral"} />
             <StatusInsightCard title="График / КС" value={`${model.qualityIssues.delayedWorkItems}/${model.qualityIssues.acceptanceBlockers}`} detail="отклонения / блокеры" tone={model.qualityIssues.delayedWorkItems || model.qualityIssues.acceptanceBlockers ? "warn" : "good"} />
@@ -525,7 +525,7 @@ export function ProjectIntelligenceDrilldown({
         </article>
 
         <article className="panel intelligence-panel">
-          <SectionHeader id="hse-safety" icon={<HardHat size={18} />} title="HSE / Safety & Permit Compliance" tone={model.hseSafety.tone}>
+          <SectionHeader id="hse-safety" icon={<HardHat size={18} />} title="Охрана труда и допуски" tone={model.hseSafety.tone}>
             <button className="button secondary compact-button" type="button" onClick={() => onNavigate(model.hseSafety.ctaTab)}>
               Исполнение
             </button>
@@ -534,7 +534,7 @@ export function ProjectIntelligenceDrilldown({
             </button>
           </SectionHeader>
           <div className="intelligence-metrics">
-            <StatusInsightCard title="HSE status" value={model.hseSafety.status} detail={model.hseSafety.headline} tone={model.hseSafety.tone} />
+            <StatusInsightCard title="Статус охраны труда" value={model.hseSafety.status} detail={model.hseSafety.headline} tone={model.hseSafety.tone} />
             <StatusInsightCard title="Сигналы" value={`${model.hseSafety.criticalSignals}/${model.hseSafety.totalSignals}`} detail="critical / всего" tone={model.hseSafety.criticalSignals ? "bad" : model.hseSafety.totalSignals ? "warn" : "good"} />
             <StatusInsightCard title="Документы HSE" value={String(model.hseSafety.safetyDocuments)} detail="допуски / инструкции" tone={model.hseSafety.safetyDocuments ? "info" : "neutral"} />
             <StatusInsightCard title="Permit blockers" value={String(model.hseSafety.permitBlockers)} detail="требуют подтверждения" tone={model.hseSafety.permitBlockers ? "bad" : "good"} />
@@ -544,16 +544,16 @@ export function ProjectIntelligenceDrilldown({
         </article>
 
         <article className="panel intelligence-panel">
-          <SectionHeader id="reports" icon={<ClipboardList size={18} />} title="Reports / Executive Output" tone={model.reports.tone}>
+          <SectionHeader id="reports" icon={<ClipboardList size={18} />} title="Рапорты и управленческий отчет" tone={model.reports.tone}>
             <button className="button secondary compact-button" type="button" onClick={() => onNavigate(model.reports.reportTab)}>
               Рапорты
             </button>
             <button className="button primary compact-button" disabled={aiLoading === model.reports.executiveScenario} type="button" onClick={() => onRunAiScenario(model.reports.executiveScenario)}>
-              {aiLoading === model.reports.executiveScenario ? "Готовлю..." : "Executive report"}
+              {aiLoading === model.reports.executiveScenario ? "Готовлю..." : "Отчет руководителю"}
             </button>
           </SectionHeader>
           {model.reports.empty ? (
-            <EmptyIntelligenceState text="Ежедневных рапортов пока нет. Executive report можно сформировать из текущих бюджета, графика, снабжения и рисков." />
+            <EmptyIntelligenceState text="Ежедневных рапортов пока нет. Отчет руководителю можно сформировать из текущих бюджета, графика, снабжения и рисков." />
           ) : (
             <div className="executive-report-preview">
               <strong>{model.reports.latestReport?.title}</strong>
@@ -567,11 +567,11 @@ export function ProjectIntelligenceDrilldown({
           </div>
           <div className="ai-recommendation-meta executive-readiness-meta">
             <div>
-              <strong>Executive status</strong>
+              <strong>Статус для руководителя</strong>
               <span>{model.reports.executiveStatus}</span>
             </div>
             <div>
-              <strong>Readiness</strong>
+              <strong>Готовность</strong>
               <span>{model.reports.reportReadiness}</span>
             </div>
             <div>
@@ -579,7 +579,7 @@ export function ProjectIntelligenceDrilldown({
               <span>{model.reports.decisionsRequired}</span>
             </div>
             <div>
-              <strong>Missing data</strong>
+              <strong>Недостающие данные</strong>
               <span>{model.reports.missingData.join(" · ") || "нет критичных пропусков"}</span>
             </div>
           </div>
@@ -587,7 +587,7 @@ export function ProjectIntelligenceDrilldown({
       </div>
 
       <article className="panel intelligence-panel ai-recommendations-panel" id="ai-recommendations">
-        <SectionHeader id="ai-recommendations-title" icon={<Bot size={18} />} title="AI Recommendations Drill-down" tone={model.ai.tone}>
+        <SectionHeader id="ai-recommendations-title" icon={<Bot size={18} />} title="AI-рекомендации по проекту" tone={model.ai.tone}>
           <button className="button secondary compact-button" type="button" onClick={() => onNavigate("AI-помощник")}>
             Открыть AI-помощник
           </button>
@@ -599,7 +599,7 @@ export function ProjectIntelligenceDrilldown({
           </div>
           <div>
             <strong>Ограничения</strong>
-            <span>{model.ai.limitations.join(" · ") || "Live provider не вызывается при рендере страницы."}</span>
+            <span>{model.ai.limitations.join(" · ") || "AI-провайдер не вызывается при открытии страницы."}</span>
           </div>
           <div>
             <strong>Результаты</strong>
