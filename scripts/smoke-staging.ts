@@ -15,7 +15,7 @@ const password = process.env.SMOKE_PASSWORD;
 const allowMutation = process.env.SMOKE_ALLOW_MUTATION === "true";
 const appEnv = process.env.APP_ENV ?? process.env.NODE_ENV ?? "development";
 const smokeRunId = process.env.SMOKE_RUN_ID ?? `SMOKE-${Date.now()}`;
-const projectId = allowMutation ? SMOKE_PROJECT_ID : process.env.PROJECT_ID ?? "project-demo";
+const projectId = process.env.PROJECT_ID ?? SMOKE_PROJECT_ID;
 
 const results: SmokeResult[] = [];
 let sessionCookie = "";
@@ -166,21 +166,24 @@ async function optionalDocumentUpload() {
 }
 
 async function main() {
-  await checkGet("health", "/api/health", [200, 503]);
+  await checkGet("health", "/api/health", [200]);
   await checkGet("login page", "/login");
   await login();
-  await checkGet("auth me", "/api/auth/me", sessionCookie ? [200] : [200, 401, 503]);
-  await checkGet("project-demo page", "/projects/project-demo", [200, 500]);
-  await checkOptionalGet("project-smoke page", "/projects/project-smoke", [200, 500]);
-  await checkGet("target project page", `/projects/${projectId}`, [200, 500, allowMutation ? 404 : 200]);
-  await checkGet("projects api", "/api/projects", [200, 403, 503]);
-  await checkGet("admin users api", "/api/admin/users", [200, 403, 503]);
-  await checkGet("connectors status api", "/api/connectors/status", [200, 403, 503]);
-  await checkGet("members api", `/api/projects/${projectId}/members`, [200, 403, 404, 503]);
-  await checkGet("audit api", `/api/projects/${projectId}/audit`, [200, 403, 404, 503]);
-  await checkGet("documents api", `/api/projects/${projectId}/documents`, [200, 403, 404, 503]);
-  await checkGet("project export", `/api/projects/${projectId}/export/json`, [200, 403, 404, 503]);
-  await checkGet("audit export", `/api/projects/${projectId}/audit/export/json`, [200, 403, 404, 503]);
+  const unauthenticatedStatuses = appEnv === "staging" || appEnv === "production" ? [401, 403] : [200, 401, 403];
+  const protectedStatuses = sessionCookie ? [200, 403] : unauthenticatedStatuses;
+  await checkGet("auth me", "/api/auth/me", sessionCookie ? [200] : unauthenticatedStatuses);
+  await checkOptionalGet("project-demo page", "/projects/project-demo", [200]);
+  await checkOptionalGet("project-smoke page", "/projects/project-smoke", [200]);
+  if (allowMutation) await checkGet("target project page", `/projects/${projectId}`, [200]);
+  else await checkOptionalGet("target project page", `/projects/${projectId}`, [200]);
+  await checkGet("projects api", "/api/projects", protectedStatuses);
+  await checkGet("admin users api", "/api/admin/users", protectedStatuses);
+  await checkGet("connectors status api", "/api/connectors/status", protectedStatuses);
+  await checkGet("members api", `/api/projects/${projectId}/members`, [...protectedStatuses, 404]);
+  await checkGet("audit api", `/api/projects/${projectId}/audit`, [...protectedStatuses, 404]);
+  await checkGet("documents api", `/api/projects/${projectId}/documents`, [...protectedStatuses, 404]);
+  await checkGet("project export", `/api/projects/${projectId}/export/json`, [...protectedStatuses, 404]);
+  await checkGet("audit export", `/api/projects/${projectId}/audit/export/json`, [...protectedStatuses, 404]);
   record({ status: "SKIP", name: "excel preview", url: `${appUrl}/api/projects/${projectId}/imports/budget/preview`, reason: "Use fixture flow for file-specific import verification" });
   await optionalDocumentUpload();
 
