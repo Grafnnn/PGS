@@ -14,8 +14,10 @@ describe("ProjectModuleMenu", () => {
     );
 
     expect(html).toContain('aria-expanded="true"');
-    expect(html).toContain("Рабочие контуры");
-    expect(html).toContain(`${projectTabs.length} модулей доступны через 6 рабочих контуров`);
+    expect(html).toContain("Рабочие контуры проекта");
+    expect(html).toContain(`${projectTabs.length} модулей · быстрый переход`);
+    expect(html).toContain("Все модули");
+    expect(html).toContain("Карта проекта");
     expect(html).toContain("Центр управления");
     expect(html).toContain("Производство");
     expect(html).toContain("Ресурсы");

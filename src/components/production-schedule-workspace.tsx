@@ -1,11 +1,14 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import {
   AlertTriangle,
   CalendarDays,
   ChevronDown,
   ClipboardList,
+  LocateFixed,
+  Maximize2,
+  Minus,
   Landmark,
   PackageCheck,
   Pencil,
@@ -396,12 +399,13 @@ function TimelineBar({
   const position = timelinePosition(startsAt, endsAt, scale);
 
   return (
-    <div className="production-gantt-track" role="img" aria-label={`Период: ${formatDate(startsAt)} — ${formatDate(endsAt)}, выполнено ${Math.round(progress)}%`}>
+    <div className="production-gantt-track" role="img" tabIndex={0} aria-label={`Период: ${formatDate(startsAt)} — ${formatDate(endsAt)}, выполнено ${Math.round(progress)}%`}>
       {scale.todayLeft !== null ? <i className="production-today-line" style={{ left: `${scale.todayLeft}%` }} /> : null}
       <span className={`production-gantt-bar tone-${tone}`} style={{ left: `${position.left}%`, width: `${position.width}%` }}>
         <b style={{ width: `${progress}%` }} />
         {label ? <small>{label}</small> : null}
       </span>
+      <span className="production-gantt-tooltip">{formatDate(startsAt)} — {formatDate(endsAt)} · выполнено {Math.round(progress)}%</span>
     </div>
   );
 }
@@ -536,6 +540,9 @@ export function ProductionScheduleWorkspace({
   const [query, setQuery] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [view, setView] = useState<ScheduleView>("plan");
+  const [timelineZoom, setTimelineZoom] = useState(1);
+  const [allExpanded, setAllExpanded] = useState(false);
+  const timelineViewportRef = useRef<HTMLDivElement>(null);
   const normalizedQuery = query.trim().toLocaleLowerCase("ru-RU");
   const model = useMemo(() => buildScheduleCashflowIntelligenceModel({
     project: { name: projectName, startsAt: projectStartsAt, endsAt: projectEndsAt, contractAmount },
@@ -568,6 +575,27 @@ export function ProductionScheduleWorkspace({
   const healthLabel = delayedCount ? "Требует внимания" : activeCount ? "Работы идут" : scheduleItems.length ? "План сформирован" : "График не заполнен";
   const canScheduleCommit = draft?.kind === "schedule" && draft.mode === "preview" && !loading;
   const canCashflowCommit = draft?.kind === "cashflow" && draft.mode === "preview" && !loading;
+
+  function toggleAllGroups() {
+    const next = !allExpanded;
+    timelineViewportRef.current?.querySelectorAll("details").forEach((details) => {
+      details.open = next;
+    });
+    setAllExpanded(next);
+  }
+
+  function scrollToToday() {
+    const viewport = timelineViewportRef.current;
+    if (!viewport || scale.todayLeft === null) return;
+    const target = (scale.todayLeft / 100) * viewport.scrollWidth - viewport.clientWidth / 2;
+    viewport.scrollTo({ left: Math.max(0, target), behavior: "smooth" });
+  }
+
+  async function openFullscreen() {
+    const viewport = timelineViewportRef.current;
+    if (!viewport?.requestFullscreen) return;
+    await viewport.requestFullscreen();
+  }
 
   return (
     <section className="production-schedule-workspace" aria-label="График производства работ">
@@ -618,6 +646,16 @@ export function ProductionScheduleWorkspace({
             <button aria-pressed={filter === value} className={filter === value ? "active" : ""} key={value} onClick={() => setFilter(value)} type="button">{label}<span>{count}</span></button>
           ))}
         </div>
+        <div className="production-gantt-controls" aria-label="Управление диаграммой">
+          <div className="production-gantt-zoom" role="group" aria-label="Масштаб диаграммы">
+            <button aria-label="Уменьшить масштаб" disabled={timelineZoom <= 1} onClick={() => setTimelineZoom((value) => Math.max(1, Number((value - 0.25).toFixed(2))))} type="button"><Minus size={15} /></button>
+            <output aria-live="polite">{Math.round(timelineZoom * 100)}%</output>
+            <button aria-label="Увеличить масштаб" disabled={timelineZoom >= 2.5} onClick={() => setTimelineZoom((value) => Math.min(2.5, Number((value + 0.25).toFixed(2))))} type="button"><Plus size={15} /></button>
+          </div>
+          <button disabled={scale.todayLeft === null} onClick={scrollToToday} type="button"><LocateFixed size={15} />Сегодня</button>
+          <button onClick={toggleAllGroups} type="button"><ChevronDown size={15} />{allExpanded ? "Свернуть этапы" : "Раскрыть этапы"}</button>
+          <button onClick={() => void openFullscreen()} type="button"><Maximize2 size={15} />На весь экран</button>
+        </div>
       </div>
 
       {canEdit ? (
@@ -637,6 +675,7 @@ export function ProductionScheduleWorkspace({
         </details>
       ) : null}
 
+      <div className="production-gantt-viewport" ref={timelineViewportRef} style={{ "--atlas-timeline-zoom": timelineZoom } as React.CSSProperties}>
       <div className="production-phase-list" id="production-gantt">
         <div className="production-gantt-axis" aria-hidden="true">
           <span className="production-gantt-axis-title">Этап / работа</span>
@@ -687,6 +726,7 @@ export function ProductionScheduleWorkspace({
             <span>{scheduleItems.length ? "Измените фильтр или поисковый запрос." : "Работы можно добавить вручную или сформировать из загруженной ВОР."}</span>
           </div>
         ) : null}
+      </div>
       </div>
       </div>
 

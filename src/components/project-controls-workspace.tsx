@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Activity, CalendarClock, CheckCheck, CircleDollarSign, Gauge, History, LockKeyhole, RefreshCw, Save, ShieldCheck } from "lucide-react";
+import { InteractiveChart } from "@/components/charts/interactive-chart";
 import type {
   ProjectControlBaselinePreview,
   ProjectControlBaselineRecord,
@@ -108,6 +109,29 @@ export function ProjectControlsWorkspace({ projectId, role, onNavigate }: Props)
     latestPeriod?.schedulePerformanceIndex ?? null,
     latestPeriod?.actualCost ? latestPeriod.actualCostCoveragePercent : 100
   );
+  const performanceChartData = useMemo(() => {
+    const periods = (data?.periods ?? [])
+      .filter((item) => item.status !== "void")
+      .slice()
+      .reverse()
+      .map((item) => ({
+        label: dateValue(item.dataDate),
+        planned: item.plannedValue,
+        earned: item.earnedValue,
+        actual: item.actualCost,
+        bac: item.budgetAtCompletion
+      }));
+    if (displayedPeriod) {
+      periods.push({
+        label: `${dateValue(displayedPeriod.summary.dataDate)} preview`,
+        planned: displayedPeriod.summary.plannedValue,
+        earned: displayedPeriod.summary.earnedValue,
+        actual: displayedPeriod.summary.actualCost,
+        bac: displayedPeriod.summary.budgetAtCompletion
+      });
+    }
+    return periods;
+  }, [data?.periods, displayedPeriod]);
 
   async function baselineRequest(mode: "preview" | "create") {
     setLoading(`baseline-${mode}`);
@@ -259,11 +283,18 @@ export function ProjectControlsWorkspace({ projectId, role, onNavigate }: Props)
       <div className="project-controls-body">
         <article className="project-controls-section">
           <div className="section-title"><Activity size={18} /><h4>План / освоение / факт</h4></div>
-          <ValueBars
-            bac={displayedPeriod?.summary.budgetAtCompletion ?? latestPeriod?.budgetAtCompletion ?? 0}
-            planned={displayedPeriod?.summary.plannedValue ?? latestPeriod?.plannedValue ?? 0}
-            earned={displayedPeriod?.summary.earnedValue ?? latestPeriod?.earnedValue ?? 0}
-            actual={displayedPeriod?.summary.actualCost ?? latestPeriod?.actualCost ?? 0}
+          <InteractiveChart
+            data={performanceChartData}
+            description="S-кривая сравнивает плановую стоимость, освоенный объём и подтверждённый факт по отчётным периодам."
+            height={300}
+            series={[
+              { key: "planned", label: "PV · план", color: "#1b6670", type: "line", format: "money" },
+              { key: "earned", label: "EV · освоено", color: "#087a70", type: "area", format: "money" },
+              { key: "actual", label: "AC · факт", color: "#b84721", type: "line", format: "money" },
+              { key: "bac", label: "BAC", color: "#8a9093", type: "line", format: "money", dashed: true }
+            ]}
+            title="S-кривая Project Controls"
+            xKey="label"
           />
         </article>
         <article className="project-controls-section">
@@ -299,21 +330,6 @@ function BaselinePreview({ model }: { model: ProjectControlBaselinePreview }) {
 
 function Metric({ title, value, detail, tone }: { title: string; value: string; detail: string; tone: ProjectControlTone }) {
   return <div className={`quality-issues-card metric tone-${tone}`}><small>{title}</small><strong>{value}</strong><span>{detail}</span></div>;
-}
-
-function ValueBars({ bac, planned, earned, actual }: { bac: number; planned: number; earned: number; actual: number }) {
-  const maximum = Math.max(bac, planned, earned, actual, 1);
-  const rows = [
-    { label: "BAC", value: bac, className: "bac" },
-    { label: "PV", value: planned, className: "planned" },
-    { label: "EV", value: earned, className: "earned" },
-    { label: "AC", value: actual, className: "actual" }
-  ];
-  return <div className="project-controls-bars">{rows.map((row) => <div className="project-controls-bar-row" key={row.label}>
-    <span>{row.label}</span>
-    <div className="project-controls-bar-track"><span className={row.className} style={{ width: `${Math.max((row.value / maximum) * 100, row.value ? 2 : 0)}%` }} /></div>
-    <strong>{money(row.value)}</strong>
-  </div>)}</div>;
 }
 
 function PeriodHistory({ items, canLock, loading, onLock }: { items: ProjectControlPeriodRecord[]; canLock: boolean; loading: string; onLock: (period: ProjectControlPeriodRecord) => Promise<void> }) {

@@ -204,6 +204,24 @@ export function ProjectWorkspace({
     if (details) details.open = true;
     window.requestAnimationFrame(() => element.scrollIntoView({ behavior: "smooth", block: "start" }));
   }, []);
+  const navigateProjectTab = useCallback((tab: ProjectTab | string) => {
+    if (!projectTabs.includes(tab as ProjectTab)) return;
+    const nextTab = tab as ProjectTab;
+    setActiveTab(nextTab);
+    const url = new URL(window.location.href);
+    url.searchParams.set("tab", nextTab);
+    window.history.pushState({ tab: nextTab }, "", url);
+    window.requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "smooth" }));
+  }, []);
+
+  useEffect(() => {
+    const syncFromHistory = () => {
+      const tab = new URL(window.location.href).searchParams.get("tab");
+      if (tab && projectTabs.includes(tab as ProjectTab)) setActiveTab(tab as ProjectTab);
+    };
+    window.addEventListener("popstate", syncFromHistory);
+    return () => window.removeEventListener("popstate", syncFromHistory);
+  }, []);
 
   const budget = useMemo(() => budgetTotals(initialBundle.project.contractAmount, budgetItems), [budgetItems, initialBundle.project.contractAmount]);
   const works = useMemo(() => workTotals(scheduleItems), [scheduleItems]);
@@ -831,16 +849,33 @@ export function ProjectWorkspace({
             <span>РП: {initialBundle.project.manager}</span>
           </div>
         </div>
+        <div className="project-atlas-signals" aria-label="Ключевые сигналы проекта">
+          <div className="project-atlas-signal tone-good">
+            <small>Готовность</small>
+            <strong>{percent(works.completionPercent)}</strong>
+            <span>{works.overdueItems.length ? `${works.overdueItems.length} работ просрочено` : "без просроченных работ"}</span>
+          </div>
+          <div className={`project-atlas-signal ${works.delayDays ? "tone-bad" : "tone-good"}`}>
+            <small>Срок</small>
+            <strong>{works.delayDays ? `+${works.delayDays} дн.` : "По плану"}</strong>
+            <span>{works.delayDays ? "максимальное отклонение" : "критичных отклонений нет"}</span>
+          </div>
+          <div className={`project-atlas-signal ${budgetDeviation > 0 ? "tone-warn" : "tone-good"}`}>
+            <small>Прогноз бюджета</small>
+            <strong>{budgetDeviation ? money(budgetDeviation) : "В коридоре"}</strong>
+            <span>{budgetDeviation > 0 ? "к плановой себестоимости" : "перерасход не выявлен"}</span>
+          </div>
+        </div>
         {activeTab === "Обзор" && <div className="page-header-actions">
-          <button className="button secondary" type="button" onClick={() => setActiveTab("Бюджет / ВОР")}>
+          <button className="button secondary" type="button" onClick={() => navigateProjectTab("Бюджет / ВОР")}>
             <Table2 size={18} />
             Импорт ВОР
           </button>
-          <button className="button secondary" type="button" onClick={() => setActiveTab("Рапорты")}>
+          <button className="button secondary" type="button" onClick={() => navigateProjectTab("Рапорты")}>
             <ClipboardList size={18} />
             Добавить рапорт
           </button>
-          <button className="button primary" type="button" onClick={() => setActiveTab("AI-помощник")}>
+          <button className="button primary" type="button" onClick={() => navigateProjectTab("AI-помощник")}>
             <Bot size={18} />
             AI-анализ
           </button>
@@ -848,7 +883,7 @@ export function ProjectWorkspace({
       </div>
 
       <div className="workspace-layout workspace-layout-full project-workspace-layout">
-        <ProjectModuleMenu activeTab={activeProjectTab} onSelect={setActiveTab} />
+        <ProjectModuleMenu activeTab={activeProjectTab} onSelect={navigateProjectTab} />
         <div className="project-workspace-content">
           {activeTab !== "Обзор" && (
             <ProjectSectionGuide
@@ -856,7 +891,7 @@ export function ProjectWorkspace({
               signals={sectionSignals}
               priorities={sectionPriorities}
               lastEvent={lastProjectEvent}
-              onNavigate={setActiveTab}
+              onNavigate={navigateProjectTab}
             />
           )}
           {(saving || error) && (

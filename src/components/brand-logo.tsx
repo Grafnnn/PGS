@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 type BrandLogoProps = {
-  href?: "/dashboard" | "/login";
+  href?: "/dashboard" | "/login" | null;
   compact?: boolean;
 };
 

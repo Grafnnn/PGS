@@ -226,40 +226,6 @@ function InboxBell() {
   );
 }
 
-function NavigationRail({ onOpen }: { onOpen: () => void }) {
-  const pathname = usePathname();
-  const workItems = APP_NAVIGATION_ITEMS.filter((item) => item.group === "Работа");
-  const settingsItems = APP_NAVIGATION_ITEMS.filter((item) => item.group === "Настройки");
-
-  const links = (items: AppNavigationItem[]) => items.map((item) => (
-    <Link
-      aria-current={isNavigationItemActive(pathname, item) ? "page" : undefined}
-      className={isNavigationItemActive(pathname, item) ? "active" : undefined}
-      href={item.href as Route}
-      key={item.id}
-      title={item.label}
-    >
-      {navigationIcons[item.id]}
-      <span>{item.label}</span>
-    </Link>
-  ));
-
-  return (
-    <aside className="app-rail" aria-label="Быстрая навигация">
-      <BrandLogo compact />
-      <button aria-label="Открыть все разделы" className="rail-menu-button" onClick={onOpen} title="Все разделы" type="button">
-        <Menu size={20} />
-      </button>
-      <Link className="rail-create-button" href={"/projects#create-project" as Route} title="Новый проект">
-        <Plus size={20} />
-        <span>Создать</span>
-      </Link>
-      <nav className="rail-links" aria-label="Рабочие разделы">{links(workItems)}</nav>
-      <nav className="rail-links rail-links-bottom" aria-label="Системные разделы">{links(settingsItems)}</nav>
-    </aside>
-  );
-}
-
 export function AppNav({ children }: { children: ReactNode }) {
   const sheetId = useId();
   const pathname = usePathname();
@@ -277,6 +243,7 @@ export function AppNav({ children }: { children: ReactNode }) {
   }, []);
 
   const openNavigation = useCallback(() => {
+    window.dispatchEvent(new Event("pgs:global-navigation-open"));
     setNavigationOpen(true);
   }, []);
 
@@ -296,9 +263,13 @@ export function AppNav({ children }: { children: ReactNode }) {
   }, [openNavigation]);
 
   useEffect(() => {
+    const closeForProjectNavigation = () => closeNavigation();
+    window.addEventListener("pgs:project-navigation-open", closeForProjectNavigation);
+    return () => window.removeEventListener("pgs:project-navigation-open", closeForProjectNavigation);
+  }, [closeNavigation]);
+
+  useEffect(() => {
     if (!navigationOpen) return;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
     const previousFocus = document.activeElement as HTMLElement | null;
     requestAnimationFrame(() => searchInput.current?.focus());
 
@@ -325,7 +296,6 @@ export function AppNav({ children }: { children: ReactNode }) {
 
     document.addEventListener("keydown", handleKeyDown);
     return () => {
-      document.body.style.overflow = previousOverflow;
       document.removeEventListener("keydown", handleKeyDown);
       previousFocus?.focus();
     };
@@ -338,10 +308,12 @@ export function AppNav({ children }: { children: ReactNode }) {
   return (
     <div className="app-shell">
       <PwaRegister />
-      <NavigationRail onOpen={openNavigation} />
-
       <div className="app-main">
         <header className="topbar">
+          <Link aria-label="PGS Studio" className="atlas-brand" href="/dashboard">
+            <BrandLogo compact href={null} />
+            <span><strong>PGS</strong><small>Project Atlas</small></span>
+          </Link>
           <button
             aria-controls={sheetId}
             aria-expanded={navigationOpen}
@@ -353,19 +325,30 @@ export function AppNav({ children }: { children: ReactNode }) {
           >
             <Menu size={19} />
           </button>
-          <div className="topbar-route">
-            <span>PGS Studio</span>
-            <ChevronRight size={13} aria-hidden="true" />
-            <strong>{activeItem?.label ?? "Рабочая область"}</strong>
-          </div>
+          <nav className="atlas-global-nav" aria-label="Основные разделы PGS">
+            {APP_NAVIGATION_ITEMS.filter((item) => item.group === "Работа").map((item) => (
+              <Link
+                aria-current={isNavigationItemActive(pathname, item) ? "page" : undefined}
+                className={isNavigationItemActive(pathname, item) ? "active" : undefined}
+                href={item.href as Route}
+                key={item.id}
+              >
+                {item.label}
+              </Link>
+            ))}
+          </nav>
           <button className="command-trigger" onClick={openNavigation} type="button">
             <Search size={17} aria-hidden="true" />
-            <span>Быстрый переход</span>
+            <span>Поиск и команды</span>
             <kbd>⌘ K</kbd>
           </button>
           <div className="topbar-actions">
             <span className="topbar-context"><i /> Система в норме</span>
             <InboxBell />
+            <button aria-expanded={navigationOpen} className="atlas-all-sections" onClick={openNavigation} type="button">
+              <Menu size={16} />
+              <span>Все разделы</span>
+            </button>
             <Link className="button primary" href="/projects#create-project" title="Создать проект">
               <Plus size={17} />
               <span>Создать</span>
@@ -378,9 +361,9 @@ export function AppNav({ children }: { children: ReactNode }) {
       {navigationOpen ? (
         <>
           <button aria-label="Закрыть навигацию" className="navigation-backdrop" onClick={closeNavigation} type="button" />
-          <aside aria-label="Навигация PGS" className="navigation-sheet" id={sheetId} ref={sheetRef}>
+          <aside aria-label="Навигация PGS" aria-modal="true" className="navigation-sheet" id={sheetId} ref={sheetRef} role="dialog">
             <header className="navigation-sheet-header">
-              <BrandLogo />
+              <div><small>PGS Project Atlas</small><strong>{activeItem?.label ?? "Рабочая область"}</strong></div>
               <button aria-label="Закрыть навигацию" className="icon-button" onClick={closeNavigation} title="Закрыть" type="button">
                 <X size={18} />
               </button>
