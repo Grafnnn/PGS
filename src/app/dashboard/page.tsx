@@ -1,7 +1,8 @@
 import Link from "next/link";
 import type { Route } from "next";
 import { redirect } from "next/navigation";
-import { AlertTriangle, Banknote, BarChart3, CalendarClock, FolderKanban, Layers3, PackageCheck, Sparkles } from "lucide-react";
+import { AlertTriangle, Banknote, CalendarClock, FolderKanban, Layers3, PackageCheck, Sparkles } from "lucide-react";
+import { InteractiveChart } from "@/components/charts/interactive-chart";
 import { budgetTotals, deriveAutoRisks, financeTotals, materialTotals, money, percent, workTotals } from "@/lib/calculations";
 import { loadDashboardData } from "@/lib/project-page-data";
 import { getCurrentUser } from "@/lib/auth/session";
@@ -51,7 +52,7 @@ export default async function DashboardPage() {
     activeRisks[0] ? `Риск: ${activeRisks[0].title}` : "Новых критичных рисков нет",
     budgetDeviation > 0 ? `Бюджет: перерасход ${compactMoney(budgetDeviation)}` : "Бюджет в допустимом коридоре"
   ];
-  const cashFlowSeries = bundle.payments.slice(0, 6).map((payment) => ({
+  const cashFlowSeries = bundle.payments.slice().sort((left, right) => new Date(left.plannedAt).getTime() - new Date(right.plannedAt).getTime()).slice(0, 12).map((payment) => ({
     label: new Date(payment.plannedAt).toLocaleDateString("ru-RU", { day: "2-digit", month: "2-digit" }),
     value: payment.direction === "incoming" ? payment.amount : -payment.amount
   }));
@@ -60,7 +61,10 @@ export default async function DashboardPage() {
       acc[item.kind] = (acc[item.kind] ?? 0) + item.qty * item.forecastUnitPrice;
       return acc;
     }, {})
-  ).map(([label, value]) => ({ label, value }));
+  ).map(([label, value]) => ({
+    label: ({ work: "Работы", material: "Материалы", subcontract: "Субподряд", overhead: "Накладные" } as Record<string, string>)[label] ?? label,
+    value
+  }));
 
   return (
     <main className="page">
@@ -97,7 +101,7 @@ export default async function DashboardPage() {
         <Kpi title="Требуют внимания" value={String(attentionCount)} hint="Сроки, риски, заявки, материалы" tone={attentionCount ? "bad" : "good"} icon={<AlertTriangle size={18} />} />
       </section>
 
-      <section className="dashboard-command-grid">
+      <section className="dashboard-command-grid dashboard-command-single">
         <div className="panel stack ai-command-card">
           <div className="section-title">
             <Sparkles size={18} />
@@ -118,16 +122,26 @@ export default async function DashboardPage() {
             <Link className="button secondary" href={primaryProjectRoute}>Подготовить письмо</Link>
           </div>
         </div>
-        <div className="panel stack portfolio-chart-panel">
-          <div className="section-title">
-            <BarChart3 size={18} />
-            <h2>Портфельная аналитика</h2>
-          </div>
-          <div className="mini-chart-grid">
-            <MiniBars title="Денежный поток" items={cashFlowSeries} />
-            <MiniBars title="Структура затрат" items={costStructure} />
-          </div>
-        </div>
+      </section>
+
+      <section className="dashboard-atlas-charts" aria-label="Портфельная аналитика">
+        <InteractiveChart
+          data={cashFlowSeries}
+          description="Плановые входящие и исходящие платежи по ближайшим датам. Наведите курсор для точного значения."
+          height={290}
+          series={[{ key: "value", label: "Чистый поток", color: "#087a70", type: "area", format: "money" }]}
+          summary={cashFlowSeries.length ? "Отрицательные значения показывают финансовую нагрузку проекта." : "Платёжный календарь ещё не заполнен."}
+          title="Денежный поток"
+          xKey="label"
+        />
+        <InteractiveChart
+          data={costStructure}
+          description="Прогнозная себестоимость по видам затрат из ВОР. Серии можно скрывать, данные — открыть таблицей."
+          height={290}
+          series={[{ key: "value", label: "Себестоимость", color: "#b84721", type: "bar", format: "money" }]}
+          title="Структура затрат"
+          xKey="label"
+        />
       </section>
 
       <details className="panel compact-details dashboard-secondary-details">
@@ -163,23 +177,6 @@ export default async function DashboardPage() {
         </div>
       </section>
     </main>
-  );
-}
-
-function MiniBars({ title, items }: { title: string; items: Array<{ label: string; value: number }> }) {
-  const max = Math.max(...items.map((item) => Math.abs(item.value)), 1);
-  return (
-    <div className="mini-chart">
-      <div className="mini-chart-title">{title}</div>
-      <div className="mini-bars">
-        {items.map((item) => (
-          <div className="mini-bar" key={item.label} title={`${item.label}: ${compactMoney(item.value)}`}>
-            <span className={item.value < 0 ? "negative" : ""} style={{ height: `${Math.max(8, (Math.abs(item.value) / max) * 100)}%` }} />
-            <small>{item.label.length > 9 ? `${item.label.slice(0, 8)}...` : item.label}</small>
-          </div>
-        ))}
-      </div>
-    </div>
   );
 }
 

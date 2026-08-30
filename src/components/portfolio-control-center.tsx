@@ -3,6 +3,7 @@
 import Link from "next/link";
 import React, { useMemo, useState } from "react";
 import { AlertTriangle, ArrowUpRight, Banknote, CalendarClock, CircleGauge, Filter, Users } from "lucide-react";
+import { InteractiveChart } from "@/components/charts/interactive-chart";
 import type { PortfolioControlModel, PortfolioHealth, PortfolioProjectRow } from "@/lib/portfolio-control";
 
 type FilterValue = "all" | PortfolioHealth;
@@ -160,16 +161,17 @@ function PortfolioRow({ project }: { project: PortfolioProjectRow }) {
 }
 
 function CashflowChart({ items }: { items: PortfolioControlModel["cashflow"] }) {
-  const max = Math.max(1, ...items.flatMap((item) => [item.incoming, item.outgoing]));
   if (!items.length) return <div className="portfolio-empty">Нет платежного календаря для портфельного графика.</div>;
-  return (
-    <div className="portfolio-cashflow-chart" aria-label="Плановый cash-flow по месяцам">
-      {items.map((item) => (
-        <div className="portfolio-cashflow-column" key={item.month} title={`${item.label}: вход ${compactMoney(item.incoming)}, выход ${compactMoney(item.outgoing)}`}>
-          <div className="portfolio-cashflow-bars"><i className="incoming" style={{ height: `${Math.max(4, item.incoming / max * 100)}%` }} /><i className="outgoing" style={{ height: `${Math.max(4, item.outgoing / max * 100)}%` }} /></div>
-          <small>{item.label}</small>
-        </div>
-      ))}
-    </div>
-  );
+  return <InteractiveChart
+    data={items.map((item) => ({ label: item.label, incoming: item.incoming, outgoing: item.outgoing, net: item.incoming - item.outgoing }))}
+    description="Входящий и исходящий поток по портфелю с расчётом чистой позиции."
+    height={300}
+    series={[
+      { key: "incoming", label: "Поступления", color: "#087a70", type: "bar", format: "money" },
+      { key: "outgoing", label: "Платежи", color: "#b84721", type: "bar", format: "money" },
+      { key: "net", label: "Чистый поток", color: "#1b6670", type: "line", format: "money" }
+    ]}
+    title="Плановый cash-flow"
+    xKey="label"
+  />;
 }

@@ -137,9 +137,14 @@ describe("ProductionScheduleWorkspace", () => {
     const trackCount = html.match(/production-gantt-track/g)?.length ?? 0;
 
     expect(html).toContain("production-gantt-axis");
+    expect(html).toContain("production-gantt-viewport");
     expect(html).toContain("production-phase tone-");
     expect(html).toContain("production-work-row tone-");
     expect(html).toContain("role=\"img\"");
+    expect(html).toContain("aria-label=\"Управление диаграммой\"");
+    expect(html).toContain("aria-label=\"Увеличить масштаб\"");
+    expect(html).toContain("Раскрыть этапы");
+    expect(html).toContain("Сегодня");
     expect(html).toContain("Период:");
     expect(trackCount).toBeGreaterThanOrEqual(5);
     expect(html).not.toContain("NaN%");
