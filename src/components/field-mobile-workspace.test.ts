@@ -9,6 +9,8 @@ describe("FieldMobileWorkspace", () => {
     const html = renderToStaticMarkup(createElement(FieldMobileWorkspace, {
       projectId: "project-1",
       projectName: "Тестовый объект",
+      scheduleItems: [],
+      materials: [],
       currentUser: { authenticated: true, role: "MANAGER", name: "Прораб" },
       currentUserLoaded: true,
       onReportSynced: () => undefined,
@@ -19,6 +21,8 @@ describe("FieldMobileWorkspace", () => {
     expect(html).toContain("Сохранить на устройстве");
     expect(html).toContain("Фактическая выработка смены");
     expect(html).toContain("Добавить работу");
+    expect(html).toContain("Движение материалов");
+    expect(html).toContain("Техника и машино-часы");
     expect(html).toContain("Синхронизировать (0)");
     expect(html).toContain("FIFO · только явная отправка");
     expect(html).toContain("Редактирование серверных записей offline не выполняется");

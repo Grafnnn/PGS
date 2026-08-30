@@ -154,7 +154,13 @@ export interface DailyReport {
   downtime: string;
   issues: string;
   workOutputs?: DailyReportWorkOutput[];
+  materialActuals?: DailyReportMaterialActual[];
+  equipmentActuals?: DailyReportEquipmentActual[];
   status: "draft" | "submitted" | "checked" | "approved";
+  impactStatus?: "pending" | "applying" | "applied" | "not_applicable";
+  impactAppliedAt?: string | null;
+  impactAppliedBy?: string | null;
+  impactSummary?: DailyReportImpactSummary | null;
 }
 
 export interface DailyReportWorkOutput {
@@ -163,6 +169,35 @@ export interface DailyReportWorkOutput {
   quantity: number;
   unit: string;
   laborHours: number;
+  scheduleItemId?: string | null;
+}
+
+export interface DailyReportMaterialActual {
+  materialId: string;
+  kind: "received" | "consumed";
+  quantity: number;
+  unit: string;
+  note?: string;
+}
+
+export interface DailyReportEquipmentActual {
+  name: string;
+  quantity: number;
+  hours: number;
+  downtimeHours: number;
+  note?: string;
+}
+
+export interface DailyReportImpactSummary {
+  scheduleItemCount: number;
+  progressEntryCount: number;
+  materialUpdateCount: number;
+  linkedWorkOutputCount: number;
+  unlinkedWorkOutputCount: number;
+  laborHours: number;
+  equipmentHours: number;
+  acceptanceCandidateCount: number;
+  actionId?: string | null;
 }
 
 export type ResourceKind = "worker" | "engineer" | "crew" | "equipment";

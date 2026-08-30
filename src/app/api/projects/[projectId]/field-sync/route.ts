@@ -65,6 +65,8 @@ export async function POST(request: NextRequest, { params }: { params: { project
           data: {
             ...input.payload,
             workOutputs: input.payload.workOutputs as unknown as Prisma.InputJsonValue,
+            materialActuals: input.payload.materialActuals as unknown as Prisma.InputJsonValue,
+            equipmentActuals: input.payload.equipmentActuals as unknown as Prisma.InputJsonValue,
             status: "draft",
             organizationId: project.organizationId,
             projectId: params.projectId,

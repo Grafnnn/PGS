@@ -8,9 +8,13 @@ describe("ReportsWorkflow", () => {
     const html = renderToStaticMarkup(createElement(ReportsWorkflow, {
       projectId: "project-1",
       reports: [],
+      scheduleItems: [],
+      materials: [],
       currentUser: { authenticated: true, role: "MANAGER", name: "РП" },
       currentUserLoaded: true,
-      onReportsChange: () => undefined
+      onReportsChange: () => undefined,
+      onScheduleItemsChange: () => undefined,
+      onMaterialsChange: () => undefined
     }));
     expect(html).toContain("Процесс ежедневного рапорта");
     expect(html).toContain("Новый рапорт");
@@ -25,9 +29,13 @@ describe("ReportsWorkflow", () => {
     const html = renderToStaticMarkup(createElement(ReportsWorkflow, {
       projectId: "project-1",
       reports: [],
+      scheduleItems: [],
+      materials: [],
       currentUser: { authenticated: true, role: "VIEWER" },
       currentUserLoaded: true,
-      onReportsChange: () => undefined
+      onReportsChange: () => undefined,
+      onScheduleItemsChange: () => undefined,
+      onMaterialsChange: () => undefined
     }));
     expect(html).not.toContain("Новый рапорт");
     expect(html).not.toContain("Сформировать версию");
@@ -36,6 +44,8 @@ describe("ReportsWorkflow", () => {
   it("shows approved measurable output and its normalized monthly productivity", () => {
     const html = renderToStaticMarkup(createElement(ReportsWorkflow, {
       projectId: "project-1",
+      scheduleItems: [],
+      materials: [],
       reports: [{
         id: "report-1",
         projectId: "project-1",
@@ -55,7 +65,9 @@ describe("ReportsWorkflow", () => {
       }],
       currentUser: { authenticated: true, role: "MANAGER", name: "РП" },
       currentUserLoaded: true,
-      onReportsChange: () => undefined
+      onReportsChange: () => undefined,
+      onScheduleItemsChange: () => undefined,
+      onMaterialsChange: () => undefined
     }));
     expect(html).toContain("Каменщик");
     expect(html).toContain("100 м²/чел.-мес.");

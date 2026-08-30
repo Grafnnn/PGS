@@ -1,5 +1,9 @@
 import { z } from "zod";
 import { dailyReportWorkOutputsSchema } from "@/lib/daily-report-work-outputs";
+import {
+  dailyReportEquipmentActualsSchema,
+  dailyReportMaterialActualsSchema
+} from "@/lib/daily-report-actuals";
 
 export const fieldClientMutationIdSchema = z.string().trim().min(8).max(120).regex(/^[A-Za-z0-9_-]+$/);
 
@@ -15,7 +19,9 @@ const dailyReportPayloadSchema = z.object({
   materialsConsumed: z.string().trim().max(6000).default(""),
   downtime: z.string().trim().max(6000).default(""),
   issues: z.string().trim().max(6000).default(""),
-  workOutputs: dailyReportWorkOutputsSchema.default([])
+  workOutputs: dailyReportWorkOutputsSchema.default([]),
+  materialActuals: dailyReportMaterialActualsSchema.default([]),
+  equipmentActuals: dailyReportEquipmentActualsSchema.default([])
 }).strict();
 
 const fieldIssuePayloadSchema = z.object({

@@ -1375,7 +1375,11 @@ export function ProjectWorkspace({
             currentUserLoaded={currentUserLoaded}
             projectId={initialBundle.project.id}
             reports={reports}
+            scheduleItems={scheduleItems}
+            materials={materials}
             onReportsChange={setReports}
+            onScheduleItemsChange={setScheduleItems}
+            onMaterialsChange={setMaterials}
           />
           <WorkspaceTools title="Аналитика рапортов и подтверждения" description="Производственный факт, качество, фото и управленческий отчет">
             <FieldOperationsWorkspace
@@ -1447,6 +1451,8 @@ export function ProjectWorkspace({
             currentUserLoaded={currentUserLoaded}
             projectId={initialBundle.project.id}
             projectName={initialBundle.project.name}
+            scheduleItems={scheduleItems}
+            materials={materials}
             onReportSynced={(item) => setReports((items) => items.some((current) => current.id === item.id) ? items : [item, ...items])}
             onDocumentSynced={(item) => setDocuments((items) => items.some((current) => current.id === item.id) ? items : [item, ...items])}
           />
