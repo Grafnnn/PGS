@@ -240,6 +240,41 @@ export interface AvailableWorkforceResource {
   }>;
 }
 
+export type WorkforceAdmissionRequestStatus = "draft" | "approved" | "rejected";
+export type WorkforceAdmissionMemberStatus = "pending" | "approved" | "rejected";
+
+export interface WorkforceAdmissionMember {
+  id: string;
+  resourceId?: string | null;
+  fullName: string;
+  profession: string;
+  kind: "worker" | "engineer";
+  birthDate?: string | null;
+  citizenship?: string | null;
+  documentType?: string | null;
+  documentLast4?: string | null;
+  status: WorkforceAdmissionMemberStatus;
+}
+
+export interface WorkforceAdmissionRequest {
+  id: string;
+  projectId: string;
+  requestNumber: string;
+  title: string;
+  contractor: string;
+  objectName: string;
+  validFrom: string;
+  validUntil?: string | null;
+  workScope: string;
+  employmentType: "staff" | "hired" | "subcontract";
+  status: WorkforceAdmissionRequestStatus;
+  sourceFileName?: string | null;
+  notes?: string | null;
+  approvedAt?: string | null;
+  createdAt: string;
+  members: WorkforceAdmissionMember[];
+}
+
 export interface ProjectPayrollPolicy {
   id?: string;
   projectId: string;

@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { buildResourcesEquipmentIntelligence, type ResourcesEquipmentTone } from "@/lib/resources-equipment-intelligence";
+import { WorkforceAdmissionRequests } from "@/components/workforce-admission-requests";
 import {
   buildWorkforceCapacitySummary,
   buildWorkforceEconomics,
@@ -53,7 +54,7 @@ import type {
   WorkforceResource
 } from "@/lib/types";
 
-type ViewMode = "economics" | "staffing" | "team" | "demand" | "settings";
+type ViewMode = "economics" | "staffing" | "team" | "requests" | "demand" | "settings";
 
 type Props = {
   projectId: string;
@@ -710,6 +711,9 @@ export function ResourcesEquipmentWorkspace(props: Props) {
               <button className="button secondary compact-button" type="button" onClick={openImport}>
                 <Upload size={16} /> Реестр Excel
               </button>
+              <button className="button secondary compact-button" type="button" onClick={() => setMode("requests")}>
+                <ClipboardList size={16} /> Заявка
+              </button>
               <button className="button primary compact-button" type="button" onClick={() => openCreate()}>
                 <Plus size={16} /> Сотрудник
               </button>
@@ -725,6 +729,7 @@ export function ResourcesEquipmentWorkspace(props: Props) {
         <button className={mode === "economics" ? "active" : ""} type="button" onClick={() => setMode("economics")}><Calculator size={15} /> Экономика</button>
         <button className={mode === "staffing" ? "active" : ""} type="button" onClick={() => setMode("staffing")}><UserRoundSearch size={15} /> Комплектование</button>
         <button className={mode === "team" ? "active" : ""} type="button" onClick={() => setMode("team")}><Users size={15} /> Штат</button>
+        {canEdit ? <button className={mode === "requests" ? "active" : ""} type="button" onClick={() => setMode("requests")}><ClipboardList size={15} /> Заявки на допуск</button> : null}
         <button className={mode === "demand" ? "active" : ""} type="button" onClick={() => setMode("demand")}><FileSpreadsheet size={15} /> Потребность по ВОР</button>
         <button className={mode === "settings" ? "active" : ""} type="button" onClick={() => setMode("settings")}><ShieldCheck size={15} /> Начисления</button>
       </div>
@@ -1037,6 +1042,10 @@ export function ResourcesEquipmentWorkspace(props: Props) {
             <div className="quality-issues-actions"><button className="button secondary compact-button" type="button" onClick={() => props.onNavigate("Рапорты")}><ClipboardList size={16} /> Рапорты</button><button className="button secondary compact-button" type="button" onClick={() => props.onNavigate("График")}><TimerReset size={16} /> График</button></div>
           </div>
         </>
+      ) : null}
+
+      {mode === "requests" && canEdit ? (
+        <WorkforceAdmissionRequests project={props.project} projectId={props.projectId} onResourcesChanged={loadResources} />
       ) : null}
 
       {mode === "demand" ? (

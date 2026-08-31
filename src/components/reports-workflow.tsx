@@ -12,6 +12,7 @@ import {
   Plus,
   RefreshCw,
   Save,
+  Search,
   Send,
   ShieldCheck,
   Users,
@@ -115,6 +116,7 @@ export function ReportsWorkflow({ projectId, reports, currentUser, currentUserLo
   const [copied, setCopied] = useState(false);
   const [workforce, setWorkforce] = useState<WorkforceItem[]>([]);
   const [workforceLoaded, setWorkforceLoaded] = useState(false);
+  const [crewSearch, setCrewSearch] = useState("");
   const [photoFiles, setPhotoFiles] = useState<File[]>([]);
   const [selectedPhotoIds, setSelectedPhotoIds] = useState<string[]>([]);
   const [photoQuestion, setPhotoQuestion] = useState("");
@@ -129,6 +131,11 @@ export function ReportsWorkflow({ projectId, reports, currentUser, currentUserLo
   const evidence = activeReport?.evidenceDocuments?.filter((item) => (item.mimeType ?? "").startsWith("image/")) ?? [];
   const selectedCrew = workforce.filter((item) => form.crewResourceIds.includes(item.resourceId));
   const selectedHeadcount = selectedCrew.reduce((sum, item) => sum + item.headcount, 0);
+  const visibleWorkforce = useMemo(() => {
+    const query = crewSearch.trim().toLocaleLowerCase("ru-RU");
+    if (!query) return workforce;
+    return workforce.filter((item) => `${item.name} ${item.profession}`.toLocaleLowerCase("ru-RU").includes(query));
+  }, [crewSearch, workforce]);
   const missingRequiredFields = form.phase === "open"
     ? [
         !form.author.trim() ? "автор" : "",
@@ -217,6 +224,7 @@ export function ReportsWorkflow({ projectId, reports, currentUser, currentUserLo
     setSelectedPhotoIds([]);
     setPhotoQuestion("");
     setPhotoAnswer(null);
+    setCrewSearch("");
     setError("");
   }
 
@@ -244,6 +252,7 @@ export function ReportsWorkflow({ projectId, reports, currentUser, currentUserLo
     setSelectedPhotoIds(item.evidenceDocuments?.filter((document) => (document.mimeType ?? "").startsWith("image/")).map((document) => document.id).slice(0, 4) ?? []);
     setPhotoQuestion("");
     setPhotoAnswer(null);
+    setCrewSearch("");
     setFormOpen(true);
     setError("");
   }
@@ -255,6 +264,17 @@ export function ReportsWorkflow({ projectId, reports, currentUser, currentUserLo
         ? current.crewResourceIds.filter((id) => id !== resourceId)
         : [...current.crewResourceIds, resourceId]
     }));
+  }
+
+  function selectVisibleCrew() {
+    setForm((current) => ({
+      ...current,
+      crewResourceIds: Array.from(new Set([...current.crewResourceIds, ...visibleWorkforce.map((item) => item.resourceId)]))
+    }));
+  }
+
+  function clearCrew() {
+    setForm((current) => ({ ...current, crewResourceIds: [] }));
   }
 
   function togglePhoto(documentId: string) {
@@ -488,17 +508,26 @@ export function ReportsWorkflow({ projectId, reports, currentUser, currentUserLo
           <section className="daily-crew-picker" aria-label="Состав смены">
             <div className="daily-crew-heading"><span><Users size={18} /><strong>Кто работает</strong></span><small>{selectedHeadcount ? `${selectedHeadcount} чел.` : "Состав не выбран"}</small></div>
             {workforceLoaded && workforce.length ? (
-              <div className="daily-crew-grid">
-                {workforce.map((item) => (
-                  <label className={form.crewResourceIds.includes(item.resourceId) ? "selected" : ""} key={item.resourceId}>
-                    <input checked={form.crewResourceIds.includes(item.resourceId)} type="checkbox" onChange={() => toggleCrew(item.resourceId)} />
-                    <span><strong>{item.name}</strong><small>{item.profession || (item.kind === "engineer" ? "ИТР" : "Рабочий")}{item.headcount > 1 ? ` · ${item.headcount} чел.` : ""}</small></span>
-                  </label>
-                ))}
-              </div>
+              <>
+                <div className="daily-crew-tools">
+                  <label><Search size={15} /><input aria-label="Поиск сотрудника" value={crewSearch} onChange={(event) => setCrewSearch(event.target.value)} placeholder="Найти по ФИО или профессии" /></label>
+                  <button className="button secondary compact-button" disabled={!visibleWorkforce.length} type="button" onClick={selectVisibleCrew}>Выбрать видимых</button>
+                  <button className="button secondary compact-button" disabled={!form.crewResourceIds.length} type="button" onClick={clearCrew}>Очистить</button>
+                </div>
+                {visibleWorkforce.length ? (
+                  <div className="daily-crew-grid">
+                    {visibleWorkforce.map((item) => (
+                      <label className={form.crewResourceIds.includes(item.resourceId) ? "selected" : ""} key={item.resourceId}>
+                        <input checked={form.crewResourceIds.includes(item.resourceId)} type="checkbox" onChange={() => toggleCrew(item.resourceId)} />
+                        <span><strong>{item.name}</strong><small>{item.profession || (item.kind === "engineer" ? "ИТР" : "Рабочий")}{item.headcount > 1 ? ` · ${item.headcount} чел.` : ""}</small></span>
+                      </label>
+                    ))}
+                  </div>
+                ) : <div className="daily-crew-empty"><p>По этому запросу сотрудников нет.</p></div>}
+              </>
             ) : workforceLoaded ? (
               <div className="daily-crew-empty">
-                <p>Сотрудники ещё не назначены на проект. Импортируйте Excel-реестр в блоке «ФОТ и ресурсы» или укажите численность вручную.</p>
+                <p>Сотрудники ещё не назначены на проект. Создайте и согласуйте заявку в «ФОТ» → «Заявки на допуск», импортируйте Excel-реестр или укажите численность вручную.</p>
                 <div><label>Рабочие<input min="0" type="number" value={form.workers} onChange={(event) => setForm({ ...form, workers: Number(event.target.value) })} /></label><label>ИТР<input min="0" type="number" value={form.engineers} onChange={(event) => setForm({ ...form, engineers: Number(event.target.value) })} /></label></div>
               </div>
             ) : <div className="reports-empty">Загружаю состав проекта...</div>}

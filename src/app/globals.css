@@ -8984,6 +8984,38 @@ input[type="checkbox"] {
   font-size: 12px;
 }
 
+.daily-crew-tools {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.daily-crew-tools > label {
+  align-items: center;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  display: flex;
+  flex: 1 1 280px;
+  gap: 7px;
+  min-height: 36px;
+  padding: 0 10px;
+}
+
+.daily-crew-tools > label svg {
+  color: var(--muted);
+  flex: 0 0 auto;
+}
+
+.daily-crew-tools > label input {
+  background: transparent;
+  border: 0;
+  min-width: 0;
+  outline: 0;
+  padding: 0;
+  width: 100%;
+}
+
 .daily-crew-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -9235,6 +9267,163 @@ input[type="checkbox"] {
   min-width: 0;
   overflow-wrap: anywhere;
   font-size: 12px;
+}
+
+.workforce-admission-workspace,
+.workforce-admission-form,
+.workforce-admission-list,
+.workforce-admission-request-body,
+.workforce-admission-approved-members {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.workforce-admission-form {
+  background: var(--panel);
+  border: 1px solid var(--line-strong);
+  padding: 14px;
+}
+
+.workforce-admission-meta {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.workforce-admission-meta .field-wide {
+  grid-column: span 2;
+}
+
+.workforce-admission-members-heading,
+.workforce-admission-members-heading > div,
+.workforce-admission-request summary,
+.workforce-admission-request summary > span,
+.workforce-admission-request-meta {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.workforce-admission-members-heading {
+  justify-content: space-between;
+}
+
+.workforce-admission-members-heading > div:first-child,
+.workforce-admission-request summary > span:first-child,
+.workforce-admission-approved-members > span {
+  display: grid;
+  min-width: 0;
+}
+
+.workforce-admission-members-heading span,
+.workforce-admission-request small,
+.workforce-admission-request-meta,
+.workforce-admission-approved-members small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.workforce-admission-paste {
+  align-items: end;
+  background: var(--panel-muted);
+  border: 1px solid var(--line);
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: 12px;
+}
+
+.workforce-admission-members {
+  border: 1px solid var(--line);
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.workforce-admission-member {
+  align-items: center;
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(230px, 1.5fr) minmax(100px, 0.65fr) minmax(140px, 0.7fr) minmax(150px, 0.9fr) minmax(190px, 1fr) 34px;
+  min-width: 930px;
+  padding: 8px;
+}
+
+.workforce-admission-member:first-child {
+  border-top: 0;
+}
+
+.workforce-admission-member.head {
+  background: var(--panel-muted);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.workforce-admission-member > span {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.workforce-admission-member input,
+.workforce-admission-member select {
+  min-width: 0;
+  width: 100%;
+}
+
+.workforce-admission-request {
+  background: var(--panel);
+  border: 1px solid var(--line);
+}
+
+.workforce-admission-request summary {
+  cursor: pointer;
+  display: grid;
+  grid-template-columns: minmax(220px, 1.4fr) minmax(180px, 0.7fr) auto;
+  list-style: none;
+  min-height: 62px;
+  padding: 10px 12px;
+}
+
+.workforce-admission-request summary::-webkit-details-marker {
+  display: none;
+}
+
+.workforce-admission-request summary svg {
+  color: var(--accent);
+  grid-row: 1 / span 2;
+}
+
+.workforce-admission-request[open] summary {
+  border-bottom: 1px solid var(--line);
+}
+
+.workforce-admission-request-body {
+  padding: 12px;
+}
+
+.workforce-admission-request-meta {
+  flex-wrap: wrap;
+}
+
+.workforce-admission-request-meta span {
+  border-left: 2px solid var(--line-strong);
+  display: grid;
+  gap: 2px;
+  min-width: 180px;
+  padding-left: 8px;
+}
+
+.workforce-admission-approved-members {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.workforce-admission-approved-members > span {
+  border-bottom: 1px solid var(--line);
+  gap: 3px;
+  padding: 8px 0;
 }
 
 .daily-report-output-editor {
@@ -9523,6 +9712,11 @@ input[type="checkbox"] {
   .daily-photo-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .workforce-admission-meta,
+  .workforce-admission-approved-members {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 640px) {
@@ -9548,6 +9742,29 @@ input[type="checkbox"] {
   .daily-photo-grid,
   .daily-crew-empty > div {
     grid-template-columns: 1fr;
+  }
+
+  .daily-crew-tools,
+  .workforce-admission-members-heading,
+  .workforce-admission-paste,
+  .workforce-admission-request summary {
+    align-items: stretch;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .daily-crew-tools .button,
+  .workforce-admission-members-heading .button {
+    flex: 1 1 auto;
+  }
+
+  .workforce-admission-meta,
+  .workforce-admission-approved-members {
+    grid-template-columns: 1fr;
+  }
+
+  .workforce-admission-meta .field-wide {
+    grid-column: auto;
   }
 
   .daily-photo-question .button,
