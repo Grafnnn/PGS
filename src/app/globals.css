@@ -484,10 +484,30 @@
 
 .expense-toolbar { border-bottom: 1px solid var(--line); padding-bottom: 12px; }
 .expense-toolbar label { align-items: center; border: 1px solid var(--line); border-radius: var(--radius-sm); display: flex; gap: 8px; min-width: 220px; padding: 0 10px; }
-.expense-toolbar label:first-child { flex: 1 1 320px; }
+.expense-toolbar > label:first-child { flex: 1 1 320px; }
 .expense-toolbar label > span { color: var(--muted); font-size: 12px; white-space: nowrap; }
 .expense-toolbar input,
 .expense-toolbar select { background: transparent; border: 0; box-shadow: none; min-width: 0; padding-left: 0; padding-right: 0; width: 100%; }
+.expense-toolbar-category { align-items: center; display: flex; gap: 6px; min-width: 0; position: relative; }
+.expense-toolbar-category > label { min-width: 220px; }
+.expense-toolbar-add-category { flex: 0 0 auto; }
+.expense-toolbar-category-composer {
+  align-items: center;
+  background: var(--panel);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow);
+  display: grid;
+  gap: 5px;
+  grid-template-columns: minmax(220px, 1fr) auto auto;
+  padding: 8px;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 7px);
+  width: 370px;
+  z-index: 30;
+}
+.expense-toolbar-category-composer input { background: var(--panel); border: 1px solid var(--line); min-width: 0; padding: 7px 9px; }
 
 .expense-list { display: grid; max-height: 680px; overflow: auto; overscroll-behavior: contain; }
 .expense-row { border-bottom: 1px solid var(--line); min-width: 0; }
@@ -546,6 +566,11 @@
   .expense-row-lines > div { grid-template-columns: minmax(0, 1fr) auto; }
   .expense-row-lines small { grid-column: 1 / -1; }
   .expense-row-details > footer { align-items: stretch; flex-direction: column; }
+  .expense-toolbar { align-items: stretch; }
+  .expense-toolbar > label:first-child { flex-basis: 100%; min-width: 0; }
+  .expense-toolbar-category { flex: 1 1 calc(100% - 50px); }
+  .expense-toolbar-category > label { flex: 1 1 auto; min-width: 0; }
+  .expense-toolbar-category-composer { left: 0; right: auto; width: min(370px, calc(100vw - 60px)); }
 }
 
 /* Document Transmittals & Approval */
