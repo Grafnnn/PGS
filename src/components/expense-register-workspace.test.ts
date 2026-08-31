@@ -9,6 +9,8 @@ describe("ExpenseRegisterWorkspace", () => {
     expect(markup).toContain("Реестр расходов");
     expect(markup).toContain("Без чека");
     expect(markup).toContain("Загрузить чек");
+    expect(markup).toContain("Расходы по статьям");
+    expect(markup).toContain("Диаграмма появится после добавления первого расхода");
     expect(markup).toContain("/api/projects/project-1/expenses/export");
     expect(markup).not.toContain("receipt-preview");
   });

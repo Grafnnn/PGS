@@ -1,14 +1,15 @@
 "use client";
 
-import { AlertTriangle, ChevronDown, Download, FileCheck2, Pencil, Plus, ReceiptText, RefreshCw, Search, Sparkles, Trash2, Upload, X } from "lucide-react";
+import { AlertTriangle, ChartPie, Check, ChevronDown, Download, FileCheck2, Pencil, Plus, ReceiptText, RefreshCw, Search, Sparkles, Trash2, Upload, X } from "lucide-react";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { expenseCategories, expenseCategoryLabels, expensePaymentMethods, expensePaymentMethodLabels, type ExpenseCategory, type ExpensePaymentMethod } from "@/lib/project-expense-config";
+import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
+import { builtInExpenseCategoryOptions, expensePaymentMethods, expensePaymentMethodLabels, type ExpenseCategoryOption, type ExpensePaymentMethod } from "@/lib/project-expense-config";
 import type { ReceiptRecognitionResult } from "@/lib/receipt-recognition";
 
 type ExpenseLine = {
   id?: string;
   name: string;
-  category: ExpenseCategory;
+  category: string;
   quantity: number;
   unit: string;
   unitPrice: number;
@@ -22,7 +23,7 @@ type Expense = {
   expenseDate: string;
   merchant: string;
   documentNumber: string | null;
-  category: ExpenseCategory;
+  category: string;
   paymentMethod: ExpensePaymentMethod;
   currency: string;
   grossAmount: number;
@@ -42,7 +43,7 @@ type Summary = {
   taxAmount: number;
   receipts: number;
   withoutReceipt: number;
-  byCategory: Record<ExpenseCategory, number>;
+  byCategory: Record<string, number>;
 };
 
 type CostCode = { id: string; code: string; name: string };
@@ -52,7 +53,7 @@ type ExpenseForm = {
   expenseDate: string;
   merchant: string;
   documentNumber: string;
-  category: ExpenseCategory;
+  category: string;
   paymentMethod: ExpensePaymentMethod;
   currency: string;
   grossAmount: string;
@@ -93,9 +94,52 @@ function confidenceLabel(value: Expense["recognitionConfidence"]) {
   return "Без распознавания";
 }
 
+const expenseChartColors = ["#0f766e", "#2563eb", "#d97706", "#dc2626", "#7c3aed", "#0891b2", "#65a30d", "#db2777", "#475569", "#b45309", "#0369a1", "#6d28d9"];
+
+function expenseChartColor(value: string) {
+  const hash = [...value].reduce((total, character) => (total * 31 + character.charCodeAt(0)) >>> 0, 0);
+  return expenseChartColors[hash % expenseChartColors.length];
+}
+
+type ExpenseChartDatum = { value: string; label: string; amount: number; percent: number; color: string };
+
+function ExpenseCategoryInsights({ data, total, selected, onSelect }: { data: ExpenseChartDatum[]; total: number; selected: string; onSelect(value: string): void }) {
+  return <section aria-label="Структура расходов по статьям" className="expense-category-insights">
+    <header>
+      <div><span className="eyebrow">Структура фактических затрат</span><h4><ChartPie size={18} /> Расходы по статьям</h4></div>
+      <div><small>Общая сумма</small><strong>{money(total)}</strong></div>
+    </header>
+    {data.length === 0 ? <div className="expense-category-empty"><ChartPie size={22} /><span>Диаграмма появится после добавления первого расхода.</span></div> : <div className="expense-category-insights-body">
+      <div className="expense-category-chart">
+        <ResponsiveContainer height="100%" width="100%">
+          <PieChart accessibilityLayer>
+            <Pie data={data} dataKey="amount" innerRadius="58%" nameKey="label" outerRadius="88%" paddingAngle={data.length > 1 ? 2 : 0} stroke="var(--panel)" strokeWidth={2}>
+              {data.map((item) => <Cell fill={item.color} key={item.value} />)}
+            </Pie>
+            <Tooltip content={({ active, payload }) => {
+              const item = payload?.[0]?.payload as ExpenseChartDatum | undefined;
+              return active && item ? <div className="expense-category-tooltip"><strong>{item.label}</strong><span>{money(item.amount)}</span><small>{item.percent.toLocaleString("ru-RU", { maximumFractionDigits: 1 })}% от общей суммы</small></div> : null;
+            }} />
+          </PieChart>
+        </ResponsiveContainer>
+        <div aria-hidden="true" className="expense-category-chart-center"><strong>{data.length}</strong><span>{data.length === 1 ? "статья" : data.length < 5 ? "статьи" : "статей"}</span></div>
+      </div>
+      <div aria-label="Статьи расходов" className="expense-category-legend">
+        {data.map((item) => <button aria-pressed={selected === item.value} key={item.value} onClick={() => onSelect(selected === item.value ? "all" : item.value)} type="button">
+          <i style={{ background: item.color }} />
+          <span><strong>{item.label}</strong><small>{item.percent.toLocaleString("ru-RU", { maximumFractionDigits: 1 })}%</small></span>
+          <b>{money(item.amount)}</b>
+          <em aria-hidden="true"><span style={{ width: `${Math.max(item.percent, 2)}%`, background: item.color }} /></em>
+        </button>)}
+      </div>
+    </div>}
+  </section>;
+}
+
 export function ExpenseRegisterWorkspace({ projectId, canEdit, canDelete }: { projectId: string; canEdit: boolean; canDelete: boolean }) {
   const [items, setItems] = useState<Expense[]>([]);
   const [costCodes, setCostCodes] = useState<CostCode[]>([]);
+  const [categories, setCategories] = useState<ExpenseCategoryOption[]>(builtInExpenseCategoryOptions);
   const [summary, setSummary] = useState<Summary>();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -103,21 +147,25 @@ export function ExpenseRegisterWorkspace({ projectId, canEdit, canDelete }: { pr
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [query, setQuery] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState<"all" | ExpenseCategory>("all");
+  const [categoryFilter, setCategoryFilter] = useState("all");
   const [formMode, setFormMode] = useState<FormMode | null>(null);
   const [editingId, setEditingId] = useState("");
   const [form, setForm] = useState<ExpenseForm>(() => emptyForm("manual"));
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [recognitionWarnings, setRecognitionWarnings] = useState<string[]>([]);
+  const [categoryComposerOpen, setCategoryComposerOpen] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [creatingCategory, setCreatingCategory] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const response = await fetch(`/api/projects/${projectId}/expenses`, { cache: "no-store" });
-      const data = await response.json() as { items?: Expense[]; costCodes?: CostCode[]; summary?: Summary; error?: string };
+      const data = await response.json() as { items?: Expense[]; costCodes?: CostCode[]; categories?: ExpenseCategoryOption[]; summary?: Summary; error?: string };
       if (!response.ok) throw new Error(data.error || "Не удалось загрузить реестр расходов.");
       setItems(data.items ?? []);
       setCostCodes(data.costCodes ?? []);
+      setCategories(data.categories?.length ? data.categories : builtInExpenseCategoryOptions);
       setSummary(data.summary);
       setError("");
     } catch (loadError) {
@@ -132,10 +180,21 @@ export function ExpenseRegisterWorkspace({ projectId, canEdit, canDelete }: { pr
   const filtered = useMemo(() => {
     const needle = query.trim().toLocaleLowerCase("ru");
     return items.filter((item) => {
-      if (categoryFilter !== "all" && item.category !== categoryFilter) return false;
+      if (categoryFilter !== "all" && item.category !== categoryFilter && !item.items.some((line) => line.category === categoryFilter)) return false;
       return !needle || `${item.merchant} ${item.documentNumber ?? ""} ${item.costCode?.code ?? ""} ${item.items.map((line) => line.name).join(" ")}`.toLocaleLowerCase("ru").includes(needle);
     });
   }, [categoryFilter, items, query]);
+
+  const categoryLabels = useMemo(() => Object.fromEntries(categories.map((category) => [category.value, category.label])), [categories]);
+  const chartData = useMemo<ExpenseChartDatum[]>(() => {
+    const total = summary?.grossAmount ?? 0;
+    const knownValues = new Set([...categories.map((category) => category.value), ...Object.keys(summary?.byCategory ?? {})]);
+    return [...knownValues]
+      .map((value) => ({ value, label: categoryLabels[value] ?? "Статья не найдена", amount: summary?.byCategory[value] ?? 0 }))
+      .filter((item) => item.amount > 0)
+      .sort((left, right) => right.amount - left.amount)
+      .map((item) => ({ ...item, percent: total > 0 ? item.amount / total * 100 : 0, color: expenseChartColor(item.value) }));
+  }, [categories, categoryLabels, summary]);
 
   const lineTotal = useMemo(() => form.items.reduce((sum, line) => sum + line.amount, 0), [form.items]);
 
@@ -154,6 +213,8 @@ export function ExpenseRegisterWorkspace({ projectId, canEdit, canDelete }: { pr
     setEditingId("");
     setReceiptFile(null);
     setRecognitionWarnings([]);
+    setCategoryComposerOpen(false);
+    setNewCategoryName("");
   }
 
   function markEdited(next: ExpenseForm) {
@@ -178,6 +239,31 @@ export function ExpenseRegisterWorkspace({ projectId, canEdit, canDelete }: { pr
       });
       return markEdited({ ...current, items: lines });
     });
+  }
+
+  async function createCategory() {
+    const name = newCategoryName.trim();
+    if (name.length < 2) return setError("Введите название статьи — минимум 2 символа.");
+    setCreatingCategory(true);
+    setError("");
+    try {
+      const response = await fetch(`/api/projects/${projectId}/expense-categories`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name })
+      });
+      const data = await response.json() as { item?: ExpenseCategoryOption; error?: string };
+      if (!response.ok || !data.item) throw new Error(data.error || "Не удалось добавить статью расходов.");
+      setCategories((current) => [...current, data.item as ExpenseCategoryOption]);
+      updateForm("category", data.item.value);
+      setNewCategoryName("");
+      setCategoryComposerOpen(false);
+      setNotice(`Статья «${data.item.label}» добавлена и выбрана.`);
+    } catch (categoryError) {
+      setError(categoryError instanceof Error ? categoryError.message : "Не удалось добавить статью расходов.");
+    } finally {
+      setCreatingCategory(false);
+    }
   }
 
   async function analyzeReceipt() {
@@ -291,6 +377,8 @@ export function ExpenseRegisterWorkspace({ projectId, canEdit, canDelete }: { pr
       <article className={(summary?.withoutReceipt ?? 0) > 0 ? "tone-warn" : "tone-good"}><span>Без чека</span><strong>{summary?.withoutReceipt ?? 0}</strong><small>ручных записей</small></article>
     </div>
 
+    <ExpenseCategoryInsights data={chartData} onSelect={setCategoryFilter} selected={categoryFilter} total={summary?.grossAmount ?? 0} />
+
     {(error || notice) && <div className={`expense-notice ${error ? "error" : "success"}`}>{error ? <AlertTriangle size={17} /> : <FileCheck2 size={17} />}<span>{error || notice}</span></div>}
 
     {formMode && <div className="expense-form">
@@ -311,7 +399,18 @@ export function ExpenseRegisterWorkspace({ projectId, canEdit, canDelete }: { pr
         <label className="field"><span>Дата *</span><input type="date" value={form.expenseDate} onChange={(event) => updateForm("expenseDate", event.target.value)} /></label>
         <label className="field field-wide"><span>Поставщик / назначение *</span><input placeholder="ООО Стройснаб или хозяйственные расходы" value={form.merchant} onChange={(event) => updateForm("merchant", event.target.value)} /></label>
         <label className="field"><span>№ чека / документа</span><input value={form.documentNumber} onChange={(event) => updateForm("documentNumber", event.target.value)} /></label>
-        <label className="field"><span>Статья *</span><select value={form.category} onChange={(event) => updateForm("category", event.target.value as ExpenseCategory)}>{expenseCategories.map((category) => <option key={category} value={category}>{expenseCategoryLabels[category]}</option>)}</select></label>
+        <div className="field expense-category-field">
+          <span>Статья *</span>
+          <div className="expense-category-control">
+            <select aria-label="Статья расхода" value={form.category} onChange={(event) => updateForm("category", event.target.value)}>{categories.map((category) => <option key={category.value} value={category.value}>{category.label}{category.custom ? " · своя" : ""}</option>)}</select>
+            <button aria-expanded={categoryComposerOpen} aria-label="Добавить свою статью расхода" className="icon-button" onClick={() => setCategoryComposerOpen((current) => !current)} title="Добавить свою статью" type="button"><Plus size={17} /></button>
+          </div>
+          {categoryComposerOpen && <div className="expense-category-composer">
+            <input aria-label="Название новой статьи" autoFocus maxLength={80} onChange={(event) => setNewCategoryName(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); void createCategory(); } if (event.key === "Escape") setCategoryComposerOpen(false); }} placeholder="Например, аренда бытовки" value={newCategoryName} />
+            <button aria-label="Сохранить новую статью" className="icon-button primary" disabled={creatingCategory || newCategoryName.trim().length < 2} onClick={() => void createCategory()} title="Сохранить статью" type="button">{creatingCategory ? <RefreshCw className="spin" size={16} /> : <Check size={16} />}</button>
+            <button aria-label="Отменить добавление статьи" className="icon-button" onClick={() => { setCategoryComposerOpen(false); setNewCategoryName(""); }} title="Отмена" type="button"><X size={16} /></button>
+          </div>}
+        </div>
         <label className="field"><span>Способ оплаты</span><select value={form.paymentMethod} onChange={(event) => updateForm("paymentMethod", event.target.value as ExpensePaymentMethod)}>{expensePaymentMethods.map((method) => <option key={method} value={method}>{expensePaymentMethodLabels[method]}</option>)}</select></label>
         <label className="field"><span>Код затрат</span><select value={form.costCodeId} onChange={(event) => updateForm("costCodeId", event.target.value)}><option value="">Не привязан</option>{costCodes.map((code) => <option key={code.id} value={code.id}>{code.code} · {code.name}</option>)}</select></label>
         <label className="field"><span>Сумма *</span><input inputMode="decimal" placeholder="0,00" value={form.grossAmount} onChange={(event) => updateForm("grossAmount", event.target.value)} /></label>
@@ -324,7 +423,7 @@ export function ExpenseRegisterWorkspace({ projectId, canEdit, canDelete }: { pr
         <header><div><strong>Позиции расхода</strong><span>Для постатейного Excel и аналитики по категориям</span></div><button className="button secondary compact-button" onClick={addLine} type="button"><Plus size={15} /> Позиция</button></header>
         {form.items.length === 0 ? <button className="expense-lines-empty" onClick={addLine} type="button">Добавить детализацию или сохранить расход одной строкой</button> : form.items.map((line, index) => <div className="expense-line" key={`${index}-${line.id ?? "new"}`}>
           <input aria-label="Наименование позиции" className="expense-line-name" placeholder="Наименование" value={line.name} onChange={(event) => updateLine(index, { name: event.target.value })} />
-          <select aria-label="Статья позиции" value={line.category} onChange={(event) => updateLine(index, { category: event.target.value as ExpenseCategory })}>{expenseCategories.map((category) => <option key={category} value={category}>{expenseCategoryLabels[category]}</option>)}</select>
+          <select aria-label="Статья позиции" value={line.category} onChange={(event) => updateLine(index, { category: event.target.value })}>{categories.map((category) => <option key={category.value} value={category.value}>{category.label}</option>)}</select>
           <input aria-label="Количество" inputMode="decimal" min="0" type="number" value={line.quantity} onChange={(event) => updateLine(index, { quantity: Number(event.target.value) }, true)} />
           <input aria-label="Единица" value={line.unit} onChange={(event) => updateLine(index, { unit: event.target.value })} />
           <input aria-label="Цена" inputMode="decimal" min="0" type="number" value={line.unitPrice} onChange={(event) => updateLine(index, { unitPrice: Number(event.target.value) }, true)} />
@@ -339,7 +438,7 @@ export function ExpenseRegisterWorkspace({ projectId, canEdit, canDelete }: { pr
 
     <div className="expense-toolbar">
       <label><Search size={16} /><input aria-label="Поиск расходов" placeholder="Поставщик, документ, позиция или код" value={query} onChange={(event) => setQuery(event.target.value)} /></label>
-      <label><span>Статья</span><select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value as "all" | ExpenseCategory)}><option value="all">Все статьи</option>{expenseCategories.map((category) => <option key={category} value={category}>{expenseCategoryLabels[category]}</option>)}</select><ChevronDown size={15} /></label>
+      <label><span>Статья</span><select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)}><option value="all">Все статьи</option>{categories.map((category) => <option key={category.value} value={category.value}>{category.label}</option>)}</select><ChevronDown size={15} /></label>
       <button aria-label="Обновить реестр" className="icon-button" disabled={loading} onClick={() => void load()} title="Обновить" type="button"><RefreshCw className={loading ? "spin" : ""} size={17} /></button>
     </div>
 
@@ -347,7 +446,7 @@ export function ExpenseRegisterWorkspace({ projectId, canEdit, canDelete }: { pr
       {loading ? <div className="expense-empty"><RefreshCw className="spin" size={20} /><strong>Загружаем реестр</strong></div> : filtered.length === 0 ? <div className="expense-empty"><ReceiptText size={24} /><strong>{items.length ? "По фильтру ничего не найдено" : "Расходов пока нет"}</strong><span>{items.length ? "Измените условия поиска." : "Добавьте расход вручную или загрузите чек."}</span></div> : filtered.map((item) => <details className="expense-row" key={item.id}>
         <summary>
           <span className="expense-row-number">#{item.sequence}</span>
-          <span className="expense-row-main"><strong>{item.merchant}</strong><small>{new Date(item.expenseDate).toLocaleDateString("ru-RU")} · {expenseCategoryLabels[item.category]}</small></span>
+          <span className="expense-row-main"><strong>{item.merchant}</strong><small>{new Date(item.expenseDate).toLocaleDateString("ru-RU")} · {categoryLabels[item.category] ?? "Статья не найдена"}</small></span>
           <span className="expense-row-code">{item.costCode ? `${item.costCode.code} · ${item.costCode.name}` : "Без кода затрат"}</span>
           <span className="expense-row-source">{item.receiptDocument ? <><ReceiptText size={14} /> Чек</> : "Без чека"}</span>
           <strong className="expense-row-amount">{money(item.grossAmount)}</strong>

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
-  user: vi.fn(), canProject: vi.fn(), projectFind: vi.fn(), expenseFindMany: vi.fn(), costCodeFindMany: vi.fn(), costCodeFind: vi.fn(),
+  user: vi.fn(), canProject: vi.fn(), projectFind: vi.fn(), expenseFindMany: vi.fn(), costCodeFindMany: vi.fn(), costCodeFind: vi.fn(), categoryFindMany: vi.fn(), categoryCount: vi.fn(),
   transaction: vi.fn(), audit: vi.fn(), save: vi.fn(), remove: vi.fn()
 }));
 
@@ -16,6 +16,7 @@ vi.mock("@/lib/prisma", () => ({ prisma: {
   project: { findUnique: mocks.projectFind },
   projectExpense: { findMany: mocks.expenseFindMany },
   projectCostCode: { findMany: mocks.costCodeFindMany, findFirst: mocks.costCodeFind },
+  projectExpenseCategory: { findMany: mocks.categoryFindMany, count: mocks.categoryCount },
   $transaction: mocks.transaction
 } }));
 
@@ -36,6 +37,8 @@ describe("expense register route", () => {
     mocks.expenseFindMany.mockResolvedValue([expense]);
     mocks.costCodeFindMany.mockResolvedValue([]);
     mocks.costCodeFind.mockResolvedValue(null);
+    mocks.categoryFindMany.mockResolvedValue([]);
+    mocks.categoryCount.mockResolvedValue(0);
     mocks.audit.mockResolvedValue({});
   });
 
@@ -56,6 +59,23 @@ describe("expense register route", () => {
     expect(response.status).toBe(200);
     expect(body.items[0]).toMatchObject({ merchant: "Хозяйственные расходы", grossAmount: 500 });
     expect(body.summary).toMatchObject({ count: 1, grossAmount: 500, receipts: 0, withoutReceipt: 1 });
+    expect(body.categories).toEqual(expect.arrayContaining([expect.objectContaining({ value: "materials", label: "Материалы", custom: false })]));
+  });
+
+  it("accepts a custom category that belongs to this project", async () => {
+    mocks.categoryCount.mockResolvedValue(1);
+    const tx = {
+      projectExpense: { findFirst: vi.fn().mockResolvedValue(null), create: vi.fn().mockResolvedValue({ ...expense, category: "custom:category-1" }) },
+      document: { create: vi.fn() }, documentVersion: { create: vi.fn() }, auditLog: { create: vi.fn() }
+    };
+    mocks.transaction.mockImplementation(async (callback: (value: typeof tx) => unknown) => callback(tx));
+    const request = new Request("https://pgs.local", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({
+      expenseDate: "2026-08-31", merchant: "Аренда бытовки", category: "custom:category-1", paymentMethod: "bank", currency: "RUB", grossAmount: 15000, items: []
+    }) }) as never;
+    const { POST } = await import("./route");
+    const response = await POST(request, context);
+    expect(response.status).toBe(201);
+    expect(mocks.categoryCount).toHaveBeenCalledWith({ where: { projectId: "project-1", id: { in: ["category-1"] } } });
   });
 
   it("creates a manual expense without touching receipt storage", async () => {

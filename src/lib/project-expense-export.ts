@@ -16,21 +16,21 @@ function numberValue(value: number | string | { toString(): string }) {
   return Number.isFinite(number) ? number : 0;
 }
 
-function categoryLabel(value: string) {
-  return expenseCategoryLabels[value as ExpenseCategory] ?? value;
+function categoryLabel(value: string, customLabels: Record<string, string>) {
+  return expenseCategoryLabels[value as ExpenseCategory] ?? customLabels[value] ?? value;
 }
 
 function paymentMethodLabel(value: string) {
   return expensePaymentMethodLabels[value as ExpensePaymentMethod] ?? value;
 }
 
-export function buildProjectExpensesWorkbook(items: ProjectExpenseRecord[], projectName: string) {
+export function buildProjectExpensesWorkbook(items: ProjectExpenseRecord[], projectName: string, customLabels: Record<string, string> = {}) {
   const detailRows = items.flatMap((expense) => {
     const lines = expense.items?.length ? expense.items : [null];
     return lines.map((line) => ({
       "№ расхода": expense.sequence,
       Дата: new Date(expense.expenseDate).toLocaleDateString("ru-RU"),
-      Статья: categoryLabel(line?.category ?? expense.category),
+      Статья: categoryLabel(line?.category ?? expense.category, customLabels),
       "Код затрат": expense.costCode?.code ?? "",
       "Наименование позиции": line?.name ?? expense.merchant,
       Количество: line ? numberValue(line.quantity) : 1,
@@ -50,6 +50,7 @@ export function buildProjectExpensesWorkbook(items: ProjectExpenseRecord[], proj
     }));
   });
   const summary = buildProjectExpenseSummary(items);
+  const categoryValues = [...new Set([...expenseCategories, ...Object.keys(customLabels), ...Object.keys(summary.byCategory)])];
   const summaryRows = [
     { Показатель: "Проект", Значение: projectName },
     { Показатель: "Всего расходов", Значение: summary.grossAmount },
@@ -57,7 +58,7 @@ export function buildProjectExpensesWorkbook(items: ProjectExpenseRecord[], proj
     { Показатель: "Записей", Значение: summary.count },
     { Показатель: "С чеками", Значение: summary.receipts },
     { Показатель: "Без чеков", Значение: summary.withoutReceipt },
-    ...expenseCategories.map((category) => ({ Показатель: expenseCategoryLabels[category], Значение: summary.byCategory[category] }))
+    ...categoryValues.map((category) => ({ Показатель: categoryLabel(category, customLabels), Значение: summary.byCategory[category] ?? 0 }))
   ];
 
   const workbook = XLSX.utils.book_new();

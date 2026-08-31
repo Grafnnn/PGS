@@ -3,7 +3,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { writeAudit } from "@/lib/audit";
 import { canProject } from "@/lib/auth/project-permissions";
 import { getCurrentUser } from "@/lib/auth/session";
-import { buildProjectExpenseSummary, projectExpenseInputSchema, serializeProjectExpense } from "@/lib/project-expenses";
+import { builtInExpenseCategoryOptions, customExpenseCategoryOption } from "@/lib/project-expense-config";
+import { buildProjectExpenseSummary, projectExpenseCustomCategoryIds, projectExpenseInputSchema, serializeProjectExpense, type ProjectExpenseInput } from "@/lib/project-expenses";
 import { prisma } from "@/lib/prisma";
 import { deleteDocumentFile, hasPreviewMetadata, makeStorageKey, sanitizeFileName, saveDocumentFile, validateDocumentUpload } from "@/lib/storage/documents";
 
@@ -48,17 +49,26 @@ async function validateCostCode(projectId: string, costCodeId: string | null | u
   return Boolean(await prisma.projectCostCode.findFirst({ where: { id: costCodeId, projectId, status: "active" }, select: { id: true } }));
 }
 
+async function validateExpenseCategories(projectId: string, data: Pick<ProjectExpenseInput, "category" | "items">) {
+  const ids = projectExpenseCustomCategoryIds(data);
+  if (!ids.length) return true;
+  const count = await prisma.projectExpenseCategory.count({ where: { projectId, id: { in: ids } } });
+  return count === ids.length;
+}
+
 export async function GET(_request: Request, { params }: Params) {
   const user = await getCurrentUser();
   if (!(await canProject(user, params.projectId, "view"))) return json({ error: "Forbidden" }, 403);
   try {
     const project = await prisma.project.findUnique({ where: { id: params.projectId }, select: { id: true } });
     if (!project) return json({ error: "Project not found" }, 404);
-    const [items, costCodes] = await Promise.all([
+    const [items, costCodes, customCategories] = await Promise.all([
       prisma.projectExpense.findMany({ where: { projectId: params.projectId }, include: expenseInclude, orderBy: [{ expenseDate: "desc" }, { sequence: "desc" }] }),
-      prisma.projectCostCode.findMany({ where: { projectId: params.projectId, status: "active" }, select: { id: true, code: true, name: true }, orderBy: [{ sortOrder: "asc" }, { code: "asc" }] })
+      prisma.projectCostCode.findMany({ where: { projectId: params.projectId, status: "active" }, select: { id: true, code: true, name: true }, orderBy: [{ sortOrder: "asc" }, { code: "asc" }] }),
+      prisma.projectExpenseCategory.findMany({ where: { projectId: params.projectId }, select: { id: true, name: true }, orderBy: [{ name: "asc" }, { createdAt: "asc" }] })
     ]);
-    return json({ items: items.map(serializeProjectExpense), costCodes, summary: buildProjectExpenseSummary(items) });
+    const categories = [...builtInExpenseCategoryOptions, ...customCategories.map(customExpenseCategoryOption)];
+    return json({ items: items.map(serializeProjectExpense), costCodes, categories, summary: buildProjectExpenseSummary(items, categories.map((category) => category.value)) });
   } catch (error) {
     if (error instanceof Prisma.PrismaClientInitializationError) return json({ error: "Database is not available" }, 503);
     console.error(error);
@@ -80,6 +90,7 @@ export async function POST(request: NextRequest, { params }: Params) {
     const project = await prisma.project.findUnique({ where: { id: params.projectId }, select: { id: true, organizationId: true } });
     if (!project) return json({ error: "Project not found" }, 404);
     if (!(await validateCostCode(params.projectId, data.costCodeId))) return json({ error: "Код затрат не принадлежит проекту" }, 409);
+    if (!(await validateExpenseCategories(params.projectId, data))) return json({ error: "Статья расходов не принадлежит проекту" }, 409);
 
     let stored: { key: string; name: string; mimeType: string; size: number } | null = null;
     if (file) {
