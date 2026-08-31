@@ -15,6 +15,7 @@ import { CostCodeWorkspace } from "@/components/cost-code-workspace";
 import { CostForecastByCodeWorkspace } from "@/components/cost-forecast-by-code-workspace";
 import { CostToCompleteWorkspace } from "@/components/cost-to-complete-workspace";
 import { ExternalCollaborationWorkspace } from "@/components/external-collaboration-workspace";
+import { ExpenseRegisterWorkspace } from "@/components/expense-register-workspace";
 import { FieldOperationsWorkspace } from "@/components/field-operations-workspace";
 import { FieldMobileWorkspace } from "@/components/field-mobile-workspace";
 import { HseSafetyPermitWorkspace } from "@/components/hse-safety-permit-workspace";
@@ -1222,6 +1223,7 @@ export function ProjectWorkspace({
             content: <><CostToCompleteWorkspace project={initialBundle.project} budgetItems={budgetItems} scheduleItems={scheduleItems} materials={materials} procurementRequests={procurementRequests} payments={payments} risks={risks} onNavigate={setActiveTab} /><FinanceCommand payments={payments} contractAmount={initialBundle.project.contractAmount} forecastProfit={budget.forecastProfit} /></>
           },
           { id: "payments", label: "Платежи", description: "Входящие и исходящие платежи проекта.", content: <PaymentTable items={payments} /> },
+          { id: "expenses", label: "Расходы", description: "Фактические затраты, чеки и постатейный Excel-реестр.", content: <ExpenseRegisterWorkspace projectId={initialBundle.project.id} canEdit={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN" || currentUser?.role === "MANAGER"} canDelete={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN"} /> },
           {
             id: "forecast",
             label: "Прогноз и cashflow",

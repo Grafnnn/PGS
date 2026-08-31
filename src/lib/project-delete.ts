@@ -40,6 +40,8 @@ export type ProjectDeleteCounts = {
   procurementRequestItems: number;
   supplierQuotes: number;
   payments: number;
+  projectExpenses: number;
+  projectExpenseItems: number;
   cashflowPeriods: number;
   documents: number;
   documentVersions: number;
@@ -82,6 +84,8 @@ async function countProjectOwnedData(client: TxClient, projectId: string): Promi
     procurementRequestItems,
     supplierQuotes,
     payments,
+    projectExpenses,
+    projectExpenseItems,
     cashflowPeriods,
     documents,
     documentVersions,
@@ -106,6 +110,8 @@ async function countProjectOwnedData(client: TxClient, projectId: string): Promi
     client.procurementRequestItem.count({ where: { request: { projectId } } }),
     client.supplierQuote.count({ where: { projectId } }),
     client.payment.count({ where: { projectId } }),
+    client.projectExpense.count({ where: { projectId } }),
+    client.projectExpenseItem.count({ where: { expense: { projectId } } }),
     client.cashflowPeriod.count({ where: { projectId } }),
     client.document.count({ where: { projectId } }),
     client.documentVersion.count({ where: { document: { projectId } } }),
@@ -132,6 +138,8 @@ async function countProjectOwnedData(client: TxClient, projectId: string): Promi
     procurementRequestItems,
     supplierQuotes,
     payments,
+    projectExpenses,
+    projectExpenseItems,
     cashflowPeriods,
     documents,
     documentVersions,

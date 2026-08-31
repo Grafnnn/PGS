@@ -62,6 +62,7 @@ model Organization {
   auditLogs                  AuditLog[]
   externalCollaborationLinks ExternalCollaborationLink[]
   projectInvoices            ProjectInvoice[]
+  projectExpenses            ProjectExpense[]
   aiRuns                     AiRun[]
 
   @@map("organizations")
@@ -156,6 +157,7 @@ model Project {
   procurementRequests        ProcurementRequest[]
   supplierQuotes             SupplierQuote[]
   payments                   Payment[]
+  expenses                   ProjectExpense[]
   cashflowPeriods            CashflowPeriod[]
   documents                  Document[]
   dailyReports               DailyReport[]
@@ -473,6 +475,61 @@ model Payment {
   @@map("payments")
 }
 
+model ProjectExpense {
+  id                    String               @id @default(cuid())
+  organizationId        String               @map("organization_id")
+  projectId             String               @map("project_id")
+  costCodeId            String?              @map("cost_code_id")
+  receiptDocumentId     String?              @map("receipt_document_id")
+  sequence              Int
+  expenseDate           DateTime             @map("expense_date")
+  merchant              String
+  documentNumber        String?              @map("document_number")
+  category              String
+  paymentMethod         String               @default("unknown") @map("payment_method")
+  currency              String               @default("RUB")
+  grossAmount           Decimal              @map("gross_amount") @db.Decimal(16, 2)
+  taxAmount             Decimal              @default(0) @map("tax_amount") @db.Decimal(16, 2)
+  source                String               @default("manual")
+  recognitionStatus     String               @default("not_applicable") @map("recognition_status")
+  recognitionConfidence String?              @map("recognition_confidence")
+  notes                 String?
+  createdBy             String?              @map("created_by")
+  createdAt             DateTime             @default(now()) @map("created_at")
+  updatedAt             DateTime             @updatedAt @map("updated_at")
+  organization          Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  project               Project              @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  costCode              ProjectCostCode?     @relation(fields: [costCodeId], references: [id], onDelete: SetNull)
+  receiptDocument       Document?            @relation(fields: [receiptDocumentId], references: [id], onDelete: SetNull)
+  items                 ProjectExpenseItem[]
+
+  @@unique([projectId, sequence])
+  @@index([projectId, expenseDate])
+  @@index([projectId, category, expenseDate])
+  @@index([costCodeId])
+  @@index([receiptDocumentId])
+  @@map("project_expenses")
+}
+
+model ProjectExpenseItem {
+  id        String         @id @default(cuid())
+  expenseId String         @map("expense_id")
+  sequence  Int
+  name      String
+  category  String
+  quantity  Decimal        @default(1) @db.Decimal(14, 3)
+  unit      String         @default("шт")
+  unitPrice Decimal        @map("unit_price") @db.Decimal(16, 2)
+  amount    Decimal        @db.Decimal(16, 2)
+  taxAmount Decimal        @default(0) @map("tax_amount") @db.Decimal(16, 2)
+  createdAt DateTime       @default(now()) @map("created_at")
+  updatedAt DateTime       @updatedAt @map("updated_at")
+  expense   ProjectExpense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+
+  @@unique([expenseId, sequence])
+  @@map("project_expense_items")
+}
+
 model CashflowPeriod {
   id             String   @id @default(cuid())
   organizationId String   @map("organization_id")
@@ -524,6 +581,7 @@ model Document {
   invoices               ProjectInvoice[]
   closeoutChecklistItems ProjectCloseoutChecklistItem[]
   warrantySourceLinks    ProjectWarrantyObligation[]
+  expenseReceipts        ProjectExpense[]
 
   @@index([dailyReportId])
   @@map("documents")
@@ -967,6 +1025,7 @@ model ProjectCostCode {
   materials               Material[]
   procurementRequestItems ProcurementRequestItem[]
   payments                Payment[]
+  expenses                ProjectExpense[]
   changeOrderItems        ProjectChangeOrderItem[]
   commitmentLines         ProjectCommitmentLine[]
   invoices                ProjectInvoice[]
