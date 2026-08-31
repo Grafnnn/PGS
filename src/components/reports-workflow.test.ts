@@ -1,9 +1,25 @@
+import { readFileSync } from "node:fs";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { ReportsWorkflow } from "@/components/reports-workflow";
 
 describe("ReportsWorkflow", () => {
+  it("keeps the crew checkbox compact so employee names retain readable width", () => {
+    const styles = readFileSync(new URL("../app/globals.css", import.meta.url), "utf8");
+    const checkboxRule = styles.match(/\.daily-crew-grid label > input\[type="checkbox"\]\s*\{([^}]*)\}/)?.[1];
+    const contentRule = styles.match(/\.daily-crew-grid label span\s*\{([^}]*)\}/)?.[1];
+    const mobileSearchRules = [...styles.matchAll(/\.daily-crew-tools > label\s*\{([^}]*)\}/g)];
+    const mobileSearchRule = mobileSearchRules.at(-1)?.[1];
+
+    expect(checkboxRule).toContain("flex: 0 0 18px");
+    expect(checkboxRule).toContain("width: 18px");
+    expect(contentRule).toContain("flex: 1 1 auto");
+    expect(contentRule).toContain("min-width: 0");
+    expect(mobileSearchRule).toContain("flex: 0 0 auto");
+    expect(mobileSearchRule).toContain("width: 100%");
+  });
+
   it("renders an explicit daily-report workflow without creating records on render", () => {
     const html = renderToStaticMarkup(createElement(ReportsWorkflow, {
       projectId: "project-1",
