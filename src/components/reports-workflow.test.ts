@@ -116,7 +116,7 @@ describe("ReportsWorkflow", () => {
     expect(html).not.toContain("Отправить");
   });
 
-  it("offers project schedule works as a compact quick picker", () => {
+  it("offers project schedule works as a compact multi-select picker", () => {
     const scheduleItems: ScheduleItem[] = [{
       id: "schedule-active",
       projectId: "project-1",
@@ -127,18 +127,33 @@ describe("ReportsWorkflow", () => {
       plannedQty: 120,
       actualQty: 40,
       status: "in_progress"
+    }, {
+      id: "schedule-second",
+      projectId: "project-1",
+      name: "Устройство примыканий",
+      owner: "Бригада кровли",
+      startsAt: "2026-08-31T00:00:00.000Z",
+      endsAt: "2026-09-04T00:00:00.000Z",
+      plannedQty: 24,
+      actualQty: 0,
+      status: "not_started"
     }];
     const html = renderToStaticMarkup(createElement(ScheduleWorkPicker, {
       items: scheduleItems,
       shiftDate: "2026-08-31",
-      selectedValue: "",
-      onSelect: () => undefined
+      selectedScopes: [{ scheduleItemId: "schedule-active", workName: "Монтаж кровельной мембраны", source: "schedule" }],
+      onToggle: () => undefined
     }));
 
     expect(html).toContain("Из графика");
     expect(html).toContain("Монтаж кровельной мембраны");
+    expect(html).toContain("Устройство примыканий");
     expect(html).toContain("Прораб кровли");
     expect(html).toContain("В работе");
+    expect(html).toContain("Выбрано из графика: 1");
+    expect(html).toContain("aria-multiselectable=\"true\"");
+    expect(html).toContain("aria-selected=\"true\"");
+    expect(html).toContain("Готово");
   });
 
   it("ranks current schedule work before future and completed items", () => {

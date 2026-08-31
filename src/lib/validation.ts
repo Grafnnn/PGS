@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { dailyReportWorkScopesSchema } from "@/lib/daily-report-work-scopes";
 import { dailyReportWorkOutputsSchema } from "@/lib/daily-report-work-outputs";
 
 export const projectSchema = z.object({
@@ -109,6 +110,7 @@ export const dailyReportSchema = z.object({
   workOutputs: dailyReportWorkOutputsSchema.default([]),
   phase: z.enum(["open", "closed"]).default("closed"),
   workCategory: z.string().trim().max(240).default(""),
+  workScopes: dailyReportWorkScopesSchema.default([]),
   plannedWorks: z.string().trim().max(8000).default(""),
   crewResourceIds: z.array(z.string().min(1).max(200)).max(200).default([]),
   status: z.enum(["draft", "submitted", "checked", "approved"]).default("draft")

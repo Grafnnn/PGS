@@ -25,10 +25,17 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import Image from "next/image";
 import { DailyReportWorkOutputEditor } from "@/components/daily-report-work-output-editor";
 import { dailyReportWorkOutputNorm, dailyReportWorkOutputsComplete } from "@/lib/daily-report-work-outputs";
+import {
+  dailyReportWorkScopeKey,
+  dailyReportWorkScopeLabel,
+  dailyReportWorkScopeSummary,
+  parseDailyReportWorkScopes,
+  seedDailyReportWorkOutputs
+} from "@/lib/daily-report-work-scopes";
 import { dailyReportStatusLabel } from "@/lib/daily-reports";
 import type { SerializedExecutiveReport } from "@/lib/executive-reports";
 import type { PhotoQuestionResult } from "@/lib/photo-question";
-import type { DailyReport, DailyReportWorkOutput, ProjectDocument, ScheduleItem, WorkStatus } from "@/lib/types";
+import type { DailyReport, DailyReportWorkOutput, DailyReportWorkScope, ProjectDocument, ScheduleItem, WorkStatus } from "@/lib/types";
 
 type UserContext = {
   role?: "OWNER" | "ADMIN" | "MANAGER" | "VIEWER";
@@ -45,9 +52,10 @@ type Props = {
   onReportsChange: (items: DailyReport[]) => void;
 };
 
-type ReportForm = Omit<DailyReport, "id" | "projectId" | "status" | "workOutputs" | "crewMembers" | "evidenceDocuments"> & {
+type ReportForm = Omit<DailyReport, "id" | "projectId" | "status" | "workOutputs" | "workScopes" | "crewMembers" | "evidenceDocuments"> & {
   phase: "open" | "closed";
   workCategory: string;
+  workScopes: DailyReportWorkScope[];
   plannedWorks: string;
   crewResourceIds: string[];
   workOutputs: DailyReportWorkOutput[];
@@ -115,25 +123,21 @@ export function buildScheduleWorkSuggestions(items: ScheduleItem[], shiftDate: s
 export function ScheduleWorkPicker({
   items,
   shiftDate,
-  selectedValue,
-  onSelect
+  selectedScopes,
+  onToggle
 }: {
   items: ScheduleItem[];
   shiftDate: string;
-  selectedValue: string;
-  onSelect: (value: string) => void;
+  selectedScopes: DailyReportWorkScope[];
+  onToggle: (item: ScheduleItem) => void;
 }) {
   const detailsRef = useRef<HTMLDetailsElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState("");
   const suggestions = useMemo(() => buildScheduleWorkSuggestions(items, shiftDate, query), [items, query, shiftDate]);
   const visibleSuggestions = suggestions.slice(0, 30);
-
-  function selectWork(value: string) {
-    onSelect(value);
-    setQuery("");
-    if (detailsRef.current) detailsRef.current.open = false;
-  }
+  const selectedScheduleIds = useMemo(() => new Set(selectedScopes.flatMap((scope) => scope.scheduleItemId ? [scope.scheduleItemId] : [])), [selectedScopes]);
+  const selectedCount = selectedScheduleIds.size;
 
   return (
     <details
@@ -151,6 +155,7 @@ export function ScheduleWorkPicker({
       <summary aria-label="Выбрать работу из графика проекта" title="Выбрать работу из графика проекта">
         <CalendarDays size={16} />
         <span>Из графика</span>
+        {selectedCount ? <b>{selectedCount}</b> : null}
         <ChevronDown className="daily-schedule-work-chevron" size={15} />
       </summary>
       <div className="daily-schedule-work-menu">
@@ -166,21 +171,29 @@ export function ScheduleWorkPicker({
               <Search size={15} />
               <input aria-label="Поиск работы в графике" placeholder="Название, ответственный или статус" ref={searchInputRef} value={query} onChange={(event) => setQuery(event.target.value)} />
             </label>
-            <div className="daily-schedule-work-results" role="listbox" aria-label="Работы проектного графика">
+            <div aria-label="Работы проектного графика" aria-multiselectable="true" className="daily-schedule-work-results" role="listbox">
               {visibleSuggestions.length ? visibleSuggestions.map((item) => {
                 const meta = scheduleStatusMeta[item.status];
+                const selected = selectedScheduleIds.has(item.id);
                 return (
-                  <button aria-selected={selectedValue === item.name} className={selectedValue === item.name ? "selected" : ""} key={item.id} role="option" type="button" onClick={() => selectWork(item.name)}>
+                  <button aria-selected={selected} className={selected ? "selected" : ""} key={item.id} role="option" type="button" onClick={() => onToggle(item)}>
                     <span>
                       <strong>{item.name}</strong>
                       <small>{scheduleDateLabel(item)}{item.owner ? ` · ${item.owner}` : ""}</small>
                     </span>
-                    <span className={`badge ${meta.tone}`}>{meta.label}</span>
+                    <span className="daily-schedule-work-option-meta">
+                      <span className={`badge ${meta.tone}`}>{meta.label}</span>
+                      <span aria-hidden="true" className="daily-schedule-work-check">{selected ? <Check size={14} /> : null}</span>
+                    </span>
                   </button>
                 );
               }) : <p>По этому запросу работ нет.</p>}
             </div>
             {suggestions.length > visibleSuggestions.length ? <small className="daily-schedule-work-limit">Уточните поиск, чтобы увидеть остальные работы.</small> : null}
+            <footer className="daily-schedule-work-footer">
+              <span>{selectedCount ? `Выбрано из графика: ${selectedCount}` : "Выберите одну или несколько работ"}</span>
+              <button className="button secondary compact-button" type="button" onClick={() => { if (detailsRef.current) detailsRef.current.open = false; }}>Готово</button>
+            </footer>
           </>
         ) : (
           <div className="daily-schedule-work-empty">Добавьте работы во вкладке «График» или введите вид работ вручную.</div>
@@ -204,6 +217,7 @@ const emptyReport = (author = "Прораб", phase: "open" | "closed" = "open")
   issues: "",
   phase,
   workCategory: "",
+  workScopes: [],
   plannedWorks: "",
   crewResourceIds: [],
   workOutputs: []
@@ -239,6 +253,7 @@ export function ReportsWorkflow({ projectId, reports, scheduleItems, currentUser
   const [workforce, setWorkforce] = useState<WorkforceItem[]>([]);
   const [workforceLoaded, setWorkforceLoaded] = useState(false);
   const [crewSearch, setCrewSearch] = useState("");
+  const [workDraft, setWorkDraft] = useState("");
   const [photoFiles, setPhotoFiles] = useState<File[]>([]);
   const [selectedPhotoIds, setSelectedPhotoIds] = useState<string[]>([]);
   const [photoQuestion, setPhotoQuestion] = useState("");
@@ -261,7 +276,7 @@ export function ReportsWorkflow({ projectId, reports, scheduleItems, currentUser
   const missingRequiredFields = form.phase === "open"
     ? [
         !form.author.trim() ? "автор" : "",
-        !form.workCategory.trim() ? "вид работ" : "",
+        !form.workScopes.length ? "хотя бы один вид работ" : "",
         !form.plannedWorks.trim() ? "план смены" : "",
         !form.crewResourceIds.length && form.workers + form.engineers === 0 ? "состав смены" : ""
       ].filter(Boolean)
@@ -347,10 +362,12 @@ export function ReportsWorkflow({ projectId, reports, scheduleItems, currentUser
     setPhotoQuestion("");
     setPhotoAnswer(null);
     setCrewSearch("");
+    setWorkDraft("");
     setError("");
   }
 
   function openEditReport(item: DailyReport, closeShift = false) {
+    const workScopes = parseDailyReportWorkScopes(item.workScopes, item.workCategory);
     setEditingId(item.id);
     setForm({
       date: item.date,
@@ -365,18 +382,73 @@ export function ReportsWorkflow({ projectId, reports, scheduleItems, currentUser
       downtime: item.downtime,
       issues: item.issues,
       phase: closeShift ? "closed" : item.phase ?? "closed",
-      workCategory: item.workCategory ?? "",
+      workCategory: dailyReportWorkScopeSummary(workScopes, item.workCategory),
+      workScopes,
       plannedWorks: item.plannedWorks ?? "",
       crewResourceIds: (item.crewMembers ?? []).map((member) => member.resourceId),
-      workOutputs: item.workOutputs ?? []
+      workOutputs: closeShift ? seedDailyReportWorkOutputs(workScopes, item.workOutputs ?? []) : item.workOutputs ?? []
     });
     setPhotoFiles([]);
     setSelectedPhotoIds(item.evidenceDocuments?.filter((document) => (document.mimeType ?? "").startsWith("image/")).map((document) => document.id).slice(0, 4) ?? []);
     setPhotoQuestion("");
     setPhotoAnswer(null);
     setCrewSearch("");
+    setWorkDraft("");
     setFormOpen(true);
     setError("");
+  }
+
+  function replaceWorkScopes(nextScopes: DailyReportWorkScope[]) {
+    setForm((current) => {
+      const workScopes = parseDailyReportWorkScopes(nextScopes);
+      const nextKeys = new Set(workScopes.map(dailyReportWorkScopeKey));
+      const removedScopes = current.workScopes.filter((scope) => !nextKeys.has(dailyReportWorkScopeKey(scope)));
+      const retainedOutputs = current.workOutputs.filter((output) => {
+        const removed = removedScopes.some((scope) => scope.scheduleItemId
+          ? scope.scheduleItemId === output.scheduleItemId
+          : scope.workName.trim().toLocaleLowerCase("ru-RU") === output.workName.trim().toLocaleLowerCase("ru-RU"));
+        const untouched = !output.profession.trim() && output.quantity === 0 && !output.unit.trim() && output.laborHours === 0;
+        return !(removed && untouched);
+      });
+      return {
+        ...current,
+        workScopes,
+        workCategory: dailyReportWorkScopeSummary(workScopes),
+        workOutputs: current.phase === "closed"
+          ? seedDailyReportWorkOutputs(workScopes, retainedOutputs)
+          : retainedOutputs
+      };
+    });
+  }
+
+  function addManualWork() {
+    const workName = workDraft.trim().replace(/\s+/g, " ");
+    if (workName.length < 2) return;
+    if (form.workScopes.length >= 20) {
+      setError("В одной смене можно выбрать до 20 видов работ.");
+      return;
+    }
+    const duplicate = form.workScopes.some((scope) => scope.workName.toLocaleLowerCase("ru-RU") === workName.toLocaleLowerCase("ru-RU"));
+    if (!duplicate) replaceWorkScopes([...form.workScopes, { workName, source: "manual" }]);
+    setWorkDraft("");
+  }
+
+  function toggleScheduleWork(item: ScheduleItem) {
+    const selected = form.workScopes.some((scope) => scope.scheduleItemId === item.id);
+    if (selected) {
+      replaceWorkScopes(form.workScopes.filter((scope) => scope.scheduleItemId !== item.id));
+      return;
+    }
+    if (form.workScopes.length >= 20) {
+      setError("В одной смене можно выбрать до 20 видов работ.");
+      return;
+    }
+    replaceWorkScopes([...form.workScopes, { scheduleItemId: item.id, workName: item.name, source: "schedule" }]);
+  }
+
+  function removeWorkScope(scope: DailyReportWorkScope) {
+    const key = dailyReportWorkScopeKey(scope);
+    replaceWorkScopes(form.workScopes.filter((item) => dailyReportWorkScopeKey(item) !== key));
   }
 
   function toggleCrew(resourceId: string) {
@@ -604,7 +676,7 @@ export function ReportsWorkflow({ projectId, reports, scheduleItems, currentUser
           <div className="reports-workflow-heading compact">
             <div>
               <strong>{editingId ? form.phase === "closed" ? "Фактическое закрытие смены" : "Заявка на смену" : "Новая заявка на смену"}</strong>
-              <span>{form.phase === "open" ? "План, укрупнённый вид работ и персональный состав." : "Выполненные объёмы, события и фотофиксация."}</span>
+              <span>{form.phase === "open" ? "План, несколько видов работ и персональный состав." : "Отдельный объём по каждой работе, события и фотофиксация."}</span>
             </div>
             <button className="icon-button" type="button" title="Закрыть" onClick={() => setFormOpen(false)}><X size={18} /></button>
           </div>
@@ -616,29 +688,51 @@ export function ReportsWorkflow({ projectId, reports, scheduleItems, currentUser
           <div className="daily-report-form-grid">
             <label>Дата<input type="date" value={form.date} onChange={(event) => setForm({ ...form, date: event.target.value })} /></label>
             <label>Автор <span aria-hidden="true">*</span><input aria-invalid={!form.author.trim()} required value={form.author} onChange={(event) => setForm({ ...form, author: event.target.value })} /></label>
-            <div className="daily-report-field daily-work-category-field">
-              <label htmlFor="daily-work-category">Укрупнённый вид работ <span aria-hidden="true">*</span></label>
+            <div className="daily-report-field daily-work-scopes-field">
+              <label htmlFor="daily-work-category">Укрупнённые виды работ <span aria-hidden="true">*</span></label>
               <div className="daily-work-category-control">
                 <input
-                  aria-invalid={!form.workCategory.trim()}
+                  aria-invalid={!form.workScopes.length}
                   id="daily-work-category"
                   list={`daily-work-category-options-${projectId}`}
-                  placeholder="Введите вручную или выберите из графика"
-                  required
-                  value={form.workCategory}
-                  onChange={(event) => setForm({ ...form, workCategory: event.target.value })}
+                  maxLength={240}
+                  placeholder="Введите свой вид работ"
+                  value={workDraft}
+                  onChange={(event) => setWorkDraft(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key !== "Enter") return;
+                    event.preventDefault();
+                    addManualWork();
+                  }}
                 />
+                <button aria-label="Добавить введённый вид работ" className="button secondary daily-add-work-button" disabled={workDraft.trim().length < 2 || form.workScopes.length >= 20} title="Добавить вид работ" type="button" onClick={addManualWork}><Plus size={16} /> Добавить</button>
                 <ScheduleWorkPicker
                   items={scheduleItems}
-                  selectedValue={form.workCategory}
+                  selectedScopes={form.workScopes}
                   shiftDate={form.date}
-                  onSelect={(workCategory) => setForm((current) => ({ ...current, workCategory }))}
+                  onToggle={toggleScheduleWork}
                 />
                 <datalist id={`daily-work-category-options-${projectId}`}>
                   {Array.from(new Set([...scheduleItems.map((item) => item.name), ...workCategories])).map((category) => <option key={category} value={category} />)}
                 </datalist>
               </div>
-              <small>Можно ввести свой вид работ или выбрать позицию из графика проекта.</small>
+              {form.workScopes.length ? (
+                <div className="daily-work-scope-list" role="list" aria-label="Выбранные виды работ">
+                  {form.workScopes.map((scope) => {
+                    const scheduleItem = scope.scheduleItemId ? scheduleItems.find((item) => item.id === scope.scheduleItemId) : null;
+                    return (
+                      <div key={dailyReportWorkScopeKey(scope)} role="listitem">
+                        <span>
+                          <strong>{scope.workName}</strong>
+                          <small>{scheduleItem ? `График · ${scheduleDateLabel(scheduleItem)}` : "Добавлено вручную"}</small>
+                        </span>
+                        <button aria-label={`Убрать вид работ: ${scope.workName}`} className="icon-button" title="Убрать вид работ" type="button" onClick={() => removeWorkScope(scope)}><X size={15} /></button>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : <div className="daily-work-scope-empty">Добавьте одну или несколько работ. При закрытии смены они станут отдельными строками факта.</div>}
+              <small>Можно сочетать позиции графика и свои работы, до 20 позиций в одном рапорте.</small>
             </div>
             <label>Погода<input value={form.weather} onChange={(event) => setForm({ ...form, weather: event.target.value })} placeholder="Температура, осадки, ветер" /></label>
             <label className="wide">План работ на смену <span aria-hidden="true">*</span><textarea aria-invalid={!form.plannedWorks.trim()} rows={2} value={form.plannedWorks} onChange={(event) => setForm({ ...form, plannedWorks: event.target.value })} placeholder="Что должно быть выполнено к концу дня" /></label>
@@ -682,6 +776,7 @@ export function ReportsWorkflow({ projectId, reports, scheduleItems, currentUser
                 <label>Простои<textarea rows={2} value={form.downtime} onChange={(event) => setForm({ ...form, downtime: event.target.value })} /></label>
                 <label>Проблемы / замечания<textarea rows={2} value={form.issues} onChange={(event) => setForm({ ...form, issues: event.target.value })} /></label>
               </div>
+              {form.workScopes.length ? <p className="daily-work-output-plan-note"><strong>{form.workScopes.length} {form.workScopes.length === 1 ? "работа перенесена" : "работы перенесены"} из плана.</strong> Укажите отдельный объём, единицу и трудозатраты по каждой позиции.</p> : null}
               <DailyReportWorkOutputEditor outputs={form.workOutputs} onChange={(workOutputs) => setForm({ ...form, workOutputs })} />
               {editingId ? (
                 <section className="daily-photo-workspace" aria-label="Фото смены и AI-анализ">
@@ -735,11 +830,12 @@ export function ReportsWorkflow({ projectId, reports, scheduleItems, currentUser
         {!dailyReportsLoaded && busy === "daily-load" ? <div className="reports-empty">Загружаю рапорты со стройплощадки...</div> : sortedReports.length ? sortedReports.map((item) => (
           <article className="daily-report-row" key={item.id}>
             <div className="daily-report-row-main">
-              <div><strong>{new Date(item.date).toLocaleDateString("ru-RU")} · {item.workCategory || "Смена"}</strong><span>{item.author} · {item.workers} рабочих / {item.engineers} ИТР</span></div>
+              <div><strong>{new Date(item.date).toLocaleDateString("ru-RU")} · {dailyReportWorkScopeLabel(item.workScopes, item.workCategory || "Смена")}</strong><span>{item.author} · {item.workers} рабочих / {item.engineers} ИТР</span></div>
               <div className="daily-report-badges"><span className={`badge ${(item.phase ?? "closed") === "open" ? "blue" : "gray"}`}>{(item.phase ?? "closed") === "open" ? "Смена открыта" : "Факт внесён"}</span><span className={`badge ${tone(item.status)}`}>{dailyReportStatusLabel(item.status)}</span></div>
             </div>
             <p>{(item.phase ?? "closed") === "open" ? item.plannedWorks || "План смены не заполнен" : item.completedWorks || "Выполненные работы не заполнены"}</p>
             <small>{item.weather || "Погода не указана"} · {item.equipment || "Техника не указана"}</small>
+            {parseDailyReportWorkScopes(item.workScopes, item.workCategory).length > 1 ? <div className="daily-report-work-scope-summary">{parseDailyReportWorkScopes(item.workScopes, item.workCategory).map((scope) => <span key={dailyReportWorkScopeKey(scope)}>{scope.workName}</span>)}</div> : null}
             {item.crewMembers?.length ? <div className="daily-report-crew-summary">{item.crewMembers.map((member) => <span key={member.resourceId}>{member.name}</span>)}</div> : null}
             {item.evidenceDocuments?.length ? <div className="daily-report-evidence-count"><Camera size={14} /> {item.evidenceDocuments.length} фото / документов</div> : null}
             {item.workOutputs?.length ? (

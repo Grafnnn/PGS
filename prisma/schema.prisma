@@ -632,6 +632,7 @@ model DailyReport {
   workOutputs       Json?                 @map("work_outputs")
   phase             String                @default("closed")
   workCategory      String                @default("") @map("work_category")
+  workScopes        Json?                 @map("work_scopes")
   plannedWorks      String                @default("") @map("planned_works")
   crewMembers       Json?                 @map("crew_members")
   status            String

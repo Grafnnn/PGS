@@ -66,7 +66,7 @@ export function DailyReportWorkOutputEditor({ outputs, onChange }: Props) {
                   <input aria-invalid={Boolean(issues.profession)} required minLength={2} maxLength={160} value={output.profession} onChange={(event) => update(index, { profession: event.target.value })} placeholder="Каменщик" />
                 </label>
                 <label className="field output-work">
-                  <span>Работа</span>
+                  <span>{output.scheduleItemId ? "Работа из графика" : "Работа"}</span>
                   <input aria-invalid={Boolean(issues.workName)} required minLength={2} maxLength={240} value={output.workName} onChange={(event) => update(index, { workName: event.target.value })} placeholder="Кладка стен" />
                 </label>
                 <label className="field">

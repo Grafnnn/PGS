@@ -156,6 +156,7 @@ export interface DailyReport {
   workOutputs?: DailyReportWorkOutput[];
   phase?: "open" | "closed";
   workCategory?: string;
+  workScopes?: DailyReportWorkScope[];
   plannedWorks?: string;
   crewMembers?: DailyReportCrewMember[];
   evidenceDocuments?: ProjectDocument[];
@@ -171,11 +172,18 @@ export interface DailyReportCrewMember {
 }
 
 export interface DailyReportWorkOutput {
+  scheduleItemId?: string;
   profession: string;
   workName: string;
   quantity: number;
   unit: string;
   laborHours: number;
+}
+
+export interface DailyReportWorkScope {
+  scheduleItemId?: string;
+  workName: string;
+  source: "schedule" | "manual";
 }
 
 export type ResourceKind = "worker" | "engineer" | "crew" | "equipment";

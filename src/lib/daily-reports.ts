@@ -4,6 +4,7 @@ import {
   dailyReportWorkOutputsComplete,
   parseDailyReportWorkOutputs
 } from "@/lib/daily-report-work-outputs";
+import { parseDailyReportWorkScopes } from "@/lib/daily-report-work-scopes";
 import { parseDailyReportCrewMembers } from "@/lib/daily-report-crew";
 import type { DailyReport } from "@/lib/types";
 
@@ -52,6 +53,7 @@ type DailyReportValidationInput = {
   workOutputs?: unknown;
   phase?: "open" | "closed";
   workCategory?: string;
+  workScopes?: unknown;
   plannedWorks?: string;
   crewMembers?: unknown;
 };
@@ -100,8 +102,14 @@ export function dailyReportDraftIssues(report: DailyReportValidationInput): Dail
   if (report.author.trim().length < 2) issues.push({ field: "author", message: "Укажите автора рапорта." });
   const phase = report.phase ?? "closed";
   const crew = parseDailyReportCrewMembers(report.crewMembers);
+  const workScopes = parseDailyReportWorkScopes(report.workScopes, report.workCategory);
+  if (report.workScopes !== undefined && report.workScopes !== null) {
+    if (!Array.isArray(report.workScopes) || workScopes.length !== report.workScopes.length) {
+      issues.push({ field: "workScopes", message: "Проверьте список видов работ: позиции должны быть заполнены и не дублироваться." });
+    }
+  }
   if (phase === "open") {
-    if ((report.workCategory ?? "").trim().length < 2) issues.push({ field: "workCategory", message: "Выберите укрупнённый вид работ на смену." });
+    if (!workScopes.length) issues.push({ field: "workScopes", message: "Выберите хотя бы один укрупнённый вид работ на смену." });
     if ((report.plannedWorks ?? "").trim().length < 3) issues.push({ field: "plannedWorks", message: "Опишите план работ на смену." });
     if (!crew.length && report.workers + report.engineers === 0) issues.push({ field: "crewMembers", message: "Выберите состав смены или укажите численность вручную." });
   } else if (report.completedWorks.trim().length < 3) {
