@@ -31,6 +31,7 @@ export async function POST(request: NextRequest, { params }: { params: { project
   const formData = await request.formData();
   const file = formData.get("file");
   const category = String(formData.get("category") || "прочее");
+  const dailyReportId = String(formData.get("dailyReportId") || "").trim() || null;
   const rawMutationId = String(formData.get("clientMutationId") || "").trim();
   const mutationIdResult = rawMutationId ? fieldClientMutationIdSchema.safeParse(rawMutationId) : null;
   if (mutationIdResult && !mutationIdResult.success) return NextResponse.json({ error: "Invalid client mutation identifier" }, { status: 400 });
@@ -45,6 +46,14 @@ export async function POST(request: NextRequest, { params }: { params: { project
   try {
     const project = await prisma.project.findUnique({ where: { id: params.projectId }, select: { organizationId: true } });
     if (!project) return NextResponse.json({ error: "Project not found" }, { status: 404 });
+    if (dailyReportId) {
+      const report = await prisma.dailyReport.findFirst({
+        where: { id: dailyReportId, projectId: params.projectId },
+        select: { id: true, status: true }
+      });
+      if (!report) return NextResponse.json({ error: "Daily report not found in project" }, { status: 404 });
+      if (report.status !== "draft") return NextResponse.json({ error: "Photos can be attached only to a draft daily report" }, { status: 409 });
+    }
     if (clientMutationId) {
       const previous = await existingUpload(params.projectId, clientMutationId);
       if (previous) return previous;
@@ -61,6 +70,7 @@ export async function POST(request: NextRequest, { params }: { params: { project
         data: {
           organizationId: project.organizationId,
           projectId: params.projectId,
+          dailyReportId,
           category,
           title: safeName,
           filePath: storageKey,
@@ -95,7 +105,15 @@ export async function POST(request: NextRequest, { params }: { params: { project
         entityId: created.id,
         action: "create",
         summary: `Загружен документ: ${safeName}`,
-        after: { id: created.id, fileName: safeName, mimeType: file.type, sizeBytes: file.size, category, source: clientMutationId ? "field_offline" : "document_upload" }
+        after: {
+          id: created.id,
+          fileName: safeName,
+          mimeType: file.type,
+          sizeBytes: file.size,
+          category,
+          linkedToDailyReport: Boolean(dailyReportId),
+          source: clientMutationId ? "field_offline" : "document_upload"
+        }
       });
       if (clientMutationId) {
         await tx.fieldSyncReceipt.create({

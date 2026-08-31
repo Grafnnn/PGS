@@ -493,6 +493,7 @@ model Document {
   id                     String                         @id @default(cuid())
   organizationId         String                         @map("organization_id")
   projectId              String                         @map("project_id")
+  dailyReportId          String?                        @map("daily_report_id")
   category               String
   title                  String
   filePath               String                         @map("file_path")
@@ -508,6 +509,7 @@ model Document {
   createdAt              DateTime                       @default(now()) @map("created_at")
   updatedAt              DateTime                       @updatedAt @map("updated_at")
   project                Project                        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  dailyReport            DailyReport?                   @relation(fields: [dailyReportId], references: [id], onDelete: SetNull)
   versions               DocumentVersion[]
   rfiLinks               ProjectRfi[]
   submittalLinks         ProjectSubmittal[]
@@ -521,6 +523,7 @@ model Document {
   closeoutChecklistItems ProjectCloseoutChecklistItem[]
   warrantySourceLinks    ProjectWarrantyObligation[]
 
+  @@index([dailyReportId])
   @@map("documents")
 }
 
@@ -567,14 +570,20 @@ model DailyReport {
   downtime          String
   issues            String
   workOutputs       Json?                 @map("work_outputs")
+  phase             String                @default("closed")
+  workCategory      String                @default("") @map("work_category")
+  plannedWorks      String                @default("") @map("planned_works")
+  crewMembers       Json?                 @map("crew_members")
   status            String
   createdBy         String?               @map("created_by")
   createdAt         DateTime              @default(now()) @map("created_at")
   updatedAt         DateTime              @updatedAt @map("updated_at")
   project           Project               @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  evidenceDocuments Document[]
   qualityIssues     ProjectQualityIssue[]
 
   @@index([organizationId, status, date])
+  @@index([projectId, date, phase])
   @@map("daily_reports")
 }
 

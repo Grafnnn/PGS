@@ -154,7 +154,20 @@ export interface DailyReport {
   downtime: string;
   issues: string;
   workOutputs?: DailyReportWorkOutput[];
+  phase?: "open" | "closed";
+  workCategory?: string;
+  plannedWorks?: string;
+  crewMembers?: DailyReportCrewMember[];
+  evidenceDocuments?: ProjectDocument[];
   status: "draft" | "submitted" | "checked" | "approved";
+}
+
+export interface DailyReportCrewMember {
+  resourceId: string;
+  name: string;
+  profession: string;
+  kind: Exclude<ResourceKind, "equipment">;
+  headcount: number;
 }
 
 export interface DailyReportWorkOutput {
@@ -556,6 +569,7 @@ export interface ProjectQualityIssue {
 export interface ProjectDocument {
   id: string;
   projectId: string;
+  dailyReportId?: string | null;
   category: string;
   title: string;
   filePath: string;

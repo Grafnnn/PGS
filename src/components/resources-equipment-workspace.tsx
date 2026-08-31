@@ -14,6 +14,7 @@ import {
   ShieldCheck,
   TimerReset,
   Trash2,
+  Upload,
   UserPlus,
   UserRoundSearch,
   Users,
@@ -100,6 +101,30 @@ type DemandForm = {
   startsAt: string;
   endsAt: string;
   notes: string;
+};
+
+type WorkforceImportRow = {
+  key: string;
+  sheetName: string;
+  sourceRow: number;
+  section: string;
+  name: string;
+  profession: string;
+  kind: Exclude<ResourceKind, "equipment">;
+  employmentType: Exclude<ResourceEmploymentType, "owned" | "rented">;
+  netMonthlySalary: number;
+  employerMonthlyCost: number;
+  notes: string;
+  duplicateInFile: boolean;
+  existingStatus: "new" | "organization" | "assigned";
+};
+
+type WorkforceImportPreview = {
+  parserVersion: string;
+  fileName: string;
+  rows: WorkforceImportRow[];
+  warnings: string[];
+  skippedRows: number;
 };
 
 const kindLabels: Record<ResourceKind, string> = {
@@ -272,6 +297,10 @@ export function ResourcesEquipmentWorkspace(props: Props) {
   const [demandNormAuto, setDemandNormAuto] = useState(true);
   const [resourceFilter, setResourceFilter] = useState<"people" | "equipment">("people");
   const [staffingFilter, setStaffingFilter] = useState<"gaps" | "all">("gaps");
+  const [importOpen, setImportOpen] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importPreview, setImportPreview] = useState<WorkforceImportPreview | null>(null);
+  const [importSelection, setImportSelection] = useState<string[]>([]);
 
   const resourceNormRecommendation = useMemo(() => recommendProductivityNorm({
     category: form.kind === "equipment" ? "engineer" : form.kind,
@@ -588,6 +617,72 @@ export function ResourcesEquipmentWorkspace(props: Props) {
     }
   }
 
+  function openImport() {
+    setImportOpen(true);
+    setImportFile(null);
+    setImportPreview(null);
+    setImportSelection([]);
+    setError("");
+    setNotice("");
+    setMode("team");
+  }
+
+  function chooseImportFile(file: File | null) {
+    setImportFile(file);
+    setImportPreview(null);
+    setImportSelection([]);
+  }
+
+  async function previewImport() {
+    if (!importFile) return;
+    setSaving("workforce-preview");
+    setError("");
+    try {
+      const data = new FormData();
+      data.set("action", "preview");
+      data.set("file", importFile);
+      const response = await fetch(`/api/projects/${props.projectId}/resources/import`, { method: "POST", body: data });
+      if (!response.ok) throw new Error(await responseError(response, "Не удалось разобрать Excel-реестр."));
+      const body = (await response.json()) as { preview?: WorkforceImportPreview };
+      const preview = body.preview ?? null;
+      setImportPreview(preview);
+      setImportSelection(preview?.rows.filter((row) => !row.duplicateInFile && row.existingStatus !== "assigned").map((row) => row.key) ?? []);
+    } catch (previewError) {
+      setError(previewError instanceof Error ? previewError.message : "Не удалось разобрать Excel-реестр.");
+    } finally {
+      setSaving("");
+    }
+  }
+
+  async function commitImport() {
+    if (!importFile || !importSelection.length) return;
+    setSaving("workforce-commit");
+    setError("");
+    try {
+      const data = new FormData();
+      data.set("action", "commit");
+      data.set("file", importFile);
+      data.set("selectedKeys", JSON.stringify(importSelection));
+      const response = await fetch(`/api/projects/${props.projectId}/resources/import`, { method: "POST", body: data });
+      if (!response.ok) throw new Error(await responseError(response, "Не удалось импортировать сотрудников."));
+      const body = (await response.json()) as { result?: { created?: number; assigned?: number; skipped?: number } };
+      setNotice(`Реестр сохранён: создано ${body.result?.created ?? 0}, назначено ${body.result?.assigned ?? 0}, пропущено ${body.result?.skipped ?? 0}.`);
+      setImportOpen(false);
+      setImportFile(null);
+      setImportPreview(null);
+      setImportSelection([]);
+      await loadResources();
+    } catch (commitError) {
+      setError(commitError instanceof Error ? commitError.message : "Не удалось импортировать сотрудников.");
+    } finally {
+      setSaving("");
+    }
+  }
+
+  function toggleImportRow(key: string) {
+    setImportSelection((current) => current.includes(key) ? current.filter((item) => item !== key) : [...current, key]);
+  }
+
   return (
     <section className="resources-equipment-workspace payroll-workspace" aria-label="ФОТ, штат и трудовая потребность">
       <header className={`payroll-workspace-header status-${summary.status}`}>
@@ -611,6 +706,9 @@ export function ResourcesEquipmentWorkspace(props: Props) {
             <>
               <button className="button secondary compact-button" type="button" onClick={openDemand}>
                 <Plus size={16} /> Потребность
+              </button>
+              <button className="button secondary compact-button" type="button" onClick={openImport}>
+                <Upload size={16} /> Реестр Excel
               </button>
               <button className="button primary compact-button" type="button" onClick={() => openCreate()}>
                 <Plus size={16} /> Сотрудник
@@ -854,9 +952,55 @@ export function ResourcesEquipmentWorkspace(props: Props) {
 
       {mode === "team" ? (
         <>
+          {importOpen ? (
+            <section className="workforce-import-panel" aria-label="Импорт сотрудников из Excel">
+              <div className="reports-workflow-heading compact">
+                <div><strong>Импорт сотрудников из Excel</strong><span>Поддерживается реестр ФОТ со столбцами «Должность · ФИО · на руки · с учётом налогов».</span></div>
+                <button className="icon-button" title="Закрыть" type="button" onClick={() => setImportOpen(false)}><X size={18} /></button>
+              </div>
+              <div className="workforce-import-controls">
+                <label className="field field-wide"><span>Excel-реестр сотрудников</span><input accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" type="file" onChange={(event) => chooseImportFile(event.target.files?.[0] ?? null)} /></label>
+                <button className="button secondary" disabled={!importFile || saving === "workforce-preview"} type="button" onClick={() => void previewImport()}><FileSpreadsheet size={16} />{saving === "workforce-preview" ? "Анализирую..." : "Проверить файл"}</button>
+              </div>
+              {importPreview ? (
+                <>
+                  <div className="workforce-import-summary">
+                    <span><strong>{importPreview.rows.length}</strong><small>строк распознано</small></span>
+                    <span><strong>{importSelection.length}</strong><small>выбрано</small></span>
+                    <span><strong>{importPreview.rows.filter((row) => row.existingStatus === "assigned").length}</strong><small>уже на проекте</small></span>
+                    <span><strong>{importPreview.rows.filter((row) => row.duplicateInFile).length}</strong><small>дублей в файле</small></span>
+                  </div>
+                  {importPreview.warnings.length ? <div className="workforce-import-warnings">{importPreview.warnings.map((warning) => <span key={warning}><AlertTriangle size={14} />{warning}</span>)}</div> : null}
+                  <div className="workforce-import-table-scroll">
+                    <div className="workforce-import-table" role="table" aria-label="Предпросмотр сотрудников">
+                      <div className="workforce-import-head" role="row"><span /><span>ФИО / должность</span><span>Тип</span><span>На руки</span><span>Стоимость работодателя</span><span>Статус</span></div>
+                      {importPreview.rows.map((row) => {
+                        const disabled = row.duplicateInFile || row.existingStatus === "assigned";
+                        return (
+                          <label className={`workforce-import-row ${disabled ? "disabled" : ""}`} key={row.key} role="row">
+                            <input checked={importSelection.includes(row.key)} disabled={disabled} type="checkbox" onChange={() => toggleImportRow(row.key)} />
+                            <span><strong>{row.name}</strong><small>{row.profession} · {row.sheetName}, строка {row.sourceRow}</small></span>
+                            <span>{kindLabels[row.kind]}</span>
+                            <span>{row.netMonthlySalary ? money(row.netMonthlySalary) : "—"}</span>
+                            <span>{row.employerMonthlyCost ? money(row.employerMonthlyCost) : "—"}</span>
+                            <span className={`badge ${row.existingStatus === "assigned" || row.duplicateInFile ? "gray" : row.existingStatus === "organization" ? "blue" : "green"}`}>{row.duplicateInFile ? "Дубль" : row.existingStatus === "assigned" ? "Уже назначен" : row.existingStatus === "organization" ? "Из реестра" : "Новый"}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <div className="form-actions">
+                    <button className="button primary" disabled={!importSelection.length || saving === "workforce-commit"} type="button" onClick={() => void commitImport()}><Upload size={16} />{saving === "workforce-commit" ? "Импортирую..." : `Импортировать (${importSelection.length})`}</button>
+                    <span className="muted">Сохранение выполняется только после этого подтверждения. Повторы не создаются.</span>
+                  </div>
+                </>
+              ) : null}
+            </section>
+          ) : null}
           <div className="project-action-toolbar resource-filter" role="group" aria-label="Фильтр ресурсов">
             <button className={resourceFilter === "people" ? "active" : ""} type="button" onClick={() => setResourceFilter("people")}>Сотрудники и бригады</button>
             <button className={resourceFilter === "equipment" ? "active" : ""} type="button" onClick={() => setResourceFilter("equipment")}>Техника</button>
+            {canEdit ? <button type="button" onClick={openImport}><Upload size={15} /> Импорт Excel</button> : null}
           </div>
           {loading ? <div className="empty-state">Загрузка ресурсного плана...</div> : visibleItems.length ? (
             <div className="resource-capacity-list">

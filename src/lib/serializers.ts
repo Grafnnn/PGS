@@ -12,6 +12,7 @@ import type {
   ScheduleItem as DbScheduleItem
 } from "@prisma/client";
 import { parseDailyReportWorkOutputs } from "@/lib/daily-report-work-outputs";
+import { parseDailyReportCrewMembers } from "@/lib/daily-report-crew";
 import type { BudgetItem, DailyReport, Material, Payment, ProcurementRequest, Project, Risk, ScheduleItem } from "./types";
 
 const dateOnly = (date: Date) => date.toISOString().slice(0, 10);
@@ -140,7 +141,7 @@ export function serializePayment(item: DbPayment): Payment {
   };
 }
 
-export function serializeDailyReport(item: DbDailyReport): DailyReport {
+export function serializeDailyReport(item: DbDailyReport & { evidenceDocuments?: DbDocument[] }): DailyReport {
   return {
     id: item.id,
     projectId: item.projectId,
@@ -156,6 +157,11 @@ export function serializeDailyReport(item: DbDailyReport): DailyReport {
     downtime: item.downtime,
     issues: item.issues,
     workOutputs: parseDailyReportWorkOutputs(item.workOutputs),
+    phase: item.phase === "open" ? "open" : "closed",
+    workCategory: item.workCategory,
+    plannedWorks: item.plannedWorks,
+    crewMembers: parseDailyReportCrewMembers(item.crewMembers),
+    evidenceDocuments: item.evidenceDocuments?.map(serializeDocument),
     status: item.status as DailyReport["status"]
   };
 }
@@ -177,6 +183,7 @@ export function serializeDocument(item: DbDocument) {
   return {
     id: item.id,
     projectId: item.projectId,
+    dailyReportId: item.dailyReportId,
     category: item.category,
     title: item.title,
     filePath: item.filePath,

@@ -13,6 +13,7 @@ import {
   dailyReportSubmissionIssues,
   normalizeDailyReportFields
 } from "@/lib/daily-reports";
+import { buildDailyReportCrewMembers, dailyReportCrewCounts } from "@/lib/daily-report-crew";
 import { demoState } from "@/lib/demo-data";
 import { getDemoContext, getProjectBundleFromDb, listProjectsFromDb } from "@/lib/project-data";
 import { deleteProjectWithConfirmation, ProjectDeleteError } from "@/lib/project-delete";
@@ -107,7 +108,11 @@ export async function GET(request: NextRequest, { params }: { params: { path?: s
         return json({ items: items.map(serializeDocument) });
       }
       if (resource === "daily-reports") {
-        const items = await prisma.dailyReport.findMany({ where: { projectId }, orderBy: [{ date: "desc" }, { createdAt: "desc" }] });
+        const items = await prisma.dailyReport.findMany({
+          where: { projectId },
+          include: { evidenceDocuments: { orderBy: { uploadedAt: "asc" } } },
+          orderBy: [{ date: "desc" }, { createdAt: "desc" }]
+        });
         return json({ items: items.map(serializeDailyReport) });
       }
       if (resource === "risks") {
@@ -433,14 +438,24 @@ async function createProjectResource(projectId: string, resource: string | undef
   }
 
   if (resource === "daily-reports") {
-    const data = normalizeDailyReportFields(dailyReportSchema.parse(body));
-    const issues = dailyReportDraftIssues(data);
+    const parsed = normalizeDailyReportFields(dailyReportSchema.parse(body));
+    const crewMembers = await resolveDailyReportCrew(projectId, parsed.crewResourceIds);
+    const counts = dailyReportCrewCounts(crewMembers);
+    const { crewResourceIds: _crewResourceIds, ...data } = parsed;
+    const candidate = {
+      ...data,
+      crewMembers,
+      workers: crewMembers.length ? counts.workers : data.workers,
+      engineers: crewMembers.length ? counts.engineers : data.engineers
+    };
+    const issues = dailyReportDraftIssues(candidate);
     if (issues.length) return json({ error: `Рапорт не сохранён: ${issues[0].message}`, issues }, 400);
     const item = await prisma.$transaction(async (tx) => {
       const created = await tx.dailyReport.create({
         data: {
-          ...data,
-          workOutputs: data.workOutputs as unknown as Prisma.InputJsonValue,
+          ...candidate,
+          crewMembers: candidate.crewMembers as unknown as Prisma.InputJsonValue,
+          workOutputs: candidate.workOutputs as unknown as Prisma.InputJsonValue,
           status: "draft",
           organizationId: project.organizationId,
           projectId,
@@ -454,7 +469,9 @@ async function createProjectResource(projectId: string, resource: string | undef
         entity: "daily_report",
         entityId: created.id,
         action: "create",
-        summary: `Создан ежедневный рапорт: ${created.date.toISOString().slice(0, 10)}`,
+        summary: created.phase === "open"
+          ? `Открыта заявка на смену: ${created.date.toISOString().slice(0, 10)}`
+          : `Создан ежедневный рапорт: ${created.date.toISOString().slice(0, 10)}`,
         after: serializeDailyReport(created)
       });
       return created;
@@ -587,8 +604,21 @@ async function updateResource(resource: string, id: string, body: unknown, expec
     return json({ item: serializePayment(item) });
   }
   if (resource === "daily-reports") {
-    const data = normalizeDailyReportFields(partial(dailyReportSchema).parse(body));
+    const parsed = normalizeDailyReportFields(partial(dailyReportSchema).parse(body));
     const before = await prisma.dailyReport.findUniqueOrThrow({ where: { id } });
+    const crewMembers = parsed.crewResourceIds === undefined
+      ? undefined
+      : await resolveDailyReportCrew(before.projectId, parsed.crewResourceIds);
+    const counts = crewMembers ? dailyReportCrewCounts(crewMembers) : null;
+    const { crewResourceIds: _crewResourceIds, ...parsedData } = parsed;
+    const data = {
+      ...parsedData,
+      ...(crewMembers ? {
+        crewMembers,
+        workers: counts?.workers ?? 0,
+        engineers: counts?.engineers ?? 0
+      } : {})
+    };
     if (!Object.keys(data).length || (data.status === before.status && Object.keys(data).length === 1)) {
       return json({ error: "No daily report changes requested" }, 409);
     }
@@ -613,12 +643,16 @@ async function updateResource(resource: string, id: string, body: unknown, expec
       return json({ error: `Рапорт ${action}: ${issues[0].message}`, issues }, data.status ? 409 : 400);
     }
     const item = await prisma.$transaction(async (tx) => {
+      const { crewMembers: updatedCrew, workOutputs: updatedOutputs, ...scalarData } = data;
       const updated = await tx.dailyReport.update({
         where: { id },
         data: {
-          ...data,
-          ...(data.workOutputs !== undefined
-            ? { workOutputs: data.workOutputs as unknown as Prisma.InputJsonValue }
+          ...scalarData,
+          ...(updatedCrew !== undefined
+            ? { crewMembers: updatedCrew as unknown as Prisma.InputJsonValue }
+            : {}),
+          ...(updatedOutputs !== undefined
+            ? { workOutputs: updatedOutputs as unknown as Prisma.InputJsonValue }
             : {})
         }
       });
@@ -763,6 +797,26 @@ async function projectExists(projectId: string) {
   return Boolean(await prisma.project.findUnique({ where: { id: projectId }, select: { id: true } }));
 }
 
+async function resolveDailyReportCrew(projectId: string, resourceIds: string[]) {
+  if (!resourceIds.length) return [];
+  const uniqueIds = [...new Set(resourceIds)];
+  const assignments = await prisma.projectResourceAssignment.findMany({
+    where: {
+      projectId,
+      resourceId: { in: uniqueIds },
+      status: { not: "completed" },
+      resource: { status: { not: "archived" }, kind: { in: ["worker", "engineer", "crew"] } }
+    },
+    include: { resource: true }
+  });
+  if (assignments.length !== uniqueIds.length) {
+    throw new DailyReportCrewError("Один или несколько сотрудников не назначены на этот проект.");
+  }
+  return buildDailyReportCrewMembers(assignments);
+}
+
+class DailyReportCrewError extends Error {}
+
 function budgetUpdateData(data: Partial<ReturnType<typeof budgetItemSchema.parse>>) {
   return {
     ...data,
@@ -822,6 +876,9 @@ function auditActor(user?: AppUser | null) {
 }
 
 function handleError(error: unknown) {
+  if (error instanceof DailyReportCrewError) {
+    return json({ error: error.message }, 400);
+  }
   if (error instanceof ProjectDeleteError) {
     return json({ error: error.message }, error.status);
   }

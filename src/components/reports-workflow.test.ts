@@ -12,8 +12,8 @@ describe("ReportsWorkflow", () => {
       currentUserLoaded: true,
       onReportsChange: () => undefined
     }));
-    expect(html).toContain("Процесс ежедневного рапорта");
-    expect(html).toContain("Новый рапорт");
+    expect(html).toContain("Смена и рапорт прораба");
+    expect(html).toContain("Открыть смену");
     expect(html).toContain("Обновить");
     expect(html).toContain("Версионная управленческая отчетность");
     expect(html).toContain("Формирование выполняется только по явной команде");
@@ -29,7 +29,7 @@ describe("ReportsWorkflow", () => {
       currentUserLoaded: true,
       onReportsChange: () => undefined
     }));
-    expect(html).not.toContain("Новый рапорт");
+    expect(html).not.toContain("Открыть смену");
     expect(html).not.toContain("Сформировать версию");
   });
 
@@ -59,5 +59,39 @@ describe("ReportsWorkflow", () => {
     }));
     expect(html).toContain("Каменщик");
     expect(html).toContain("100 м²/чел.-мес.");
+  });
+
+  it("shows an open shift as a plan that can be closed with actual facts", () => {
+    const html = renderToStaticMarkup(createElement(ReportsWorkflow, {
+      projectId: "project-1",
+      reports: [{
+        id: "report-open",
+        projectId: "project-1",
+        date: "2026-08-31",
+        author: "Прораб",
+        weather: "Ясно",
+        workers: 1,
+        engineers: 0,
+        equipment: "",
+        completedWorks: "",
+        materialsReceived: "",
+        materialsConsumed: "",
+        downtime: "",
+        issues: "",
+        phase: "open",
+        workCategory: "Кровельные работы",
+        plannedWorks: "Монтаж мембраны",
+        crewMembers: [{ resourceId: "resource-1", name: "Сотрудник 1", profession: "Кровельщик", kind: "worker", headcount: 1 }],
+        status: "draft"
+      }],
+      currentUser: { authenticated: true, role: "MANAGER", name: "РП" },
+      currentUserLoaded: true,
+      onReportsChange: () => undefined
+    }));
+    expect(html).toContain("Смена открыта");
+    expect(html).toContain("Монтаж мембраны");
+    expect(html).toContain("Сотрудник 1");
+    expect(html).toContain("Внести факт");
+    expect(html).not.toContain("Отправить");
   });
 });
