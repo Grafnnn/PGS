@@ -63,6 +63,7 @@ model Organization {
   externalCollaborationLinks ExternalCollaborationLink[]
   projectInvoices            ProjectInvoice[]
   projectExpenses            ProjectExpense[]
+  projectExpenseCategories   ProjectExpenseCategory[]
   aiRuns                     AiRun[]
 
   @@map("organizations")
@@ -158,6 +159,7 @@ model Project {
   supplierQuotes             SupplierQuote[]
   payments                   Payment[]
   expenses                   ProjectExpense[]
+  expenseCategories          ProjectExpenseCategory[]
   cashflowPeriods            CashflowPeriod[]
   documents                  Document[]
   dailyReports               DailyReport[]
@@ -509,6 +511,23 @@ model ProjectExpense {
   @@index([costCodeId])
   @@index([receiptDocumentId])
   @@map("project_expenses")
+}
+
+model ProjectExpenseCategory {
+  id             String       @id @default(cuid())
+  organizationId String       @map("organization_id")
+  projectId      String       @map("project_id")
+  name           String
+  normalizedName String       @map("normalized_name")
+  createdBy      String?      @map("created_by")
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  project        Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, normalizedName])
+  @@index([projectId, name])
+  @@map("project_expense_categories")
 }
 
 model ProjectExpenseItem {

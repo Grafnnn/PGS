@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { canProject } from "@/lib/auth/project-permissions";
 import { getCurrentUser } from "@/lib/auth/session";
 import { buildProjectExpensesWorkbook } from "@/lib/project-expense-export";
+import { customExpenseCategoryValue } from "@/lib/project-expense-config";
 import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
@@ -17,16 +18,20 @@ export async function GET(_request: Request, { params }: { params: { projectId: 
   try {
     const project = await prisma.project.findUnique({ where: { id: params.projectId }, select: { id: true, name: true } });
     if (!project) return NextResponse.json({ error: "Project not found" }, { status: 404 });
-    const items = await prisma.projectExpense.findMany({
-      where: { projectId: params.projectId },
-      include: {
-        costCode: { select: { id: true, code: true, name: true } },
-        receiptDocument: { select: { id: true, title: true, fileName: true, mimeType: true } },
-        items: { orderBy: { sequence: "asc" } }
-      },
-      orderBy: [{ expenseDate: "asc" }, { sequence: "asc" }]
-    });
-    const workbook = buildProjectExpensesWorkbook(items, project.name);
+    const [items, categories] = await Promise.all([
+      prisma.projectExpense.findMany({
+        where: { projectId: params.projectId },
+        include: {
+          costCode: { select: { id: true, code: true, name: true } },
+          receiptDocument: { select: { id: true, title: true, fileName: true, mimeType: true } },
+          items: { orderBy: { sequence: "asc" } }
+        },
+        orderBy: [{ expenseDate: "asc" }, { sequence: "asc" }]
+      }),
+      prisma.projectExpenseCategory.findMany({ where: { projectId: params.projectId }, select: { id: true, name: true } })
+    ]);
+    const customLabels = Object.fromEntries(categories.map((category) => [customExpenseCategoryValue(category.id), category.name]));
+    const workbook = buildProjectExpensesWorkbook(items, project.name, customLabels);
     return new NextResponse(new Uint8Array(workbook), {
       headers: {
         "content-type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { writeAudit } from "@/lib/audit";
 import { canProject } from "@/lib/auth/project-permissions";
 import { getCurrentUser } from "@/lib/auth/session";
-import { projectExpenseInputSchema, serializeProjectExpense } from "@/lib/project-expenses";
+import { projectExpenseCustomCategoryIds, projectExpenseInputSchema, serializeProjectExpense } from "@/lib/project-expenses";
 import { prisma } from "@/lib/prisma";
 
 type Params = { params: { projectId: string; expenseId: string } };
@@ -26,6 +26,11 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     if (!before) return json({ error: "Expense not found" }, 404);
     if (data.costCodeId && !(await prisma.projectCostCode.findFirst({ where: { id: data.costCodeId, projectId: params.projectId, status: "active" }, select: { id: true } }))) {
       return json({ error: "Код затрат не принадлежит проекту" }, 409);
+    }
+    const customCategoryIds = projectExpenseCustomCategoryIds(data);
+    if (customCategoryIds.length) {
+      const count = await prisma.projectExpenseCategory.count({ where: { projectId: params.projectId, id: { in: customCategoryIds } } });
+      if (count !== customCategoryIds.length) return json({ error: "Статья расходов не принадлежит проекту" }, 409);
     }
     const updated = await prisma.$transaction(async (tx) => {
       const item = await tx.projectExpense.update({

@@ -1,12 +1,12 @@
 import { z } from "zod";
-import { expenseCategories, expensePaymentMethods, type ExpenseCategory } from "@/lib/project-expense-config";
+import { customExpenseCategoryId, expenseCategories, expensePaymentMethods, isExpenseCategoryValue } from "@/lib/project-expense-config";
 
 const moneySchema = z.number().finite().min(0).max(1_000_000_000_000);
 const dateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 
 export const projectExpenseItemInputSchema = z.object({
   name: z.string().trim().min(1).max(300),
-  category: z.enum(expenseCategories),
+  category: z.string().trim().min(1).max(220).refine(isExpenseCategoryValue),
   quantity: z.number().finite().min(0).max(1_000_000).default(1),
   unit: z.string().trim().min(1).max(40).default("шт"),
   unitPrice: moneySchema,
@@ -18,7 +18,7 @@ export const projectExpenseInputSchema = z.object({
   expenseDate: dateSchema,
   merchant: z.string().trim().min(1).max(300),
   documentNumber: z.string().trim().max(120).nullable().optional(),
-  category: z.enum(expenseCategories),
+  category: z.string().trim().min(1).max(220).refine(isExpenseCategoryValue),
   paymentMethod: z.enum(expensePaymentMethods).default("unknown"),
   currency: z.string().trim().regex(/^[A-Z]{3}$/).default("RUB"),
   grossAmount: moneySchema,
@@ -101,8 +101,14 @@ export function serializeProjectExpense(item: ProjectExpenseRecord) {
 
 export type SerializedProjectExpense = ReturnType<typeof serializeProjectExpense>;
 
-export function buildProjectExpenseSummary(items: ProjectExpenseRecord[]) {
-  const byCategory = Object.fromEntries(expenseCategories.map((category) => [category, 0])) as Record<ExpenseCategory, number>;
+export function projectExpenseCustomCategoryIds(input: Pick<ProjectExpenseInput, "category" | "items">) {
+  const values = [input.category, ...input.items.map((item) => item.category)];
+  return [...new Set(values.map(customExpenseCategoryId).filter((id): id is string => Boolean(id)))];
+}
+
+export function buildProjectExpenseSummary(items: ProjectExpenseRecord[], additionalCategories: string[] = []) {
+  const byCategory: Record<string, number> = Object.fromEntries(expenseCategories.map((category) => [category, 0]));
+  for (const category of additionalCategories) byCategory[category] ??= 0;
   let grossAmount = 0;
   let taxAmount = 0;
   let receipts = 0;
@@ -110,7 +116,23 @@ export function buildProjectExpenseSummary(items: ProjectExpenseRecord[]) {
     const amount = numberValue(item.grossAmount);
     grossAmount += amount;
     taxAmount += numberValue(item.taxAmount);
-    if (expenseCategories.includes(item.category as ExpenseCategory)) byCategory[item.category as ExpenseCategory] += amount;
+    const lines = item.items ?? [];
+    const linesAmount = lines.reduce((sum, line) => sum + numberValue(line.amount), 0);
+    const useLines = lines.length > 0 && linesAmount > 0 && linesAmount <= amount + 0.01;
+    if (useLines) {
+      for (const line of lines) {
+        byCategory[line.category] ??= 0;
+        byCategory[line.category] += numberValue(line.amount);
+      }
+      const unallocated = Math.max(0, amount - linesAmount);
+      if (unallocated > 0.01) {
+        byCategory[item.category] ??= 0;
+        byCategory[item.category] += unallocated;
+      }
+    } else {
+      byCategory[item.category] ??= 0;
+      byCategory[item.category] += amount;
+    }
     if (item.receiptDocument) receipts += 1;
   }
   return { count: items.length, grossAmount, taxAmount, receipts, withoutReceipt: items.length - receipts, byCategory };
