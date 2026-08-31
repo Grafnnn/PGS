@@ -8897,6 +8897,26 @@ input[type="checkbox"] {
   font-weight: 700;
 }
 
+.daily-report-field {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  min-width: 0;
+}
+
+.daily-report-field > label {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.daily-report-field > small {
+  color: var(--muted-soft);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
 .daily-report-form-grid label.wide {
   grid-column: span 2;
 }
@@ -8906,6 +8926,196 @@ input[type="checkbox"] {
 .daily-report-form-grid textarea {
   width: 100%;
   min-width: 0;
+}
+
+.daily-work-category-control {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 7px;
+  min-width: 0;
+}
+
+.daily-schedule-work-picker {
+  position: relative;
+}
+
+.daily-schedule-work-picker > summary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 42px;
+  padding: 0 11px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--panel-muted);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+  list-style: none;
+  white-space: nowrap;
+}
+
+.daily-schedule-work-picker > summary::-webkit-details-marker {
+  display: none;
+}
+
+.daily-schedule-work-picker > summary:hover,
+.daily-schedule-work-picker[open] > summary {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, var(--panel));
+  color: var(--accent-hover);
+}
+
+.daily-schedule-work-picker > summary:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+}
+
+.daily-schedule-work-chevron {
+  transition: transform 160ms ease;
+}
+
+.daily-schedule-work-picker[open] .daily-schedule-work-chevron {
+  transform: rotate(180deg);
+}
+
+.daily-schedule-work-menu {
+  position: absolute;
+  z-index: 40;
+  top: calc(100% + 7px);
+  right: 0;
+  display: grid;
+  width: min(440px, calc(100vw - 40px));
+  max-width: calc(100vw - 40px);
+  overflow: hidden;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--elevated);
+  box-shadow: var(--shadow-md);
+}
+
+.daily-schedule-work-menu > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 14px 11px;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel-muted);
+}
+
+.daily-schedule-work-menu > header > div {
+  display: grid;
+  gap: 2px;
+}
+
+.daily-schedule-work-menu > header strong {
+  color: var(--text);
+  font-size: 13px;
+}
+
+.daily-schedule-work-menu > header small,
+.daily-schedule-work-limit {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.daily-schedule-work-search {
+  display: flex !important;
+  align-items: center !important;
+  gap: 7px !important;
+  margin: 10px 11px 6px;
+  padding: 0 9px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--panel);
+  color: var(--muted);
+}
+
+.daily-schedule-work-search input {
+  min-height: 34px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.daily-schedule-work-search input:focus {
+  box-shadow: none;
+  outline: none;
+}
+
+.daily-schedule-work-results {
+  display: grid;
+  max-height: 310px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 6px 6px;
+}
+
+.daily-schedule-work-results > button {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 10px 8px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+}
+
+.daily-schedule-work-results > button:last-child {
+  border-bottom: 0;
+}
+
+.daily-schedule-work-results > button:hover,
+.daily-schedule-work-results > button.selected {
+  background: var(--blue-soft);
+}
+
+.daily-schedule-work-results > button > span:first-child {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.daily-schedule-work-results > button strong,
+.daily-schedule-work-results > button small {
+  overflow-wrap: anywhere;
+}
+
+.daily-schedule-work-results > button strong {
+  font-size: 13px;
+  line-height: 1.3;
+}
+
+.daily-schedule-work-results > button small {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.daily-schedule-work-results > p,
+.daily-schedule-work-empty {
+  margin: 0;
+  padding: 18px 14px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+  text-align: center;
+}
+
+.daily-schedule-work-limit {
+  padding: 5px 12px 10px;
 }
 
 .daily-shift-steps {
@@ -9800,6 +10010,25 @@ input[type="checkbox"] {
 
   .daily-report-form-grid label.wide {
     grid-column: auto;
+  }
+
+  .daily-schedule-work-picker > summary {
+    width: 42px;
+    padding: 0;
+  }
+
+  .daily-schedule-work-picker > summary span,
+  .daily-schedule-work-chevron {
+    display: none;
+  }
+
+  .daily-schedule-work-picker {
+    position: static;
+  }
+
+  .daily-schedule-work-menu {
+    width: 100%;
+    max-width: 100%;
   }
 
   .daily-report-actions .button {
