@@ -48,6 +48,7 @@ type Summary = {
 
 type CostCode = { id: string; code: string; name: string };
 type FormMode = "manual" | "receipt";
+type CategoryComposerTarget = "form" | "toolbar";
 
 type ExpenseForm = {
   expenseDate: string;
@@ -99,6 +100,36 @@ const expenseChartColors = ["#0f766e", "#2563eb", "#d97706", "#dc2626", "#7c3aed
 function expenseChartColor(value: string) {
   const hash = [...value].reduce((total, character) => (total * 31 + character.charCodeAt(0)) >>> 0, 0);
   return expenseChartColors[hash % expenseChartColors.length];
+}
+
+function ExpenseCategoryComposer({ className, inputLabel, value, saving, onChange, onSave, onCancel }: {
+  className: string;
+  inputLabel: string;
+  value: string;
+  saving: boolean;
+  onChange(value: string): void;
+  onSave(): void;
+  onCancel(): void;
+}) {
+  return <div className={className}>
+    <input
+      aria-label={inputLabel}
+      autoFocus
+      maxLength={80}
+      onChange={(event) => onChange(event.target.value)}
+      onKeyDown={(event) => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          onSave();
+        }
+        if (event.key === "Escape") onCancel();
+      }}
+      placeholder="Например, аренда бытовки"
+      value={value}
+    />
+    <button aria-label="Сохранить новую статью" className="icon-button primary" disabled={saving || value.trim().length < 2} onClick={onSave} title="Сохранить статью" type="button">{saving ? <RefreshCw className="spin" size={16} /> : <Check size={16} />}</button>
+    <button aria-label="Отменить добавление статьи" className="icon-button" onClick={onCancel} title="Отмена" type="button"><X size={16} /></button>
+  </div>;
 }
 
 type ExpenseChartDatum = { value: string; label: string; amount: number; percent: number; color: string };
@@ -153,7 +184,7 @@ export function ExpenseRegisterWorkspace({ projectId, canEdit, canDelete }: { pr
   const [form, setForm] = useState<ExpenseForm>(() => emptyForm("manual"));
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [recognitionWarnings, setRecognitionWarnings] = useState<string[]>([]);
-  const [categoryComposerOpen, setCategoryComposerOpen] = useState(false);
+  const [categoryComposerTarget, setCategoryComposerTarget] = useState<CategoryComposerTarget | null>(null);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [creatingCategory, setCreatingCategory] = useState(false);
 
@@ -199,11 +230,15 @@ export function ExpenseRegisterWorkspace({ projectId, canEdit, canDelete }: { pr
   const lineTotal = useMemo(() => form.items.reduce((sum, line) => sum + line.amount, 0), [form.items]);
 
   function openNew(mode: FormMode) {
+    const nextForm = emptyForm(mode);
+    if (categoryFilter !== "all") nextForm.category = categoryFilter;
     setEditingId("");
     setFormMode(mode);
-    setForm(emptyForm(mode));
+    setForm(nextForm);
     setReceiptFile(null);
     setRecognitionWarnings([]);
+    setCategoryComposerTarget(null);
+    setNewCategoryName("");
     setError("");
     setNotice("");
   }
@@ -213,8 +248,15 @@ export function ExpenseRegisterWorkspace({ projectId, canEdit, canDelete }: { pr
     setEditingId("");
     setReceiptFile(null);
     setRecognitionWarnings([]);
-    setCategoryComposerOpen(false);
+    setCategoryComposerTarget(null);
     setNewCategoryName("");
+  }
+
+  function toggleCategoryComposer(target: CategoryComposerTarget) {
+    const shouldOpen = categoryComposerTarget !== target;
+    setCategoryComposerTarget(shouldOpen ? target : null);
+    if (shouldOpen) setNewCategoryName("");
+    setError("");
   }
 
   function markEdited(next: ExpenseForm) {
@@ -241,7 +283,7 @@ export function ExpenseRegisterWorkspace({ projectId, canEdit, canDelete }: { pr
     });
   }
 
-  async function createCategory() {
+  async function createCategory(target: CategoryComposerTarget) {
     const name = newCategoryName.trim();
     if (name.length < 2) return setError("Введите название статьи — минимум 2 символа.");
     setCreatingCategory(true);
@@ -255,9 +297,10 @@ export function ExpenseRegisterWorkspace({ projectId, canEdit, canDelete }: { pr
       const data = await response.json() as { item?: ExpenseCategoryOption; error?: string };
       if (!response.ok || !data.item) throw new Error(data.error || "Не удалось добавить статью расходов.");
       setCategories((current) => [...current, data.item as ExpenseCategoryOption]);
-      updateForm("category", data.item.value);
+      if (target === "toolbar") setCategoryFilter(data.item.value);
+      else updateForm("category", data.item.value);
       setNewCategoryName("");
-      setCategoryComposerOpen(false);
+      setCategoryComposerTarget(null);
       setNotice(`Статья «${data.item.label}» добавлена и выбрана.`);
     } catch (categoryError) {
       setError(categoryError instanceof Error ? categoryError.message : "Не удалось добавить статью расходов.");
@@ -403,13 +446,9 @@ export function ExpenseRegisterWorkspace({ projectId, canEdit, canDelete }: { pr
           <span>Статья *</span>
           <div className="expense-category-control">
             <select aria-label="Статья расхода" value={form.category} onChange={(event) => updateForm("category", event.target.value)}>{categories.map((category) => <option key={category.value} value={category.value}>{category.label}{category.custom ? " · своя" : ""}</option>)}</select>
-            <button aria-expanded={categoryComposerOpen} aria-label="Добавить свою статью расхода" className="icon-button" onClick={() => setCategoryComposerOpen((current) => !current)} title="Добавить свою статью" type="button"><Plus size={17} /></button>
+            <button aria-expanded={categoryComposerTarget === "form"} aria-label="Добавить свою статью в расход" className="icon-button" onClick={() => toggleCategoryComposer("form")} title="Добавить свою статью" type="button"><Plus size={17} /></button>
           </div>
-          {categoryComposerOpen && <div className="expense-category-composer">
-            <input aria-label="Название новой статьи" autoFocus maxLength={80} onChange={(event) => setNewCategoryName(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); void createCategory(); } if (event.key === "Escape") setCategoryComposerOpen(false); }} placeholder="Например, аренда бытовки" value={newCategoryName} />
-            <button aria-label="Сохранить новую статью" className="icon-button primary" disabled={creatingCategory || newCategoryName.trim().length < 2} onClick={() => void createCategory()} title="Сохранить статью" type="button">{creatingCategory ? <RefreshCw className="spin" size={16} /> : <Check size={16} />}</button>
-            <button aria-label="Отменить добавление статьи" className="icon-button" onClick={() => { setCategoryComposerOpen(false); setNewCategoryName(""); }} title="Отмена" type="button"><X size={16} /></button>
-          </div>}
+          {categoryComposerTarget === "form" && <ExpenseCategoryComposer className="expense-category-composer" inputLabel="Название новой статьи расхода" onCancel={() => { setCategoryComposerTarget(null); setNewCategoryName(""); }} onChange={setNewCategoryName} onSave={() => void createCategory("form")} saving={creatingCategory} value={newCategoryName} />}
         </div>
         <label className="field"><span>Способ оплаты</span><select value={form.paymentMethod} onChange={(event) => updateForm("paymentMethod", event.target.value as ExpensePaymentMethod)}>{expensePaymentMethods.map((method) => <option key={method} value={method}>{expensePaymentMethodLabels[method]}</option>)}</select></label>
         <label className="field"><span>Код затрат</span><select value={form.costCodeId} onChange={(event) => updateForm("costCodeId", event.target.value)}><option value="">Не привязан</option>{costCodes.map((code) => <option key={code.id} value={code.id}>{code.code} · {code.name}</option>)}</select></label>
@@ -438,7 +477,11 @@ export function ExpenseRegisterWorkspace({ projectId, canEdit, canDelete }: { pr
 
     <div className="expense-toolbar">
       <label><Search size={16} /><input aria-label="Поиск расходов" placeholder="Поставщик, документ, позиция или код" value={query} onChange={(event) => setQuery(event.target.value)} /></label>
-      <label><span>Статья</span><select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)}><option value="all">Все статьи</option>{categories.map((category) => <option key={category.value} value={category.value}>{category.label}</option>)}</select><ChevronDown size={15} /></label>
+      <div className="expense-toolbar-category">
+        <label><span>Статья</span><select aria-label="Фильтр по статье расходов" value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)}><option value="all">Все статьи</option>{categories.map((category) => <option key={category.value} value={category.value}>{category.label}</option>)}</select><ChevronDown size={15} /></label>
+        {canEdit && <button aria-expanded={categoryComposerTarget === "toolbar"} aria-label="Добавить свою статью рядом с фильтром" className="icon-button expense-toolbar-add-category" onClick={() => toggleCategoryComposer("toolbar")} title="Добавить свою статью" type="button"><Plus size={17} /></button>}
+        {categoryComposerTarget === "toolbar" && <ExpenseCategoryComposer className="expense-toolbar-category-composer" inputLabel="Название новой статьи в фильтре" onCancel={() => { setCategoryComposerTarget(null); setNewCategoryName(""); }} onChange={setNewCategoryName} onSave={() => void createCategory("toolbar")} saving={creatingCategory} value={newCategoryName} />}
+      </div>
       <button aria-label="Обновить реестр" className="icon-button" disabled={loading} onClick={() => void load()} title="Обновить" type="button"><RefreshCw className={loading ? "spin" : ""} size={17} /></button>
     </div>
 
