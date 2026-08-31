@@ -3,6 +3,7 @@
 import { Bot, CalendarDays, Camera, Check, Images, Sparkles } from "lucide-react";
 import Image from "next/image";
 import React, { useEffect, useMemo, useState } from "react";
+import { dailyReportWorkScopeLabel } from "@/lib/daily-report-work-scopes";
 import type { PhotoQuestionResult } from "@/lib/photo-question";
 import type { DailyReport } from "@/lib/types";
 
@@ -131,7 +132,7 @@ export function DailyPhotoAiWorkspace({ projectId, reports, currentUser, current
               <span>Рапорт с фотографиями</span>
               <select value={selectedReport?.report.id ?? ""} onChange={(event) => chooseReport(event.target.value)}>
                 {photoReports.map(({ report, photos }) => (
-                  <option key={report.id} value={report.id}>{reportDate(report.date)} · {report.workCategory || "Смена"} · {photos.length} фото</option>
+                  <option key={report.id} value={report.id}>{reportDate(report.date)} · {dailyReportWorkScopeLabel(report.workScopes, report.workCategory || "Смена")} · {photos.length} фото</option>
                 ))}
               </select>
             </label>

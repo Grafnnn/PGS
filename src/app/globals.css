@@ -24,6 +24,7 @@
   --gray: #5f5949;
   --accent: #c1512f;
   --accent-hover: #a83e22;
+  --accent-soft: #f4e4de;
   --shadow-sm: 0 1px 0 rgba(21, 24, 29, 0.05), 0 8px 22px rgba(21, 24, 29, 0.04);
   --shadow-md: 0 18px 46px rgba(21, 24, 29, 0.14);
   --radius: 6px;
@@ -9117,9 +9118,17 @@ input[type="checkbox"] {
 .daily-work-category-control {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   gap: 7px;
   min-width: 0;
+}
+
+.daily-work-scopes-field {
+  grid-column: 1 / -1;
+}
+
+.daily-add-work-button {
+  min-height: 42px;
 }
 
 .daily-schedule-work-picker {
@@ -9158,6 +9167,18 @@ input[type="checkbox"] {
 .daily-schedule-work-picker > summary:focus-visible {
   outline: none;
   box-shadow: var(--focus);
+}
+
+.daily-schedule-work-picker > summary b {
+  display: inline-grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 10px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 11px;
 }
 
 .daily-schedule-work-chevron {
@@ -9274,6 +9295,27 @@ input[type="checkbox"] {
   min-width: 0;
 }
 
+.daily-schedule-work-option-meta {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.daily-schedule-work-check {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--line-strong);
+  border-radius: 4px;
+  color: var(--accent);
+}
+
+.daily-schedule-work-results > button.selected .daily-schedule-work-check {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
 .daily-schedule-work-results > button strong,
 .daily-schedule-work-results > button small {
   overflow-wrap: anywhere;
@@ -9302,6 +9344,82 @@ input[type="checkbox"] {
 
 .daily-schedule-work-limit {
   padding: 5px 12px 10px;
+}
+
+.daily-schedule-work-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 11px;
+  border-top: 1px solid var(--line);
+  background: var(--panel-muted);
+}
+
+.daily-schedule-work-footer > span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.daily-work-scope-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.daily-work-scope-list > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 34px;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 8px 8px 8px 10px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--accent);
+  background: var(--surface);
+}
+
+.daily-work-scope-list > div > span {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.daily-work-scope-list strong,
+.daily-work-scope-list small {
+  overflow-wrap: anywhere;
+}
+
+.daily-work-scope-list strong {
+  color: var(--text);
+  font-size: 12px;
+}
+
+.daily-work-scope-list small,
+.daily-work-scope-empty {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.daily-work-scope-empty {
+  padding: 10px 12px;
+  border: 1px dashed var(--line-strong);
+  background: var(--panel-muted);
+}
+
+.daily-work-output-plan-note {
+  margin: 0;
+  padding: 9px 11px;
+  border-left: 3px solid var(--accent);
+  background: var(--accent-soft);
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.daily-work-output-plan-note strong {
+  color: var(--text);
 }
 
 .daily-shift-steps {
@@ -10220,6 +10338,21 @@ input[type="checkbox"] {
   color: var(--text);
 }
 
+.daily-report-work-scope-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.daily-report-work-scope-summary span {
+  padding: 4px 7px;
+  border: 1px solid var(--line);
+  background: var(--panel-muted);
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 700;
+}
+
 .daily-report-actions {
   justify-content: flex-start;
   flex-wrap: wrap;
@@ -10378,7 +10511,8 @@ input[type="checkbox"] {
   .daily-report-form-grid,
   .compact-sections,
   .executive-report-history,
-  .daily-report-output-row {
+  .daily-report-output-row,
+  .daily-work-scope-list {
     grid-template-columns: 1fr;
   }
 
@@ -10450,22 +10584,30 @@ input[type="checkbox"] {
   }
 
   .daily-schedule-work-picker > summary {
-    width: 42px;
-    padding: 0;
+    width: 100%;
+    padding: 0 11px;
   }
 
-  .daily-schedule-work-picker > summary span,
-  .daily-schedule-work-chevron {
-    display: none;
+  .daily-work-category-control {
+    grid-template-columns: minmax(0, 1fr) auto;
   }
 
   .daily-schedule-work-picker {
+    grid-column: 1 / -1;
     position: static;
+  }
+
+  .daily-add-work-button {
+    padding-inline: 10px;
   }
 
   .daily-schedule-work-menu {
     width: 100%;
     max-width: 100%;
+  }
+
+  .daily-schedule-work-option-meta .badge {
+    display: none;
   }
 
   .daily-report-actions .button {

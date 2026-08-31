@@ -45,6 +45,12 @@ describe("daily report work outputs", () => {
     }]);
   });
 
+  it("preserves the optional project-schedule link on a measurable actual row", () => {
+    expect(parseDailyReportWorkOutputs([{ ...output, scheduleItemId: " schedule-1 " }])).toEqual([
+      { ...output, scheduleItemId: "schedule-1", unit: "м²" }
+    ]);
+  });
+
   it("reports incomplete rows and totals only finite positive labor", () => {
     expect(dailyReportWorkOutputIssues({ ...output, profession: "", laborHours: 0 })).toEqual(expect.objectContaining({
       profession: expect.any(String),

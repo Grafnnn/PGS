@@ -264,14 +264,15 @@ async function main() {
     }
 
     for (const item of demoState.dailyReports) {
-      const { crewMembers, evidenceDocuments: _evidenceDocuments, ...reportData } = item;
+      const { crewMembers, workOutputs, workScopes, evidenceDocuments: _evidenceDocuments, ...reportData } = item;
       await prisma.dailyReport.upsert({
         where: { id: item.id },
         update: {},
         create: {
           ...reportData,
           crewMembers: crewMembers as unknown as Prisma.InputJsonValue | undefined,
-          workOutputs: item.workOutputs as unknown as Prisma.InputJsonValue | undefined,
+          workOutputs: workOutputs as unknown as Prisma.InputJsonValue | undefined,
+          workScopes: workScopes as unknown as Prisma.InputJsonValue | undefined,
           organizationId: org.id,
           date: new Date(item.date),
           createdBy: user.id

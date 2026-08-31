@@ -14,6 +14,7 @@ import {
   normalizeDailyReportFields
 } from "@/lib/daily-reports";
 import { buildDailyReportCrewMembers, dailyReportCrewCounts } from "@/lib/daily-report-crew";
+import { dailyReportWorkScopeSummary, parseDailyReportWorkScopes } from "@/lib/daily-report-work-scopes";
 import { demoState } from "@/lib/demo-data";
 import { getDemoContext, getProjectBundleFromDb, listProjectsFromDb } from "@/lib/project-data";
 import { deleteProjectWithConfirmation, ProjectDeleteError } from "@/lib/project-delete";
@@ -439,9 +440,14 @@ async function createProjectResource(projectId: string, resource: string | undef
 
   if (resource === "daily-reports") {
     const parsed = normalizeDailyReportFields(dailyReportSchema.parse(body));
+    const workScopes = parseDailyReportWorkScopes(parsed.workScopes, parsed.workCategory);
     const crewMembers = await resolveDailyReportCrew(projectId, parsed.crewResourceIds);
     const counts = dailyReportCrewCounts(crewMembers);
-    const { crewResourceIds: _crewResourceIds, ...data } = parsed;
+    const { crewResourceIds: _crewResourceIds, ...data } = {
+      ...parsed,
+      workScopes,
+      workCategory: dailyReportWorkScopeSummary(workScopes, parsed.workCategory)
+    };
     const candidate = {
       ...data,
       crewMembers,
@@ -451,11 +457,18 @@ async function createProjectResource(projectId: string, resource: string | undef
     const issues = dailyReportDraftIssues(candidate);
     if (issues.length) return json({ error: `Рапорт не сохранён: ${issues[0].message}`, issues }, 400);
     const item = await prisma.$transaction(async (tx) => {
+      const {
+        crewMembers: storedCrew,
+        workOutputs: storedOutputs,
+        workScopes: storedScopes,
+        ...scalarCandidate
+      } = candidate;
       const created = await tx.dailyReport.create({
         data: {
-          ...candidate,
-          crewMembers: candidate.crewMembers as unknown as Prisma.InputJsonValue,
-          workOutputs: candidate.workOutputs as unknown as Prisma.InputJsonValue,
+          ...scalarCandidate,
+          crewMembers: storedCrew as unknown as Prisma.InputJsonValue,
+          workOutputs: storedOutputs as unknown as Prisma.InputJsonValue,
+          workScopes: storedScopes as unknown as Prisma.InputJsonValue,
           status: "draft",
           organizationId: project.organizationId,
           projectId,
@@ -606,11 +619,21 @@ async function updateResource(resource: string, id: string, body: unknown, expec
   if (resource === "daily-reports") {
     const parsed = normalizeDailyReportFields(partial(dailyReportSchema).parse(body));
     const before = await prisma.dailyReport.findUniqueOrThrow({ where: { id } });
-    const crewMembers = parsed.crewResourceIds === undefined
+    const normalizedWorkScopes = parsed.workScopes === undefined && parsed.workCategory === undefined
       ? undefined
-      : await resolveDailyReportCrew(before.projectId, parsed.crewResourceIds);
+      : parseDailyReportWorkScopes(parsed.workScopes, parsed.workCategory ?? before.workCategory);
+    const normalizedParsed = normalizedWorkScopes === undefined
+      ? parsed
+      : {
+          ...parsed,
+          workScopes: normalizedWorkScopes,
+          workCategory: dailyReportWorkScopeSummary(normalizedWorkScopes, parsed.workCategory ?? before.workCategory)
+        };
+    const crewMembers = normalizedParsed.crewResourceIds === undefined
+      ? undefined
+      : await resolveDailyReportCrew(before.projectId, normalizedParsed.crewResourceIds);
     const counts = crewMembers ? dailyReportCrewCounts(crewMembers) : null;
-    const { crewResourceIds: _crewResourceIds, ...parsedData } = parsed;
+    const { crewResourceIds: _crewResourceIds, ...parsedData } = normalizedParsed;
     const data = {
       ...parsedData,
       ...(crewMembers ? {
@@ -643,7 +666,7 @@ async function updateResource(resource: string, id: string, body: unknown, expec
       return json({ error: `Рапорт ${action}: ${issues[0].message}`, issues }, data.status ? 409 : 400);
     }
     const item = await prisma.$transaction(async (tx) => {
-      const { crewMembers: updatedCrew, workOutputs: updatedOutputs, ...scalarData } = data;
+      const { crewMembers: updatedCrew, workOutputs: updatedOutputs, workScopes: updatedScopes, ...scalarData } = data;
       const updated = await tx.dailyReport.update({
         where: { id },
         data: {
@@ -653,6 +676,9 @@ async function updateResource(resource: string, id: string, body: unknown, expec
             : {}),
           ...(updatedOutputs !== undefined
             ? { workOutputs: updatedOutputs as unknown as Prisma.InputJsonValue }
+            : {}),
+          ...(updatedScopes !== undefined
+            ? { workScopes: updatedScopes as unknown as Prisma.InputJsonValue }
             : {})
         }
       });

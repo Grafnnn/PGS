@@ -13,6 +13,7 @@ import type {
 } from "@prisma/client";
 import { parseDailyReportWorkOutputs } from "@/lib/daily-report-work-outputs";
 import { parseDailyReportCrewMembers } from "@/lib/daily-report-crew";
+import { parseDailyReportWorkScopes } from "@/lib/daily-report-work-scopes";
 import type { BudgetItem, DailyReport, Material, Payment, ProcurementRequest, Project, Risk, ScheduleItem } from "./types";
 
 const dateOnly = (date: Date) => date.toISOString().slice(0, 10);
@@ -159,6 +160,7 @@ export function serializeDailyReport(item: DbDailyReport & { evidenceDocuments?:
     workOutputs: parseDailyReportWorkOutputs(item.workOutputs),
     phase: item.phase === "open" ? "open" : "closed",
     workCategory: item.workCategory,
+    workScopes: parseDailyReportWorkScopes(item.workScopes, item.workCategory),
     plannedWorks: item.plannedWorks,
     crewMembers: parseDailyReportCrewMembers(item.crewMembers),
     evidenceDocuments: item.evidenceDocuments?.map(serializeDocument),

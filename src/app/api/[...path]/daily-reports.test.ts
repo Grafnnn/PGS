@@ -154,6 +154,69 @@ describe("daily reports catch-all workflow", () => {
     }));
   });
 
+  it("stores multiple work scopes and keeps a compact legacy summary", async () => {
+    mocks.assignmentFindMany.mockResolvedValue([{
+      resourceId: "resource-1",
+      resource: { name: "Сотрудник 1", profession: "Кровельщик", kind: "worker", headcount: 1 }
+    }]);
+    const { POST } = await import("./route");
+    const response = await POST(request({
+      ...before,
+      phase: "open",
+      workCategory: "",
+      workScopes: [
+        { scheduleItemId: "schedule-1", workName: "Монтаж мембраны", source: "schedule" },
+        { scheduleItemId: "schedule-2", workName: "Устройство примыканий", source: "schedule" }
+      ],
+      plannedWorks: "Выполнить работы на захватке 2",
+      completedWorks: "",
+      workOutputs: [],
+      workers: 0,
+      engineers: 0,
+      crewResourceIds: ["resource-1"]
+    }), { params: { path: ["projects", "project-1", "daily-reports"] } });
+
+    expect(response.status).toBe(201);
+    expect(mocks.reportCreate).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        workCategory: "Монтаж мембраны · Устройство примыканий",
+        workScopes: [
+          expect.objectContaining({ scheduleItemId: "schedule-1", workName: "Монтаж мембраны" }),
+          expect.objectContaining({ scheduleItemId: "schedule-2", workName: "Устройство примыканий" })
+        ]
+      })
+    }));
+  });
+
+  it("rejects duplicate work scopes before writing the report", async () => {
+    const { POST } = await import("./route");
+    const response = await POST(request({
+      ...before,
+      workScopes: [
+        { scheduleItemId: "schedule-1", workName: "Монтаж мембраны", source: "schedule" },
+        { scheduleItemId: "schedule-1", workName: "Монтаж мембраны", source: "schedule" }
+      ]
+    }), { params: { path: ["projects", "project-1", "daily-reports"] } });
+
+    expect(response.status).toBe(400);
+    expect(mocks.reportCreate).not.toHaveBeenCalled();
+  });
+
+  it("keeps legacy work-category patches synchronized with structured scopes", async () => {
+    const { PATCH } = await import("./route");
+    const response = await PATCH(request({ workCategory: "Устройство гидроизоляции" }), {
+      params: { path: ["daily-reports", "daily-1"] }
+    });
+
+    expect(response.status).toBe(200);
+    expect(mocks.reportUpdate).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        workCategory: "Устройство гидроизоляции",
+        workScopes: [{ workName: "Устройство гидроизоляции", source: "manual" }]
+      })
+    }));
+  });
+
   it("does not allow an open shift to be submitted as a completed report", async () => {
     mocks.reportFind.mockResolvedValue({
       ...before,

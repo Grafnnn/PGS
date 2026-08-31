@@ -27,6 +27,7 @@ export function normalizeDailyReportWorkOutputUnit(value: string) {
 }
 
 export const dailyReportWorkOutputSchema = z.object({
+  scheduleItemId: z.string().trim().min(1).max(200).optional().nullable(),
   profession: z.string().trim().min(2).max(160),
   workName: z.string().trim().min(2).max(240),
   quantity: z.coerce.number().positive().max(1_000_000_000),
@@ -34,6 +35,7 @@ export const dailyReportWorkOutputSchema = z.object({
   laborHours: z.coerce.number().positive().max(10_000_000)
 }).strict().transform((output) => ({
   ...output,
+  scheduleItemId: output.scheduleItemId?.trim() || undefined,
   profession: compactText(output.profession),
   workName: compactText(output.workName),
   unit: normalizeDailyReportWorkOutputUnit(output.unit)

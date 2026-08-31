@@ -68,6 +68,10 @@ describe("daily report workflow", () => {
       ...report,
       phase: "open" as const,
       workCategory: "Кровельные работы",
+      workScopes: [
+        { scheduleItemId: "schedule-1", workName: "Монтаж мембраны", source: "schedule" as const },
+        { workName: "Устройство примыканий", source: "manual" as const }
+      ],
       plannedWorks: "Монтаж мембраны на захватке 2",
       completedWorks: "",
       workOutputs: [],
@@ -77,7 +81,7 @@ describe("daily report workflow", () => {
     expect(dailyReportSubmissionIssues(openShift)).toContainEqual(expect.objectContaining({ field: "phase" }));
   });
 
-  it("requires a work category, plan and crew for an open shift", () => {
+  it("requires at least one work scope, plan and crew for an open shift", () => {
     expect(dailyReportDraftIssues({
       ...report,
       phase: "open",
@@ -88,9 +92,24 @@ describe("daily report workflow", () => {
       engineers: 0,
       crewMembers: []
     })).toEqual(expect.arrayContaining([
-      expect.objectContaining({ field: "workCategory" }),
+      expect.objectContaining({ field: "workScopes" }),
       expect.objectContaining({ field: "plannedWorks" }),
       expect.objectContaining({ field: "crewMembers" })
     ]));
+  });
+
+  it("rejects duplicate work scopes instead of silently collapsing the shift plan", () => {
+    expect(dailyReportDraftIssues({
+      ...report,
+      phase: "open",
+      workCategory: "",
+      workScopes: [
+        { scheduleItemId: "schedule-1", workName: "Монтаж мембраны", source: "schedule" },
+        { scheduleItemId: "schedule-1", workName: "Монтаж мембраны", source: "schedule" }
+      ],
+      plannedWorks: "Работы на захватке",
+      completedWorks: "",
+      crewMembers: [{ resourceId: "resource-1", name: "Сотрудник 1", profession: "Кровельщик", kind: "worker", headcount: 1 }]
+    })).toContainEqual(expect.objectContaining({ field: "workScopes" }));
   });
 });
