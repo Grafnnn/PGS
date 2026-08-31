@@ -54,6 +54,7 @@ model Organization {
   projects                   Project[]
   resources                  OrganizationResource[]
   resourceAssignments        ProjectResourceAssignment[]
+  workforceAdmissionRequests WorkforceAdmissionRequest[]
   payrollPolicies            ProjectPayrollPolicy[]
   laborDemands               ProjectLaborDemand[]
   laborAllocations           ProjectLaborAllocation[]
@@ -182,6 +183,7 @@ model Project {
   controlBaselines           ProjectControlBaseline[]
   controlPeriods             ProjectControlPeriod[]
   resourceAssignments        ProjectResourceAssignment[]
+  workforceAdmissionRequests WorkforceAdmissionRequest[]
   payrollPolicy              ProjectPayrollPolicy?
   laborDemands               ProjectLaborDemand[]
   laborAllocations           ProjectLaborAllocation[]
@@ -609,6 +611,7 @@ model OrganizationResource {
   updatedAt             DateTime                    @updatedAt @map("updated_at")
   organization          Organization                @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   assignments           ProjectResourceAssignment[]
+  admissionMembers      WorkforceAdmissionMember[]
 
   @@index([organizationId, kind, status])
   @@index([organizationId, name])
@@ -638,6 +641,57 @@ model ProjectResourceAssignment {
   @@index([organizationId, startsAt, endsAt])
   @@index([resourceId, startsAt, endsAt])
   @@map("project_resource_assignments")
+}
+
+model WorkforceAdmissionRequest {
+  id             String                       @id @default(cuid())
+  organizationId String                       @map("organization_id")
+  projectId      String                       @map("project_id")
+  requestNumber  String                       @map("request_number")
+  title          String
+  contractor     String
+  objectName     String                       @map("object_name")
+  validFrom      DateTime                     @map("valid_from")
+  validUntil     DateTime?                    @map("valid_until")
+  workScope      String                       @map("work_scope")
+  employmentType String                       @default("subcontract") @map("employment_type")
+  status         String                       @default("draft")
+  sourceFileName String?                      @map("source_file_name")
+  notes          String?
+  createdBy      String?                      @map("created_by")
+  approvedBy     String?                      @map("approved_by")
+  approvedAt     DateTime?                    @map("approved_at")
+  createdAt      DateTime                     @default(now()) @map("created_at")
+  updatedAt      DateTime                     @updatedAt @map("updated_at")
+  organization   Organization                 @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  project        Project                      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  members        WorkforceAdmissionMember[]
+
+  @@unique([projectId, requestNumber])
+  @@index([projectId, status, createdAt])
+  @@map("workforce_admission_requests")
+}
+
+model WorkforceAdmissionMember {
+  id                String                     @id @default(cuid())
+  requestId         String                     @map("request_id")
+  resourceId        String?                    @map("resource_id")
+  fullName          String                     @map("full_name")
+  profession        String
+  kind              String                     @default("worker")
+  birthDate         DateTime?                  @map("birth_date")
+  citizenship       String?
+  documentType      String?                    @map("document_type")
+  documentLast4     String?                    @map("document_last4")
+  status            String                     @default("pending")
+  createdAt         DateTime                   @default(now()) @map("created_at")
+  updatedAt         DateTime                   @updatedAt @map("updated_at")
+  request           WorkforceAdmissionRequest  @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  resource          OrganizationResource?      @relation(fields: [resourceId], references: [id], onDelete: SetNull)
+
+  @@index([requestId, status])
+  @@index([resourceId])
+  @@map("workforce_admission_members")
 }
 
 model ProjectPayrollPolicy {
