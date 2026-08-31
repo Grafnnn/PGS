@@ -1,25 +1,30 @@
 "use client";
 
 import {
+  Bot,
+  Camera,
   Check,
   ClipboardCopy,
   FileDown,
   FilePlus2,
+  Images,
   Pencil,
   Plus,
   RefreshCw,
   Save,
   Send,
   ShieldCheck,
+  Users,
   Trash2,
   X
 } from "lucide-react";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import { DailyReportWorkOutputEditor } from "@/components/daily-report-work-output-editor";
 import { dailyReportWorkOutputNorm, dailyReportWorkOutputsComplete } from "@/lib/daily-report-work-outputs";
 import { dailyReportStatusLabel } from "@/lib/daily-reports";
 import type { SerializedExecutiveReport } from "@/lib/executive-reports";
-import type { DailyReport, DailyReportWorkOutput } from "@/lib/types";
+import type { DailyReport, DailyReportWorkOutput, ProjectDocument } from "@/lib/types";
 
 type UserContext = {
   role?: "OWNER" | "ADMIN" | "MANAGER" | "VIEWER";
@@ -35,11 +40,34 @@ type Props = {
   onReportsChange: (items: DailyReport[]) => void;
 };
 
-type ReportForm = Omit<DailyReport, "id" | "projectId" | "status" | "workOutputs"> & {
+type ReportForm = Omit<DailyReport, "id" | "projectId" | "status" | "workOutputs" | "crewMembers" | "evidenceDocuments"> & {
+  phase: "open" | "closed";
+  workCategory: string;
+  plannedWorks: string;
+  crewResourceIds: string[];
   workOutputs: DailyReportWorkOutput[];
 };
 
-const emptyReport = (author = "Прораб"): ReportForm => ({
+type WorkforceItem = {
+  resourceId: string;
+  name: string;
+  profession: string;
+  kind: "worker" | "engineer" | "crew";
+  headcount: number;
+};
+
+type PhotoQuestionResult = {
+  answer: string;
+  observations: string[];
+  risks: string[];
+  recommendedActions: string[];
+  confidence: "low" | "medium" | "high";
+  limitations: string[];
+};
+
+const workCategories = ["Кровельные работы", "Фасадные работы", "Монолит", "Кладка", "Отделка", "Инженерные сети", "Благоустройство", "Подготовительные работы", "Другое"];
+
+const emptyReport = (author = "Прораб", phase: "open" | "closed" = "open"): ReportForm => ({
   date: new Date().toISOString().slice(0, 10),
   author,
   weather: "",
@@ -51,6 +79,10 @@ const emptyReport = (author = "Прораб"): ReportForm => ({
   materialsConsumed: "",
   downtime: "",
   issues: "",
+  phase,
+  workCategory: "",
+  plannedWorks: "",
+  crewResourceIds: [],
   workOutputs: []
 });
 
@@ -81,17 +113,34 @@ export function ReportsWorkflow({ projectId, reports, currentUser, currentUserLo
   const [executiveLoaded, setExecutiveLoaded] = useState(false);
   const [publishConfirmed, setPublishConfirmed] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [workforce, setWorkforce] = useState<WorkforceItem[]>([]);
+  const [workforceLoaded, setWorkforceLoaded] = useState(false);
+  const [photoFiles, setPhotoFiles] = useState<File[]>([]);
+  const [selectedPhotoIds, setSelectedPhotoIds] = useState<string[]>([]);
+  const [photoQuestion, setPhotoQuestion] = useState("");
+  const [photoAnswer, setPhotoAnswer] = useState<PhotoQuestionResult | null>(null);
 
   const role = currentUser?.role;
   const canEdit = role === "OWNER" || role === "ADMIN" || role === "MANAGER";
   const canApprove = role === "OWNER" || role === "ADMIN";
   const selectedExecutive = executiveReports.find((item) => item.id === selectedExecutiveId) ?? executiveReports[0] ?? null;
   const sortedReports = useMemo(() => [...reports].sort((a, b) => b.date.localeCompare(a.date)), [reports]);
-  const missingRequiredFields = [
-    !form.author.trim() ? "автор" : "",
-    !form.completedWorks.trim() ? "выполненные работы" : "",
-    !dailyReportWorkOutputsComplete(form.workOutputs) ? "полные строки фактической выработки" : ""
-  ].filter(Boolean);
+  const activeReport = editingId ? reports.find((item) => item.id === editingId) ?? null : null;
+  const evidence = activeReport?.evidenceDocuments?.filter((item) => (item.mimeType ?? "").startsWith("image/")) ?? [];
+  const selectedCrew = workforce.filter((item) => form.crewResourceIds.includes(item.resourceId));
+  const selectedHeadcount = selectedCrew.reduce((sum, item) => sum + item.headcount, 0);
+  const missingRequiredFields = form.phase === "open"
+    ? [
+        !form.author.trim() ? "автор" : "",
+        !form.workCategory.trim() ? "вид работ" : "",
+        !form.plannedWorks.trim() ? "план смены" : "",
+        !form.crewResourceIds.length && form.workers + form.engineers === 0 ? "состав смены" : ""
+      ].filter(Boolean)
+    : [
+        !form.author.trim() ? "автор" : "",
+        !form.completedWorks.trim() ? "выполненные работы" : "",
+        !dailyReportWorkOutputsComplete(form.workOutputs) ? "полные строки фактической выработки" : ""
+      ].filter(Boolean);
 
   const loadDailyReports = useCallback(async () => {
     if (!currentUserLoaded || !currentUser?.authenticated) {
@@ -131,6 +180,23 @@ export function ReportsWorkflow({ projectId, reports, currentUser, currentUserLo
     }
   }, [currentUser?.authenticated, currentUserLoaded, projectId]);
 
+  const loadWorkforce = useCallback(async () => {
+    if (!currentUserLoaded || !currentUser?.authenticated) {
+      setWorkforceLoaded(true);
+      return;
+    }
+    try {
+      const response = await fetch(`/api/projects/${projectId}/daily-workforce`, { cache: "no-store" });
+      if (!response.ok) throw new Error(await responseError(response, "Не удалось загрузить состав проекта."));
+      const body = (await response.json()) as { items?: WorkforceItem[] };
+      setWorkforce(body.items ?? []);
+    } catch (loadError) {
+      setDailyReportsError(loadError instanceof Error ? loadError.message : "Не удалось загрузить состав проекта.");
+    } finally {
+      setWorkforceLoaded(true);
+    }
+  }, [currentUser?.authenticated, currentUserLoaded, projectId]);
+
   useEffect(() => {
     void loadExecutiveReports();
   }, [loadExecutiveReports]);
@@ -139,14 +205,22 @@ export function ReportsWorkflow({ projectId, reports, currentUser, currentUserLo
     void loadDailyReports();
   }, [loadDailyReports]);
 
+  useEffect(() => {
+    void loadWorkforce();
+  }, [loadWorkforce]);
+
   function openNewReport() {
     setEditingId(null);
-    setForm(emptyReport(currentUser?.name || "Прораб"));
+    setForm(emptyReport(currentUser?.name || "Прораб", "open"));
     setFormOpen(true);
+    setPhotoFiles([]);
+    setSelectedPhotoIds([]);
+    setPhotoQuestion("");
+    setPhotoAnswer(null);
     setError("");
   }
 
-  function openEditReport(item: DailyReport) {
+  function openEditReport(item: DailyReport, closeShift = false) {
     setEditingId(item.id);
     setForm({
       date: item.date,
@@ -160,10 +234,81 @@ export function ReportsWorkflow({ projectId, reports, currentUser, currentUserLo
       materialsConsumed: item.materialsConsumed,
       downtime: item.downtime,
       issues: item.issues,
+      phase: closeShift ? "closed" : item.phase ?? "closed",
+      workCategory: item.workCategory ?? "",
+      plannedWorks: item.plannedWorks ?? "",
+      crewResourceIds: (item.crewMembers ?? []).map((member) => member.resourceId),
       workOutputs: item.workOutputs ?? []
     });
+    setPhotoFiles([]);
+    setSelectedPhotoIds(item.evidenceDocuments?.filter((document) => (document.mimeType ?? "").startsWith("image/")).map((document) => document.id).slice(0, 4) ?? []);
+    setPhotoQuestion("");
+    setPhotoAnswer(null);
     setFormOpen(true);
     setError("");
+  }
+
+  function toggleCrew(resourceId: string) {
+    setForm((current) => ({
+      ...current,
+      crewResourceIds: current.crewResourceIds.includes(resourceId)
+        ? current.crewResourceIds.filter((id) => id !== resourceId)
+        : [...current.crewResourceIds, resourceId]
+    }));
+  }
+
+  function togglePhoto(documentId: string) {
+    setSelectedPhotoIds((current) => {
+      if (current.includes(documentId)) return current.filter((id) => id !== documentId);
+      return current.length < 4 ? [...current, documentId] : current;
+    });
+  }
+
+  async function uploadEvidence() {
+    if (!editingId || !photoFiles.length) return;
+    setBusy("photo-upload");
+    setError("");
+    try {
+      const uploadedIds: string[] = [];
+      for (const file of photoFiles) {
+        const data = new FormData();
+        data.set("file", file);
+        data.set("category", "фотофиксация");
+        data.set("dailyReportId", editingId);
+        const response = await fetch(`/api/projects/${projectId}/documents/upload`, { method: "POST", body: data });
+        if (!response.ok) throw new Error(await responseError(response, `Не удалось загрузить ${file.name}.`));
+        const body = (await response.json()) as { item: ProjectDocument };
+        uploadedIds.push(body.item.id);
+      }
+      setPhotoFiles([]);
+      setSelectedPhotoIds((current) => [...new Set([...current, ...uploadedIds])].slice(0, 4));
+      await loadDailyReports();
+    } catch (uploadError) {
+      setError(uploadError instanceof Error ? uploadError.message : "Не удалось загрузить фото смены.");
+    } finally {
+      setBusy("");
+    }
+  }
+
+  async function askAboutPhotos() {
+    if (!editingId || !selectedPhotoIds.length || photoQuestion.trim().length < 3) return;
+    setBusy("photo-ai");
+    setError("");
+    setPhotoAnswer(null);
+    try {
+      const response = await fetch(`/api/projects/${projectId}/daily-reports/${editingId}/photo-question`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ question: photoQuestion, documentIds: selectedPhotoIds })
+      });
+      if (!response.ok) throw new Error(await responseError(response, "Не удалось проанализировать фотографии."));
+      const body = (await response.json()) as { result: PhotoQuestionResult };
+      setPhotoAnswer(body.result);
+    } catch (analysisError) {
+      setError(analysisError instanceof Error ? analysisError.message : "Не удалось проанализировать фотографии.");
+    } finally {
+      setBusy("");
+    }
   }
 
   async function saveReport() {
@@ -176,8 +321,8 @@ export function ReportsWorkflow({ projectId, reports, currentUser, currentUserLo
         body: JSON.stringify(form)
       });
       if (!response.ok) throw new Error(await responseError(response, "Не удалось сохранить рапорт."));
-      const body = (await response.json()) as { item: DailyReport };
-      onReportsChange(editingId ? reports.map((item) => (item.id === editingId ? body.item : item)) : [body.item, ...reports]);
+      await response.json();
+      await loadDailyReports();
       setFormOpen(false);
       setEditingId(null);
     } catch (saveError) {
@@ -197,8 +342,8 @@ export function ReportsWorkflow({ projectId, reports, currentUser, currentUserLo
         body: JSON.stringify({ status })
       });
       if (!response.ok) throw new Error(await responseError(response, "Не удалось изменить статус рапорта."));
-      const body = (await response.json()) as { item: DailyReport };
-      onReportsChange(reports.map((current) => (current.id === item.id ? body.item : current)));
+      await response.json();
+      await loadDailyReports();
     } catch (transitionError) {
       setError(transitionError instanceof Error ? transitionError.message : "Не удалось изменить статус рапорта.");
     } finally {
@@ -296,9 +441,9 @@ export function ReportsWorkflow({ projectId, reports, currentUser, currentUserLo
 
       <div className="reports-workflow-heading">
         <div>
-          <div className="eyebrow">Процесс ежедневного рапорта</div>
-          <h3>Ежедневные рапорты</h3>
-          <p className="muted">Черновик → отправка → проверка → утверждение. Рабочие данные не создаются до сохранения формы.</p>
+          <div className="eyebrow">Смена и рапорт прораба</div>
+          <h3>План дня → состав → факт → фото</h3>
+          <p className="muted">Утром откройте смену и выберите людей. В конце дня внесите объёмы, приложите фото и отправьте рапорт на проверку.</p>
         </div>
         <div className="form-actions">
           <button className="button secondary" disabled={busy === "daily-load"} type="button" onClick={() => void loadDailyReports()}>
@@ -306,7 +451,7 @@ export function ReportsWorkflow({ projectId, reports, currentUser, currentUserLo
           </button>
           {canEdit ? (
             <button className="button primary" type="button" onClick={openNewReport}>
-              <Plus size={17} /> Новый рапорт
+              <Plus size={17} /> Открыть смену
             </button>
           ) : null}
         </div>
@@ -315,27 +460,102 @@ export function ReportsWorkflow({ projectId, reports, currentUser, currentUserLo
       {formOpen ? (
         <div className="daily-report-editor">
           <div className="reports-workflow-heading compact">
-            <div><strong>{editingId ? "Редактирование черновика" : "Новый ежедневный рапорт"}</strong><span>Заполните фактические данные смены.</span></div>
+            <div>
+              <strong>{editingId ? form.phase === "closed" ? "Фактическое закрытие смены" : "Заявка на смену" : "Новая заявка на смену"}</strong>
+              <span>{form.phase === "open" ? "План, укрупнённый вид работ и персональный состав." : "Выполненные объёмы, события и фотофиксация."}</span>
+            </div>
             <button className="icon-button" type="button" title="Закрыть" onClick={() => setFormOpen(false)}><X size={18} /></button>
+          </div>
+          <div className="daily-shift-steps" aria-label="Этап смены">
+            <span className="active"><strong>1</strong> План и люди</span>
+            <span className={form.phase === "closed" ? "active" : ""}><strong>2</strong> Факт и фото</span>
+            <span><strong>3</strong> Проверка</span>
           </div>
           <div className="daily-report-form-grid">
             <label>Дата<input type="date" value={form.date} onChange={(event) => setForm({ ...form, date: event.target.value })} /></label>
             <label>Автор <span aria-hidden="true">*</span><input aria-invalid={!form.author.trim()} required value={form.author} onChange={(event) => setForm({ ...form, author: event.target.value })} /></label>
+            <label>Укрупнённый вид работ <span aria-hidden="true">*</span>
+              <select aria-invalid={!form.workCategory.trim()} value={form.workCategory} onChange={(event) => setForm({ ...form, workCategory: event.target.value })}>
+                <option value="">Выберите вид работ</option>
+                {workCategories.map((category) => <option key={category} value={category}>{category}</option>)}
+              </select>
+            </label>
             <label>Погода<input value={form.weather} onChange={(event) => setForm({ ...form, weather: event.target.value })} placeholder="Температура, осадки, ветер" /></label>
-            <label>Рабочие<input min="0" type="number" value={form.workers} onChange={(event) => setForm({ ...form, workers: Number(event.target.value) })} /></label>
-            <label>ИТР<input min="0" type="number" value={form.engineers} onChange={(event) => setForm({ ...form, engineers: Number(event.target.value) })} /></label>
+            <label className="wide">План работ на смену <span aria-hidden="true">*</span><textarea aria-invalid={!form.plannedWorks.trim()} rows={2} value={form.plannedWorks} onChange={(event) => setForm({ ...form, plannedWorks: event.target.value })} placeholder="Что должно быть выполнено к концу дня" /></label>
             <label className="wide">Техника<input value={form.equipment} onChange={(event) => setForm({ ...form, equipment: event.target.value })} placeholder="Наименование и количество" /></label>
-            <label className="wide">Выполненные работы <span aria-hidden="true">*</span><textarea aria-invalid={!form.completedWorks.trim()} required rows={3} value={form.completedWorks} onChange={(event) => setForm({ ...form, completedWorks: event.target.value })} /></label>
-            <label>Материалы получены<textarea rows={2} value={form.materialsReceived} onChange={(event) => setForm({ ...form, materialsReceived: event.target.value })} /></label>
-            <label>Материалы израсходованы<textarea rows={2} value={form.materialsConsumed} onChange={(event) => setForm({ ...form, materialsConsumed: event.target.value })} /></label>
-            <label>Простои<textarea rows={2} value={form.downtime} onChange={(event) => setForm({ ...form, downtime: event.target.value })} /></label>
-            <label>Проблемы / замечания<textarea rows={2} value={form.issues} onChange={(event) => setForm({ ...form, issues: event.target.value })} /></label>
           </div>
-          <DailyReportWorkOutputEditor outputs={form.workOutputs} onChange={(workOutputs) => setForm({ ...form, workOutputs })} />
+
+          <section className="daily-crew-picker" aria-label="Состав смены">
+            <div className="daily-crew-heading"><span><Users size={18} /><strong>Кто работает</strong></span><small>{selectedHeadcount ? `${selectedHeadcount} чел.` : "Состав не выбран"}</small></div>
+            {workforceLoaded && workforce.length ? (
+              <div className="daily-crew-grid">
+                {workforce.map((item) => (
+                  <label className={form.crewResourceIds.includes(item.resourceId) ? "selected" : ""} key={item.resourceId}>
+                    <input checked={form.crewResourceIds.includes(item.resourceId)} type="checkbox" onChange={() => toggleCrew(item.resourceId)} />
+                    <span><strong>{item.name}</strong><small>{item.profession || (item.kind === "engineer" ? "ИТР" : "Рабочий")}{item.headcount > 1 ? ` · ${item.headcount} чел.` : ""}</small></span>
+                  </label>
+                ))}
+              </div>
+            ) : workforceLoaded ? (
+              <div className="daily-crew-empty">
+                <p>Сотрудники ещё не назначены на проект. Импортируйте Excel-реестр в блоке «ФОТ и ресурсы» или укажите численность вручную.</p>
+                <div><label>Рабочие<input min="0" type="number" value={form.workers} onChange={(event) => setForm({ ...form, workers: Number(event.target.value) })} /></label><label>ИТР<input min="0" type="number" value={form.engineers} onChange={(event) => setForm({ ...form, engineers: Number(event.target.value) })} /></label></div>
+              </div>
+            ) : <div className="reports-empty">Загружаю состав проекта...</div>}
+          </section>
+
+          {form.phase === "closed" ? (
+            <>
+              <div className="daily-report-form-grid daily-fact-grid">
+                <label className="wide">Выполненные работы <span aria-hidden="true">*</span><textarea aria-invalid={!form.completedWorks.trim()} required rows={3} value={form.completedWorks} onChange={(event) => setForm({ ...form, completedWorks: event.target.value })} /></label>
+                <label>Материалы получены<textarea rows={2} value={form.materialsReceived} onChange={(event) => setForm({ ...form, materialsReceived: event.target.value })} /></label>
+                <label>Материалы израсходованы<textarea rows={2} value={form.materialsConsumed} onChange={(event) => setForm({ ...form, materialsConsumed: event.target.value })} /></label>
+                <label>Простои<textarea rows={2} value={form.downtime} onChange={(event) => setForm({ ...form, downtime: event.target.value })} /></label>
+                <label>Проблемы / замечания<textarea rows={2} value={form.issues} onChange={(event) => setForm({ ...form, issues: event.target.value })} /></label>
+              </div>
+              <DailyReportWorkOutputEditor outputs={form.workOutputs} onChange={(workOutputs) => setForm({ ...form, workOutputs })} />
+              {editingId ? (
+                <section className="daily-photo-workspace" aria-label="Фото смены и AI-анализ">
+                  <div className="daily-crew-heading"><span><Camera size={18} /><strong>Фото смены</strong></span><small>JPEG, PNG или WebP</small></div>
+                  <div className="daily-photo-upload">
+                    <label className="button secondary"><Images size={16} /> Выбрать фото<input accept="image/jpeg,image/png,image/webp" multiple type="file" onChange={(event) => setPhotoFiles(Array.from(event.target.files ?? []))} /></label>
+                    <span>{photoFiles.length ? `Выбрано: ${photoFiles.length}` : "Фото ещё не выбраны"}</span>
+                    <button className="button secondary" disabled={!photoFiles.length || busy === "photo-upload"} type="button" onClick={() => void uploadEvidence()}>{busy === "photo-upload" ? "Загружаю..." : "Прикрепить"}</button>
+                  </div>
+                  {evidence.length ? (
+                    <div className="daily-photo-grid">
+                      {evidence.map((document) => (
+                        <label className={selectedPhotoIds.includes(document.id) ? "selected" : ""} key={document.id}>
+                          <input checked={selectedPhotoIds.includes(document.id)} disabled={!selectedPhotoIds.includes(document.id) && selectedPhotoIds.length >= 4} type="checkbox" onChange={() => togglePhoto(document.id)} />
+                          <Image alt={document.title} height={240} src={`/api/projects/${projectId}/documents/${document.id}/download`} unoptimized width={320} />
+                          <span>{document.title}</span>
+                        </label>
+                      ))}
+                    </div>
+                  ) : <p className="muted">Прикрепите фото, чтобы сохранить доказательства и задать вопрос AI.</p>}
+                  <div className="daily-photo-question">
+                    <label>Вопрос по выбранным фото<textarea rows={2} value={photoQuestion} onChange={(event) => setPhotoQuestion(event.target.value)} placeholder="Например: видны ли дефекты примыкания и что проверить на месте?" /></label>
+                    <button className="button primary" disabled={!selectedPhotoIds.length || photoQuestion.trim().length < 3 || busy === "photo-ai"} type="button" onClick={() => void askAboutPhotos()}><Bot size={17} /> {busy === "photo-ai" ? "Анализирую..." : "Спросить AI"}</button>
+                  </div>
+                  <p className="form-hint">Для AI можно выбрать до 4 фото. Они отправляются на анализ только после нажатия «Спросить AI».</p>
+                  {photoAnswer ? (
+                    <div className="daily-photo-answer" role="status">
+                      <div><strong>Ответ</strong><span className={`badge ${photoAnswer.confidence === "high" ? "green" : photoAnswer.confidence === "medium" ? "yellow" : "gray"}`}>Уверенность: {photoAnswer.confidence}</span></div>
+                      <p>{photoAnswer.answer}</p>
+                      {photoAnswer.observations.length ? <section><strong>Наблюдения</strong><ul>{photoAnswer.observations.map((item) => <li key={item}>{item}</li>)}</ul></section> : null}
+                      {photoAnswer.risks.length ? <section><strong>Риски</strong><ul>{photoAnswer.risks.map((item) => <li key={item}>{item}</li>)}</ul></section> : null}
+                      {photoAnswer.recommendedActions.length ? <section><strong>Что сделать</strong><ul>{photoAnswer.recommendedActions.map((item) => <li key={item}>{item}</li>)}</ul></section> : null}
+                      {photoAnswer.limitations.length ? <small>Ограничения: {photoAnswer.limitations.join(" ")}</small> : null}
+                    </div>
+                  ) : null}
+                </section>
+              ) : <p className="form-hint">Сначала сохраните заявку на смену. После этого в форме факта появится загрузка фото.</p>}
+            </>
+          ) : null}
           {missingRequiredFields.length ? <p className="form-hint" role="status">Для сохранения заполните: {missingRequiredFields.join(", ")}.</p> : null}
           <div className="form-actions">
             <button className="button primary" disabled={busy === "daily-save" || missingRequiredFields.length > 0} type="button" onClick={() => void saveReport()}>
-              <Save size={17} /> {busy === "daily-save" ? "Сохраняю..." : "Сохранить черновик"}
+              <Save size={17} /> {busy === "daily-save" ? "Сохраняю..." : form.phase === "open" ? "Открыть смену" : "Сохранить факт"}
             </button>
             <button className="button secondary" type="button" onClick={() => setFormOpen(false)}>Отмена</button>
           </div>
@@ -346,11 +566,13 @@ export function ReportsWorkflow({ projectId, reports, currentUser, currentUserLo
         {!dailyReportsLoaded && busy === "daily-load" ? <div className="reports-empty">Загружаю рапорты со стройплощадки...</div> : sortedReports.length ? sortedReports.map((item) => (
           <article className="daily-report-row" key={item.id}>
             <div className="daily-report-row-main">
-              <div><strong>{new Date(item.date).toLocaleDateString("ru-RU")}</strong><span>{item.author} · {item.workers} рабочих / {item.engineers} ИТР</span></div>
-              <span className={`badge ${tone(item.status)}`}>{dailyReportStatusLabel(item.status)}</span>
+              <div><strong>{new Date(item.date).toLocaleDateString("ru-RU")} · {item.workCategory || "Смена"}</strong><span>{item.author} · {item.workers} рабочих / {item.engineers} ИТР</span></div>
+              <div className="daily-report-badges"><span className={`badge ${(item.phase ?? "closed") === "open" ? "blue" : "gray"}`}>{(item.phase ?? "closed") === "open" ? "Смена открыта" : "Факт внесён"}</span><span className={`badge ${tone(item.status)}`}>{dailyReportStatusLabel(item.status)}</span></div>
             </div>
-            <p>{item.completedWorks || "Выполненные работы не заполнены"}</p>
+            <p>{(item.phase ?? "closed") === "open" ? item.plannedWorks || "План смены не заполнен" : item.completedWorks || "Выполненные работы не заполнены"}</p>
             <small>{item.weather || "Погода не указана"} · {item.equipment || "Техника не указана"}</small>
+            {item.crewMembers?.length ? <div className="daily-report-crew-summary">{item.crewMembers.map((member) => <span key={member.resourceId}>{member.name}</span>)}</div> : null}
+            {item.evidenceDocuments?.length ? <div className="daily-report-evidence-count"><Camera size={14} /> {item.evidenceDocuments.length} фото / документов</div> : null}
             {item.workOutputs?.length ? (
               <div className="daily-report-output-summary">
                 {item.workOutputs.map((output, index) => {
@@ -367,8 +589,9 @@ export function ReportsWorkflow({ projectId, reports, currentUser, currentUserLo
             ) : null}
             {item.issues || item.downtime ? <div className="daily-report-alert">{item.issues || item.downtime}</div> : null}
             <div className="daily-report-actions">
-              {item.status === "draft" && canEdit ? <button className="button secondary compact-button" type="button" onClick={() => openEditReport(item)}><Pencil size={15} /> Редактировать</button> : null}
-              {item.status === "draft" && canEdit ? <button className="button primary compact-button" disabled={busy === `daily-${item.id}`} type="button" onClick={() => void transitionReport(item, "submitted")}><Send size={15} /> Отправить</button> : null}
+              {item.status === "draft" && (item.phase ?? "closed") === "open" && canEdit ? <button className="button primary compact-button" type="button" onClick={() => openEditReport(item, true)}><Pencil size={15} /> Внести факт</button> : null}
+              {item.status === "draft" && (item.phase ?? "closed") === "closed" && canEdit ? <button className="button secondary compact-button" type="button" onClick={() => openEditReport(item)}><Pencil size={15} /> Редактировать</button> : null}
+              {item.status === "draft" && (item.phase ?? "closed") === "closed" && canEdit ? <button className="button primary compact-button" disabled={busy === `daily-${item.id}`} type="button" onClick={() => void transitionReport(item, "submitted")}><Send size={15} /> Отправить</button> : null}
               {item.status === "submitted" && canEdit ? <button className="button primary compact-button" disabled={busy === `daily-${item.id}`} type="button" onClick={() => void transitionReport(item, "checked")}><Check size={15} /> Проверить</button> : null}
               {item.status === "checked" && canApprove ? <button className="button primary compact-button" disabled={busy === `daily-${item.id}`} type="button" onClick={() => void transitionReport(item, "approved")}><ShieldCheck size={15} /> Утвердить</button> : null}
               {item.status === "draft" && canApprove ? <button className="icon-button danger" type="button" title="Удалить черновик" onClick={() => void removeReport(item)}><Trash2 size={16} /></button> : null}

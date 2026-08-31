@@ -4,6 +4,7 @@ const mocks = vi.hoisted(() => ({
   getCurrentUser: vi.fn(),
   canProject: vi.fn(),
   projectFind: vi.fn(),
+  reportFind: vi.fn(),
   receiptFind: vi.fn(),
   receiptCreate: vi.fn(),
   documentFind: vi.fn(),
@@ -30,6 +31,7 @@ vi.mock("@/lib/storage/documents", () => ({
 vi.mock("@/lib/prisma", () => ({
   prisma: {
     project: { findUnique: mocks.projectFind },
+    dailyReport: { findFirst: mocks.reportFind },
     fieldSyncReceipt: { findUnique: mocks.receiptFind, create: mocks.receiptCreate },
     document: { findUnique: mocks.documentFind, create: mocks.documentCreate },
     documentVersion: { create: mocks.versionCreate },
@@ -46,6 +48,7 @@ const documentItem = {
   id: "document-1",
   organizationId: "org-1",
   projectId: "project-1",
+  dailyReportId: null,
   category: "фотофиксация",
   title: "evidence.jpg",
   filePath: "project-1/storage-key.jpg",
@@ -76,6 +79,7 @@ describe("document upload field idempotency", () => {
     mocks.getCurrentUser.mockResolvedValue(user);
     mocks.canProject.mockResolvedValue(true);
     mocks.projectFind.mockResolvedValue({ organizationId: "org-1" });
+    mocks.reportFind.mockResolvedValue({ id: "report-1", status: "draft" });
     mocks.receiptFind.mockResolvedValue(null);
     mocks.documentFind.mockResolvedValue(documentItem);
     mocks.documentCreate.mockResolvedValue(documentItem);
@@ -114,5 +118,28 @@ describe("document upload field idempotency", () => {
     await expect(response.json()).resolves.toMatchObject({ duplicate: true, clientMutationId: "mutation_photo_1" });
     expect(mocks.save).not.toHaveBeenCalled();
     expect(mocks.documentCreate).not.toHaveBeenCalled();
+  });
+
+  it("links evidence only to a draft report in the same project", async () => {
+    const form = new FormData();
+    form.set("file", new File(["test"], "evidence.jpg", { type: "image/jpeg" }));
+    form.set("category", "фотофиксация");
+    form.set("dailyReportId", "report-1");
+    const { POST } = await import("./route");
+    const response = await POST(new Request("https://pgs.local", { method: "POST", body: form }) as never, { params: { projectId: "project-1" } });
+    expect(response.status).toBe(201);
+    expect(mocks.reportFind).toHaveBeenCalledWith(expect.objectContaining({ where: { id: "report-1", projectId: "project-1" } }));
+    expect(mocks.documentCreate).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ dailyReportId: "report-1" }) }));
+  });
+
+  it("rejects evidence linked to another project before writing storage", async () => {
+    mocks.reportFind.mockResolvedValue(null);
+    const form = new FormData();
+    form.set("file", new File(["test"], "evidence.jpg", { type: "image/jpeg" }));
+    form.set("dailyReportId", "foreign-report");
+    const { POST } = await import("./route");
+    const response = await POST(new Request("https://pgs.local", { method: "POST", body: form }) as never, { params: { projectId: "project-1" } });
+    expect(response.status).toBe(404);
+    expect(mocks.save).not.toHaveBeenCalled();
   });
 });

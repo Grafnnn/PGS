@@ -62,4 +62,35 @@ describe("daily report workflow", () => {
       workOutputs: []
     })).toEqual([]);
   });
+
+  it("accepts a planned open shift but blocks submission until the fact is closed", () => {
+    const openShift = {
+      ...report,
+      phase: "open" as const,
+      workCategory: "Кровельные работы",
+      plannedWorks: "Монтаж мембраны на захватке 2",
+      completedWorks: "",
+      workOutputs: [],
+      crewMembers: [{ resourceId: "resource-1", name: "Сотрудник 1", profession: "Кровельщик", kind: "worker" as const, headcount: 1 }]
+    };
+    expect(dailyReportDraftIssues(openShift)).toEqual([]);
+    expect(dailyReportSubmissionIssues(openShift)).toContainEqual(expect.objectContaining({ field: "phase" }));
+  });
+
+  it("requires a work category, plan and crew for an open shift", () => {
+    expect(dailyReportDraftIssues({
+      ...report,
+      phase: "open",
+      workCategory: "",
+      plannedWorks: "",
+      completedWorks: "",
+      workers: 0,
+      engineers: 0,
+      crewMembers: []
+    })).toEqual(expect.arrayContaining([
+      expect.objectContaining({ field: "workCategory" }),
+      expect.objectContaining({ field: "plannedWorks" }),
+      expect.objectContaining({ field: "crewMembers" })
+    ]));
+  });
 });

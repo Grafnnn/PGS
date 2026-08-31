@@ -4,6 +4,7 @@ import {
   dailyReportWorkOutputsComplete,
   parseDailyReportWorkOutputs
 } from "@/lib/daily-report-work-outputs";
+import { parseDailyReportCrewMembers } from "@/lib/daily-report-crew";
 import type { DailyReport } from "@/lib/types";
 
 export const dailyReportStatuses = ["draft", "submitted", "checked", "approved"] as const;
@@ -49,6 +50,10 @@ type DailyReportValidationInput = {
   downtime?: string;
   issues?: string;
   workOutputs?: unknown;
+  phase?: "open" | "closed";
+  workCategory?: string;
+  plannedWorks?: string;
+  crewMembers?: unknown;
 };
 
 export type DailyReportValidationIssue = {
@@ -60,6 +65,8 @@ const reportTextLimits: Array<[keyof DailyReportValidationInput, number, string]
   ["author", 160, "Автор"],
   ["weather", 500, "Погода"],
   ["equipment", 4_000, "Техника"],
+  ["workCategory", 240, "Вид работ"],
+  ["plannedWorks", 8_000, "План смены"],
   ["completedWorks", 8_000, "Выполненные работы"],
   ["materialsReceived", 8_000, "Полученные материалы"],
   ["materialsConsumed", 8_000, "Израсходованные материалы"],
@@ -91,7 +98,15 @@ export function dailyReportDraftIssues(report: DailyReportValidationInput): Dail
   const date = report.date instanceof Date ? report.date : new Date(report.date);
   if (Number.isNaN(date.getTime())) issues.push({ field: "date", message: "Укажите корректную дату рапорта." });
   if (report.author.trim().length < 2) issues.push({ field: "author", message: "Укажите автора рапорта." });
-  if (report.completedWorks.trim().length < 3) issues.push({ field: "completedWorks", message: "Опишите выполненные работы или явно укажите, что работы не выполнялись." });
+  const phase = report.phase ?? "closed";
+  const crew = parseDailyReportCrewMembers(report.crewMembers);
+  if (phase === "open") {
+    if ((report.workCategory ?? "").trim().length < 2) issues.push({ field: "workCategory", message: "Выберите укрупнённый вид работ на смену." });
+    if ((report.plannedWorks ?? "").trim().length < 3) issues.push({ field: "plannedWorks", message: "Опишите план работ на смену." });
+    if (!crew.length && report.workers + report.engineers === 0) issues.push({ field: "crewMembers", message: "Выберите состав смены или укажите численность вручную." });
+  } else if (report.completedWorks.trim().length < 3) {
+    issues.push({ field: "completedWorks", message: "Опишите выполненные работы или явно укажите, что работы не выполнялись." });
+  }
   if (!Number.isInteger(report.workers) || report.workers < 0) issues.push({ field: "workers", message: "Количество рабочих должно быть целым неотрицательным числом." });
   if (!Number.isInteger(report.engineers) || report.engineers < 0) issues.push({ field: "engineers", message: "Количество ИТР должно быть целым неотрицательным числом." });
 
@@ -115,6 +130,9 @@ export function dailyReportDraftIssues(report: DailyReportValidationInput): Dail
 
 export function dailyReportSubmissionIssues(report: DailyReportValidationInput): DailyReportValidationIssue[] {
   const issues = dailyReportDraftIssues(report);
+  if ((report.phase ?? "closed") !== "closed") {
+    issues.push({ field: "phase", message: "Сначала внесите фактические результаты и закройте смену." });
+  }
   const personnel = Math.max(0, report.workers) + Math.max(0, report.engineers);
   const outputs = parseDailyReportWorkOutputs(report.workOutputs);
   const totals = dailyReportWorkOutputTotals(outputs);

@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   reportCreate: vi.fn(),
   reportUpdate: vi.fn(),
   reportDelete: vi.fn(),
+  assignmentFindMany: vi.fn(),
   audit: vi.fn(async () => ({})),
   demoContext: vi.fn()
 }));
@@ -25,6 +26,7 @@ vi.mock("@/lib/prisma", () => ({
   prisma: {
     project: { findUnique: mocks.projectFind },
     dailyReport: { findMany: mocks.reportFindMany, findUnique: mocks.reportFind, findUniqueOrThrow: mocks.reportFind, create: mocks.reportCreate, update: mocks.reportUpdate, delete: mocks.reportDelete },
+    projectResourceAssignment: { findMany: mocks.assignmentFindMany },
     auditLog: { create: mocks.audit },
     $transaction: vi.fn(async (callback: (tx: unknown) => unknown) => callback({
       dailyReport: { create: mocks.reportCreate, update: mocks.reportUpdate, delete: mocks.reportDelete },
@@ -61,6 +63,7 @@ describe("daily reports catch-all workflow", () => {
     mocks.reportCreate.mockResolvedValue(before);
     mocks.reportUpdate.mockImplementation(async ({ data }: { data: Record<string, unknown> }) => ({ ...before, ...data }));
     mocks.reportDelete.mockResolvedValue(before);
+    mocks.assignmentFindMany.mockResolvedValue([]);
   });
 
   it("loads project reports independently from the page bundle", async () => {
@@ -68,7 +71,11 @@ describe("daily reports catch-all workflow", () => {
     const response = await GET(new Request("https://pgs.local") as never, { params: { path: ["projects", "project-1", "daily-reports"] } });
     const body = await response.json();
     expect(response.status).toBe(200);
-    expect(mocks.reportFindMany).toHaveBeenCalledWith({ where: { projectId: "project-1" }, orderBy: [{ date: "desc" }, { createdAt: "desc" }] });
+    expect(mocks.reportFindMany).toHaveBeenCalledWith({
+      where: { projectId: "project-1" },
+      include: { evidenceDocuments: { orderBy: { uploadedAt: "asc" } } },
+      orderBy: [{ date: "desc" }, { createdAt: "desc" }]
+    });
     expect(body.items).toEqual([expect.objectContaining({ id: "daily-1", projectId: "project-1", completedWorks: "Монтаж" })]);
   });
 
@@ -117,6 +124,50 @@ describe("daily reports catch-all workflow", () => {
         workOutputs: [expect.objectContaining({ profession: "Монтажник", unit: "м²" })]
       })
     }));
+  });
+
+  it("opens a planned shift with server-resolved project crew", async () => {
+    mocks.assignmentFindMany.mockResolvedValue([{
+      resourceId: "resource-1",
+      resource: { name: "Сотрудник 1", profession: "Кровельщик", kind: "worker", headcount: 1 }
+    }]);
+    const { POST } = await import("./route");
+    const response = await POST(request({
+      ...before,
+      phase: "open",
+      workCategory: "Кровельные работы",
+      plannedWorks: "Монтаж мембраны",
+      completedWorks: "",
+      workOutputs: [],
+      workers: 0,
+      engineers: 0,
+      crewResourceIds: ["resource-1"]
+    }), { params: { path: ["projects", "project-1", "daily-reports"] } });
+    expect(response.status).toBe(201);
+    expect(mocks.reportCreate).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        phase: "open",
+        workers: 1,
+        engineers: 0,
+        crewMembers: [expect.objectContaining({ resourceId: "resource-1", name: "Сотрудник 1" })]
+      })
+    }));
+  });
+
+  it("does not allow an open shift to be submitted as a completed report", async () => {
+    mocks.reportFind.mockResolvedValue({
+      ...before,
+      phase: "open",
+      workCategory: "Кровельные работы",
+      plannedWorks: "Монтаж мембраны",
+      completedWorks: "",
+      workOutputs: [],
+      crewMembers: [{ resourceId: "resource-1", name: "Сотрудник 1", profession: "Кровельщик", kind: "worker", headcount: 1 }]
+    });
+    const { PATCH } = await import("./route");
+    const response = await PATCH(request({ status: "submitted" }), { params: { path: ["daily-reports", "daily-1"] } });
+    expect(response.status).toBe(409);
+    expect(mocks.reportUpdate).not.toHaveBeenCalled();
   });
 
   it("rejects skipped workflow transitions", async () => {

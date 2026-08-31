@@ -107,6 +107,10 @@ export const dailyReportSchema = z.object({
   downtime: z.string().default(""),
   issues: z.string().default(""),
   workOutputs: dailyReportWorkOutputsSchema.default([]),
+  phase: z.enum(["open", "closed"]).default("closed"),
+  workCategory: z.string().trim().max(240).default(""),
+  plannedWorks: z.string().trim().max(8000).default(""),
+  crewResourceIds: z.array(z.string().min(1).max(200)).max(200).default([]),
   status: z.enum(["draft", "submitted", "checked", "approved"]).default("draft")
 });
 

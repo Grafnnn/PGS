@@ -32,7 +32,10 @@ export async function getProjectBundleFromDb(projectId: string) {
       materials: { orderBy: { neededAt: "asc" } },
       procurementRequests: { include: { items: true }, orderBy: { neededAt: "asc" } },
       payments: { orderBy: { plannedAt: "asc" } },
-      dailyReports: { orderBy: { date: "desc" } },
+      dailyReports: {
+        include: { evidenceDocuments: { orderBy: { uploadedAt: "asc" } } },
+        orderBy: { date: "desc" }
+      },
       risks: { orderBy: { dueAt: "asc" } }
     }
   });
