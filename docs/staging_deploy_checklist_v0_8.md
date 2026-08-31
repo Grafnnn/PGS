@@ -53,7 +53,7 @@ Use placeholders only in tickets, docs, and chat. Do not paste real values into 
 | `FIRST_ADMIN_NAME` | first bootstrap | no | Initial staging admin name |
 | `EMAIL_PROVIDER` | yes | no | Start with `console` unless real delivery is approved |
 | `EMAIL_FROM` | optional | no | Sender label/address for future delivery |
-| `UPLOAD_STORAGE_PROVIDER` | yes | no | `local` with persistent disk, or `s3` |
+| `UPLOAD_STORAGE_PROVIDER` | yes | no | `local` with persistent disk, `database`, or `s3` |
 | `UPLOAD_DIR` | local storage | no | Persistent mounted path, not ephemeral FS |
 | `MAX_UPLOAD_MB` | optional | no | Default is `50`; keep explicit for staging |
 | `S3_BUCKET` | S3 only | no | Synthetic/staging bucket |
@@ -120,6 +120,7 @@ pnpm start
 
 - Attach staging PostgreSQL and set `DATABASE_URL`.
 - For local file storage, mount a persistent disk and set `UPLOAD_STORAGE_PROVIDER=local` plus `UPLOAD_DIR` to the mounted path.
+- For database file storage, set `UPLOAD_STORAGE_PROVIDER=database`; uploaded bytes use the configured PostgreSQL database and require no additional credentials.
 - For S3 storage, set `UPLOAD_STORAGE_PROVIDER=s3` and the S3 variables above.
 - Do not configure production domains or production databases.
 

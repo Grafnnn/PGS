@@ -31,7 +31,7 @@ const envSchema = z.object({
   SEED_DEMO_PROJECT: z.enum(["true", "false"]).optional(),
   MAX_UPLOAD_MB: z.coerce.number().positive().max(250).default(50),
   UPLOAD_DIR: z.string().default("./storage/uploads"),
-  UPLOAD_STORAGE_PROVIDER: z.enum(["local", "s3"]).default("local"),
+  UPLOAD_STORAGE_PROVIDER: z.enum(["local", "database", "s3"]).default("local"),
   S3_BUCKET: z.string().optional(),
   S3_REGION: z.string().optional(),
   S3_ENDPOINT: z.string().optional(),

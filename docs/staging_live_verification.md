@@ -32,7 +32,7 @@ AUTH_REQUIRED=true
 SESSION_SECRET=...
 APP_URL=https://staging.example.com
 EMAIL_PROVIDER=console
-UPLOAD_STORAGE_PROVIDER=local
+UPLOAD_STORAGE_PROVIDER=database
 GITHUB_REPO=Grafnnn/PGS
 GITHUB_CONNECTOR_MODE=read_only
 GOOGLE_DRIVE_CONNECTOR_MODE=disabled
@@ -136,6 +136,15 @@ pnpm import:fixture
 
 - `UPLOAD_DIR` должен быть persistent volume на staging;
 - `/api/health` должен показывать `storage.writable=true`.
+
+## Database storage verification
+
+При `UPLOAD_STORAGE_PROVIDER=database`:
+
+- применить миграцию `database_document_storage_v1`;
+- загрузить только synthetic file и проверить upload/download/delete;
+- `/api/health` должен показывать `storage.provider=database` и `storage.writable=true`;
+- учитывать размер файлов в PostgreSQL backups; для больших объемов перейти на S3.
 
 ## S3 storage verification
 

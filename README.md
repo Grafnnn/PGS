@@ -175,7 +175,7 @@ APP_ENV="development"
 - `SESSION_SECRET` задан длинным случайным значением;
 - `FIRST_ADMIN_EMAIL` и `FIRST_ADMIN_PASSWORD` заданы для первого bootstrap, затем пароль нужно сменить/убрать из env;
 - `DATABASE_URL` указывает на live PostgreSQL;
-- `UPLOAD_STORAGE_PROVIDER=local` допустим только для VPS/volume, для serverless нужен S3-compatible storage;
+- `UPLOAD_STORAGE_PROVIDER=local` допустим только для VPS/volume; для среды без persistent disk используйте `database` или S3-compatible storage;
 - для S3 задать `S3_BUCKET`, `S3_REGION`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, а `S3_ENDPOINT` для совместимого провайдера;
 - `OPENAI_API_KEY` задается только если нужны AI endpoints.
 - `EMAIL_PROVIDER=console` безопасен для dev/staging проверки, но не отправляет реальные письма;
@@ -538,14 +538,15 @@ Audit trail пишет последние изменения по проекту
 
 ## Документы и файловое хранилище
 
-Для dev-режима документы хранятся в `UPLOAD_DIR` (`./storage/uploads`), а в PostgreSQL остаются только метаданные: категория, название, путь, имя файла, mime type, размер, storage key, версия и автор.
+Для dev-режима документы по умолчанию хранятся в `UPLOAD_DIR` (`./storage/uploads`). В зависимости от выбранного provider бинарные данные также могут храниться в PostgreSQL или S3-compatible storage.
 
 Storage providers:
 
 - `UPLOAD_STORAGE_PROVIDER=local` - полностью работает, требует persistent disk/volume;
+- `UPLOAD_STORAGE_PROVIDER=database` - долговечное хранение бинарных файлов в PostgreSQL; подходит для умеренного объема файлов и сред без persistent disk;
 - `UPLOAD_STORAGE_PROVIDER=s3` - S3-compatible adapter с AWS Signature v4 через server-side endpoints.
 
-Для production/serverless нужен S3-compatible storage. Рекомендуемые категории:
+Для больших production-объемов рекомендуется S3-compatible storage. Database provider дает надежный старт без отдельного object storage, но размер файлов учитывается в объеме и резервных копиях PostgreSQL. Рекомендуемые категории:
 
 - договоры;
 - сметы;
@@ -573,6 +574,14 @@ S3_SECRET_ACCESS_KEY=...
 ```
 
 S3 credentials не логируются и не возвращаются API.
+
+Database storage пример:
+
+```bash
+UPLOAD_STORAGE_PROVIDER=database
+```
+
+Дополнительные credentials не требуются; используется текущий `DATABASE_URL`.
 
 ## JSON Export
 

@@ -25,4 +25,17 @@ describe("env helpers", () => {
     expect(status.missing).toContain("AUTH_REQUIRED=true");
     expect(status.missing).toContain("SESSION_SECRET");
   });
+
+  it("accepts database-backed document storage without S3 settings", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("AUTH_REQUIRED", "true");
+    vi.stubEnv("SESSION_SECRET", "session-secret");
+    vi.stubEnv("DATABASE_URL", "postgresql://pgs:pgs@localhost:5432/pgs");
+    vi.stubEnv("UPLOAD_STORAGE_PROVIDER", "database");
+
+    const status = getEnvStatus();
+
+    expect(status.uploadProvider).toBe("database");
+    expect(status.missing).not.toContain("S3_BUCKET");
+  });
 });
