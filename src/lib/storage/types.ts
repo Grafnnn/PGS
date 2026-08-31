@@ -1,4 +1,4 @@
-export type StorageProviderName = "local" | "s3";
+export type StorageProviderName = "local" | "database" | "s3";
 
 export interface StorageWriteResult {
   storageKey: string;
