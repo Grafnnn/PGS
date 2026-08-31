@@ -9028,11 +9028,20 @@ input[type="checkbox"] {
   display: flex;
   align-items: flex-start;
   gap: 9px;
+  min-height: 58px;
   min-width: 0;
   padding: 10px;
   border: 1px solid var(--line);
   background: var(--panel-muted);
   cursor: pointer;
+}
+
+.daily-crew-grid label > input[type="checkbox"] {
+  flex: 0 0 18px;
+  height: 18px;
+  margin: 1px 0 0;
+  padding: 0;
+  width: 18px;
 }
 
 .daily-crew-grid label.selected {
@@ -9042,12 +9051,15 @@ input[type="checkbox"] {
 
 .daily-crew-grid label span {
   display: grid;
+  flex: 1 1 auto;
   min-width: 0;
 }
 
 .daily-crew-grid label strong,
 .daily-crew-grid label small {
-  overflow-wrap: anywhere;
+  line-height: 1.35;
+  overflow-wrap: break-word;
+  word-break: normal;
 }
 
 .daily-crew-grid label small {
@@ -9756,6 +9768,11 @@ input[type="checkbox"] {
   .daily-crew-tools .button,
   .workforce-admission-members-heading .button {
     flex: 1 1 auto;
+  }
+
+  .daily-crew-tools > label {
+    flex: 0 0 auto;
+    width: 100%;
   }
 
   .workforce-admission-meta,
