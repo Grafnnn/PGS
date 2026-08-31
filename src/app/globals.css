@@ -9394,6 +9394,239 @@ input[type="checkbox"] {
   gap: 4px;
 }
 
+.daily-photo-ai-workspace {
+  display: grid;
+  gap: 18px;
+  min-width: 0;
+}
+
+.daily-photo-ai-header {
+  align-items: flex-start;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  gap: 20px;
+  justify-content: space-between;
+  padding-bottom: 16px;
+}
+
+.daily-photo-ai-header h3,
+.daily-photo-ai-header p {
+  margin: 0;
+}
+
+.daily-photo-ai-header h3 {
+  align-items: center;
+  display: flex;
+  gap: 9px;
+  margin-top: 4px;
+}
+
+.daily-photo-ai-header h3 svg,
+.daily-photo-ai-prompts > span svg {
+  color: var(--accent);
+}
+
+.daily-photo-ai-header p {
+  color: var(--muted);
+  margin-top: 7px;
+  max-width: 720px;
+}
+
+.daily-photo-ai-header > .badge {
+  align-items: center;
+  display: inline-flex;
+  flex: 0 0 auto;
+  gap: 5px;
+}
+
+.daily-photo-ai-layout {
+  display: grid;
+  gap: 20px;
+  grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.65fr);
+  min-width: 0;
+}
+
+.daily-photo-ai-source,
+.daily-photo-ai-dialog {
+  display: grid;
+  min-width: 0;
+}
+
+.daily-photo-ai-source {
+  align-content: start;
+  gap: 12px;
+}
+
+.daily-photo-ai-dialog {
+  align-content: start;
+  background: var(--panel-muted);
+  border: 1px solid var(--line);
+  gap: 12px;
+  padding: 16px;
+}
+
+.daily-photo-ai-report-select,
+.daily-photo-ai-dialog > label {
+  color: var(--muted);
+  display: grid;
+  font-size: 12px;
+  font-weight: 700;
+  gap: 6px;
+}
+
+.daily-photo-ai-report-select select,
+.daily-photo-ai-dialog textarea {
+  width: 100%;
+}
+
+.daily-photo-ai-report-meta {
+  align-items: center;
+  color: var(--muted);
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 12px;
+  gap: 7px 14px;
+}
+
+.daily-photo-ai-report-meta span {
+  align-items: center;
+  display: inline-flex;
+  gap: 5px;
+}
+
+.daily-photo-ai-report-meta span:last-child {
+  flex: 1 1 100%;
+}
+
+.daily-photo-ai-selection-heading {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+
+.daily-photo-ai-selection-heading span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.daily-photo-ai-grid {
+  display: grid;
+  gap: 9px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.daily-photo-ai-grid button {
+  background: var(--panel-muted);
+  border: 1px solid var(--line);
+  color: var(--text);
+  cursor: pointer;
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  padding: 7px;
+  position: relative;
+  text-align: left;
+}
+
+.daily-photo-ai-grid button:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+.daily-photo-ai-grid button.selected {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+.daily-photo-ai-grid button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+.daily-photo-ai-grid img {
+  aspect-ratio: 4 / 3;
+  background: var(--line);
+  object-fit: cover;
+  width: 100%;
+}
+
+.daily-photo-ai-grid button > span {
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.daily-photo-ai-grid button > i {
+  align-items: center;
+  background: var(--accent);
+  color: #fff;
+  display: flex;
+  height: 24px;
+  justify-content: center;
+  position: absolute;
+  right: 12px;
+  top: 12px;
+  width: 24px;
+}
+
+.daily-photo-ai-prompts {
+  display: grid;
+  gap: 8px;
+}
+
+.daily-photo-ai-prompts > span {
+  align-items: center;
+  display: flex;
+  font-size: 12px;
+  font-weight: 800;
+  gap: 6px;
+}
+
+.daily-photo-ai-prompts > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.daily-photo-ai-prompts button {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  padding: 7px 9px;
+  text-align: left;
+}
+
+.daily-photo-ai-prompts button:hover {
+  border-color: var(--accent);
+  color: var(--accent-strong);
+}
+
+.daily-photo-ai-submit {
+  justify-content: center;
+  width: 100%;
+}
+
+.daily-photo-ai-empty {
+  align-items: center;
+  background: var(--panel-muted);
+  border: 1px dashed var(--line-strong);
+  color: var(--muted);
+  display: grid;
+  gap: 7px;
+  justify-items: center;
+  min-height: 210px;
+  padding: 28px;
+  text-align: center;
+}
+
+.daily-photo-ai-empty strong {
+  color: var(--text);
+}
+
 .daily-report-badges {
   flex-wrap: wrap;
   justify-content: flex-end;
@@ -9935,6 +10168,10 @@ input[type="checkbox"] {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .daily-photo-ai-layout {
+    grid-template-columns: 1fr;
+  }
+
   .workforce-admission-meta,
   .workforce-admission-approved-members {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -9962,8 +10199,22 @@ input[type="checkbox"] {
   .daily-shift-steps,
   .daily-crew-grid,
   .daily-photo-grid,
+  .daily-photo-ai-grid,
   .daily-crew-empty > div {
     grid-template-columns: 1fr;
+  }
+
+  .daily-photo-ai-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .daily-photo-ai-header > .badge {
+    align-self: flex-start;
+  }
+
+  .daily-photo-ai-dialog {
+    padding: 12px;
   }
 
   .daily-crew-tools,
