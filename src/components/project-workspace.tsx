@@ -1412,6 +1412,7 @@ export function ProjectWorkspace({
             currentUserLoaded={currentUserLoaded}
             projectId={initialBundle.project.id}
             reports={reports}
+            scheduleItems={scheduleItems}
             onReportsChange={setReports}
           /> },
           { id: "operations", label: "Производственный факт", description: "Сводка факта, смен и отклонений по площадке.", content: <FieldOperationsWorkspace

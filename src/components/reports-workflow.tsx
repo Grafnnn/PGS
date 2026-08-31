@@ -2,8 +2,10 @@
 
 import {
   Bot,
+  CalendarDays,
   Camera,
   Check,
+  ChevronDown,
   ClipboardCopy,
   FileDown,
   FilePlus2,
@@ -19,13 +21,13 @@ import {
   Trash2,
   X
 } from "lucide-react";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { DailyReportWorkOutputEditor } from "@/components/daily-report-work-output-editor";
 import { dailyReportWorkOutputNorm, dailyReportWorkOutputsComplete } from "@/lib/daily-report-work-outputs";
 import { dailyReportStatusLabel } from "@/lib/daily-reports";
 import type { SerializedExecutiveReport } from "@/lib/executive-reports";
-import type { DailyReport, DailyReportWorkOutput, ProjectDocument } from "@/lib/types";
+import type { DailyReport, DailyReportWorkOutput, ProjectDocument, ScheduleItem, WorkStatus } from "@/lib/types";
 
 type UserContext = {
   role?: "OWNER" | "ADMIN" | "MANAGER" | "VIEWER";
@@ -36,6 +38,7 @@ type UserContext = {
 type Props = {
   projectId: string;
   reports: DailyReport[];
+  scheduleItems: ScheduleItem[];
   currentUser: UserContext | null;
   currentUserLoaded: boolean;
   onReportsChange: (items: DailyReport[]) => void;
@@ -67,6 +70,133 @@ type PhotoQuestionResult = {
 };
 
 const workCategories = ["Кровельные работы", "Фасадные работы", "Монолит", "Кладка", "Отделка", "Инженерные сети", "Благоустройство", "Подготовительные работы", "Другое"];
+
+const scheduleStatusMeta: Record<WorkStatus, { label: string; tone: string }> = {
+  not_started: { label: "Не начато", tone: "gray" },
+  in_progress: { label: "В работе", tone: "blue" },
+  done: { label: "Готово", tone: "green" },
+  delayed: { label: "Просрочено", tone: "red" },
+  stopped: { label: "Остановлено", tone: "yellow" }
+};
+
+function scheduleDay(value: string) {
+  return value.slice(0, 10);
+}
+
+function scheduleDateLabel(item: ScheduleItem) {
+  const format = (value: string) => {
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString("ru-RU", { day: "2-digit", month: "2-digit" });
+  };
+  return `${format(item.startsAt)}–${format(item.endsAt)}`;
+}
+
+function scheduleWorkRank(item: ScheduleItem, shiftDate: string) {
+  const startsAt = scheduleDay(item.startsAt);
+  const endsAt = scheduleDay(item.endsAt);
+  const coversShift = Boolean(shiftDate && startsAt <= shiftDate && endsAt >= shiftDate);
+  if (coversShift && item.status === "in_progress") return 0;
+  if (coversShift && item.status !== "done") return 1;
+  if (item.status === "in_progress") return 2;
+  if (item.status === "delayed" || item.status === "stopped") return 3;
+  if (item.status === "not_started" && startsAt >= shiftDate) return 4;
+  if (item.status === "not_started") return 5;
+  return 6;
+}
+
+export function buildScheduleWorkSuggestions(items: ScheduleItem[], shiftDate: string, query = "") {
+  const normalizedQuery = query.trim().toLocaleLowerCase("ru-RU");
+  return [...items]
+    .filter((item) => {
+      if (!normalizedQuery) return true;
+      const status = scheduleStatusMeta[item.status].label;
+      return `${item.name} ${item.owner} ${status}`.toLocaleLowerCase("ru-RU").includes(normalizedQuery);
+    })
+    .sort((left, right) => {
+      const rankDelta = scheduleWorkRank(left, shiftDate) - scheduleWorkRank(right, shiftDate);
+      if (rankDelta) return rankDelta;
+      const dateDelta = scheduleDay(left.startsAt).localeCompare(scheduleDay(right.startsAt));
+      return dateDelta || left.name.localeCompare(right.name, "ru-RU");
+    });
+}
+
+export function ScheduleWorkPicker({
+  items,
+  shiftDate,
+  selectedValue,
+  onSelect
+}: {
+  items: ScheduleItem[];
+  shiftDate: string;
+  selectedValue: string;
+  onSelect: (value: string) => void;
+}) {
+  const detailsRef = useRef<HTMLDetailsElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const [query, setQuery] = useState("");
+  const suggestions = useMemo(() => buildScheduleWorkSuggestions(items, shiftDate, query), [items, query, shiftDate]);
+  const visibleSuggestions = suggestions.slice(0, 30);
+
+  function selectWork(value: string) {
+    onSelect(value);
+    setQuery("");
+    if (detailsRef.current) detailsRef.current.open = false;
+  }
+
+  return (
+    <details
+      className="daily-schedule-work-picker"
+      ref={detailsRef}
+      onKeyDown={(event) => {
+        if (event.key !== "Escape" || !detailsRef.current?.open) return;
+        detailsRef.current.open = false;
+        detailsRef.current.querySelector<HTMLElement>("summary")?.focus();
+      }}
+      onToggle={(event) => {
+        if (event.currentTarget.open) window.requestAnimationFrame(() => searchInputRef.current?.focus());
+      }}
+    >
+      <summary aria-label="Выбрать работу из графика проекта" title="Выбрать работу из графика проекта">
+        <CalendarDays size={16} />
+        <span>Из графика</span>
+        <ChevronDown className="daily-schedule-work-chevron" size={15} />
+      </summary>
+      <div className="daily-schedule-work-menu">
+        <header>
+          <div>
+            <strong>Работы проектного графика</strong>
+            <small>{items.length ? `${items.length} позиций · актуальные показаны первыми` : "График пока не заполнен"}</small>
+          </div>
+        </header>
+        {items.length ? (
+          <>
+            <label className="daily-schedule-work-search">
+              <Search size={15} />
+              <input aria-label="Поиск работы в графике" placeholder="Название, ответственный или статус" ref={searchInputRef} value={query} onChange={(event) => setQuery(event.target.value)} />
+            </label>
+            <div className="daily-schedule-work-results" role="listbox" aria-label="Работы проектного графика">
+              {visibleSuggestions.length ? visibleSuggestions.map((item) => {
+                const meta = scheduleStatusMeta[item.status];
+                return (
+                  <button aria-selected={selectedValue === item.name} className={selectedValue === item.name ? "selected" : ""} key={item.id} role="option" type="button" onClick={() => selectWork(item.name)}>
+                    <span>
+                      <strong>{item.name}</strong>
+                      <small>{scheduleDateLabel(item)}{item.owner ? ` · ${item.owner}` : ""}</small>
+                    </span>
+                    <span className={`badge ${meta.tone}`}>{meta.label}</span>
+                  </button>
+                );
+              }) : <p>По этому запросу работ нет.</p>}
+            </div>
+            {suggestions.length > visibleSuggestions.length ? <small className="daily-schedule-work-limit">Уточните поиск, чтобы увидеть остальные работы.</small> : null}
+          </>
+        ) : (
+          <div className="daily-schedule-work-empty">Добавьте работы во вкладке «График» или введите вид работ вручную.</div>
+        )}
+      </div>
+    </details>
+  );
+}
 
 const emptyReport = (author = "Прораб", phase: "open" | "closed" = "open"): ReportForm => ({
   date: new Date().toISOString().slice(0, 10),
@@ -101,7 +231,7 @@ async function responseError(response: Response, fallback: string) {
   return body.error ?? fallback;
 }
 
-export function ReportsWorkflow({ projectId, reports, currentUser, currentUserLoaded, onReportsChange }: Props) {
+export function ReportsWorkflow({ projectId, reports, scheduleItems, currentUser, currentUserLoaded, onReportsChange }: Props) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [form, setForm] = useState<ReportForm>(() => emptyReport(currentUser?.name));
@@ -494,12 +624,30 @@ export function ReportsWorkflow({ projectId, reports, currentUser, currentUserLo
           <div className="daily-report-form-grid">
             <label>Дата<input type="date" value={form.date} onChange={(event) => setForm({ ...form, date: event.target.value })} /></label>
             <label>Автор <span aria-hidden="true">*</span><input aria-invalid={!form.author.trim()} required value={form.author} onChange={(event) => setForm({ ...form, author: event.target.value })} /></label>
-            <label>Укрупнённый вид работ <span aria-hidden="true">*</span>
-              <select aria-invalid={!form.workCategory.trim()} value={form.workCategory} onChange={(event) => setForm({ ...form, workCategory: event.target.value })}>
-                <option value="">Выберите вид работ</option>
-                {workCategories.map((category) => <option key={category} value={category}>{category}</option>)}
-              </select>
-            </label>
+            <div className="daily-report-field daily-work-category-field">
+              <label htmlFor="daily-work-category">Укрупнённый вид работ <span aria-hidden="true">*</span></label>
+              <div className="daily-work-category-control">
+                <input
+                  aria-invalid={!form.workCategory.trim()}
+                  id="daily-work-category"
+                  list={`daily-work-category-options-${projectId}`}
+                  placeholder="Введите вручную или выберите из графика"
+                  required
+                  value={form.workCategory}
+                  onChange={(event) => setForm({ ...form, workCategory: event.target.value })}
+                />
+                <ScheduleWorkPicker
+                  items={scheduleItems}
+                  selectedValue={form.workCategory}
+                  shiftDate={form.date}
+                  onSelect={(workCategory) => setForm((current) => ({ ...current, workCategory }))}
+                />
+                <datalist id={`daily-work-category-options-${projectId}`}>
+                  {Array.from(new Set([...scheduleItems.map((item) => item.name), ...workCategories])).map((category) => <option key={category} value={category} />)}
+                </datalist>
+              </div>
+              <small>Можно ввести свой вид работ или выбрать позицию из графика проекта.</small>
+            </div>
             <label>Погода<input value={form.weather} onChange={(event) => setForm({ ...form, weather: event.target.value })} placeholder="Температура, осадки, ветер" /></label>
             <label className="wide">План работ на смену <span aria-hidden="true">*</span><textarea aria-invalid={!form.plannedWorks.trim()} rows={2} value={form.plannedWorks} onChange={(event) => setForm({ ...form, plannedWorks: event.target.value })} placeholder="Что должно быть выполнено к концу дня" /></label>
             <label className="wide">Техника<input value={form.equipment} onChange={(event) => setForm({ ...form, equipment: event.target.value })} placeholder="Наименование и количество" /></label>
