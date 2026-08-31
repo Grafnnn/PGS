@@ -1,5 +1,35 @@
 # PGS Project Log
 
+## 2026-08-31 - Workforce Admission Requests v1 online/full workflow GO
+
+Status: Workforce Admission Requests v1 from PR #182 is live on Render. The first real personnel admission request was created from the approved roofing access list, explicitly approved and verified in both the project workforce register and the daily-plan crew picker.
+
+- Online URL: https://pgs-frankfurt.onrender.com
+- Online commit: `fd9b5f7a6284b9acda3ea0f9e8d81ab104958e07`
+- Feature PR: #182
+- Decision: ONLINE/FULL WORKFLOW GO
+- Git SHA source: `RENDER_GIT_COMMIT`
+
+Online verification:
+
+- `/api/health`: HTTP 200 / `ok`; DB: `ok`; migrations: `ok`, count `29`; auth required; storage writable;
+- the guarded request workflow saved and approved one application with 13 roofing employees for the active Troitsk project;
+- approval created 13 organization resources and 13 active project assignments, with no reused or duplicate rows;
+- all 13 employees and their profession were returned by `/daily-workforce`;
+- all 13 employees rendered in `ФОТ -> Штат` and in `Рапорты -> Открыть смену -> Кто работает`;
+- crew search, `Выбрать видимых` and `Очистить` were verified for all 13 rows without saving a test report;
+- unauthenticated admission list/create/approve and daily-workforce requests returned 403 before data access;
+- the temporary smoke ADMIN session was closed, the role was restored and all temporary sessions were revoked.
+
+Validation and privacy:
+
+- PR #182 GitHub Actions CI #373 passed;
+- Vitest: 688/688 passed; ESLint, TypeScript, Prisma validate/generate, production build and `git diff --check` passed;
+- only document type and the final four characters are stored; full passport, patent and visa identifiers were neither transmitted nor persisted;
+- no employee names or document fragments were committed to the repository or included in this log;
+- no live AI call, project deletion, report mutation, Render environment change or direct SQL was used;
+- no secret, cookie, token, provider key or environment value was printed.
+
 ## 2026-08-31 - Workforce Daily Plan & Photo AI full disposable smoke GO
 
 Status: Workforce Daily Plan & Photo AI from PR #179 is live on Render. PR #180 replaced ephemeral local uploads with explicit PostgreSQL-backed storage, and the complete authenticated employee import, shift, photo, AI and cleanup flow passed online.
