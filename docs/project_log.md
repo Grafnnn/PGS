@@ -1,5 +1,37 @@
 # PGS Project Log
 
+## 2026-08-31 - Workforce Daily Plan & Photo AI full disposable smoke GO
+
+Status: Workforce Daily Plan & Photo AI from PR #179 is live on Render. PR #180 replaced ephemeral local uploads with explicit PostgreSQL-backed storage, and the complete authenticated employee import, shift, photo, AI and cleanup flow passed online.
+
+- Online URL: https://pgs-frankfurt.onrender.com
+- Feature app commit: `aae0b1f440f0e92926766f45a178e1b139761e59`
+- Online storage fix commit: `a5adf334a77c096d55369d200781e74a8da90ee7`
+- Feature PR: #179
+- Storage PR: #180
+- Decision: FULL DISPOSABLE SHIFT/PHOTO AI SMOKE GO
+- Git SHA source: `RENDER_GIT_COMMIT`
+
+Online verification:
+
+- `/api/health`: HTTP 200 / `ok`; DB: `ok`; migrations: `ok`, count `28`; auth required; AI configured; `storage.provider=database`; storage writable;
+- a generated two-person Excel workforce register passed preview and explicit commit; both synthetic employees were assigned and returned by the daily workforce endpoint;
+- an authenticated foreman shift request was opened with a broad work category, plan and selected crew;
+- one synthetic PNG was attached to the draft daily report, downloaded through the protected endpoint and matched the source SHA-256 checksum;
+- the shift was closed with one structured work-output row, and the report read model returned the linked photo;
+- exactly one click-triggered live AI photo question returned a valid structured answer with observations, limitations and bounded confidence;
+- document deletion removed both metadata and stored bytes; the daily report was deleted; resources were archived and unassigned;
+- cleanup verification found zero matching active resources, workforce rows, reports or documents.
+
+Validation and safety:
+
+- PR #179 CI #367 and PR #180 CI #369 passed;
+- Vitest: 676/676 passed after the storage fix; ESLint, TypeScript, Prisma validate/generate, production build and `git diff --check` passed;
+- the Troitsk roofing workbook was used only as a read-only structural reference; no real employee name or salary was committed or used online;
+- only `UPLOAD_STORAGE_PROVIDER` was changed for PGS Frankfurt; no secret value, auth configuration, database URL or production service was changed;
+- the smoke used only `project-smoke`, synthetic employee/file data and the normal authenticated application APIs; no direct SQL was used;
+- no secret, cookie, token, provider key or environment value was printed.
+
 ## 2026-07-31 - Project Closeout & Warranty v1 full disposable lifecycle smoke GO
 
 Status: Project Closeout & Warranty v1 from PR #165 is live on Render, and the guarded runtime lifecycle added in PR #166 passed the full disposable closeout, approval, warranty, completion and cleanup flow.
