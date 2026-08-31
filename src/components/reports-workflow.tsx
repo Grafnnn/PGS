@@ -27,6 +27,7 @@ import { DailyReportWorkOutputEditor } from "@/components/daily-report-work-outp
 import { dailyReportWorkOutputNorm, dailyReportWorkOutputsComplete } from "@/lib/daily-report-work-outputs";
 import { dailyReportStatusLabel } from "@/lib/daily-reports";
 import type { SerializedExecutiveReport } from "@/lib/executive-reports";
+import type { PhotoQuestionResult } from "@/lib/photo-question";
 import type { DailyReport, DailyReportWorkOutput, ProjectDocument, ScheduleItem, WorkStatus } from "@/lib/types";
 
 type UserContext = {
@@ -58,15 +59,6 @@ type WorkforceItem = {
   profession: string;
   kind: "worker" | "engineer" | "crew";
   headcount: number;
-};
-
-type PhotoQuestionResult = {
-  answer: string;
-  observations: string[];
-  risks: string[];
-  recommendedActions: string[];
-  confidence: "low" | "medium" | "high";
-  limitations: string[];
 };
 
 const workCategories = ["Кровельные работы", "Фасадные работы", "Монолит", "Кладка", "Отделка", "Инженерные сети", "Благоустройство", "Подготовительные работы", "Другое"];

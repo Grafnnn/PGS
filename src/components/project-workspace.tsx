@@ -28,6 +28,7 @@ import { ProjectModuleWorkspace } from "@/components/project-module-workspace";
 import { ProjectSectionGuide, projectSectionGuides, type ProjectSectionSignal, type ProjectSignalKey } from "@/components/project-section-guide";
 import { DocumentComplianceWorkspace } from "@/components/document-compliance-workspace";
 import { DocumentTransmittalsWorkspace } from "@/components/document-transmittals-workspace";
+import { DailyPhotoAiWorkspace } from "@/components/daily-photo-ai-workspace";
 import { PhotoEvidenceWorkspace } from "@/components/photo-evidence-workspace";
 import { ProjectIntelligenceDrilldown } from "@/components/project-intelligence-drilldown";
 import { ProcurementIntelligenceWorkspace } from "@/components/procurement-intelligence-workspace";
@@ -1453,6 +1454,12 @@ export function ProjectWorkspace({
               documents={documents}
               documentChecklist={documentChecklist}
               onNavigate={setActiveTab}
+            /> },
+          { id: "photo-ai", label: "AI по фото", description: "Отдельный AI-анализ фотографий из рапортов прораба.", content: <DailyPhotoAiWorkspace
+              projectId={initialBundle.project.id}
+              reports={reports}
+              currentUser={currentUser}
+              currentUserLoaded={currentUserLoaded}
             /> },
           { id: "executive", label: "Отчёт руководителю", description: "Управленческая сводка на основе подтвержденного факта.", content: <RiskExecutiveWorkspace
               project={initialBundle.project}
