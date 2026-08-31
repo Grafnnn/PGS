@@ -46,6 +46,8 @@ function projectDeleteClient(project: { id: string; organizationId: string; name
     procurementRequestItem: countDelegate(10),
     supplierQuote: countDelegate(11),
     payment: countDelegate(12),
+    projectExpense: countDelegate(24),
+    projectExpenseItem: countDelegate(25),
     cashflowPeriod: countDelegate(13),
     document: countDelegate(14),
     documentVersion: countDelegate(15),
@@ -130,6 +132,8 @@ describe("deleteProjectWithConfirmation", () => {
         projectMembers: 1,
         userInvitesDetached: 2,
         budgetItems: 4,
+        projectExpenses: 24,
+        projectExpenseItems: 25,
         procurementRequestItems: 10,
         documentVersions: 15,
         aiRuns: 23,
@@ -140,6 +144,7 @@ describe("deleteProjectWithConfirmation", () => {
     });
     expect(tx.procurementRequestItem.count).toHaveBeenCalledWith({ where: { request: { projectId: "project-demo" } } });
     expect(tx.documentVersion.count).toHaveBeenCalledWith({ where: { document: { projectId: "project-demo" } } });
+    expect(tx.projectExpenseItem.count).toHaveBeenCalledWith({ where: { expense: { projectId: "project-demo" } } });
     expect(tx.project.delete).toHaveBeenCalledWith({ where: { id: "project-demo" } });
     expect(writeAuditMock).toHaveBeenCalledWith(
       tx,
