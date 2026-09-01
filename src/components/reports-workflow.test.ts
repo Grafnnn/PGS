@@ -81,6 +81,53 @@ describe("ReportsWorkflow", () => {
     expect(html).toContain("100 м²/чел.-мес.");
   });
 
+  it("keeps approved report photos visible and offers controlled correction and progress sync", () => {
+    const html = renderToStaticMarkup(createElement(ReportsWorkflow, {
+      projectId: "project-1",
+      scheduleItems: [],
+      reports: [{
+        id: "report-approved",
+        projectId: "project-1",
+        date: "2026-09-01",
+        author: "Прораб",
+        weather: "Ясно",
+        workers: 4,
+        engineers: 1,
+        equipment: "",
+        completedWorks: "Монтаж мембраны",
+        materialsReceived: "",
+        materialsConsumed: "",
+        downtime: "",
+        issues: "",
+        workOutputs: [{ scheduleItemId: "schedule-1", profession: "Кровельщик", workName: "Монтаж мембраны", quantity: 20, unit: "м²", laborHours: 32 }],
+        evidenceDocuments: [{
+          id: "photo-1",
+          projectId: "project-1",
+          dailyReportId: "report-approved",
+          category: "фотофиксация",
+          title: "Фото кровли",
+          filePath: "storage/photo-1.jpg",
+          fileName: "photo-1.jpg",
+          mimeType: "image/jpeg",
+          version: 1,
+          author: "Прораб",
+          createdAt: "2026-09-01T10:00:00.000Z"
+        }],
+        progressImpact: { applied: false, entries: 0, scheduleItems: 0 },
+        status: "approved"
+      }],
+      currentUser: { authenticated: true, role: "ADMIN", name: "Администратор" },
+      currentUserLoaded: true,
+      onReportsChange: () => undefined
+    }));
+
+    expect(html).toContain("Фото кровли");
+    expect(html).toContain("/api/projects/project-1/documents/photo-1/download");
+    expect(html).toContain("Факт ещё не учтён в графике");
+    expect(html).toContain("Учесть в графике");
+    expect(html).toContain("Исправить");
+  });
+
   it("shows an open shift as a plan that can be closed with actual facts", () => {
     const html = renderToStaticMarkup(createElement(ReportsWorkflow, {
       projectId: "project-1",

@@ -14,7 +14,7 @@ const transitions: Record<DailyReport["status"], DailyReport["status"][]> = {
   draft: ["submitted"],
   submitted: ["draft", "checked"],
   checked: ["submitted", "approved"],
-  approved: []
+  approved: ["draft"]
 };
 
 export function canTransitionDailyReport(from: string, to: string, role: AppRole | null) {
@@ -23,6 +23,7 @@ export function canTransitionDailyReport(from: string, to: string, role: AppRole
   const next = to as DailyReport["status"];
   if (from === to) return true;
   if (!role || !transitions[current].includes(next)) return false;
+  if (current === "approved" && next === "draft") return role === "OWNER" || role === "ADMIN";
   if (next === "approved") return role === "OWNER" || role === "ADMIN";
   if (next === "checked") return role === "OWNER" || role === "ADMIN" || role === "MANAGER";
   return role === "OWNER" || role === "ADMIN" || role === "MANAGER";

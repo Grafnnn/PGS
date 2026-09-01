@@ -160,6 +160,11 @@ export interface DailyReport {
   plannedWorks?: string;
   crewMembers?: DailyReportCrewMember[];
   evidenceDocuments?: ProjectDocument[];
+  progressImpact?: {
+    applied: boolean;
+    entries: number;
+    scheduleItems: number;
+  };
   status: "draft" | "submitted" | "checked" | "approved";
 }
 

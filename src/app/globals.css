@@ -9568,6 +9568,14 @@ input[type="checkbox"] {
   font-size: 12px;
 }
 
+.daily-photo-notice {
+  background: var(--green-soft);
+  border-left: 3px solid var(--green);
+  color: var(--text);
+  font-size: 13px;
+  padding: 9px 11px;
+}
+
 .daily-crew-tools {
   align-items: center;
   display: flex;
@@ -10387,6 +10395,68 @@ input[type="checkbox"] {
   margin: 0;
 }
 
+.daily-report-evidence {
+  display: grid;
+  gap: 7px;
+}
+
+.daily-report-evidence-gallery {
+  display: grid;
+  gap: 7px;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.daily-report-evidence-gallery a {
+  background: var(--panel-muted);
+  border: 1px solid var(--line);
+  color: var(--muted);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  min-width: 0;
+  padding: 4px;
+  text-decoration: none;
+}
+
+.daily-report-evidence-gallery a:hover,
+.daily-report-evidence-gallery a:focus-visible {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.daily-report-evidence-gallery img {
+  aspect-ratio: 4 / 3;
+  background: var(--line);
+  grid-column: 1 / -1;
+  object-fit: cover;
+  width: 100%;
+}
+
+.daily-report-evidence-gallery span {
+  font-size: 10px;
+  overflow: hidden;
+  padding: 4px 2px 1px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.daily-report-evidence-gallery svg {
+  margin-top: 4px;
+}
+
+.daily-report-evidence-files {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.daily-report-evidence-files a {
+  align-items: center;
+  color: var(--muted);
+  display: inline-flex;
+  font-size: 11px;
+  gap: 5px;
+}
+
 .daily-report-output-summary {
   display: flex;
   flex-wrap: wrap;
@@ -10427,6 +10497,52 @@ input[type="checkbox"] {
   justify-content: flex-start;
   flex-wrap: wrap;
   min-height: 34px;
+}
+
+.daily-report-progress-impact {
+  align-items: center;
+  border-left: 3px solid var(--line-strong);
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 12px;
+  font-weight: 700;
+  gap: 10px;
+  justify-content: space-between;
+  min-height: 38px;
+  padding: 7px 10px;
+}
+
+.daily-report-progress-impact.is-applied {
+  background: var(--green-soft);
+  border-left-color: var(--green);
+  color: var(--green);
+}
+
+.daily-report-progress-impact.is-pending {
+  background: var(--yellow-soft);
+  border-left-color: var(--yellow);
+  color: var(--text);
+}
+
+.daily-report-correction {
+  background: var(--panel-muted);
+  border: 1px solid var(--line);
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+}
+
+.daily-report-correction label {
+  color: var(--muted);
+  display: grid;
+  font-size: 12px;
+  font-weight: 700;
+  gap: 5px;
+}
+
+.daily-report-correction p {
+  color: var(--muted);
+  font-size: 12px;
 }
 
 .daily-report-alert {
@@ -10597,6 +10713,10 @@ input[type="checkbox"] {
   .daily-photo-ai-header {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .daily-report-evidence-gallery {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .daily-photo-ai-header > .badge {

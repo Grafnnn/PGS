@@ -1417,6 +1417,7 @@ export function ProjectWorkspace({
             reports={reports}
             scheduleItems={scheduleItems}
             onReportsChange={setReports}
+            onScheduleItemsChange={(updatedItems) => setScheduleItems((current) => current.map((item) => updatedItems.find((updated) => updated.id === item.id) ?? item))}
           /> },
           { id: "operations", label: "Производственный факт", description: "Сводка факта, смен и отклонений по площадке.", content: <FieldOperationsWorkspace
               project={initialBundle.project}
@@ -1486,9 +1487,10 @@ export function ProjectWorkspace({
       )}
 
       {activeTab === "Площадка" && (
-        <ProjectModuleWorkspace moduleKey="site" title="Мобильная работа стройплощадки" icon={<HardHat size={18} />} views={[{
+        <ProjectModuleWorkspace moduleKey="site" title="Полевой режим стройплощадки" icon={<HardHat size={18} />} views={[{
           id: "mobile",
-          label: "Площадка",
+          label: "Offline-запись",
+          description: "Быстрый ввод без связи; после синхронизации записи переходят в «Рапорты».",
           content: <FieldMobileWorkspace
             currentUser={currentUser}
             currentUserLoaded={currentUserLoaded}

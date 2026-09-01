@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { Prisma } from "@prisma/client";
 
 const mocks = vi.hoisted(() => ({
   getCurrentUser: vi.fn(),
@@ -10,6 +11,11 @@ const mocks = vi.hoisted(() => ({
   reportCreate: vi.fn(),
   reportUpdate: vi.fn(),
   reportDelete: vi.fn(),
+  scheduleFindMany: vi.fn(),
+  scheduleUpdate: vi.fn(),
+  progressFindMany: vi.fn(),
+  progressCreate: vi.fn(),
+  progressDeleteMany: vi.fn(),
   assignmentFindMany: vi.fn(),
   audit: vi.fn(async () => ({})),
   demoContext: vi.fn()
@@ -26,10 +32,14 @@ vi.mock("@/lib/prisma", () => ({
   prisma: {
     project: { findUnique: mocks.projectFind },
     dailyReport: { findMany: mocks.reportFindMany, findUnique: mocks.reportFind, findUniqueOrThrow: mocks.reportFind, create: mocks.reportCreate, update: mocks.reportUpdate, delete: mocks.reportDelete },
+    scheduleItem: { findMany: mocks.scheduleFindMany, update: mocks.scheduleUpdate },
+    workProgressEntry: { findMany: mocks.progressFindMany, create: mocks.progressCreate, deleteMany: mocks.progressDeleteMany },
     projectResourceAssignment: { findMany: mocks.assignmentFindMany },
     auditLog: { create: mocks.audit },
     $transaction: vi.fn(async (callback: (tx: unknown) => unknown) => callback({
       dailyReport: { create: mocks.reportCreate, update: mocks.reportUpdate, delete: mocks.reportDelete },
+      scheduleItem: { findMany: mocks.scheduleFindMany, update: mocks.scheduleUpdate },
+      workProgressEntry: { findMany: mocks.progressFindMany, create: mocks.progressCreate, deleteMany: mocks.progressDeleteMany },
       auditLog: { create: mocks.audit }
     }))
   }
@@ -46,11 +56,33 @@ const before = {
   status: "draft", createdBy: "manager-1", createdAt: new Date(), updatedAt: new Date()
 };
 
+const schedule = {
+  id: "schedule-1",
+  organizationId: "org-1",
+  projectId: "project-1",
+  costCodeId: null,
+  budgetItemId: null,
+  name: "Монтаж конструкций",
+  owner: "Прораб",
+  startsAt: new Date("2026-07-01T00:00:00Z"),
+  endsAt: new Date("2026-07-31T00:00:00Z"),
+  plannedQty: new Prisma.Decimal(100),
+  actualQty: new Prisma.Decimal(40),
+  status: "in_progress",
+  dependency: null,
+  createdBy: "manager-1",
+  createdAt: new Date(),
+  updatedAt: new Date()
+};
+
 function request(body: unknown) {
   return new Request("https://pgs.local", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) }) as never;
 }
 
 describe("daily reports catch-all workflow", () => {
+  let scheduleActual = 40;
+  let scheduleStatus = "in_progress";
+
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.getCurrentUser.mockResolvedValue(user);
@@ -64,6 +96,19 @@ describe("daily reports catch-all workflow", () => {
     mocks.reportUpdate.mockImplementation(async ({ data }: { data: Record<string, unknown> }) => ({ ...before, ...data }));
     mocks.reportDelete.mockResolvedValue(before);
     mocks.assignmentFindMany.mockResolvedValue([]);
+    mocks.progressFindMany.mockResolvedValue([]);
+    mocks.progressCreate.mockResolvedValue({ id: "progress-1" });
+    mocks.progressDeleteMany.mockResolvedValue({ count: 0 });
+    scheduleActual = 40;
+    scheduleStatus = "in_progress";
+    mocks.scheduleFindMany.mockImplementation(async () => [{ ...schedule, actualQty: new Prisma.Decimal(scheduleActual), status: scheduleStatus }]);
+    mocks.scheduleUpdate.mockImplementation(async ({ data }: { data: { actualQty?: Prisma.Decimal | { increment?: Prisma.Decimal; decrement?: Prisma.Decimal }; status?: string } }) => {
+      if (data.actualQty instanceof Prisma.Decimal) scheduleActual = data.actualQty.toNumber();
+      else if (data.actualQty?.increment) scheduleActual += data.actualQty.increment.toNumber();
+      else if (data.actualQty?.decrement) scheduleActual -= data.actualQty.decrement.toNumber();
+      if (data.status) scheduleStatus = data.status;
+      return { ...schedule, actualQty: new Prisma.Decimal(scheduleActual), status: scheduleStatus };
+    });
   });
 
   it("loads project reports independently from the page bundle", async () => {
@@ -73,7 +118,10 @@ describe("daily reports catch-all workflow", () => {
     expect(response.status).toBe(200);
     expect(mocks.reportFindMany).toHaveBeenCalledWith({
       where: { projectId: "project-1" },
-      include: { evidenceDocuments: { orderBy: { uploadedAt: "asc" } } },
+      include: {
+        evidenceDocuments: { orderBy: { uploadedAt: "asc" } },
+        progressEntries: { orderBy: { createdAt: "asc" } }
+      },
       orderBy: [{ date: "desc" }, { createdAt: "desc" }]
     });
     expect(body.items).toEqual([expect.objectContaining({ id: "daily-1", projectId: "project-1", completedWorks: "Монтаж" })]);
@@ -293,6 +341,76 @@ describe("daily reports catch-all workflow", () => {
     const { PATCH } = await import("./route");
     const response = await PATCH(request({ completedWorks: "Переписано" }), { params: { path: ["daily-reports", "daily-1"] } });
     expect(response.status).toBe(409);
+  });
+
+  it("applies approved measurable output to the linked schedule item atomically", async () => {
+    mocks.effectiveRole.mockResolvedValue("OWNER");
+    scheduleActual = 90;
+    mocks.reportFind.mockResolvedValue({
+      ...before,
+      status: "checked",
+      workOutputs: [{ ...before.workOutputs[0], scheduleItemId: "schedule-1", quantity: 10 }]
+    });
+    const { PATCH } = await import("./route");
+    const response = await PATCH(request({ status: "approved" }), { params: { path: ["daily-reports", "daily-1"] } });
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(mocks.progressCreate).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ dailyReportId: "daily-1", scheduleItemId: "schedule-1", status: "approved" })
+    }));
+    expect(scheduleActual).toBe(100);
+    expect(scheduleStatus).toBe("done");
+    expect(body.progress).toEqual(expect.objectContaining({ mode: "applied", entries: 1 }));
+  });
+
+  it("returns an approved report to draft and rolls back only its linked progress", async () => {
+    mocks.effectiveRole.mockResolvedValue("OWNER");
+    scheduleActual = 50;
+    mocks.reportFind.mockResolvedValue({ ...before, status: "approved" });
+    mocks.progressFindMany.mockResolvedValue([{ id: "progress-1", dailyReportId: "daily-1", scheduleItemId: "schedule-1", qty: new Prisma.Decimal(10) }]);
+    const { PATCH } = await import("./route");
+    const response = await PATCH(request({ status: "draft", correctionReason: "Уточнить фактический объём" }), { params: { path: ["daily-reports", "daily-1"] } });
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(scheduleActual).toBe(40);
+    expect(mocks.progressDeleteMany).toHaveBeenCalledWith({ where: { dailyReportId: "daily-1" } });
+    expect(mocks.reportUpdate).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ status: "draft" }) }));
+    expect(body.progress).toEqual(expect.objectContaining({ mode: "rolled_back", entries: 1 }));
+    expect(mocks.audit).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ summary: expect.stringContaining("Уточнить фактический объём") }) }));
+  });
+
+  it("requires an owner or administrator and a reason to reopen an approved report", async () => {
+    mocks.reportFind.mockResolvedValue({ ...before, status: "approved" });
+    const { PATCH } = await import("./route");
+    const managerResponse = await PATCH(request({ status: "draft", correctionReason: "Исправить объём" }), { params: { path: ["daily-reports", "daily-1"] } });
+    mocks.effectiveRole.mockResolvedValue("OWNER");
+    const noReasonResponse = await PATCH(request({ status: "draft" }), { params: { path: ["daily-reports", "daily-1"] } });
+
+    expect(managerResponse.status).toBe(409);
+    expect(noReasonResponse.status).toBe(400);
+    expect(mocks.progressDeleteMany).not.toHaveBeenCalled();
+  });
+
+  it("synchronizes a legacy approved report once and remains idempotent", async () => {
+    mocks.effectiveRole.mockResolvedValue("OWNER");
+    mocks.reportFind.mockResolvedValue({
+      ...before,
+      status: "approved",
+      workOutputs: [{ ...before.workOutputs[0], scheduleItemId: "schedule-1", quantity: 5 }]
+    });
+    const { PATCH } = await import("./route");
+    const firstResponse = await PATCH(request({ applyProgress: true }), { params: { path: ["daily-reports", "daily-1"] } });
+    mocks.progressFindMany.mockResolvedValue([{ id: "progress-1", dailyReportId: "daily-1", scheduleItemId: "schedule-1", qty: new Prisma.Decimal(5) }]);
+    const secondResponse = await PATCH(request({ applyProgress: true }), { params: { path: ["daily-reports", "daily-1"] } });
+    const secondBody = await secondResponse.json();
+
+    expect(firstResponse.status).toBe(200);
+    expect(secondResponse.status).toBe(200);
+    expect(scheduleActual).toBe(45);
+    expect(mocks.progressCreate).toHaveBeenCalledTimes(1);
+    expect(secondBody.progress.mode).toBe("already_applied");
   });
 
   it("deletes only draft reports and writes audit", async () => {

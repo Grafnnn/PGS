@@ -87,7 +87,7 @@ export const projectTabGroups: ReadonlyArray<ProjectTabGroup> = [
   {
     id: "production",
     label: "Производство",
-    description: "График, площадка и факт",
+    description: "График, полевой ввод и утверждённый факт",
     icon: <CalendarRange size={18} />,
     tabs: ["График", "Площадка", "Рапорты", "Исполнение"]
   },
@@ -133,7 +133,7 @@ export const projectDomainGroups = projectTabGroups.filter(
   (group): group is ProjectTabGroup & { id: ProjectDomainId } => !group.service
 );
 
-const tabMeta: Record<ProjectTab, { icon: React.ReactNode; hint: string }> = {
+const tabMeta: Record<ProjectTab, { icon: React.ReactNode; hint: string; label?: string }> = {
   Обзор: { icon: <LayoutDashboard size={16} />, hint: "Состояние и решения" },
   "Бюджет / ВОР": { icon: <Table2 size={16} />, hint: "Объёмы и себестоимость" },
   ФОТ: { icon: <Users size={16} />, hint: "Люди и начисления" },
@@ -147,8 +147,8 @@ const tabMeta: Record<ProjectTab, { icon: React.ReactNode; hint: string }> = {
   КС: { icon: <ReceiptText size={16} />, hint: "Предъявление объёмов" },
   "Сдача / Гарантия": { icon: <BadgeCheck size={16} />, hint: "Передача и обязательства" },
   Исполнение: { icon: <Building2 size={16} />, hint: "Подрядчики и фронты" },
-  Площадка: { icon: <HardHat size={16} />, hint: "Работы на объекте" },
-  Рапорты: { icon: <ClipboardList size={16} />, hint: "Ежедневный факт" },
+  Площадка: { icon: <HardHat size={16} />, label: "Полевой режим", hint: "Offline-запись и синхронизация" },
+  Рапорты: { icon: <ClipboardList size={16} />, hint: "Факт, фото и прогресс графика" },
   Риски: { icon: <AlertTriangle size={16} />, hint: "Отклонения и меры" },
   Документы: { icon: <FileText size={16} />, hint: "Файлы и версии" },
   "RFI / Согласования": { icon: <MessageSquareText size={16} />, hint: "Запросы и ответы" },
@@ -160,6 +160,10 @@ const tabMeta: Record<ProjectTab, { icon: React.ReactNode; hint: string }> = {
   Настройки: { icon: <Settings2 size={16} />, hint: "Параметры проекта" },
   "AI-помощник": { icon: <Bot size={16} />, hint: "Контекстный анализ" }
 };
+
+export function projectTabLabel(tab: ProjectTab) {
+  return tabMeta[tab].label ?? tab;
+}
 
 export function countNoun(value: number, forms: readonly [string, string, string]) {
   const lastTwo = value % 100;
@@ -313,7 +317,7 @@ export function ProjectModuleMenu({
     return projectTabGroups
       .map((group) => ({
         ...group,
-        tabs: group.tabs.filter((tab) => `${tab} ${tabMeta[tab].hint}`.toLocaleLowerCase("ru-RU").includes(normalized))
+        tabs: group.tabs.filter((tab) => `${tab} ${projectTabLabel(tab)} ${tabMeta[tab].hint}`.toLocaleLowerCase("ru-RU").includes(normalized))
       }))
       .filter((group) => group.tabs.length);
   }, [query]);
@@ -407,7 +411,7 @@ export function ProjectModuleMenu({
               <span aria-hidden="true">{group.icon}</span>
               <strong>{group.label}</strong>
               <ChevronDown className="project-domain-chevron" size={14} aria-hidden="true" />
-              {active ? <small>{activeTab}</small> : null}
+              {active ? <small>{projectTabLabel(activeTab)}</small> : null}
             </button>
           );
         })}
@@ -463,7 +467,7 @@ export function ProjectModuleMenu({
                   type="button"
                 >
                   <span aria-hidden="true">{tabMeta[tab].icon}</span>
-                  <span><strong>{tab}</strong><small>{tabMeta[tab].hint}</small></span>
+                  <span><strong>{projectTabLabel(tab)}</strong><small>{tabMeta[tab].hint}</small></span>
                   {active ? <Check size={15} aria-hidden="true" /> : null}
                 </button>
               );
@@ -476,7 +480,7 @@ export function ProjectModuleMenu({
         aria-controls="project-all-modules-dialog"
         aria-expanded={allModulesOpen}
         aria-haspopup="dialog"
-        aria-label={`Открыть разделы проекта. Текущий раздел: ${activeTab}`}
+        aria-label={`Открыть разделы проекта. Текущий раздел: ${projectTabLabel(activeTab)}`}
         className="project-navigation-mobile-trigger"
         data-project-mobile-switcher-trigger="true"
         onClick={(event) => allModulesOpen ? closeNavigation() : openAllModules(event.currentTarget)}
@@ -484,7 +488,7 @@ export function ProjectModuleMenu({
         type="button"
       >
         <span aria-hidden="true">{activeGroup.icon}</span>
-        <span><small>{activeGroup.label}</small><strong>{activeTab}</strong></span>
+        <span><small>{activeGroup.label}</small><strong>{projectTabLabel(activeTab)}</strong></span>
         <LayoutGrid size={18} aria-hidden="true" />
       </button>
 
@@ -522,7 +526,7 @@ export function ProjectModuleMenu({
                       return (
                         <button aria-current={active ? "page" : undefined} className={active ? "active" : undefined} key={tab} onClick={() => selectTab(tab)} type="button">
                           <span aria-hidden="true">{tabMeta[tab].icon}</span>
-                          <span><strong>{tab}</strong><small>{tabMeta[tab].hint}</small></span>
+                          <span><strong>{projectTabLabel(tab)}</strong><small>{tabMeta[tab].hint}</small></span>
                           {active ? <Check size={15} aria-hidden="true" /> : null}
                         </button>
                       );

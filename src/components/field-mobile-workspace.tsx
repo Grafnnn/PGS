@@ -277,9 +277,9 @@ export function FieldMobileWorkspace({ projectId, projectName, currentUser, curr
     <section className="field-mobile-workspace" aria-label="Field Mobile Offline v1">
       <header className="field-mobile-header">
         <div>
-          <div className="eyebrow">Мобильная площадка / офлайн v1</div>
-          <h3>Площадка · {projectName}</h3>
-          <p>Фиксируйте события без связи. Сервер получит их только после явного запуска синхронизации.</p>
+          <div className="eyebrow">Полевой режим / offline-очередь</div>
+          <h3>Быстрый ввод · {projectName}</h3>
+          <p>Фиксируйте рапорты, замечания и фото без связи. После явной синхронизации рапорт появится в разделе «Рапорты» для проверки и учёта прогресса.</p>
         </div>
         <div className="field-mobile-health" aria-live="polite">
           <span className={online ? "good" : "warn"}>{online ? <Wifi size={15} /> : <WifiOff size={15} />}{online ? "Сеть доступна" : "Offline"}</span>
