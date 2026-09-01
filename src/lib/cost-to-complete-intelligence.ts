@@ -79,6 +79,8 @@ export type CostToCompleteModel = {
     payrollEmployerCost: number;
     payrollUncoveredCost: number;
     payrollContributions: number;
+    earnedContractValue: number;
+    liquidityBalance: number;
     totalSpent: number;
     expenseRegisterCost: number;
     reportPayrollCost: number;
@@ -313,6 +315,8 @@ export function buildCostToCompleteIntelligence(input: CostToCompleteInput): Cos
   const calculatedReportPayroll = reportPayrollCost(input.dailyReports ?? [], input.workforceResources ?? [], workforce.policy);
   const unregisteredPayrollCost = Math.max(0, calculatedReportPayroll - payrollAlreadyRegistered);
   const totalSpent = expenseRegisterCost + unregisteredPayrollCost;
+  const earnedContractValue = reportProgress.earnedEstimateCost;
+  const liquidityBalance = earnedContractValue - totalSpent;
   const paidOutgoingActual = payments
     .filter((item) => item.direction === "outgoing" && item.status === "paid")
     .reduce((sum, item) => sum + item.amount, 0);
@@ -329,7 +333,7 @@ export function buildCostToCompleteIntelligence(input: CostToCompleteInput): Cos
   const openCriticalRisks = risks.filter((item) => item.status !== "closed" && ["critical", "high"].includes(item.priority));
   const noBaseline = !contractAmount || !budgetItems.length;
   const noActual = recognizedActualCost <= 0 && paidOutgoingActual <= 0;
-  const critical = forecastProfit < 0 || finance.cashGap < 0 || forecastMarginPercent < 5;
+  const critical = forecastProfit < 0 || finance.cashGap < 0 || forecastMarginPercent < 5 || liquidityBalance < 0;
   const attention = forecastDeviation > 0 || work.overdueItems.length > 0 || materialsStats.deficitItems.length > 0 || openCriticalRisks.length > 0;
   const status: CostForecastStatus = noBaseline ? "no_data" : critical ? "critical" : noActual ? "needs_baseline" : attention ? "attention" : "controlled";
   const tone: CostForecastTone = status === "critical" ? "bad" : status === "attention" || status === "needs_baseline" ? "warn" : status === "no_data" ? "info" : "good";
@@ -369,6 +373,7 @@ export function buildCostToCompleteIntelligence(input: CostToCompleteInput): Cos
     ...(forecastMarginPercent < 5 && contractAmount ? [{ id: "margin-threshold", title: "Маржа ниже управленческого порога", detail: `Прогнозная маржа ${forecastMarginPercent.toFixed(1)}%.`, tone: "bad" as const, targetTab: "Финансы" as const }] : []),
     ...(workforce.uncoveredEmployerCost > 0 ? [{ id: "payroll-gap", title: "Полная стоимость ФОТ выше бюджета", detail: `Оклад и начисления работодателя не покрыты ВОР на ${Math.round(workforce.uncoveredEmployerCost).toLocaleString("ru-RU")} ₽.`, tone: "warn" as const, targetTab: "ФОТ" as const }] : []),
     ...(finance.cashGap < 0 ? [{ id: "cash-gap", title: "Кассовый разрыв", detail: `Потребность в финансировании ${Math.abs(finance.cashGap).toLocaleString("ru-RU")} ₽.`, tone: "bad" as const, targetTab: "Финансы" as const }] : []),
+    ...(liquidityBalance < 0 ? [{ id: "earned-cost-gap", title: "Затраты превышают заработанное по рапортам", detail: `Текущий разрыв ${Math.abs(liquidityBalance).toLocaleString("ru-RU")} ₽: заработано ${earnedContractValue.toLocaleString("ru-RU")} ₽, потрачено ${totalSpent.toLocaleString("ru-RU")} ₽.`, tone: "bad" as const, targetTab: "Финансы" as const }] : []),
     ...(materialsStats.deficitItems.length ? [{ id: "material-deficit", title: "Дефицит материалов влияет на остаток работ", detail: `${materialsStats.deficitItems.length} позиций требуют снабжения; активных заявок ${activeProcurement.length}.`, tone: "warn" as const, targetTab: "Материалы" as const }] : []),
     ...(work.overdueItems.length ? [{ id: "schedule-delay", title: "Сроки могут увеличить cost-to-complete", detail: `${work.overdueItems.length} просроченных работ, максимальная задержка ${work.delayDays} дн.`, tone: "warn" as const, targetTab: "График" as const }] : []),
     ...(noActual && !noBaseline ? [{ id: "missing-actual", title: "Нет подтвержденных фактических затрат", detail: "Forecast пока основан на бюджетных ценах, а не на закрытых расходах.", tone: "warn" as const, targetTab: "Финансы" as const }] : [])
@@ -397,6 +402,8 @@ export function buildCostToCompleteIntelligence(input: CostToCompleteInput): Cos
       payrollEmployerCost: workforce.totalEmployerCost,
       payrollUncoveredCost: workforce.uncoveredEmployerCost,
       payrollContributions: workforce.employerContributions,
+      earnedContractValue,
+      liquidityBalance,
       totalSpent,
       expenseRegisterCost,
       reportPayrollCost: calculatedReportPayroll,

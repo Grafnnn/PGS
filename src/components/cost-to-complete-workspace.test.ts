@@ -20,6 +20,9 @@ describe("CostToCompleteWorkspace", () => {
     expect(html).toContain("Прогноз затрат до завершения и маржи");
     expect(html).toContain("Выполнение по смете");
     expect(html).toContain("Выполнено по договорным расценкам");
+    expect(html).toContain("Ликвидность по факту");
+    expect(html).toContain("заработано");
+    expect(html).toContain("потрачено");
     expect(html).toContain("Всего учтено затрат");
     expect(html).toContain("Чеки и ручные расходы");
     expect(html).toContain("ВОР пока не загружен");
