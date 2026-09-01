@@ -117,12 +117,20 @@ export interface Material {
 export interface ProcurementRequest {
   id: string;
   projectId: string;
+  requestNumber?: string;
   title: string;
   initiator: string;
   neededAt: string;
+  expectedAt?: string;
+  leadTimeDays?: number;
+  groupKey?: string;
   priority: RiskPriority;
-  status: "draft" | "submitted" | "approved" | "ordered" | "closed" | "rejected";
-  items: Array<{ id?: string; materialId: string; costCodeId?: string | null; name: string; qty: number; unit: string; comment?: string }>;
+  status: "draft" | "submitted" | "approved" | "ordered" | "expected" | "partially_received" | "received" | "closed" | "rejected";
+  submittedAt?: string;
+  approvedAt?: string;
+  approvedBy?: string;
+  receivedAt?: string;
+  items: Array<{ id?: string; materialId: string; costCodeId?: string | null; name: string; qty: number; receivedQty?: number; unit: string; comment?: string }>;
 }
 
 export interface Payment {

@@ -20,6 +20,7 @@ import { FieldOperationsWorkspace } from "@/components/field-operations-workspac
 import { FieldMobileWorkspace } from "@/components/field-mobile-workspace";
 import { HseSafetyPermitWorkspace } from "@/components/hse-safety-permit-workspace";
 import { InvoiceReconciliationWorkspace } from "@/components/invoice-reconciliation-workspace";
+import { MaterialSupplyWorkspace } from "@/components/material-supply-workspace";
 import { ProjectCommandCenter } from "@/components/project-command-center";
 import { ProjectContractSettings } from "@/components/project-contract-settings";
 import { ProjectActionCenter, type ProjectActionSuggestion } from "@/components/project-action-center";
@@ -33,7 +34,6 @@ import { DocumentTransmittalsWorkspace } from "@/components/document-transmittal
 import { DailyPhotoAiWorkspace } from "@/components/daily-photo-ai-workspace";
 import { PhotoEvidenceWorkspace } from "@/components/photo-evidence-workspace";
 import { ProjectIntelligenceDrilldown } from "@/components/project-intelligence-drilldown";
-import { ProcurementIntelligenceWorkspace } from "@/components/procurement-intelligence-workspace";
 import { ProductionScheduleWorkspace } from "@/components/production-schedule-workspace";
 import { QualityIssuesWorkspace } from "@/components/quality-issues-workspace";
 import { QualityManagementWorkspace } from "@/components/quality-management-workspace";
@@ -120,9 +120,9 @@ function formatDate(value: string) {
 }
 
 function statusTone(value: string): "good" | "warn" | "bad" | "info" | "neutral" {
-  if (["done", "delivered", "paid", "closed", "active", "completed"].includes(value)) return "good";
+  if (["done", "delivered", "received", "paid", "closed", "active", "completed"].includes(value)) return "good";
   if (["critical", "delayed", "overdue", "required", "stopped"].includes(value)) return "bad";
-  if (["high", "medium", "requested", "ordered", "in_transit", "planned", "draft"].includes(value)) return "warn";
+  if (["high", "medium", "requested", "ordered", "expected", "partially_received", "in_transit", "planned", "draft", "submitted"].includes(value)) return "warn";
   if (["not_started", "low", "open", "planning"].includes(value)) return "info";
   return "neutral";
 }
@@ -1112,18 +1112,8 @@ export function ProjectWorkspace({
             {
               id: "summary",
               label: "Сводка",
-              description: "Дефициты, стоимость и готовность снабжения.",
-              content: <><MaterialHealth items={materials} /><ProcurementIntelligenceWorkspace
-                projectName={initialBundle.project.name}
-                materials={materials}
-                procurementRequests={procurementRequests}
-                importHistory={importHistory}
-                draft={pipelineDraft}
-                loading={pipelineLoading}
-                onPreview={() => void runPipelineDraft("procurement")}
-                onCommit={() => void runPipelineDraft("procurement", true)}
-                onNavigate={setActiveTab}
-              /></>
+              description: "Складской баланс и дефициты. Формирование и подтверждение заявок вынесено в единый контур «Заявки».",
+              content: <><MaterialHealth items={materials} /><div className="material-supply-entry"><div><Truck size={18} /><span><strong>Автоматическое снабжение</strong><small>План за 14 дней, подтверждение, ожидание и приёмка на склад</small></span></div><button className="button primary compact-button" onClick={() => setActiveTab("Заявки")} type="button">Открыть заявки</button></div></>
             },
             {
               id: "registry",
@@ -1183,11 +1173,30 @@ export function ProjectWorkspace({
       )}
 
       {activeTab === "Заявки" && (
-        <ProjectModuleWorkspace moduleKey="procurement" title="Заявки снабжению" icon={<Truck size={18} />} views={[
-          { id: "pipeline", label: "Воронка", description: "Статусы заявок и узкие места снабжения.", content: <ProcurementPipeline items={procurementRequests} /> },
-          { id: "registry", label: "Реестр", description: "Полный список заявок с текущими статусами.", content: <RequestTable items={procurementRequests} /> },
-          { id: "draft", label: "Черновик из ВОР", description: "Предварительное формирование заявок без скрытой записи.", content: <PipelineDraftPanel kind="procurement" draft={pipelineDraft} loading={pipelineLoading} onPreview={() => void runPipelineDraft("procurement")} onCommit={() => void runPipelineDraft("procurement", true)} /> }
-        ]} />
+        <ProjectModuleWorkspace moduleKey="procurement" title="Заявки и склад" icon={<Truck size={18} />} views={[{
+          id: "workflow",
+          label: "Контур снабжения",
+          description: "Потребность из графика и материалов → подтверждение → ожидаемая поставка → склад.",
+          content: <MaterialSupplyWorkspace
+            projectId={initialBundle.project.id}
+            projectName={initialBundle.project.name}
+            materials={materials}
+            scheduleItems={scheduleItems}
+            requests={procurementRequests}
+            draft={pipelineDraft}
+            pipelineLoading={pipelineLoading}
+            canEdit={canEditCurrentProject}
+            canApprove={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN"}
+            onPreview={() => void runPipelineDraft("procurement")}
+            onCommit={() => void runPipelineDraft("procurement", true)}
+            onRequestUpdated={(updated) => setProcurementRequests((current) => current.map((item) => item.id === updated.id ? updated : item))}
+            onMaterialsUpdated={(updated) => setMaterials((current) => {
+              const byId = new Map(updated.map((item) => [item.id, item]));
+              return current.map((item) => byId.get(item.id) ?? item);
+            })}
+            onNavigate={setActiveTab}
+          />
+        }]} />
       )}
 
       {activeTab === "ФОТ" && (
@@ -2586,6 +2595,10 @@ function readableStatus(value: string) {
     ordered: "Заказано",
     in_transit: "В пути",
     delivered: "Доставлено",
+    expected: "Ожидается",
+    partially_received: "Принято частично",
+    received: "Принято на склад",
+    submitted: "На подтверждении",
     closed: "Закрыто",
     planned: "План",
     need_quote: "Нужно КП",
