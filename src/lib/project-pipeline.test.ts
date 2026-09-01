@@ -157,7 +157,12 @@ describe("project data pipeline", () => {
   it("builds procurement suggestions from material deficits without external calls", () => {
     const draft = buildProcurementDraft(baseData as any);
     expect(draft.summary.materials).toBe(1);
-    expect(draft.items[0]).toMatchObject({ material: "Бетон В25", deficit: 4, status: "quote_needed" });
+    expect(draft.items[0]).toMatchObject({
+      material: "Бетон В25",
+      deficit: 4,
+      status: "quote_needed",
+      neededAt: "2026-06-10"
+    });
     expect(draft.items[0].evidence[0]).toMatchObject({ importBatchId: "batch-1", importRowId: "batch-1:ВОР:3" });
   });
 
