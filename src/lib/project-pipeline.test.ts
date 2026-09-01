@@ -186,6 +186,26 @@ describe("project data pipeline", () => {
     expect(draft.items).toEqual([]);
   });
 
+  it("suggests only the uncovered balance after a partial active request", () => {
+    const draft = buildProcurementDraft({
+      ...baseData,
+      procurementRequests: [
+        {
+          id: "pr-1",
+          projectId: "project-demo",
+          title: "Частичная заявка на бетон",
+          initiator: "ПТО",
+          neededAt: "2026-06-09",
+          priority: "high",
+          status: "draft",
+          items: [{ materialId: "m1", name: "Бетон В25", qty: 2, unit: "м3" }]
+        }
+      ]
+    } as any);
+    expect(draft.canCommit).toBe(true);
+    expect(draft.items[0]).toMatchObject({ materialId: "m1", deficit: 2 });
+  });
+
   it("builds grouped draft schedule and keeps it in preview mode", () => {
     const draft = buildScheduleDraft(baseData as any);
     expect(draft.summary.stages).toBe(1);

@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { budgetTotals, financeTotals, materialTotals, workTotals } from "@/lib/calculations";
 import { importPreviewSchema, type ImportPreview, type ImportPreviewRow } from "@/lib/excel/import-types";
+import { buildMaterialSupplyWorkflow, DEFAULT_SUPPLY_LEAD_DAYS } from "@/lib/material-supply-workflow";
 import { prisma } from "@/lib/prisma";
 import { serializeBudgetItem, serializeMaterial, serializePayment, serializeProcurementRequest, serializeScheduleItem } from "@/lib/serializers";
 import type { BudgetItem, Material, Payment, ProcurementRequest, RiskPriority, ScheduleItem } from "@/lib/types";
@@ -288,34 +289,52 @@ export function buildDocumentChecklist(data: PipelineData): DocumentChecklistIte
 
 export function buildProcurementDraft(data: PipelineData) {
   const materialByKey = new Map(data.materials.map((material) => [`${normalize(material.name)}|${normalize(material.unit)}`, material]));
-  const activeRequestMaterialIds = new Set(
-    data.procurementRequests
-      .filter((request) => !["closed", "rejected"].includes(request.status))
-      .flatMap((request) => request.items.map((item) => item.materialId).filter(Boolean))
-  );
+  const workflow = buildMaterialSupplyWorkflow({
+    materials: data.materials,
+    scheduleItems: data.scheduleItems,
+    procurementRequests: data.procurementRequests,
+    leadTimeDays: DEFAULT_SUPPLY_LEAD_DAYS
+  });
+  const dueMaterialIds = new Set(workflow.dueDemands.map((item) => item.materialId));
   const rows = importedMaterialRows(data.importBatches[0]);
   const suggestions = data.materials
-    .filter((material) => material.requiredQty > material.deliveredQty)
+    .filter((material) => dueMaterialIds.has(material.id) && material.requiredQty > material.deliveredQty)
     .map((material) => {
-      const deficit = Math.max(material.requiredQty - Math.max(material.orderedQty, material.deliveredQty), 0);
-      const alreadyRequested = activeRequestMaterialIds.has(material.id);
+      const demand = workflow.dueDemands.find((item) => item.materialId === material.id)!;
+      const deficit = demand.deficitQty;
       return {
         materialId: material.id,
         material: material.name,
         unit: material.unit,
-        neededAt: material.neededAt,
+        neededAt: demand.deliveryAt,
+        requestAt: demand.requestAt,
+        leadTimeDays: demand.leadTimeDays,
+        category: demand.category,
         requiredQty: material.requiredQty,
         orderedQty: material.orderedQty,
         deliveredQty: material.deliveredQty,
         deficit,
-        status: alreadyRequested ? "already_exists" : material.supplier && material.supplier !== "Не выбран" ? "planned" : "quote_needed",
-        suggestedAction: alreadyRequested ? "Проверить существующую заявку снабжения" : deficit > 0 ? "Создать черновик заявки снабжения" : "Проверить остатки и поставки",
+        status: material.supplier && material.supplier !== "Не выбран" ? "planned" : "quote_needed",
+        suggestedAction: deficit > 0 ? "Создать черновик заявки снабжения" : "Проверить остатки и поставки",
         evidence: rows
           .filter((row) => `${normalize(row.name ?? "")}|${normalize(row.unit ?? "")}` === `${normalize(material.name)}|${normalize(material.unit)}`)
           .map((row) => rowEvidence(data.importBatches[0], row, "Material was extracted from committed VOR import."))
       };
     })
-    .filter((item) => item.status !== "already_exists" && (item.deficit > 0 || !materialByKey.has(`${normalize(item.material)}|${normalize(item.unit)}`)));
+    .filter((item) => item.deficit > 0 || !materialByKey.has(`${normalize(item.material)}|${normalize(item.unit)}`));
+
+  const suggestionsByMaterial = new Map(suggestions.map((item) => [item.materialId, item]));
+  const groups = workflow.groups
+    .map((group) => ({
+      key: group.key,
+      title: group.title,
+      category: group.category,
+      requestAt: group.requestAt,
+      neededAt: group.neededAt,
+      priority: group.priority,
+      items: group.items.map((item) => suggestionsByMaterial.get(item.materialId)).filter((item): item is (typeof suggestions)[number] => Boolean(item))
+    }))
+    .filter((group) => group.items.length > 0);
 
   return {
     projectId: data.project.id,
@@ -323,10 +342,14 @@ export function buildProcurementDraft(data: PipelineData) {
     canCommit: suggestions.length > 0,
     summary: {
       materials: suggestions.length,
+      groups: groups.length,
+      leadTimeDays: DEFAULT_SUPPLY_LEAD_DAYS,
+      upcomingMaterials: workflow.upcomingDemands.length,
       totalDeficitQty: suggestions.reduce((sum, item) => sum + item.deficit, 0),
       quoteNeeded: suggestions.filter((item) => item.status === "quote_needed").length
     },
-    items: suggestions
+    items: suggestions,
+    groups
   };
 }
 
@@ -706,30 +729,32 @@ export async function commitProcurementDraft(projectId: string, userId: string) 
   if (!data) return null;
   const draft = buildProcurementDraft(data);
   if (!draft.items.length) return { draft, created: [] };
+  const batchNumber = Date.now().toString(36).toUpperCase();
   const created = await prisma.$transaction(
-    draft.items.map((item) => {
-      const importedNeededAt = new Date(item.neededAt);
+    draft.groups.map((group, index) => {
+      const importedNeededAt = new Date(group.neededAt);
       const neededAt = Number.isNaN(importedNeededAt.getTime()) ? new Date() : importedNeededAt;
       return prisma.procurementRequest.create({
         data: {
           organizationId: data.project.organizationId,
           projectId,
-          title: `Черновик снабжения: ${item.material}`,
+          requestNumber: `SUP-${batchNumber}-${String(index + 1).padStart(2, "0")}`,
+          title: group.title,
           initiator: "PGS Pipeline",
           neededAt,
-          priority: item.status === "quote_needed" ? "high" : "medium",
+          leadTimeDays: DEFAULT_SUPPLY_LEAD_DAYS,
+          groupKey: group.key,
+          priority: group.items.some((item) => item.status === "quote_needed") && group.priority === "medium" ? "high" : group.priority,
           status: "draft",
           createdBy: userId,
           items: {
-            create: [
-              {
+            create: group.items.map((item) => ({
                 materialId: item.materialId,
                 name: item.material,
                 qty: new Prisma.Decimal(item.deficit),
                 unit: item.unit,
-                comment: `Draft from VOR import ${draft.sourceImportBatchId ?? "unknown"}`
-              }
-            ]
+                comment: `Автозаявка за ${DEFAULT_SUPPLY_LEAD_DAYS} дней до потребности; источник ${draft.sourceImportBatchId ?? "project schedule"}`
+              }))
           }
         },
         include: { items: true }

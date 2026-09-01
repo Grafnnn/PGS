@@ -110,17 +110,26 @@ export function serializeProcurementRequest(item: DbProcurementRequest & { items
   return {
     id: item.id,
     projectId: item.projectId,
+    requestNumber: item.requestNumber ?? undefined,
     title: item.title,
     initiator: item.initiator,
     neededAt: dateOnly(item.neededAt),
+    expectedAt: item.expectedAt ? dateOnly(item.expectedAt) : undefined,
+    leadTimeDays: item.leadTimeDays,
+    groupKey: item.groupKey ?? undefined,
     priority: item.priority,
     status: item.status as ProcurementRequest["status"],
+    submittedAt: item.submittedAt?.toISOString(),
+    approvedAt: item.approvedAt?.toISOString(),
+    approvedBy: item.approvedBy ?? undefined,
+    receivedAt: item.receivedAt?.toISOString(),
     items: item.items.map((requestItem) => ({
       id: requestItem.id,
       materialId: requestItem.materialId ?? "",
       costCodeId: requestItem.costCodeId,
       name: requestItem.name,
       qty: num(requestItem.qty),
+      receivedQty: num(requestItem.receivedQty),
       unit: requestItem.unit,
       comment: requestItem.comment ?? undefined
     }))

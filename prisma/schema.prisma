@@ -389,11 +389,19 @@ model ProcurementRequest {
   id             String                   @id @default(cuid())
   organizationId String                   @map("organization_id")
   projectId      String                   @map("project_id")
+  requestNumber  String?                  @map("request_number")
   title          String
   initiator      String
   neededAt       DateTime                 @map("needed_at")
+  expectedAt     DateTime?                @map("expected_at")
+  leadTimeDays   Int                      @default(14) @map("lead_time_days")
+  groupKey       String?                  @map("group_key")
   priority       RiskPriority
   status         String
+  submittedAt    DateTime?                @map("submitted_at")
+  approvedAt     DateTime?                @map("approved_at")
+  approvedBy     String?                  @map("approved_by")
+  receivedAt     DateTime?                @map("received_at")
   createdBy      String?                  @map("created_by")
   createdAt      DateTime                 @default(now()) @map("created_at")
   updatedAt      DateTime                 @updatedAt @map("updated_at")
@@ -401,6 +409,8 @@ model ProcurementRequest {
   items          ProcurementRequestItem[]
   commitments    ProjectCommitment[]
 
+  @@unique([projectId, requestNumber])
+  @@index([projectId, status, neededAt])
   @@map("procurement_requests")
 }
 
@@ -411,6 +421,7 @@ model ProcurementRequestItem {
   materialId      String?                 @map("material_id")
   name            String
   qty             Decimal                 @db.Decimal(14, 3)
+  receivedQty     Decimal                 @default(0) @map("received_qty") @db.Decimal(14, 3)
   unit            String
   comment         String?
   createdAt       DateTime                @default(now()) @map("created_at")
