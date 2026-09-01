@@ -2,10 +2,30 @@ import { readFileSync } from "node:fs";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { buildScheduleWorkSuggestions, ReportsWorkflow, ScheduleWorkPicker } from "@/components/reports-workflow";
-import type { ScheduleItem } from "@/lib/types";
+import { buildScheduleWorkSuggestions, isProjectEvidenceCandidate, ReportsWorkflow, ScheduleWorkPicker } from "@/components/reports-workflow";
+import type { ProjectDocument, ScheduleItem } from "@/lib/types";
 
 describe("ReportsWorkflow", () => {
+  it("offers only unlinked project evidence photos for reuse in a report", () => {
+    const photo = {
+      id: "photo-1",
+      projectId: "project-1",
+      category: "фотофиксация",
+      title: "IMG_7935.JPG",
+      filePath: "project-1/photo.jpg",
+      mimeType: "image/jpeg",
+      version: 1,
+      author: "Прораб",
+      createdAt: "2026-09-01T10:00:00.000Z"
+    } satisfies ProjectDocument;
+
+    expect(isProjectEvidenceCandidate(photo)).toBe(true);
+    expect(isProjectEvidenceCandidate({ ...photo, category: "чек / расход" })).toBe(false);
+    expect(isProjectEvidenceCandidate({ ...photo, category: "Фото чека" })).toBe(false);
+    expect(isProjectEvidenceCandidate({ ...photo, dailyReportId: "report-1" })).toBe(false);
+    expect(isProjectEvidenceCandidate({ ...photo, mimeType: "application/pdf" })).toBe(false);
+  });
+
   it("keeps the crew checkbox compact so employee names retain readable width", () => {
     const styles = readFileSync(new URL("../app/globals.css", import.meta.url), "utf8");
     const checkboxRule = styles.match(/\.daily-crew-grid label > input\[type="checkbox"\]\s*\{([^}]*)\}/)?.[1];
