@@ -12715,6 +12715,7 @@ input[type="checkbox"] {
 .cost-actual-panel > header,
 .cost-actual-panel > header > div,
 .cost-actual-primary,
+.report-earned-summary,
 .cost-actual-facts,
 .spending-reconciliation {
   min-width: 0;
@@ -12780,6 +12781,42 @@ input[type="checkbox"] {
 
 .cost-actual-primary b {
   color: var(--text);
+}
+
+.report-earned-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 0.72fr) minmax(0, 1.28fr);
+  align-items: end;
+  gap: 14px;
+}
+
+.report-earned-summary > span {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.report-earned-summary > span + span {
+  padding-left: 14px;
+  border-left: 1px solid var(--line);
+}
+
+.report-earned-summary small,
+.report-earned-summary em {
+  color: var(--muted);
+}
+
+.report-earned-summary strong {
+  overflow-wrap: anywhere;
+  color: var(--text);
+  font-size: 1.55rem;
+  line-height: 1.08;
+}
+
+.report-earned-summary em {
+  font-size: 0.76rem;
+  font-style: normal;
+  line-height: 1.35;
 }
 
 .cost-actual-progress,
@@ -13168,6 +13205,19 @@ input[type="checkbox"] {
 @media (max-width: 520px) {
   .cost-actual-panel > header .button {
     padding-inline: 10px;
+  }
+
+  .report-earned-summary {
+    grid-template-columns: 1fr;
+    align-items: start;
+    gap: 9px;
+  }
+
+  .report-earned-summary > span + span {
+    padding-top: 9px;
+    padding-left: 0;
+    border-top: 1px solid var(--line);
+    border-left: 0;
   }
 }
 

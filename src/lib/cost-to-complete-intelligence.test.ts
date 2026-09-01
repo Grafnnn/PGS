@@ -74,6 +74,39 @@ describe("buildCostToCompleteIntelligence", () => {
     expect(model.summary.costToComplete).toBe(38_000);
   });
 
+  it("prices numbered schedule outputs from matching contract VOR rows", () => {
+    const model = buildCostToCompleteIntelligence({
+      budgetItems: [
+        { id: "b1", projectId: "p1", section: "Демонтаж", code: "1", name: "Демонтаж рулонной гидроизоляции", unit: "м2", qty: 1765.81, plannedUnitPrice: 190, actualUnitPrice: 0, forecastUnitPrice: 190, kind: "work", source: "КП" },
+        { id: "b2", projectId: "p1", section: "Демонтаж", code: "2", name: "Демонтаж цементно-песчанной стяжки толщиной 200 мм", unit: "м2", qty: 1765.81, plannedUnitPrice: 475, actualUnitPrice: 0, forecastUnitPrice: 475, kind: "work", source: "КП" }
+      ],
+      scheduleItems: [
+        { id: "s1", projectId: "p1", name: "10 Демонтаж рулонной гидроизоляции", owner: "ПТО", startsAt: "2026-09-07", endsAt: "2026-09-19", plannedQty: 1765.81, actualQty: 200, status: "in_progress" },
+        { id: "s2", projectId: "p1", name: "11 Демонтаж цементно-песчанной стяжки толщиной 200 мм", owner: "ПТО", startsAt: "2026-09-07", endsAt: "2026-09-19", plannedQty: 1765.81, actualQty: 20, status: "in_progress" }
+      ],
+      dailyReports: [{
+        id: "r1", projectId: "p1", date: "2026-08-31", author: "Прораб", weather: "", workers: 12, engineers: 0,
+        equipment: "", completedWorks: "Демонтаж", materialsReceived: "", materialsConsumed: "", downtime: "", issues: "",
+        phase: "closed", status: "approved", workOutputs: [
+          { scheduleItemId: "s1", profession: "Мастер", workName: "10 Демонтаж рулонной гидроизоляции", quantity: 200, unit: "м²", laborHours: 8 },
+          { scheduleItemId: "s2", profession: "Мастер", workName: "11 Демонтаж цементно-песчанной стяжки толщиной 200 мм", quantity: 20, unit: "м²", laborHours: 8 }
+        ]
+      }]
+    });
+
+    expect(model.reportProgress).toMatchObject({
+      matchedRows: 2,
+      unmatchedRows: 0,
+      matchedEstimateCost: 1_174_263.65,
+      earnedEstimateCost: 47_500,
+      completionPercent: 4.05
+    });
+    expect(model.reportProgress.works).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: "Демонтаж рулонной гидроизоляции", contractUnitPrice: 190, earnedEstimateCost: 38_000 }),
+      expect.objectContaining({ name: "Демонтаж цементно-песчанной стяжки толщиной 200 мм", contractUnitPrice: 475, earnedEstimateCost: 9_500 })
+    ]));
+  });
+
   it("does not count draft reports as confirmed progress or payroll fact", () => {
     const model = buildCostToCompleteIntelligence({
       dailyReports: [{

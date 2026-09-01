@@ -95,9 +95,9 @@ function CostActualSnapshot({ model, loading, error, onNavigate }: { model: Cost
         <div><BarChart3 size={19} /><span><small>Утверждённые рапорты</small><h4>Выполнение по смете</h4></span></div>
         <button className="button secondary compact-button" onClick={() => onNavigate("Рапорты")} type="button">Рапорты</button>
       </header>
-      <div className="cost-actual-primary">
-        <strong>{progress.completionPercent.toLocaleString("ru-RU", { maximumFractionDigits: 1 })}%</strong>
-        <span><b>{money(progress.earnedEstimateCost)}</b> освоено из {money(progress.matchedEstimateCost)} по связанным видам работ</span>
+      <div className="report-earned-summary">
+        <span><small>Выполнение по стоимости</small><strong>{progress.completionPercent.toLocaleString("ru-RU", { maximumFractionDigits: 1 })}%</strong></span>
+        <span><small>Выполнено по договорным расценкам</small><strong>{money(progress.earnedEstimateCost)}</strong><em>из {money(progress.matchedEstimateCost)} по связанным видам работ</em></span>
       </div>
       <div className="cost-actual-progress"><span style={{ width: `${boundedPercent(progress.completionPercent)}%` }} /></div>
       <div className="cost-actual-facts">
@@ -107,7 +107,7 @@ function CostActualSnapshot({ model, loading, error, onNavigate }: { model: Cost
       </div>
       {visibleWorks.length ? <div className="report-cost-work-list">
         {visibleWorks.map((item) => <div className={item.completionPercent > 100 ? "is-over" : ""} key={item.key}>
-          <span><strong>{item.name}</strong><small>{quantity(item.reportedQty)} / {quantity(item.plannedQty)} {item.unit} · смета {money(item.estimateCost)}</small></span>
+          <span><strong>{item.name}</strong><small>{quantity(item.reportedQty)} / {quantity(item.plannedQty)} {item.unit} · выполнено {money(item.earnedEstimateCost)} из {money(item.estimateCost)} · {money(item.contractUnitPrice)}/{item.unit}</small></span>
           <b>{item.completionPercent.toLocaleString("ru-RU", { maximumFractionDigits: 1 })}%</b>
           <em><span style={{ width: `${boundedPercent(item.completionPercent)}%` }} /></em>
         </div>)}

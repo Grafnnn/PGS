@@ -46,6 +46,7 @@ export type ReportCostProgressItem = {
   reportedQty: number;
   plannedQty: number;
   completionPercent: number;
+  contractUnitPrice: number;
   estimateCost: number;
   earnedEstimateCost: number;
   laborHours: number;
@@ -143,6 +144,12 @@ function normalizedWorkName(value: string) {
   return value.normalize("NFKC").trim().toLocaleLowerCase("ru-RU").replace(/[№#]/g, " ").replace(/[^a-zа-яё0-9]+/gi, " ").trim();
 }
 
+function workNameAliases(value: string) {
+  const normalized = normalizedWorkName(value);
+  const withoutScheduleIndex = normalized.replace(/^\d+\s+(?=[a-zа-яё])/i, "");
+  return [...new Set([normalized, withoutScheduleIndex].filter(Boolean))];
+}
+
 function normalizedUnit(value: string) {
   const compact = value.normalize("NFKC").trim().toLocaleLowerCase("ru-RU").replace(/[.,]/g, "").replace(/\s+/g, "");
   if (["m2", "м2", "квм"].includes(compact)) return "м2";
@@ -161,8 +168,14 @@ function reportCostProgress(reports: DailyReport[], scheduleItems: ScheduleItem[
   const budgetById = new Map(eligibleBudget.map((item) => [item.id, item]));
   const budgetByName = new Map<string, BudgetItem>();
   for (const item of eligibleBudget) {
-    budgetByName.set(normalizedWorkName(item.name), item);
-    if (item.code.trim()) budgetByName.set(normalizedWorkName(`${item.code} ${item.name}`), item);
+    const aliases = [
+      ...workNameAliases(item.name),
+      ...(item.code.trim() ? workNameAliases(`${item.code} ${item.name}`) : [])
+    ];
+    for (const alias of aliases) {
+      const existing = budgetByName.get(alias);
+      if (!existing || (existing.plannedUnitPrice <= 0 && item.plannedUnitPrice > 0)) budgetByName.set(alias, item);
+    }
   }
   const buckets = new Map<string, ReportCostProgressItem>();
   let outputRows = 0;
@@ -173,13 +186,18 @@ function reportCostProgress(reports: DailyReport[], scheduleItems: ScheduleItem[
       outputRows += 1;
       const normalizedName = normalizedWorkName(output.workName);
       const schedule = (output.scheduleItemId ? scheduleById.get(output.scheduleItemId) : undefined) ?? scheduleByName.get(normalizedName);
-      const budget = (schedule?.budgetItemId ? budgetById.get(schedule.budgetItemId) : undefined) ?? budgetByName.get(normalizedName);
+      const linkedBudget = schedule?.budgetItemId ? budgetById.get(schedule.budgetItemId) : undefined;
+      const namedBudget = [...workNameAliases(schedule?.name ?? ""), ...workNameAliases(output.workName)]
+        .map((alias) => budgetByName.get(alias))
+        .find(Boolean);
+      const budget = linkedBudget?.plannedUnitPrice ? linkedBudget : namedBudget ?? linkedBudget;
       const compatibleBudget = budget && (!budget.unit || normalizedUnit(budget.unit) === normalizedUnit(output.unit)) ? budget : undefined;
       const matched = Boolean(schedule || compatibleBudget);
       if (matched) matchedRows += 1;
       const key = compatibleBudget ? `budget:${compatibleBudget.id}` : schedule ? `schedule:${schedule.id}` : `unmatched:${normalizedName}:${normalizedUnit(output.unit)}`;
       const plannedQty = Math.max(0, compatibleBudget?.qty ?? schedule?.plannedQty ?? 0);
-      const estimateCost = compatibleBudget ? compatibleBudget.qty * compatibleBudget.plannedUnitPrice : 0;
+      const contractUnitPrice = Math.max(0, compatibleBudget?.plannedUnitPrice ?? 0);
+      const estimateCost = plannedQty * contractUnitPrice;
       const existing = buckets.get(key);
       if (existing) {
         existing.reportedQty += Math.max(0, output.quantity);
@@ -193,6 +211,7 @@ function reportCostProgress(reports: DailyReport[], scheduleItems: ScheduleItem[
         reportedQty: Math.max(0, output.quantity),
         plannedQty,
         completionPercent: 0,
+        contractUnitPrice,
         estimateCost,
         earnedEstimateCost: 0,
         laborHours: Math.max(0, output.laborHours),
