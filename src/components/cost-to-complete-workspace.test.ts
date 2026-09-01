@@ -13,10 +13,14 @@ describe("CostToCompleteWorkspace", () => {
       procurementRequests: [],
       payments: [],
       risks: [],
+      dailyReports: [],
       onNavigate: () => undefined
     }));
     expect(html).toContain("Cost-to-Complete &amp; Margin Forecast");
     expect(html).toContain("Прогноз затрат до завершения и маржи");
+    expect(html).toContain("Выполнение по смете");
+    expect(html).toContain("Всего учтено затрат");
+    expect(html).toContain("Чеки и ручные расходы");
     expect(html).toContain("ВОР пока не загружен");
   });
 });

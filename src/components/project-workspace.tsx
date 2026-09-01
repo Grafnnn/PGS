@@ -1220,7 +1220,7 @@ export function ProjectWorkspace({
             id: "summary",
             label: "Сводка",
             description: "Прогноз завершения, маржа и текущая финансовая позиция.",
-            content: <><CostToCompleteWorkspace project={initialBundle.project} budgetItems={budgetItems} scheduleItems={scheduleItems} materials={materials} procurementRequests={procurementRequests} payments={payments} risks={risks} onNavigate={setActiveTab} /><FinanceCommand payments={payments} contractAmount={initialBundle.project.contractAmount} forecastProfit={budget.forecastProfit} /></>
+            content: <><CostToCompleteWorkspace project={initialBundle.project} budgetItems={budgetItems} scheduleItems={scheduleItems} materials={materials} procurementRequests={procurementRequests} payments={payments} risks={risks} dailyReports={reports} onNavigate={setActiveTab} /><FinanceCommand payments={payments} contractAmount={initialBundle.project.contractAmount} forecastProfit={budget.forecastProfit} /></>
           },
           { id: "payments", label: "Платежи", description: "Входящие и исходящие платежи проекта.", content: <PaymentTable items={payments} /> },
           { id: "expenses", label: "Расходы", description: "Фактические затраты, чеки и постатейный Excel-реестр.", content: <ExpenseRegisterWorkspace projectId={initialBundle.project.id} canEdit={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN" || currentUser?.role === "MANAGER"} canDelete={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN"} /> },

@@ -2,6 +2,7 @@ import { budgetTotals, financeTotals, materialTotals, workTotals } from "@/lib/c
 import { buildWorkforceEconomics } from "@/lib/workforce-capacity";
 import type {
   BudgetItem,
+  DailyReport,
   Material,
   Payment,
   ProcurementRequest,
@@ -27,6 +28,28 @@ export type CostToCompleteInput = {
   workforceResources?: WorkforceResource[] | null;
   laborDemands?: ProjectLaborDemand[] | null;
   payrollPolicy?: ProjectPayrollPolicy | null;
+  dailyReports?: DailyReport[] | null;
+  expenseSummary?: {
+    count: number;
+    grossAmount: number;
+    taxAmount: number;
+    receipts: number;
+    withoutReceipt: number;
+    byCategory: Record<string, number>;
+  } | null;
+};
+
+export type ReportCostProgressItem = {
+  key: string;
+  name: string;
+  unit: string;
+  reportedQty: number;
+  plannedQty: number;
+  completionPercent: number;
+  estimateCost: number;
+  earnedEstimateCost: number;
+  laborHours: number;
+  matched: boolean;
 };
 
 export type CostToCompleteModel = {
@@ -55,6 +78,34 @@ export type CostToCompleteModel = {
     payrollEmployerCost: number;
     payrollUncoveredCost: number;
     payrollContributions: number;
+    totalSpent: number;
+    expenseRegisterCost: number;
+    reportPayrollCost: number;
+    unregisteredPayrollCost: number;
+    paidOutgoingActual: number;
+  };
+  reportProgress: {
+    approvedReports: number;
+    outputRows: number;
+    matchedRows: number;
+    unmatchedRows: number;
+    completionPercent: number;
+    matchedEstimateCost: number;
+    earnedEstimateCost: number;
+    laborHours: number;
+    works: ReportCostProgressItem[];
+  };
+  spending: {
+    totalSpent: number;
+    expenseRegisterCost: number;
+    reportPayrollCost: number;
+    payrollAlreadyRegistered: number;
+    unregisteredPayrollCost: number;
+    paidOutgoingActual: number;
+    budgetActualCost: number;
+    expenseCount: number;
+    receipts: number;
+    withoutReceipt: number;
   };
   categories: Array<{ key: string; label: string; planned: number; actual: number; forecast: number; deviation: number; tone: CostForecastTone }>;
   signals: Array<{ id: string; title: string; detail: string; tone: CostForecastTone; targetTab: "Бюджет / ВОР" | "Финансы" | "График" | "Материалы" | "Заявки" | "Риски" | "ФОТ" }>;
@@ -88,6 +139,134 @@ function toneForDeviation(deviation: number, planned: number): CostForecastTone 
   return "good";
 }
 
+function normalizedWorkName(value: string) {
+  return value.normalize("NFKC").trim().toLocaleLowerCase("ru-RU").replace(/[№#]/g, " ").replace(/[^a-zа-яё0-9]+/gi, " ").trim();
+}
+
+function normalizedUnit(value: string) {
+  const compact = value.normalize("NFKC").trim().toLocaleLowerCase("ru-RU").replace(/[.,]/g, "").replace(/\s+/g, "");
+  if (["m2", "м2", "квм"].includes(compact)) return "м2";
+  if (["m3", "м3", "кубм"].includes(compact)) return "м3";
+  if (["пм", "мп", "погм"].includes(compact)) return "погм";
+  if (["шт", "штука", "штук"].includes(compact)) return "шт";
+  if (["ч", "час", "часов"].includes(compact)) return "ч";
+  return compact;
+}
+
+function reportCostProgress(reports: DailyReport[], scheduleItems: ScheduleItem[], budgetItems: BudgetItem[]) {
+  const approvedReports = reports.filter((item) => item.status === "approved" && (item.phase ?? "closed") === "closed");
+  const scheduleById = new Map(scheduleItems.map((item) => [item.id, item]));
+  const scheduleByName = new Map(scheduleItems.map((item) => [normalizedWorkName(item.name), item]));
+  const eligibleBudget = budgetItems.filter((item) => item.kind === "work" || item.kind === "subcontract");
+  const budgetById = new Map(eligibleBudget.map((item) => [item.id, item]));
+  const budgetByName = new Map<string, BudgetItem>();
+  for (const item of eligibleBudget) {
+    budgetByName.set(normalizedWorkName(item.name), item);
+    if (item.code.trim()) budgetByName.set(normalizedWorkName(`${item.code} ${item.name}`), item);
+  }
+  const buckets = new Map<string, ReportCostProgressItem>();
+  let outputRows = 0;
+  let matchedRows = 0;
+
+  for (const report of approvedReports) {
+    for (const output of report.workOutputs ?? []) {
+      outputRows += 1;
+      const normalizedName = normalizedWorkName(output.workName);
+      const schedule = (output.scheduleItemId ? scheduleById.get(output.scheduleItemId) : undefined) ?? scheduleByName.get(normalizedName);
+      const budget = (schedule?.budgetItemId ? budgetById.get(schedule.budgetItemId) : undefined) ?? budgetByName.get(normalizedName);
+      const compatibleBudget = budget && (!budget.unit || normalizedUnit(budget.unit) === normalizedUnit(output.unit)) ? budget : undefined;
+      const matched = Boolean(schedule || compatibleBudget);
+      if (matched) matchedRows += 1;
+      const key = compatibleBudget ? `budget:${compatibleBudget.id}` : schedule ? `schedule:${schedule.id}` : `unmatched:${normalizedName}:${normalizedUnit(output.unit)}`;
+      const plannedQty = Math.max(0, compatibleBudget?.qty ?? schedule?.plannedQty ?? 0);
+      const estimateCost = compatibleBudget ? compatibleBudget.qty * compatibleBudget.plannedUnitPrice : 0;
+      const existing = buckets.get(key);
+      if (existing) {
+        existing.reportedQty += Math.max(0, output.quantity);
+        existing.laborHours += Math.max(0, output.laborHours);
+        continue;
+      }
+      buckets.set(key, {
+        key,
+        name: compatibleBudget?.name ?? schedule?.name ?? output.workName,
+        unit: compatibleBudget?.unit ?? output.unit,
+        reportedQty: Math.max(0, output.quantity),
+        plannedQty,
+        completionPercent: 0,
+        estimateCost,
+        earnedEstimateCost: 0,
+        laborHours: Math.max(0, output.laborHours),
+        matched
+      });
+    }
+  }
+
+  const works = [...buckets.values()].map((item) => {
+    const completionPercent = item.plannedQty > 0 ? item.reportedQty / item.plannedQty * 100 : 0;
+    return {
+      ...item,
+      reportedQty: round(item.reportedQty),
+      completionPercent: round(completionPercent),
+      estimateCost: round(item.estimateCost),
+      earnedEstimateCost: round(item.estimateCost * Math.min(Math.max(completionPercent, 0), 100) / 100),
+      laborHours: round(item.laborHours)
+    };
+  }).sort((left, right) => right.estimateCost - left.estimateCost || right.reportedQty - left.reportedQty);
+  const matchedWorks = works.filter((item) => item.matched && item.plannedQty > 0);
+  const matchedEstimateCost = matchedWorks.reduce((sum, item) => sum + item.estimateCost, 0);
+  const earnedEstimateCost = matchedWorks.reduce((sum, item) => sum + item.earnedEstimateCost, 0);
+  const completionPercent = matchedEstimateCost > 0
+    ? percentage(earnedEstimateCost, matchedEstimateCost)
+    : matchedWorks.length
+      ? round(matchedWorks.reduce((sum, item) => sum + Math.min(item.completionPercent, 100), 0) / matchedWorks.length)
+      : 0;
+
+  return {
+    approvedReports: approvedReports.length,
+    outputRows,
+    matchedRows,
+    unmatchedRows: outputRows - matchedRows,
+    completionPercent,
+    matchedEstimateCost: round(matchedEstimateCost),
+    earnedEstimateCost: round(earnedEstimateCost),
+    laborHours: round(works.reduce((sum, item) => sum + item.laborHours, 0)),
+    works
+  };
+}
+
+function reportPayrollCost(reports: DailyReport[], resources: WorkforceResource[], policy: ProjectPayrollPolicy) {
+  const resourceById = new Map(resources.map((item) => [item.id, item]));
+  const payrollResources = resources.filter((item) => item.kind !== "equipment" && item.employmentType !== "subcontract" && item.status === "active");
+  const contributionMultiplier = 1 + (policy.insuranceContributionRate + policy.accidentContributionRate) / 100;
+  const employerHourlyCost = (resource: WorkforceResource) => {
+    const base = resource.hourlyCost > 0
+      ? resource.hourlyCost
+      : resource.grossMonthlySalary / Math.max(1, policy.workingHoursPerMonth);
+    return Math.max(0, base) * contributionMultiplier;
+  };
+  const fallbackRates = payrollResources
+    .map((item) => ({ rate: employerHourlyCost(item), weight: Math.max(1, item.headcount) }))
+    .filter((item) => item.rate > 0);
+  const fallbackWeight = fallbackRates.reduce((sum, item) => sum + item.weight, 0);
+  const fallbackRate = fallbackWeight > 0 ? fallbackRates.reduce((sum, item) => sum + item.rate * item.weight, 0) / fallbackWeight : 0;
+
+  return round(reports
+    .filter((item) => item.status === "approved" && (item.phase ?? "closed") === "closed")
+    .reduce((total, report) => {
+      const crewRates = (report.crewMembers ?? []).flatMap((member) => {
+        const resource = resourceById.get(member.resourceId);
+        if (!resource || resource.kind === "equipment" || resource.employmentType === "subcontract") return [];
+        const rate = employerHourlyCost(resource);
+        return rate > 0 ? [{ rate, weight: Math.max(1, member.headcount) }] : [];
+      });
+      const weight = crewRates.reduce((sum, item) => sum + item.weight, 0);
+      const hourlyRate = weight > 0 ? crewRates.reduce((sum, item) => sum + item.rate * item.weight, 0) / weight : fallbackRate;
+      const structuredLabor = (report.workOutputs ?? []).reduce((sum, item) => sum + Math.max(0, item.laborHours), 0);
+      const laborHours = structuredLabor > 0 ? structuredLabor : Math.max(0, report.workers + report.engineers) * Math.max(0, report.shiftHours ?? 8);
+      return total + laborHours * hourlyRate;
+    }, 0));
+}
+
 export function buildCostToCompleteIntelligence(input: CostToCompleteInput): CostToCompleteModel {
   const project = input.project ?? {};
   const budgetItems = input.budgetItems ?? [];
@@ -106,20 +285,31 @@ export function buildCostToCompleteIntelligence(input: CostToCompleteInput): Cos
     contractAmount
   });
   const work = workTotals(scheduleItems);
+  const reportProgress = reportCostProgress(input.dailyReports ?? [], scheduleItems, budgetItems);
   const materialsStats = materialTotals(materials);
   const finance = financeTotals(payments);
-  const forecastCost = workforce.adjustedForecastCost;
+  const expenseSummary = input.expenseSummary;
+  const expenseRegisterCost = Math.max(0, expenseSummary?.grossAmount ?? 0);
+  const payrollAlreadyRegistered = Math.max(0, (expenseSummary?.byCategory.labor ?? 0) + (expenseSummary?.byCategory.tax ?? 0));
+  const calculatedReportPayroll = reportPayrollCost(input.dailyReports ?? [], input.workforceResources ?? [], workforce.policy);
+  const unregisteredPayrollCost = Math.max(0, calculatedReportPayroll - payrollAlreadyRegistered);
+  const totalSpent = expenseRegisterCost + unregisteredPayrollCost;
+  const paidOutgoingActual = payments
+    .filter((item) => item.direction === "outgoing" && item.status === "paid")
+    .reduce((sum, item) => sum + item.amount, 0);
+  const recognizedActualCost = Math.max(budget.totalActualCost, totalSpent);
+  const forecastCost = Math.max(workforce.adjustedForecastCost, recognizedActualCost);
   const forecastProfit = contractAmount - forecastCost;
   const forecastMarginPercent = contractAmount > 0 ? forecastProfit / contractAmount * 100 : 0;
   const forecastDeviation = forecastCost - budget.totalPlannedCost;
-  const costToComplete = Math.max(forecastCost - budget.totalActualCost, 0);
+  const costToComplete = Math.max(forecastCost - recognizedActualCost, 0);
   const unpaidIncoming = payments.filter((item) => item.direction === "incoming" && item.status !== "paid").reduce((sum, item) => sum + item.amount, 0);
   const unpaidOutgoing = payments.filter((item) => item.direction === "outgoing" && item.status !== "paid").reduce((sum, item) => sum + item.amount, 0);
   const committedOutgoing = payments.filter((item) => item.direction === "outgoing" && ["approved", "paid", "overdue"].includes(item.status)).reduce((sum, item) => sum + item.amount, 0);
   const activeProcurement = procurementRequests.filter((item) => !["closed", "rejected"].includes(item.status));
   const openCriticalRisks = risks.filter((item) => item.status !== "closed" && ["critical", "high"].includes(item.priority));
   const noBaseline = !contractAmount || !budgetItems.length;
-  const noActual = budget.totalActualCost <= 0 && !payments.some((item) => item.direction === "outgoing" && item.status === "paid");
+  const noActual = recognizedActualCost <= 0 && paidOutgoingActual <= 0;
   const critical = forecastProfit < 0 || finance.cashGap < 0 || forecastMarginPercent < 5;
   const attention = forecastDeviation > 0 || work.overdueItems.length > 0 || materialsStats.deficitItems.length > 0 || openCriticalRisks.length > 0;
   const status: CostForecastStatus = noBaseline ? "no_data" : critical ? "critical" : noActual ? "needs_baseline" : attention ? "attention" : "controlled";
@@ -180,20 +370,40 @@ export function buildCostToCompleteIntelligence(input: CostToCompleteInput): Cos
 
   return {
     summary: {
-      status, tone, headline, nextStep, contractAmount, plannedCost: budget.totalPlannedCost, actualCost: budget.totalActualCost,
+      status, tone, headline, nextStep, contractAmount, plannedCost: budget.totalPlannedCost, actualCost: recognizedActualCost,
       forecastCost, costToComplete, plannedMargin: budget.plannedProfit, forecastMargin: forecastProfit,
       plannedMarginPercent: budget.plannedMarginPercent, forecastMarginPercent, forecastDeviation,
       completionPercent: work.completionPercent, remainingWorkPercent: Math.max(0, 100 - work.completionPercent), cashGap: finance.cashGap,
       financingNeed: finance.financingNeed, committedOutgoing, unpaidIncoming, unpaidOutgoing,
       payrollEmployerCost: workforce.totalEmployerCost,
       payrollUncoveredCost: workforce.uncoveredEmployerCost,
-      payrollContributions: workforce.employerContributions
+      payrollContributions: workforce.employerContributions,
+      totalSpent,
+      expenseRegisterCost,
+      reportPayrollCost: calculatedReportPayroll,
+      unregisteredPayrollCost,
+      paidOutgoingActual
+    },
+    reportProgress,
+    spending: {
+      totalSpent,
+      expenseRegisterCost,
+      reportPayrollCost: calculatedReportPayroll,
+      payrollAlreadyRegistered,
+      unregisteredPayrollCost,
+      paidOutgoingActual,
+      budgetActualCost: budget.totalActualCost,
+      expenseCount: expenseSummary?.count ?? 0,
+      receipts: expenseSummary?.receipts ?? 0,
+      withoutReceipt: expenseSummary?.withoutReceipt ?? 0
     },
     categories,
     signals,
     actions,
     limitations: [
-      noActual ? "Фактическая себестоимость неполная: v1 не подменяет закрытие первичных документов и управленческий учет." : "Факт берется из текущих цен ВОР и платежей; подтвердите его с бухгалтерией.",
+      noActual ? "Фактическая себестоимость неполная: нет подтверждённых расходов, ФОТ по рапортам или фактических цен ВОР." : "Факт затрат собирается из реестра расходов и расчётного ФОТ по утверждённым рапортам; фактические цены ВОР используются как сверочный минимум.",
+      "Исходящие платежи показаны для сверки движения денег и не прибавляются повторно к расходам и ФОТ.",
+      "Выполнение по рапортам учитывает только утверждённые структурированные строки; несопоставленные с графиком/ВОР работы показаны отдельно.",
       "ФОТ включает настроенные страховые начисления работодателя; НДФЛ показывается отдельно как удержание и не добавляется повторно к себестоимости.",
       "Прогноз не включает автоматическую индексацию, курсы валют или резерв по рискам без явного отражения в бюджете.",
       "Стоимость к завершению не записывается обратно в ВОР, платежи или cashflow без явного действия пользователя."

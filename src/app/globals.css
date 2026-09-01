@@ -12690,6 +12690,276 @@ input[type="checkbox"] {
   padding-left: 18px;
 }
 
+.cost-actual-overview {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  min-width: 0;
+}
+
+.cost-to-complete-workspace .quality-issues-grid.metrics {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.cost-actual-panel {
+  display: grid;
+  align-content: start;
+  gap: 14px;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.cost-actual-panel > header,
+.cost-actual-panel > header > div,
+.cost-actual-primary,
+.cost-actual-facts,
+.spending-reconciliation {
+  min-width: 0;
+}
+
+.cost-actual-panel > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.cost-actual-panel > header > div {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.cost-actual-panel > header svg {
+  flex: 0 0 auto;
+  color: var(--accent);
+}
+
+.cost-actual-panel > header span {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.cost-actual-panel > header small,
+.cost-actual-primary span,
+.cost-actual-facts small,
+.report-cost-work-list small,
+.spending-source-list small,
+.spending-source-list b,
+.spending-reconciliation small,
+.spending-reconciliation em,
+.cost-actual-note {
+  color: var(--muted);
+}
+
+.cost-actual-panel h4 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.cost-actual-primary {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: end;
+  gap: 14px;
+}
+
+.cost-actual-primary > strong {
+  font-size: 1.8rem;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.cost-actual-primary > span {
+  line-height: 1.4;
+}
+
+.cost-actual-primary b {
+  color: var(--text);
+}
+
+.cost-actual-progress,
+.report-cost-work-list em {
+  display: block;
+  overflow: hidden;
+  height: 7px;
+  border-radius: 4px;
+  background: var(--panel-muted);
+}
+
+.cost-actual-progress > span,
+.report-cost-work-list em > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+}
+
+.cost-actual-facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.cost-actual-facts > span {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel-muted);
+}
+
+.cost-actual-facts strong,
+.spending-reconciliation strong {
+  overflow-wrap: anywhere;
+}
+
+.report-cost-work-list,
+.spending-source-list {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.report-cost-work-list > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px 10px;
+  min-width: 0;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+
+.report-cost-work-list > div > span {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.report-cost-work-list strong,
+.report-cost-work-list small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.report-cost-work-list > div > b {
+  align-self: center;
+}
+
+.report-cost-work-list em {
+  grid-column: 1 / -1;
+  height: 5px;
+}
+
+.report-cost-work-list .is-over > b {
+  color: var(--red);
+}
+
+.report-cost-work-list .is-over em > span {
+  background: var(--red);
+}
+
+.cost-actual-empty,
+.cost-actual-warning {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  margin: 0;
+  padding: 10px;
+  border-radius: 6px;
+}
+
+.cost-actual-empty {
+  background: var(--panel-muted);
+  color: var(--muted);
+}
+
+.cost-actual-warning {
+  border-left: 3px solid var(--yellow);
+  background: color-mix(in srgb, var(--yellow) 9%, var(--surface));
+  color: var(--text);
+  font-size: 0.84rem;
+}
+
+.cost-actual-warning svg {
+  flex: 0 0 auto;
+  color: var(--yellow);
+}
+
+.spending-source-list > span {
+  display: grid;
+  grid-template-columns: 9px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  padding: 9px 0;
+  border-top: 1px solid var(--line);
+}
+
+.spending-source-list i {
+  width: 8px;
+  height: 28px;
+  border-radius: 3px;
+  background: var(--accent);
+}
+
+.spending-source-list .source-payroll {
+  background: var(--blue);
+}
+
+.spending-source-list .source-gap {
+  background: var(--yellow);
+}
+
+.spending-source-list small {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.spending-source-list b {
+  font-weight: 500;
+}
+
+.spending-source-list > span > strong {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.spending-reconciliation {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.spending-reconciliation > span {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  padding: 9px 10px;
+  border-radius: 6px;
+  background: var(--panel-muted);
+}
+
+.spending-reconciliation em {
+  font-size: 0.76rem;
+  font-style: normal;
+}
+
+.cost-actual-note {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
 .photo-evidence-header {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -12833,6 +13103,10 @@ input[type="checkbox"] {
   .quality-issues-grid.metrics {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .cost-actual-overview {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 780px) {
@@ -12846,6 +13120,14 @@ input[type="checkbox"] {
   .quality-issues-grid,
   .quality-issues-grid.metrics {
     grid-template-columns: 1fr;
+  }
+
+  .cost-to-complete-workspace .quality-issues-grid.metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .cost-to-complete-workspace .quality-issues-grid.metrics > :last-child {
+    grid-column: 1 / -1;
   }
 
   .photo-evidence-card.wide {
@@ -12862,6 +13144,45 @@ input[type="checkbox"] {
 
   .quality-issues-actions {
     justify-content: flex-start;
+  }
+
+  .cost-actual-primary {
+    grid-template-columns: 1fr;
+    gap: 7px;
+  }
+
+  .cost-actual-panel > header {
+    align-items: center;
+  }
+
+  .spending-source-list > span {
+    grid-template-columns: 9px minmax(0, 1fr);
+  }
+
+  .spending-source-list > span > strong {
+    grid-column: 2;
+    text-align: left;
+  }
+}
+
+@media (max-width: 520px) {
+  .cost-actual-panel > header .button {
+    padding-inline: 10px;
+  }
+}
+
+@media (max-width: 360px) {
+  .cost-to-complete-workspace .quality-issues-grid.metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .cost-to-complete-workspace .quality-issues-grid.metrics > :last-child {
+    grid-column: auto;
+  }
+
+  .cost-actual-facts,
+  .spending-reconciliation {
+    grid-template-columns: 1fr;
   }
 }
 
