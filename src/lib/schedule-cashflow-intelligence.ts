@@ -262,7 +262,7 @@ function buildPackages(input: Required<Pick<ScheduleCashflowIntelligenceInput, "
   });
 }
 
-function buildTimeline(packages: WorkPackageView[], projectStart?: string) {
+function buildDraftTimeline(packages: WorkPackageView[], projectStart?: string) {
   let cursorWeek = 1;
   const weeks: TimelineWeekView[] = [];
   for (const item of packages) {
@@ -298,6 +298,141 @@ function buildTimeline(packages: WorkPackageView[], projectStart?: string) {
     totalAmount: round(entry.totalAmount),
     blockers: Array.from(new Set(entry.blockers)).slice(0, 4)
   }));
+}
+
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+
+function dateTime(value?: string) {
+  if (!value) return Number.NaN;
+  return new Date(value).getTime();
+}
+
+function importedScheduleSection(dependency?: string) {
+  const section = dependency?.split(" · ")[0]?.trim() ?? "";
+  return /^раздел(?:\s|$)/iu.test(section) ? section : "";
+}
+
+function sectionKey(section: string) {
+  const number = section.match(/^раздел\s+(\d+(?:[.,]\d+)*)/iu)?.[1]?.replace(",", ".");
+  return number ? `section:${number}` : normalize(section);
+}
+
+function scheduleSection(item: ScheduleItem, budgetById: Map<string, BudgetItem>) {
+  const linkedSection = item.budgetItemId ? budgetById.get(item.budgetItemId)?.section?.trim() : "";
+  return linkedSection || importedScheduleSection(item.dependency);
+}
+
+function scheduleAnchor(scheduleItems: ScheduleItem[], fallback?: string) {
+  const earliest = scheduleItems
+    .filter((item) => Number.isFinite(dateTime(item.startsAt)))
+    .slice()
+    .sort((left, right) => dateTime(left.startsAt) - dateTime(right.startsAt))[0];
+  return earliest?.startsAt ?? fallback;
+}
+
+function weekIndex(value: string | undefined, anchor: string | undefined) {
+  const time = dateTime(value);
+  const anchorTime = dateTime(anchor);
+  if (!Number.isFinite(time) || !Number.isFinite(anchorTime)) return null;
+  return Math.max(1, Math.floor((time - anchorTime) / WEEK_MS) + 1);
+}
+
+function weeklyPlan(dependency?: string) {
+  const weeks = new Map<number, number>();
+  const pattern = /[нn]\s*(\d{1,2})\s+([\d\s.,]+)\s*₽/giu;
+  for (const match of dependency?.matchAll(pattern) ?? []) {
+    const week = Number(match[1]);
+    const value = Number(match[2].replace(/\s/g, "").replace(",", "."));
+    if (!Number.isFinite(week) || week < 1 || !Number.isFinite(value) || value <= 0) continue;
+    weeks.set(week, (weeks.get(week) ?? 0) + value);
+  }
+  return weeks;
+}
+
+function buildTimeline(
+  packages: WorkPackageView[],
+  projectStart: string | undefined,
+  scheduleItems: ScheduleItem[],
+  budgetItems: BudgetItem[]
+) {
+  const budgetById = new Map(budgetItems.map((item) => [item.id, item]));
+  const scheduledBySection = new Map<string, ScheduleItem[]>();
+  for (const item of scheduleItems) {
+    if (!Number.isFinite(dateTime(item.startsAt)) || !Number.isFinite(dateTime(item.endsAt))) continue;
+    const section = scheduleSection(item, budgetById);
+    if (!section) continue;
+    const key = sectionKey(section);
+    scheduledBySection.set(key, [...(scheduledBySection.get(key) ?? []), item]);
+  }
+
+  const matchedPackages = packages.filter((item) => scheduledBySection.has(sectionKey(item.section)));
+  if (!matchedPackages.length) return buildDraftTimeline(packages, projectStart);
+
+  const weeks = new Map<number, TimelineWeekView>();
+  const addAllocation = (item: WorkPackageView, week: number, share: number) => {
+    const existing = weeks.get(week) ?? {
+      week,
+      label: weekLabel(projectStart, week),
+      packages: [],
+      workAmount: 0,
+      materialAmount: 0,
+      totalAmount: 0,
+      blockers: [],
+      tone: "info" as const
+    };
+    if (!existing.packages.includes(item.section)) existing.packages.push(item.section);
+    existing.workAmount += item.workAmount * share;
+    existing.materialAmount += item.materialAmount * share;
+    existing.totalAmount += item.totalAmount * share;
+    existing.blockers.push(...item.blockers);
+    existing.tone = existing.blockers.length ? "warn" : "info";
+    weeks.set(week, existing);
+  };
+
+  const unscheduled: WorkPackageView[] = [];
+  for (const item of packages) {
+    const scheduled = scheduledBySection.get(sectionKey(item.section)) ?? [];
+    if (!scheduled.length) {
+      unscheduled.push(item);
+      continue;
+    }
+
+    const planned = new Map<number, number>();
+    for (const scheduleItem of scheduled) {
+      for (const [week, value] of weeklyPlan(scheduleItem.dependency)) {
+        planned.set(week, (planned.get(week) ?? 0) + value);
+      }
+    }
+    const plannedTotal = Array.from(planned.values()).reduce((sum, value) => sum + value, 0);
+    if (plannedTotal > 0) {
+      for (const [week, value] of planned) addAllocation(item, week, value / plannedTotal);
+      continue;
+    }
+
+    const starts = scheduled.map((entry) => weekIndex(entry.startsAt, projectStart)).filter((value): value is number => value !== null);
+    const ends = scheduled.map((entry) => weekIndex(entry.endsAt, projectStart)).filter((value): value is number => value !== null);
+    const firstWeek = starts.length ? Math.min(...starts) : 1;
+    const lastWeek = ends.length ? Math.max(...ends) : firstWeek;
+    const duration = Math.max(1, lastWeek - firstWeek + 1);
+    for (let week = firstWeek; week <= lastWeek; week += 1) addAllocation(item, week, 1 / duration);
+  }
+
+  let cursorWeek = Math.max(0, ...weeks.keys()) + 1;
+  for (const item of unscheduled) {
+    const duration = Math.max(1, Math.ceil(item.suggestedDurationDays / 7));
+    for (let offset = 0; offset < duration; offset += 1) addAllocation(item, cursorWeek + offset, 1 / duration);
+    cursorWeek += duration;
+  }
+
+  return Array.from(weeks.values())
+    .sort((left, right) => left.week - right.week)
+    .map((entry) => ({
+      ...entry,
+      workAmount: round(entry.workAmount),
+      materialAmount: round(entry.materialAmount),
+      totalAmount: round(entry.totalAmount),
+      blockers: Array.from(new Set(entry.blockers)).slice(0, 4)
+    }));
 }
 
 function paymentWeek(plannedAt: string | undefined, projectStart: string | undefined) {
@@ -402,8 +537,9 @@ export function buildScheduleCashflowIntelligenceModel(input: ScheduleCashflowIn
     importHistory
   });
   const packages = buildPackages({ budgetItems, materials, procurementRequests });
-  const timeline = buildTimeline(packages, project.startsAt);
-  const cashflow = buildCashflow(timeline, payments, project.startsAt);
+  const timelineStart = scheduleAnchor(scheduleItems, project.startsAt);
+  const timeline = buildTimeline(packages, timelineStart, scheduleItems, budgetItems);
+  const cashflow = buildCashflow(timeline, payments, timelineStart);
   const risks = buildRisks(packages, timeline, cashflow, scheduleItems, unknownRows);
   const executivePlan = buildExecutivePlan(packages, cashflow, risks);
   const blockedPackages = packages.filter((item) => item.readiness !== "ready").length;

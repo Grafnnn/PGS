@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildScheduleCashflowIntelligenceModel, type ScheduleCashflowImportHistoryItem } from "@/lib/schedule-cashflow-intelligence";
 import type { ImportPreviewRow } from "@/lib/excel/import-types";
-import type { BudgetItem, Material, Payment, ProcurementRequest } from "@/lib/types";
+import type { BudgetItem, Material, Payment, ProcurementRequest, ScheduleItem } from "@/lib/types";
 
 function budget(overrides: Partial<BudgetItem> = {}): BudgetItem {
   return {
@@ -196,5 +196,50 @@ describe("schedule cashflow intelligence model", () => {
     expect(model.summary.peakCashNeed).toBeGreaterThan(0);
     expect(model.executivePlan.financeCashNeeds[0]).toContain("покрыть");
     expect(model.executivePlan.draftText).toContain("Cashflow");
+  });
+
+  it("aligns weekly cashflow to confirmed schedule dates and imported KS allocations", () => {
+    const scheduleItems: ScheduleItem[] = [
+      {
+        id: "schedule-1",
+        projectId: "project-demo",
+        name: "Демонтаж покрытия",
+        owner: "ПТО",
+        startsAt: "2026-09-07",
+        endsAt: "2026-09-19",
+        plannedQty: 10,
+        actualQty: 0,
+        status: "not_started",
+        dependency: "Раздел 1. Демонтажные работы · Профиль ГПР: G01 · Недельный план КС: Н1 600 ₽; Н2 400 ₽"
+      },
+      {
+        id: "schedule-2",
+        projectId: "project-demo",
+        name: "Устройство мембраны",
+        owner: "ПТО",
+        startsAt: "2026-09-14",
+        endsAt: "2026-09-26",
+        plannedQty: 20,
+        actualQty: 0,
+        status: "not_started",
+        dependency: "Раздел 2. Новая кровля · Профиль ГПР: G02 · Недельный план КС: Н2 500 ₽; Н3 1500 ₽"
+      }
+    ];
+
+    const model = buildScheduleCashflowIntelligenceModel({
+      project: { name: "Троицк", startsAt: "2026-08-25", endsAt: "2026-11-30" },
+      budgetItems: [
+        budget({ id: "budget-1", section: "Раздел 1. Демонтажные работы", qty: 10, plannedUnitPrice: 100 }),
+        budget({ id: "budget-2", section: "Раздел 2.", name: "Устройство мембраны", qty: 20, plannedUnitPrice: 100 })
+      ],
+      scheduleItems
+    });
+
+    expect(model.status).toBe("scheduled");
+    expect(model.summary.scheduleWeeks).toBe(3);
+    expect(model.timeline.map((week) => week.label)).toEqual(["07.09 - 13.09", "14.09 - 20.09", "21.09 - 27.09"]);
+    expect(model.timeline.map((week) => week.workAmount)).toEqual([600, 900, 1500]);
+    expect(model.timeline[1]?.packages).toEqual(["Раздел 1. Демонтажные работы", "Раздел 2."]);
+    expect(model.timeline.reduce((sum, week) => sum + week.totalAmount, 0)).toBe(3000);
   });
 });

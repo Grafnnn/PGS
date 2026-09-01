@@ -137,9 +137,14 @@ function itemProgress(item: ScheduleItem) {
   return item.status === "in_progress" ? 50 : 0;
 }
 
+function dependencySection(dependency?: string) {
+  const section = dependency?.split(" · ")[0]?.trim() ?? "";
+  return /^раздел(?:\s|$)/iu.test(section) ? section : "";
+}
+
 function phaseForItem(item: ScheduleItem, budgetById: Map<string, BudgetItem>) {
   const section = item.budgetItemId ? budgetById.get(item.budgetItemId)?.section?.trim() : "";
-  return section || "Без этапа";
+  return section || dependencySection(item.dependency) || "Без этапа";
 }
 
 function completionByWorkCount(items: ScheduleItem[]) {
