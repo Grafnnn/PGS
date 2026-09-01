@@ -256,7 +256,7 @@ export interface ImportCommitPlan {
 }
 
 export const importModes = ["append", "replace_budget", "replace_materials", "replace_budget_materials", "replace_schedule", "replace_all"] as const;
-export const wizardImportModes = ["append", "replace_budget", "replace_materials", "replace_budget_materials"] as const;
+export const wizardImportModes = importModes;
 
 export const columnMapSchema = z.object({
   index: z.number().int().nonnegative().optional(),
