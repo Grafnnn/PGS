@@ -101,6 +101,20 @@ describe("ProductionScheduleWorkspace", () => {
     expect(groups[1]?.items[0]?.name).toBe("Подготовить исполнительную схему");
   });
 
+  it("groups imported schedule rows by the section marker when a direct VOR link is absent", () => {
+    const importedItem: ScheduleItem = {
+      ...scheduleItems[2],
+      id: "schedule-imported",
+      dependency: "Раздел 7. Устройство кровли · Профиль ГПР: G07 · Недельный план КС: Н1 1000 ₽"
+    };
+
+    const groups = buildScheduleGroups([importedItem], budgetItems, new Date(2026, 7, 26, 12).getTime());
+
+    expect(groups).toHaveLength(1);
+    expect(groups[0]?.title).toBe("Раздел 7. Устройство кровли");
+    expect(groups[0]?.items[0]?.id).toBe("schedule-imported");
+  });
+
   it("builds the weekly PTO control from confirmed schedule dates", () => {
     const rows = buildWeeklyControl(scheduleItems, new Date(2026, 7, 26, 12).getTime());
 
