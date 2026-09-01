@@ -788,10 +788,10 @@ export function ProjectWorkspace({
       };
       if (!response.ok || !data.ok) throw new Error(data.error ?? "Не удалось сохранить импорт.");
 
-      if (importMode === "replace_budget" || importMode === "replace_all") setBudgetItems(data.budgetItems ?? []);
+      if (["replace_budget", "replace_budget_materials", "replace_all"].includes(importMode)) setBudgetItems(data.budgetItems ?? []);
       else setBudgetItems((current) => [...current, ...(data.budgetItems ?? [])]);
 
-      if (importMode === "replace_materials" || importMode === "replace_all") setMaterials(data.materials ?? []);
+      if (["replace_materials", "replace_budget_materials", "replace_all"].includes(importMode)) setMaterials(data.materials ?? []);
       else setMaterials((current) => [...current, ...(data.materials ?? [])]);
 
       if (importMode === "replace_schedule" || importMode === "replace_all") setScheduleItems(data.scheduleItems ?? []);
@@ -2365,6 +2365,8 @@ function ImportPanel({
                   <option value="replace_budget">Заменить только бюджет</option>
                   <option value="replace_materials">Заменить только материалы</option>
                   <option value="replace_budget_materials">Заменить бюджет и материалы</option>
+                  <option value="replace_schedule">Заменить только график</option>
+                  <option value="replace_all">Заменить все импортируемые блоки</option>
                 </select>
               </label>
               <label className="checkbox-row">

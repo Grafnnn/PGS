@@ -373,13 +373,17 @@ export function buildCommitPlan(preview: ImportPreview, mode: ImportMode): Impor
     throw new Error("В preview нет строк для сохранения.");
   }
 
+  const includesBudget = ["append", "replace_budget", "replace_budget_materials", "replace_all"].includes(mode);
+  const includesMaterials = ["append", "replace_materials", "replace_budget_materials", "replace_all"].includes(mode);
+  const includesSchedule = ["append", "replace_schedule", "replace_all"].includes(mode);
+
   return {
     mode,
-    sections: preview.sections,
-    budgetItems: preview.budgetItems,
-    materials: preview.materials,
-    scheduleItems: preview.scheduleItems,
-    laborDemands: preview.laborDemands ?? [],
+    sections: includesBudget ? preview.sections : [],
+    budgetItems: includesBudget ? preview.budgetItems : [],
+    materials: includesMaterials ? preview.materials : [],
+    scheduleItems: includesSchedule ? preview.scheduleItems : [],
+    laborDemands: includesBudget ? preview.laborDemands ?? [] : [],
     warnings: preview.warnings,
     summary: preview.summary
   };

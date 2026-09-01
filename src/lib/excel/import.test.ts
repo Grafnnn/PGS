@@ -274,7 +274,7 @@ describe("excel budget import", () => {
       projectId: "project-demo",
       fileName: "вор.xlsx",
       sheets: ["ВОР"],
-      sections: [],
+      sections: [{ name: "Земляные работы", sheetName: "ВОР", rowNumber: 2 }],
       budgetItems: [
         {
           section: "Земляные работы",
@@ -291,15 +291,52 @@ describe("excel budget import", () => {
           rowNumber: 3
         }
       ],
-      materials: [],
-      scheduleItems: [],
+      materials: [
+        {
+          name: "Песок",
+          unit: "т",
+          requiredQty: 20,
+          orderedQty: 0,
+          deliveredQty: 0,
+          consumedQty: 0,
+          plannedUnitPrice: 1000,
+          actualUnitPrice: 0,
+          supplier: "Не выбран",
+          neededAt: "2026-09-05",
+          status: "required",
+          sheetName: "Материалы",
+          rowNumber: 2
+        }
+      ],
+      scheduleItems: [
+        {
+          name: "Разработка котлована",
+          owner: "ПТО",
+          startsAt: "2026-09-07",
+          endsAt: "2026-09-12",
+          plannedQty: 100,
+          actualQty: 0,
+          status: "not_started",
+          dependency: "Раздел 1",
+          sheetName: "График",
+          rowNumber: 2
+        }
+      ],
       unknownRows: [],
       warnings: [],
       errors: []
     });
     const withError = buildPreview({ ...clean, errors: ["Ошибка"] });
 
-    expect(buildCommitPlan(clean, "append").budgetItems).toHaveLength(1);
+    const append = buildCommitPlan(clean, "append");
+    expect(append.budgetItems).toHaveLength(1);
+    expect(append.materials).toHaveLength(1);
+    expect(append.scheduleItems).toHaveLength(1);
+    expect(buildCommitPlan(clean, "replace_budget")).toMatchObject({ budgetItems: expect.any(Array), materials: [], scheduleItems: [] });
+    expect(buildCommitPlan(clean, "replace_materials")).toMatchObject({ sections: [], budgetItems: [], materials: expect.any(Array), scheduleItems: [] });
+    expect(buildCommitPlan(clean, "replace_schedule")).toMatchObject({ sections: [], budgetItems: [], materials: [], scheduleItems: expect.any(Array) });
+    expect(buildCommitPlan(clean, "replace_budget_materials")).toMatchObject({ budgetItems: expect.any(Array), materials: expect.any(Array), scheduleItems: [] });
+    expect(buildCommitPlan(clean, "replace_all")).toMatchObject({ budgetItems: expect.any(Array), materials: expect.any(Array), scheduleItems: expect.any(Array) });
     expect(() => buildCommitPlan(withError, "append")).toThrow("Нельзя сохранить импорт");
   });
 
