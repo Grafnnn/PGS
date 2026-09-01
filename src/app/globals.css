@@ -9700,6 +9700,64 @@ input[type="checkbox"] {
   opacity: 0;
 }
 
+.daily-existing-photo-picker {
+  border: 1px solid var(--line);
+  background: var(--panel-muted);
+}
+
+.daily-existing-photo-picker > summary {
+  align-items: center;
+  cursor: pointer;
+  display: flex;
+  gap: 8px;
+  list-style: none;
+  min-height: 42px;
+  padding: 8px 11px;
+}
+
+.daily-existing-photo-picker > summary::-webkit-details-marker {
+  display: none;
+}
+
+.daily-existing-photo-picker > summary > span {
+  flex: 1 1 auto;
+  font-weight: 700;
+}
+
+.daily-existing-photo-picker > summary > b {
+  align-items: center;
+  background: var(--accent-soft);
+  color: var(--accent);
+  display: inline-flex;
+  font-size: 11px;
+  justify-content: center;
+  min-height: 22px;
+  min-width: 22px;
+  padding: 0 5px;
+}
+
+.daily-existing-photo-picker[open] > summary > svg:last-child {
+  transform: rotate(180deg);
+}
+
+.daily-existing-photo-panel {
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 10px;
+  padding: 11px;
+}
+
+.daily-existing-photo-panel > p {
+  color: var(--muted);
+  font-size: 12px;
+  margin: 0;
+}
+
+.daily-existing-photo-panel > .form-actions {
+  align-items: center;
+  justify-content: space-between;
+}
+
 .daily-photo-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));

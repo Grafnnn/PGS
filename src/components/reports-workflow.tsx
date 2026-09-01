@@ -51,10 +51,12 @@ type Props = {
   projectId: string;
   reports: DailyReport[];
   scheduleItems: ScheduleItem[];
+  documents?: ProjectDocument[];
   currentUser: UserContext | null;
   currentUserLoaded: boolean;
   onReportsChange: (items: DailyReport[]) => void;
   onScheduleItemsChange?: (items: ScheduleItem[]) => void;
+  onDocumentsChange?: (items: ProjectDocument[]) => void;
 };
 
 type ReportMutationResponse = {
@@ -82,6 +84,8 @@ type WorkforceItem = {
   kind: "worker" | "engineer" | "crew";
   headcount: number;
 };
+
+const emptyProjectDocuments: ProjectDocument[] = [];
 
 const workCategories = ["Кровельные работы", "Фасадные работы", "Монолит", "Кладка", "Отделка", "Инженерные сети", "Благоустройство", "Подготовительные работы", "Другое"];
 
@@ -245,6 +249,14 @@ function tone(status: string) {
   return "gray";
 }
 
+export function isProjectEvidenceCandidate(document: ProjectDocument) {
+  const searchable = `${document.category} ${document.title} ${document.fileName ?? ""}`;
+  return (document.mimeType ?? "").startsWith("image/")
+    && !document.dailyReportId
+    && !/чек|расход|receipt|expense/i.test(searchable)
+    && /фото|photo|фиксац|строй|рапорт|evidence/i.test(searchable);
+}
+
 function ReportEvidenceGallery({ documents, projectId }: { documents: ProjectDocument[]; projectId: string }) {
   const images = documents.filter((document) => (document.mimeType ?? "").startsWith("image/"));
   const otherDocuments = documents.filter((document) => !(document.mimeType ?? "").startsWith("image/"));
@@ -277,7 +289,7 @@ async function responseError(response: Response, fallback: string) {
   return body.error ?? fallback;
 }
 
-export function ReportsWorkflow({ projectId, reports, scheduleItems, currentUser, currentUserLoaded, onReportsChange, onScheduleItemsChange }: Props) {
+export function ReportsWorkflow({ projectId, reports, scheduleItems, documents = emptyProjectDocuments, currentUser, currentUserLoaded, onReportsChange, onScheduleItemsChange, onDocumentsChange }: Props) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [form, setForm] = useState<ReportForm>(() => emptyReport(currentUser?.name));
@@ -299,6 +311,7 @@ export function ReportsWorkflow({ projectId, reports, scheduleItems, currentUser
   const [photoQuestion, setPhotoQuestion] = useState("");
   const [photoAnswer, setPhotoAnswer] = useState<PhotoQuestionResult | null>(null);
   const [photoNotice, setPhotoNotice] = useState("");
+  const [selectedExistingPhotoIds, setSelectedExistingPhotoIds] = useState<string[]>([]);
   const [correctionReportId, setCorrectionReportId] = useState<string | null>(null);
   const [correctionReason, setCorrectionReason] = useState("");
 
@@ -309,6 +322,7 @@ export function ReportsWorkflow({ projectId, reports, scheduleItems, currentUser
   const sortedReports = useMemo(() => [...reports].sort((a, b) => b.date.localeCompare(a.date)), [reports]);
   const activeReport = editingId ? reports.find((item) => item.id === editingId) ?? null : null;
   const evidence = activeReport?.evidenceDocuments?.filter((item) => (item.mimeType ?? "").startsWith("image/")) ?? [];
+  const availableProjectPhotos = useMemo(() => documents.filter(isProjectEvidenceCandidate), [documents]);
   const selectedCrew = workforce.filter((item) => form.crewResourceIds.includes(item.resourceId));
   const selectedHeadcount = selectedCrew.reduce((sum, item) => sum + item.headcount, 0);
   const visibleWorkforce = useMemo(() => {
@@ -405,6 +419,7 @@ export function ReportsWorkflow({ projectId, reports, scheduleItems, currentUser
     setPhotoQuestion("");
     setPhotoAnswer(null);
     setPhotoNotice("");
+    setSelectedExistingPhotoIds([]);
     setCrewSearch("");
     setWorkDraft("");
     setError("");
@@ -439,6 +454,7 @@ export function ReportsWorkflow({ projectId, reports, scheduleItems, currentUser
     setPhotoQuestion("");
     setPhotoAnswer(null);
     setPhotoNotice("");
+    setSelectedExistingPhotoIds([]);
     setCrewSearch("");
     setWorkDraft("");
     setFormOpen(true);
@@ -556,6 +572,43 @@ export function ReportsWorkflow({ projectId, reports, scheduleItems, currentUser
       await loadDailyReports();
     } catch (uploadError) {
       setError(uploadError instanceof Error ? uploadError.message : "Не удалось загрузить фото смены.");
+    } finally {
+      setBusy("");
+    }
+  }
+
+  async function attachExistingEvidence() {
+    if (!editingId || !selectedExistingPhotoIds.length) return;
+    setBusy("photo-link");
+    setError("");
+    setPhotoNotice("");
+    try {
+      const response = await fetch(`/api/projects/${projectId}/daily-reports/${editingId}/evidence`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ documentIds: selectedExistingPhotoIds })
+      });
+      if (!response.ok) throw new Error(await responseError(response, "Не удалось прикрепить фото из документов."));
+      const body = (await response.json()) as { items: ProjectDocument[]; linked: number };
+      const linkedIds = new Set(body.items.map((item) => item.id));
+      onDocumentsChange?.(documents.map((document) => linkedIds.has(document.id)
+        ? { ...document, dailyReportId: editingId }
+        : document));
+      onReportsChange(reports.map((report) => report.id === editingId
+        ? {
+            ...report,
+            evidenceDocuments: [
+              ...(report.evidenceDocuments ?? []).filter((document) => !linkedIds.has(document.id)),
+              ...body.items
+            ]
+          }
+        : report));
+      setSelectedPhotoIds((current) => [...new Set([...current, ...body.items.map((item) => item.id)])].slice(0, 4));
+      setSelectedExistingPhotoIds([]);
+      setPhotoNotice(`Из документов прикреплено: ${body.linked}. Фото теперь видны в карточке рапорта.`);
+      await loadDailyReports();
+    } catch (linkError) {
+      setError(linkError instanceof Error ? linkError.message : "Не удалось прикрепить фото из документов.");
     } finally {
       setBusy("");
     }
@@ -888,6 +941,30 @@ export function ReportsWorkflow({ projectId, reports, scheduleItems, currentUser
                     <span>{photoFiles.length ? `Выбрано: ${photoFiles.length}` : "Фото ещё не выбраны"}</span>
                     <button className="button secondary" disabled={!photoFiles.length || busy === "photo-upload"} type="button" onClick={() => void uploadEvidence()}>{busy === "photo-upload" ? "Загружаю..." : "Прикрепить"}</button>
                   </div>
+                  {availableProjectPhotos.length ? (
+                    <details className="daily-existing-photo-picker">
+                      <summary><Images size={16} /><span>Прикрепить из документов</span><b>{availableProjectPhotos.length}</b><ChevronDown size={15} /></summary>
+                      <div className="daily-existing-photo-panel">
+                        <p>Здесь показаны ещё не связанные с рапортами фото проекта. Выберите нужные, повторно загружать файлы не придётся.</p>
+                        <div className="daily-photo-grid daily-existing-photo-grid">
+                          {availableProjectPhotos.map((document) => {
+                            const selected = selectedExistingPhotoIds.includes(document.id);
+                            return (
+                              <label className={selected ? "selected" : ""} key={document.id}>
+                                <input checked={selected} type="checkbox" onChange={() => setSelectedExistingPhotoIds((current) => current.includes(document.id) ? current.filter((id) => id !== document.id) : [...current, document.id])} />
+                                <Image alt={document.title} height={150} src={`/api/projects/${projectId}/documents/${document.id}/download`} unoptimized width={200} />
+                                <span>{document.title}</span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                        <div className="form-actions">
+                          <span className="muted">Выбрано: {selectedExistingPhotoIds.length}</span>
+                          <button className="button secondary compact-button" disabled={!selectedExistingPhotoIds.length || busy === "photo-link"} type="button" onClick={() => void attachExistingEvidence()}>{busy === "photo-link" ? "Прикрепляю..." : "Добавить в рапорт"}</button>
+                        </div>
+                      </div>
+                    </details>
+                  ) : null}
                   {photoNotice ? <div className="daily-photo-notice" role="status">{photoNotice}</div> : null}
                   {evidence.length ? (
                     <div className="daily-photo-grid">

@@ -1416,8 +1416,10 @@ export function ProjectWorkspace({
             projectId={initialBundle.project.id}
             reports={reports}
             scheduleItems={scheduleItems}
+            documents={documents}
             onReportsChange={setReports}
             onScheduleItemsChange={(updatedItems) => setScheduleItems((current) => current.map((item) => updatedItems.find((updated) => updated.id === item.id) ?? item))}
+            onDocumentsChange={setDocuments}
           /> },
           { id: "operations", label: "Производственный факт", description: "Сводка факта, смен и отклонений по площадке.", content: <FieldOperationsWorkspace
               project={initialBundle.project}
