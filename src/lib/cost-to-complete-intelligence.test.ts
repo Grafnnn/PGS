@@ -72,6 +72,8 @@ describe("buildCostToCompleteIntelligence", () => {
     });
     expect(model.summary.actualCost).toBe(72_000);
     expect(model.summary.costToComplete).toBe(38_000);
+    expect(model.summary.earnedContractValue).toBe(25_000);
+    expect(model.summary.liquidityBalance).toBe(-47_000);
   });
 
   it("prices numbered schedule outputs from matching contract VOR rows", () => {
@@ -91,7 +93,8 @@ describe("buildCostToCompleteIntelligence", () => {
           { scheduleItemId: "s1", profession: "Мастер", workName: "10 Демонтаж рулонной гидроизоляции", quantity: 200, unit: "м²", laborHours: 8 },
           { scheduleItemId: "s2", profession: "Мастер", workName: "11 Демонтаж цементно-песчанной стяжки толщиной 200 мм", quantity: 20, unit: "м²", laborHours: 8 }
         ]
-      }]
+      }],
+      expenseSummary: { count: 10, grossAmount: 301_001, taxAmount: 0, receipts: 1, withoutReceipt: 9, byCategory: {} }
     });
 
     expect(model.reportProgress).toMatchObject({
@@ -101,6 +104,7 @@ describe("buildCostToCompleteIntelligence", () => {
       earnedEstimateCost: 47_500,
       completionPercent: 4.05
     });
+    expect(model.summary.liquidityBalance).toBe(-253_501);
     expect(model.reportProgress.works).toEqual(expect.arrayContaining([
       expect.objectContaining({ name: "Демонтаж рулонной гидроизоляции", contractUnitPrice: 190, earnedEstimateCost: 38_000 }),
       expect.objectContaining({ name: "Демонтаж цементно-песчанной стяжки толщиной 200 мм", contractUnitPrice: 475, earnedEstimateCost: 9_500 })

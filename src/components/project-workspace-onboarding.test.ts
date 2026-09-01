@@ -6,14 +6,17 @@ import { ProjectWorkspace } from "@/components/project-workspace";
 const emptyBundle = {
   project: {
     id: "project-new",
+    organizationId: "org-demo",
     name: "Новый объект",
     customer: "Заказчик",
     object: "Административное здание",
     address: "Москва",
     contractAmount: 1000000,
+    vatMode: "vat" as const,
     startsAt: "2026-07-01",
     endsAt: "2026-09-01",
-    manager: "РП"
+    manager: "РП",
+    status: "planning" as const
   },
   budgetItems: [],
   scheduleItems: [],

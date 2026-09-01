@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { AlertTriangle, BadgeCheck, BarChart3, Bot, ClipboardList, DatabaseZap, FileText, HardHat, Landmark, Package, Pencil, Plus, ReceiptText, Search, Send, Table2, TimerReset, Trash2, Truck, Users } from "lucide-react";
+import { AlertTriangle, BadgeCheck, BarChart3, Bot, ClipboardList, DatabaseZap, FileText, HardHat, Landmark, Package, Pencil, Plus, ReceiptText, Search, Send, Settings2, Table2, TimerReset, Trash2, Truck, Users } from "lucide-react";
 import { AcceptanceBillingWorkspace } from "@/components/acceptance-billing-workspace";
 import { AiControlAgentWorkspace } from "@/components/ai-control-agent-workspace";
 import { AiRunJournal } from "@/components/ai-run-journal";
@@ -21,6 +21,7 @@ import { FieldMobileWorkspace } from "@/components/field-mobile-workspace";
 import { HseSafetyPermitWorkspace } from "@/components/hse-safety-permit-workspace";
 import { InvoiceReconciliationWorkspace } from "@/components/invoice-reconciliation-workspace";
 import { ProjectCommandCenter } from "@/components/project-command-center";
+import { ProjectContractSettings } from "@/components/project-contract-settings";
 import { ProjectActionCenter, type ProjectActionSuggestion } from "@/components/project-action-center";
 import { ProjectControlsWorkspace } from "@/components/project-controls-workspace";
 import { ProjectCloseoutOverview, ProjectCloseoutWorkspace } from "@/components/project-closeout-workspace";
@@ -48,20 +49,10 @@ import type { ImportExplanation, ImportMode, ImportPreview, ImportSheetMapping }
 import { drilldownAiScenarios, type AiInsightResponse, type AiScenario } from "@/lib/project-intelligence-drilldown";
 import { buildInitialProjectReadiness } from "@/lib/project-onboarding-intelligence";
 import type { DocumentChecklistItem, PipelineAction, PipelineReadiness } from "@/lib/project-pipeline";
-import type { AuditEvent, BudgetItem, DailyReport, Material, Payment, ProcurementRequest, ProjectDocument, ProjectDocumentVersion, ProjectMember, Risk, ScheduleItem } from "@/lib/types";
+import type { AuditEvent, BudgetItem, DailyReport, Material, Payment, ProcurementRequest, Project, ProjectDocument, ProjectDocumentVersion, ProjectMember, Risk, ScheduleItem } from "@/lib/types";
 
 type Bundle = {
-  project: {
-    id: string;
-    name: string;
-    customer: string;
-    object: string;
-    address: string;
-    contractAmount: number;
-    startsAt: string;
-    endsAt: string;
-    manager: string;
-  };
+  project: Project;
   budgetItems: BudgetItem[];
   scheduleItems: ScheduleItem[];
   materials: Material[];
@@ -1732,7 +1723,16 @@ export function ProjectWorkspace({
       )}
 
       {activeTab === "Настройки" && (
-        <ProjectModuleWorkspace moduleKey="settings" title="Настройки проекта" icon={<Trash2 size={18} />} views={[{
+        <ProjectModuleWorkspace moduleKey="settings" title="Настройки проекта" icon={<Settings2 size={18} />} views={[{
+          id: "contract",
+          label: "Реквизиты и договор",
+          description: "Контрагент, договорная стоимость и режим НДС.",
+          content: <ProjectContractSettings
+            project={initialBundle.project}
+            canEdit={canEditCurrentProject}
+            roleLoaded={currentUserLoaded}
+          />
+        }, {
           id: "danger",
           label: "Удаление проекта",
           content: <ProjectDeleteDangerZone

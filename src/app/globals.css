@@ -5184,6 +5184,74 @@ input[type="checkbox"] {
   gap: 14px;
 }
 
+.project-contract-settings {
+  display: grid;
+  gap: 18px;
+  max-width: 1080px;
+}
+
+.project-contract-settings-copy {
+  align-items: flex-end;
+  display: flex;
+  gap: 24px;
+  justify-content: space-between;
+}
+
+.project-contract-settings-copy h3 {
+  margin: 4px 0 0;
+}
+
+.project-contract-settings-copy p {
+  margin: 0;
+  max-width: 560px;
+}
+
+.project-contract-settings-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(260px, 1.3fr) minmax(170px, 0.7fr) minmax(150px, 0.5fr);
+}
+
+.project-contract-settings-grid .field-wide {
+  grid-column: 1 / -1;
+}
+
+.project-contract-calculation {
+  border-bottom: 1px solid var(--line);
+  border-top: 1px solid var(--line);
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.project-contract-calculation > div {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  padding: 14px 16px;
+}
+
+.project-contract-calculation > div + div {
+  border-left: 1px solid var(--line);
+}
+
+.project-contract-calculation small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.project-contract-calculation strong {
+  font-family: var(--font-display);
+  font-size: 20px;
+  overflow-wrap: anywhere;
+}
+
+.project-contract-settings-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
 .danger-zone-card {
   background: #fff7f6;
   border: 1px solid #fecdca;
@@ -5191,6 +5259,24 @@ input[type="checkbox"] {
   display: grid;
   gap: 14px;
   padding: 16px;
+}
+
+@media (max-width: 760px) {
+  .project-contract-settings-copy {
+    align-items: start;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .project-contract-settings-grid,
+  .project-contract-calculation {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .project-contract-calculation > div + div {
+    border-left: 0;
+    border-top: 1px solid var(--line);
+  }
 }
 
 .danger-zone-card h3 {
