@@ -34,4 +34,32 @@ describe("DailyReportWorkOutputEditor", () => {
     expect(html).toContain("Укажите профессию");
     expect(html).toContain("Удалить строку выработки 1");
   });
+
+  it("shows crew-based shift capacity and explicit labor allocation controls", () => {
+    const html = renderToStaticMarkup(createElement(DailyReportWorkOutputEditor, {
+      crewHeadcount: 12,
+      shiftHours: 8,
+      outputs: [{
+        profession: "Кровельщик",
+        workName: "Монтаж мембраны",
+        quantity: 120,
+        unit: "м²",
+        workerCount: 6,
+        hoursPerWorker: 8,
+        laborHours: 48,
+        laborAllocationMode: "auto"
+      }],
+      onChange: vi.fn(),
+      onShiftHoursChange: vi.fn()
+    }));
+
+    expect(html).toContain("Состав смены");
+    expect(html).toContain("12 чел.");
+    expect(html).toContain("Фонд смены");
+    expect(html).toContain("96 чел.-ч");
+    expect(html).toContain("Людей");
+    expect(html).toContain("Часов на человека");
+    expect(html).toContain("Распределить");
+    expect(html).toContain("распределено автоматически");
+  });
 });

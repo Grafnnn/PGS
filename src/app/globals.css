@@ -10368,15 +10368,65 @@ input[type="checkbox"] {
   min-width: 0;
 }
 
+.daily-labor-capacity {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(120px, 1fr)) auto;
+  gap: 8px;
+  align-items: stretch;
+  padding: 10px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.daily-labor-capacity > div,
+.daily-labor-capacity > label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 7px 9px;
+  background: var(--panel-muted);
+}
+
+.daily-labor-capacity svg {
+  flex: 0 0 auto;
+  color: var(--accent);
+}
+
+.daily-labor-capacity span {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.daily-labor-capacity strong {
+  color: var(--text);
+  font-size: 13px;
+}
+
+.daily-labor-capacity input {
+  width: 86px;
+  min-height: 32px;
+  padding: 4px 7px;
+}
+
+.daily-labor-capacity.is-over {
+  border-color: var(--red);
+}
+
+.daily-labor-capacity.is-over > div:nth-of-type(3) {
+  background: var(--red-soft);
+}
+
 .daily-report-output-row {
   display: grid;
   grid-template-columns:
     minmax(130px, 1fr)
-    minmax(170px, 1.35fr)
+    minmax(220px, 1.65fr)
     minmax(88px, 0.55fr)
     minmax(70px, 0.45fr)
-    minmax(112px, 0.7fr)
-    minmax(145px, 0.9fr)
     36px;
   gap: 8px;
   align-items: end;
@@ -10393,6 +10443,37 @@ input[type="checkbox"] {
 .daily-report-output-row input {
   width: 100%;
   min-width: 0;
+}
+
+.daily-report-output-labor {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: minmax(110px, 0.55fr) minmax(150px, 0.75fr) minmax(170px, 0.9fr) minmax(210px, 1.4fr);
+  gap: 8px;
+  align-items: end;
+  min-width: 0;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+
+.daily-report-output-labor-total {
+  display: grid;
+  gap: 2px;
+  min-height: 44px;
+  align-content: center;
+  padding: 6px 9px;
+  background: var(--accent-soft);
+}
+
+.daily-report-output-labor-total small,
+.daily-report-output-labor-total span {
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.daily-report-output-labor-total strong {
+  color: var(--accent);
+  font-size: 14px;
 }
 
 .daily-report-output-norm {
@@ -10714,6 +10795,15 @@ input[type="checkbox"] {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .daily-labor-capacity,
+  .daily-report-output-labor {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .daily-labor-capacity > .button {
+    grid-column: 1 / -1;
+  }
+
   .daily-report-output-row .icon-button {
     justify-self: end;
   }
@@ -10758,6 +10848,36 @@ input[type="checkbox"] {
   .daily-report-output-row,
   .daily-work-scope-list {
     grid-template-columns: 1fr;
+  }
+
+  .daily-labor-capacity,
+  .daily-report-output-labor {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .daily-report-output-row {
+    position: relative;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .daily-report-output-row > .output-profession,
+  .daily-report-output-row > .output-work,
+  .daily-report-output-row > .daily-report-output-labor {
+    grid-column: 1 / -1;
+  }
+
+  .daily-report-output-row > .output-profession {
+    padding-right: 44px;
+  }
+
+  .daily-report-output-row > .icon-button {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+  }
+
+  .daily-labor-capacity > .button {
+    grid-column: 1 / -1;
   }
 
   .daily-shift-steps,

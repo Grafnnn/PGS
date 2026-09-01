@@ -159,6 +159,7 @@ export function serializeDailyReport(item: DbDailyReport & { evidenceDocuments?:
     downtime: item.downtime,
     issues: item.issues,
     workOutputs: parseDailyReportWorkOutputs(item.workOutputs),
+    shiftHours: item.shiftHours === undefined ? 8 : num(item.shiftHours),
     phase: item.phase === "open" ? "open" : "closed",
     workCategory: item.workCategory,
     workScopes: parseDailyReportWorkScopes(item.workScopes, item.workCategory),

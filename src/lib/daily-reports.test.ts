@@ -65,6 +65,37 @@ describe("daily report workflow", () => {
     })).toEqual([]);
   });
 
+  it("validates people and person-hours against the selected crew shift", () => {
+    const allocated = {
+      ...report,
+      shiftHours: 6,
+      workOutputs: [{
+        ...report.workOutputs[0],
+        workerCount: 5,
+        hoursPerWorker: 6,
+        laborHours: 30,
+        laborAllocationMode: "auto" as const
+      }]
+    };
+
+    expect(dailyReportSubmissionIssues(allocated)).toEqual([]);
+    expect(dailyReportSubmissionIssues({
+      ...allocated,
+      workOutputs: [{ ...allocated.workOutputs[0], workerCount: 6, laborHours: 36 }]
+    })).toContainEqual(expect.objectContaining({ field: "workOutputs", message: expect.stringContaining("больше людей") }));
+    expect(dailyReportSubmissionIssues({
+      ...allocated,
+      workOutputs: [{ ...allocated.workOutputs[0], hoursPerWorker: 7, laborHours: 35 }]
+    })).toContainEqual(expect.objectContaining({ field: "workOutputs", message: expect.stringContaining("продолжительность смены") }));
+    expect(dailyReportSubmissionIssues({
+      ...allocated,
+      workOutputs: [
+        { ...allocated.workOutputs[0], workerCount: 3, hoursPerWorker: 6, laborHours: 18 },
+        { ...allocated.workOutputs[0], workName: "Работа 2", workerCount: 3, hoursPerWorker: 6, laborHours: 18 }
+      ]
+    })).toContainEqual(expect.objectContaining({ field: "workOutputs", message: expect.stringContaining("фонд смены") }));
+  });
+
   it("accepts a planned open shift but blocks submission until the fact is closed", () => {
     const openShift = {
       ...report,

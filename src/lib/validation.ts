@@ -108,6 +108,7 @@ export const dailyReportSchema = z.object({
   downtime: z.string().default(""),
   issues: z.string().default(""),
   workOutputs: dailyReportWorkOutputsSchema.default([]),
+  shiftHours: z.coerce.number().min(0.5).max(24).default(8),
   phase: z.enum(["open", "closed"]).default("closed"),
   workCategory: z.string().trim().max(240).default(""),
   workScopes: dailyReportWorkScopesSchema.default([]),

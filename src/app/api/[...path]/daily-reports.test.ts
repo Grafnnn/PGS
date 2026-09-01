@@ -52,6 +52,7 @@ const before = {
   id: "daily-1", organizationId: "org-1", projectId: "project-1", date: new Date("2026-07-14T12:00:00Z"), author: "Прораб",
   weather: "Ясно", workers: 7, engineers: 1, equipment: "Кран", completedWorks: "Монтаж", materialsReceived: "",
   materialsConsumed: "", downtime: "", issues: "",
+  shiftHours: new Prisma.Decimal(20),
   workOutputs: [{ profession: "Монтажник", workName: "Монтаж конструкций", quantity: 12, unit: "т", laborHours: 160 }],
   status: "draft", createdBy: "manager-1", createdAt: new Date(), updatedAt: new Date()
 };

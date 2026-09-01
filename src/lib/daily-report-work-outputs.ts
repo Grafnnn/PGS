@@ -32,13 +32,23 @@ export const dailyReportWorkOutputSchema = z.object({
   workName: z.string().trim().min(2).max(240),
   quantity: z.coerce.number().positive().max(1_000_000_000),
   unit: z.string().trim().min(1).max(40),
-  laborHours: z.coerce.number().positive().max(10_000_000)
-}).strict().transform((output) => ({
+  laborHours: z.coerce.number().positive().max(10_000_000),
+  workerCount: z.coerce.number().int().positive().max(100_000).optional(),
+  hoursPerWorker: z.coerce.number().positive().max(24).optional(),
+  laborAllocationMode: z.enum(["auto", "manual"]).optional()
+}).strict().superRefine((output, context) => {
+  if ((output.workerCount === undefined) !== (output.hoursPerWorker === undefined)) {
+    context.addIssue({ code: z.ZodIssueCode.custom, message: "Количество людей и часы на человека должны быть указаны вместе." });
+  }
+}).transform((output) => ({
   ...output,
   scheduleItemId: output.scheduleItemId?.trim() || undefined,
   profession: compactText(output.profession),
   workName: compactText(output.workName),
-  unit: normalizeDailyReportWorkOutputUnit(output.unit)
+  unit: normalizeDailyReportWorkOutputUnit(output.unit),
+  laborHours: output.workerCount !== undefined && output.hoursPerWorker !== undefined
+    ? dailyReportLaborHours(output.workerCount, output.hoursPerWorker)
+    : output.laborHours
 }));
 
 export const dailyReportWorkOutputsSchema = z.array(dailyReportWorkOutputSchema).max(40);
@@ -64,7 +74,87 @@ export function dailyReportWorkOutputIssues(output: DailyReportWorkOutput): Part
   if (!Number.isFinite(output.quantity) || output.quantity <= 0 || output.quantity > 1_000_000_000) issues.quantity = "Объём должен быть больше нуля и не превышать 1 млрд.";
   if (!output.unit.trim() || output.unit.length > 40) issues.unit = "Укажите единицу измерения (до 40 символов).";
   if (!Number.isFinite(output.laborHours) || output.laborHours <= 0 || output.laborHours > 10_000_000) issues.laborHours = "Трудозатраты должны быть больше нуля и не превышать 10 млн часов.";
+  if (output.workerCount !== undefined && (!Number.isInteger(output.workerCount) || output.workerCount <= 0 || output.workerCount > 100_000)) issues.workerCount = "Количество людей должно быть целым числом больше нуля.";
+  if (output.hoursPerWorker !== undefined && (!Number.isFinite(output.hoursPerWorker) || output.hoursPerWorker <= 0 || output.hoursPerWorker > 24)) issues.hoursPerWorker = "Часы на человека должны быть больше нуля и не превышать 24.";
+  if ((output.workerCount === undefined) !== (output.hoursPerWorker === undefined)) {
+    issues.workerCount = "Укажите количество людей и часы на человека.";
+    issues.hoursPerWorker = "Укажите количество людей и часы на человека.";
+  }
   return issues;
+}
+
+function roundLabor(value: number) {
+  return Math.round(value * 1000) / 1000;
+}
+
+function roundHours(value: number) {
+  return Math.round(value * 1_000_000) / 1_000_000;
+}
+
+export function dailyReportLaborHours(workerCount: number, hoursPerWorker: number) {
+  if (!Number.isFinite(workerCount) || !Number.isFinite(hoursPerWorker)) return 0;
+  return roundLabor(Math.max(0, workerCount) * Math.max(0, hoursPerWorker));
+}
+
+export function dailyReportLaborCapacity(headcount: number, shiftHours: number) {
+  return dailyReportLaborHours(headcount, shiftHours);
+}
+
+export function dailyReportWorkOutputAllocation(output: DailyReportWorkOutput, shiftHours: number) {
+  if (output.workerCount !== undefined && output.hoursPerWorker !== undefined) {
+    return { workerCount: output.workerCount, hoursPerWorker: output.hoursPerWorker };
+  }
+  if (!Number.isFinite(output.laborHours) || output.laborHours <= 0) {
+    return { workerCount: 0, hoursPerWorker: 0 };
+  }
+  const safeShiftHours = Number.isFinite(shiftHours) && shiftHours > 0 ? shiftHours : 8;
+  const workerCount = Math.max(1, Math.ceil(Math.max(0, output.laborHours) / safeShiftHours));
+  return {
+    workerCount,
+    hoursPerWorker: roundLabor(output.laborHours / workerCount)
+  };
+}
+
+export function allocateDailyReportLabor(
+  outputs: DailyReportWorkOutput[],
+  headcount: number,
+  shiftHours: number,
+  force = false
+): DailyReportWorkOutput[] {
+  const capacity = dailyReportLaborCapacity(headcount, shiftHours);
+  if (!outputs.length || capacity <= 0) return outputs;
+  const autoIndexes = outputs.flatMap((output, index) => (
+    force || output.laborAllocationMode === "auto" || output.laborHours <= 0 ? [index] : []
+  ));
+  if (!autoIndexes.length) return outputs;
+  const autoSet = new Set(autoIndexes);
+  const manuallyAllocated = force ? 0 : outputs.reduce((sum, output, index) => (
+    autoSet.has(index) ? sum : sum + Math.max(0, output.laborHours)
+  ), 0);
+  const availableUnits = Math.max(0, Math.round((capacity - manuallyAllocated) * 1000));
+  if (availableUnits <= 0) return outputs.map((output, index) => autoSet.has(index)
+    ? { ...output, workerCount: undefined, hoursPerWorker: undefined, laborHours: 0, laborAllocationMode: "auto" as const }
+    : output);
+  const baseUnits = Math.floor(availableUnits / autoIndexes.length);
+  const extraUnits = availableUnits % autoIndexes.length;
+  const autoPosition = new Map(autoIndexes.map((index, position) => [index, position]));
+  return outputs.map((output, index) => {
+    if (!autoSet.has(index)) return output;
+    const position = autoPosition.get(index) ?? 0;
+    const share = (baseUnits + (position < extraUnits ? 1 : 0)) / 1000;
+    if (share <= 0) {
+      return { ...output, workerCount: undefined, hoursPerWorker: undefined, laborHours: 0, laborAllocationMode: "auto" as const };
+    }
+    const workerCount = Math.max(1, Math.floor(headcount));
+    const hoursPerWorker = roundHours(share / workerCount);
+    return {
+      ...output,
+      workerCount,
+      hoursPerWorker,
+      laborHours: dailyReportLaborHours(workerCount, hoursPerWorker),
+      laborAllocationMode: "auto" as const
+    };
+  });
 }
 
 export function dailyReportWorkOutputTotals(outputs: DailyReportWorkOutput[]) {
