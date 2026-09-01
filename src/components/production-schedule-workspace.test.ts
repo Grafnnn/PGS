@@ -156,6 +156,11 @@ describe("ProductionScheduleWorkspace", () => {
     expect(html).toContain("production-work-row tone-");
     expect(html).toContain("role=\"img\"");
     expect(html).toContain("aria-label=\"Управление диаграммой\"");
+    expect(html).toContain("aria-label=\"Плотность диаграммы\"");
+    expect(html).toContain("data-density=\"compact\"");
+    expect(html).toContain("production-gantt-track is-phase");
+    expect(html).toContain("production-gantt-track is-work");
+    expect(html).toContain("--atlas-gantt-columns:6");
     expect(html).toContain("aria-label=\"Увеличить масштаб\"");
     expect(html).toContain("Раскрыть этапы");
     expect(html).toContain("Сегодня");

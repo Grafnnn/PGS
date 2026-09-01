@@ -1211,8 +1211,87 @@ body.design-v5 .dashboard-atlas-charts {
 /* Gantt is an explicit horizontal canvas; the page itself remains the vertical scroll owner. */
 
 body.design-v5 .production-schedule-workspace {
+  gap: 10px;
   min-width: 0;
   width: 100%;
+}
+
+body.design-v5 .production-schedule-header {
+  border-left-width: 3px;
+  padding: 13px 16px;
+}
+
+body.design-v5 .production-schedule-header h2 {
+  font-family: var(--font-sans);
+  font-size: 19px;
+  font-weight: 560;
+  line-height: 1.2;
+}
+
+body.design-v5 .production-schedule-header p {
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 400;
+  margin-top: 5px;
+}
+
+body.design-v5 .production-schedule-metrics article {
+  gap: 2px;
+  min-height: 70px;
+  padding: 9px 12px;
+}
+
+body.design-v5 .production-schedule-metrics small {
+  font-size: 9px;
+  font-weight: 520;
+  text-transform: none;
+}
+
+body.design-v5 .production-schedule-metrics strong {
+  font-family: var(--font-sans);
+  font-size: 18px;
+  font-weight: 580;
+}
+
+body.design-v5 .production-schedule-metrics span {
+  font-size: 10px;
+  font-weight: 400;
+}
+
+body.design-v5 .production-schedule-view-tabs {
+  margin-bottom: 8px;
+}
+
+body.design-v5 .production-schedule-plan-view {
+  display: grid;
+  gap: 8px;
+}
+
+body.design-v5 .production-schedule-plan-view[hidden] {
+  display: none;
+}
+
+body.design-v5 .production-schedule-toolbar {
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+body.design-v5 .production-schedule-search {
+  flex: 1 1 230px;
+  min-width: 210px;
+}
+
+body.design-v5 .production-schedule-search input {
+  font-size: 11px;
+  font-weight: 400;
+  height: 34px;
+}
+
+body.design-v5 .production-schedule-filters button {
+  font-size: 10px;
+  font-weight: 500;
+  min-height: 30px;
+  padding: 4px 7px;
 }
 
 body.design-v5 .production-schedule-header,
@@ -1235,7 +1314,8 @@ body.design-v5 .production-gantt-controls {
 }
 
 body.design-v5 .production-gantt-controls button,
-body.design-v5 .production-gantt-zoom {
+body.design-v5 .production-gantt-zoom,
+body.design-v5 .production-gantt-density {
   align-items: center;
   background: #fff;
   border: 1px solid var(--line);
@@ -1249,6 +1329,25 @@ body.design-v5 .production-gantt-zoom {
 
 body.design-v5 .production-gantt-zoom {
   padding: 0;
+}
+
+body.design-v5 .production-gantt-density {
+  gap: 2px;
+  padding: 2px;
+}
+
+body.design-v5 .production-gantt-density button {
+  border: 0;
+  border-radius: 3px;
+  font-size: 9px;
+  font-weight: 500;
+  height: 26px;
+  padding: 0 7px;
+}
+
+body.design-v5 .production-gantt-density button.active {
+  background: #17262c;
+  color: #fff;
 }
 
 body.design-v5 .production-gantt-zoom button {
@@ -1266,27 +1365,175 @@ body.design-v5 .production-gantt-zoom output {
 }
 
 body.design-v5 .production-gantt-viewport {
+  background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 5px;
-  margin-top: 10px;
+  margin-top: 2px;
+  max-height: min(68vh, 720px);
   max-width: 100%;
   min-width: 0;
-  overflow-x: auto;
-  overflow-y: visible;
+  overscroll-behavior: contain;
+  overflow: auto;
   position: relative;
+  scrollbar-color: var(--line-strong) transparent;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
   scroll-behavior: smooth;
   width: 100%;
+}
+
+body.design-v5 .production-gantt-viewport:fullscreen {
+  background: var(--panel);
+  max-height: none;
+  padding: 10px;
+}
+
+body.design-v5 .production-gantt-viewport::-webkit-scrollbar {
+  height: 8px;
+  width: 8px;
+}
+
+body.design-v5 .production-gantt-viewport::-webkit-scrollbar-thumb {
+  background: var(--line-strong);
+  border: 2px solid var(--panel);
+  border-radius: 4px;
 }
 
 body.design-v5 .production-gantt-viewport .production-phase-list {
   border: 0;
   margin: 0;
-  min-width: calc(980px * var(--atlas-timeline-zoom, 1));
+  min-width: calc(920px * var(--atlas-timeline-zoom, 1));
   width: 100%;
 }
 
+body.design-v5 .production-gantt-axis {
+  background: color-mix(in srgb, var(--panel-muted) 94%, #fff);
+  font-size: 9px;
+  font-weight: 520;
+  min-height: 34px;
+  padding-block: 4px;
+  position: sticky;
+  text-transform: none;
+  top: 0;
+  z-index: 8;
+}
+
+body.design-v5 .production-gantt-axis-dates > span {
+  font-family: var(--font-sans);
+  font-size: 9px;
+  font-weight: 430;
+}
+
+body.design-v5 .production-phase-title strong,
+body.design-v5 .production-work-title strong {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.18;
+}
+
+body.design-v5 .production-phase-title strong {
+  font-size: 11.5px;
+  font-weight: 570;
+}
+
+body.design-v5 .production-phase-title small,
+body.design-v5 .production-work-title small {
+  font-family: var(--font-sans);
+  font-size: 9px;
+  font-weight: 390;
+  line-height: 1.2;
+}
+
+body.design-v5 .production-phase-state,
+body.design-v5 .production-status-label {
+  font-size: 9px;
+  font-weight: 500;
+}
+
+body.design-v5 .production-status-label {
+  padding: 3px 5px;
+}
+
+body.design-v5 .density-compact .production-phase > summary {
+  gap: 8px;
+  min-height: 46px;
+  padding: 5px 8px;
+}
+
+body.design-v5 .density-compact .production-work-row > summary {
+  gap: 8px;
+  min-height: 40px;
+  padding: 4px 8px;
+}
+
+body.design-v5 .density-compact .production-phase-index {
+  border-radius: 3px;
+  font-size: 9px;
+  height: 24px;
+  width: 24px;
+}
+
+body.design-v5 .density-compact .production-status-dot {
+  height: 6px;
+  width: 6px;
+}
+
+body.design-v5 .density-comfortable .production-phase > summary {
+  min-height: 62px;
+}
+
+body.design-v5 .density-comfortable .production-work-row > summary {
+  min-height: 56px;
+}
+
 body.design-v5 .production-gantt-track {
+  background-image: linear-gradient(to right, color-mix(in srgb, var(--line) 72%, transparent) 1px, transparent 1px);
+  background-size: calc(100% / var(--atlas-gantt-columns, 6)) 100%;
+  border-color: color-mix(in srgb, var(--line) 82%, transparent);
+  border-radius: 3px;
+  height: 24px;
   position: relative;
+}
+
+body.design-v5 .production-gantt-track.is-phase {
+  background-color: color-mix(in srgb, var(--panel-muted) 82%, #fff);
+}
+
+body.design-v5 .production-gantt-bar {
+  border-radius: 2px;
+  height: 12px;
+  top: 5px;
+}
+
+body.design-v5 .production-gantt-track.is-phase .production-gantt-bar {
+  height: 10px;
+  top: 6px;
+}
+
+body.design-v5 .density-comfortable .production-gantt-track {
+  height: 32px;
+}
+
+body.design-v5 .density-comfortable .production-gantt-bar {
+  height: 18px;
+  top: 6px;
+}
+
+body.design-v5 .density-comfortable .production-gantt-track.is-phase .production-gantt-bar {
+  height: 14px;
+  top: 8px;
+}
+
+body.design-v5 .production-gantt-bar > small {
+  font-family: var(--font-sans);
+  font-size: 8px;
+  font-weight: 520;
+  padding-inline: 4px;
+}
+
+body.design-v5 .production-today-line {
+  opacity: 0.78;
 }
 
 body.design-v5 .production-gantt-track:focus-visible {
@@ -1313,6 +1560,46 @@ body.design-v5 .production-gantt-tooltip {
 body.design-v5 .production-gantt-track:hover .production-gantt-tooltip,
 body.design-v5 .production-gantt-track:focus .production-gantt-tooltip {
   display: block;
+}
+
+@media (min-width: 721px) {
+  body.design-v5 .production-gantt-axis,
+  body.design-v5 .production-phase > summary,
+  body.design-v5 .production-work-row > summary {
+    grid-template-columns: 28px minmax(230px, 0.78fr) minmax(360px, 1.5fr) minmax(82px, auto) 18px;
+  }
+}
+
+@media (max-width: 720px) {
+  body.design-v5 .production-schedule-header {
+    padding: 12px;
+  }
+
+  body.design-v5 .production-schedule-metrics article {
+    min-height: 64px;
+  }
+
+  body.design-v5 .production-gantt-controls {
+    justify-content: flex-start;
+  }
+
+  body.design-v5 .production-gantt-viewport {
+    max-height: none;
+    overflow-x: auto;
+    overflow-y: visible;
+  }
+
+  body.design-v5 .production-gantt-viewport .production-phase-list {
+    min-width: calc(760px * var(--atlas-timeline-zoom, 1));
+  }
+
+  body.design-v5 .density-compact .production-phase > summary {
+    min-height: 72px;
+  }
+
+  body.design-v5 .density-compact .production-work-row > summary {
+    min-height: 82px;
+  }
 }
 
 @media (max-width: 1180px) {

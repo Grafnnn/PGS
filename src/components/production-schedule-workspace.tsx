@@ -35,6 +35,7 @@ type ScheduleDraftState = {
 } | null;
 
 type ScheduleView = "plan" | "week" | "risks" | "cashflow" | "automation";
+type ScheduleDensity = "compact" | "comfortable";
 
 export type ScheduleCreateInput = Omit<ScheduleItem, "id" | "projectId" | "actualQty" | "status" | "budgetItemId"> & {
   budgetItemId?: string | null;
@@ -392,7 +393,9 @@ function TimelineBar({
   progress,
   scale,
   tone,
-  label
+  label,
+  gridColumns,
+  variant
 }: {
   startsAt: string;
   endsAt: string;
@@ -400,11 +403,19 @@ function TimelineBar({
   scale: ReturnType<typeof timelineScale>;
   tone: string;
   label?: string;
+  gridColumns: number;
+  variant: "phase" | "work";
 }) {
   const position = timelinePosition(startsAt, endsAt, scale);
 
   return (
-    <div className="production-gantt-track" role="img" tabIndex={0} aria-label={`Период: ${formatDate(startsAt)} — ${formatDate(endsAt)}, выполнено ${Math.round(progress)}%`}>
+    <div
+      className={`production-gantt-track is-${variant}`}
+      role="img"
+      style={{ "--atlas-gantt-columns": gridColumns } as React.CSSProperties}
+      tabIndex={0}
+      aria-label={`Период: ${formatDate(startsAt)} — ${formatDate(endsAt)}, выполнено ${Math.round(progress)}%`}
+    >
       {scale.todayLeft !== null ? <i className="production-today-line" style={{ left: `${scale.todayLeft}%` }} /> : null}
       <span className={`production-gantt-bar tone-${tone}`} style={{ left: `${position.left}%`, width: `${position.width}%` }}>
         <b style={{ width: `${progress}%` }} />
@@ -419,6 +430,7 @@ function WorkRow({
   item,
   budgetItems,
   scale,
+  gridColumns,
   canEdit,
   busy,
   editing,
@@ -430,6 +442,7 @@ function WorkRow({
   item: ScheduleItem;
   budgetItems: BudgetItem[];
   scale: ReturnType<typeof timelineScale>;
+  gridColumns: number;
   canEdit: boolean;
   busy: boolean;
   editing: boolean;
@@ -452,7 +465,7 @@ function WorkRow({
           <strong>{item.name}</strong>
           <small>{item.owner || "Ответственный не назначен"} · {formatShortDate(item.startsAt)} — {formatShortDate(item.endsAt)}</small>
         </span>
-        <TimelineBar endsAt={item.endsAt} label={`${Math.round(progress)}%`} progress={progress} scale={scale} startsAt={item.startsAt} tone={rowTone} />
+        <TimelineBar endsAt={item.endsAt} gridColumns={gridColumns} label={`${Math.round(progress)}%`} progress={progress} scale={scale} startsAt={item.startsAt} tone={rowTone} variant="work" />
         <span className={`production-status-label tone-${rowTone}`}>{rowStatus}</span>
         <ChevronDown className="production-disclosure-chevron" size={17} aria-hidden="true" />
       </summary>
@@ -546,6 +559,7 @@ export function ProductionScheduleWorkspace({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [view, setView] = useState<ScheduleView>("plan");
   const [timelineZoom, setTimelineZoom] = useState(1);
+  const [density, setDensity] = useState<ScheduleDensity>("compact");
   const [allExpanded, setAllExpanded] = useState(false);
   const timelineViewportRef = useRef<HTMLDivElement>(null);
   const normalizedQuery = query.trim().toLocaleLowerCase("ru-RU");
@@ -559,7 +573,8 @@ export function ProductionScheduleWorkspace({
     importHistory
   }), [budgetItems, contractAmount, importHistory, materials, payments, procurementRequests, projectEndsAt, projectName, projectStartsAt, scheduleItems]);
   const scale = useMemo(() => timelineScale(scheduleItems, projectStartsAt, projectEndsAt), [projectEndsAt, projectStartsAt, scheduleItems]);
-  const ticks = useMemo(() => timelineTicks(scale), [scale]);
+  const ticks = useMemo(() => timelineTicks(scale, Math.min(17, Math.max(7, Math.round(7 * timelineZoom)))), [scale, timelineZoom]);
+  const gridColumns = Math.max(1, ticks.length - 1);
   const visibleItems = useMemo(() => scheduleItems.filter((item) => {
     if (filter === "active" && item.status !== "in_progress") return false;
     if (filter === "delayed" && !isDelayed(item)) return false;
@@ -583,7 +598,7 @@ export function ProductionScheduleWorkspace({
 
   function toggleAllGroups() {
     const next = !allExpanded;
-    timelineViewportRef.current?.querySelectorAll("details").forEach((details) => {
+    timelineViewportRef.current?.querySelectorAll<HTMLDetailsElement>(".production-phase").forEach((details) => {
       details.open = next;
     });
     setAllExpanded(next);
@@ -652,6 +667,10 @@ export function ProductionScheduleWorkspace({
           ))}
         </div>
         <div className="production-gantt-controls" aria-label="Управление диаграммой">
+          <div className="production-gantt-density" role="group" aria-label="Плотность диаграммы">
+            <button aria-pressed={density === "compact"} className={density === "compact" ? "active" : ""} onClick={() => setDensity("compact")} type="button">Плотно</button>
+            <button aria-pressed={density === "comfortable"} className={density === "comfortable" ? "active" : ""} onClick={() => setDensity("comfortable")} type="button">Свободно</button>
+          </div>
           <div className="production-gantt-zoom" role="group" aria-label="Масштаб диаграммы">
             <button aria-label="Уменьшить масштаб" disabled={timelineZoom <= 1} onClick={() => setTimelineZoom((value) => Math.max(1, Number((value - 0.25).toFixed(2))))} type="button"><Minus size={15} /></button>
             <output aria-live="polite">{Math.round(timelineZoom * 100)}%</output>
@@ -680,7 +699,7 @@ export function ProductionScheduleWorkspace({
         </details>
       ) : null}
 
-      <div className="production-gantt-viewport" ref={timelineViewportRef} style={{ "--atlas-timeline-zoom": timelineZoom } as React.CSSProperties}>
+      <div className={`production-gantt-viewport density-${density}`} data-density={density} ref={timelineViewportRef} style={{ "--atlas-timeline-zoom": timelineZoom } as React.CSSProperties}>
       <div className="production-phase-list" id="production-gantt">
         <div className="production-gantt-axis" aria-hidden="true">
           <span className="production-gantt-axis-title">Этап / работа</span>
@@ -695,7 +714,7 @@ export function ProductionScheduleWorkspace({
             <summary>
               <span className="production-phase-index">{String(groupIndex + 1).padStart(2, "0")}</span>
               <span className="production-phase-title"><strong>{group.title}</strong><small>{workCountLabel(group.items.length)} · {formatShortDate(group.startsAt)} — {formatShortDate(group.endsAt)}</small></span>
-              <TimelineBar endsAt={group.endsAt} label={`${Math.round(group.progress)}%`} progress={group.progress} scale={scale} startsAt={group.startsAt} tone={group.tone} />
+              <TimelineBar endsAt={group.endsAt} gridColumns={gridColumns} label={`${Math.round(group.progress)}%`} progress={group.progress} scale={scale} startsAt={group.startsAt} tone={group.tone} variant="phase" />
               <span className="production-phase-state">{group.delayed ? `${group.delayed} откл.` : group.active ? `${group.active} в работе` : group.done === group.items.length ? "завершено" : "по плану"}</span>
               <ChevronDown className="production-disclosure-chevron" size={18} aria-hidden="true" />
             </summary>
@@ -708,6 +727,7 @@ export function ProductionScheduleWorkspace({
                   editing={editingId === item.id}
                   item={item}
                   key={item.id}
+                  gridColumns={gridColumns}
                   onCancelEdit={() => setEditingId(null)}
                   onDelete={async () => {
                     await onDelete(item);
