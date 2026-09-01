@@ -358,6 +358,87 @@ describe("project workbook import", () => {
     ]);
   });
 
+  it("imports a canonical commercial proposal, procurement register and weekly KS detail without duplicating source views", () => {
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([
+      ["Объект: Капитальный ремонт кровли, г. Троицк"],
+      [],
+      ["Коммерческое предложение на выполнение работ по кровле"],
+      [],
+      ["№ пп", "Наименование конструктивных решений (элементов), комплексов (видов) работ", "Ед.изм.", "Кол-во", "Ед. расценка", "Всего"],
+      [],
+      ["", "Раздел 1. Демонтажные работы"],
+      [1, "Демонтаж покрытия", "м2", 10, 100, 1000],
+      ["", "Раздел 2. Новая кровля"],
+      [1, "Устройство мембраны", "м2", 20, 100, 2000],
+      ["", "Итого:", "", "", "", 3000],
+      ["", "ВСЕГО (без НДС):", "", "", "", 3000]
+    ]), "КП-250826");
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([
+      ["Source_Row_ID", "Строка сводной заявки", "Тип строки", "Пакет размещения", "Заказать / запустить до", "Окно потребности на площадке", "GPR_ID / фронт", "Вид закупки", "Заявка", "Марка / поз. РД", "Материал", "Характеристика", "Ед.", "К заказу", "Масса нетто, кг", "Вид работ", "Источник количества", "Контроль / комментарий"],
+      ["SRC-1", 1, "ORDER", "Н1–2", "04.09.2026", "07.09–19.09.2026", "G01", "Кровля", "МЗ-01", "В20", "Бетон", "Плита З1", "м3", 5, "", "Монолит З1", "ВОР", "Проверить поставщика"],
+      ["SRC-2", 2, "BREAKDOWN", "Н1–2", "04.09.2026", "07.09–19.09.2026", "G01", "Кровля", "МЗ-01", "B500", "Арматура", "Деталировка", "кг", 500, "", "Монолит З1", "КМД", "Не заказывать отдельно"],
+      ["SRC-3", 3, "INFO-RFI", "Н3–4", "18.09.2026", "21.09–03.10.2026", "G02", "Кровля", "МЗ-02", "По РД", "Крепеж", "Тип уточнить", "шт", "", "", "Мембрана", "РД", "HOLD/RFI"]
+    ]), "Реестр");
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([
+      ["Строка КП", "Раздел / подраздел", "№", "Наименование работ", "Ед.", "Кол-во КП", "Расценка КП, ₽", "Утверждено КП, ₽", "Профиль ГПР", "Н1", "Н2", "Н3"],
+      [8, "Раздел 1. Демонтажные работы", 1, "Демонтаж покрытия", "м2", 10, 100, 1000, "G01", 600, 400, 0],
+      [10, "Раздел 2. Новая кровля", 1, "Устройство мембраны", "м2", 20, 100, 2000, "G02", 0, 500, 1500]
+    ]), "КС детализация");
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([
+      ["ПРОГНОЗ ВЫПОЛНЕНИЯ КС"],
+      [],
+      ["Неделя", "Период", "План КС, ₽", "% КП", "План накопительно, ₽", "Факт КС, ₽", "Факт накопительно, ₽", "Отклонение", "Статус", "Ключевые работы"],
+      ["Н1", "07.09–12.09", 600, 20, 600, "", "", "", "ПЛАН", "Демонтаж"]
+    ]), "Прогноз КС");
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([
+      ["Вид закупки / уровень", "Заявка", "Марка", "Материал", "Характеристика", "Ед.", "К заказу", "Масса", "Вид работ"],
+      ["Кровля", "МЗ-01", "В20", "Бетон", "Плита З1", "м3", 5, "", "Монолит З1"]
+    ]), "Весь объект");
+    const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" }) as Buffer;
+
+    const analysis = analyzeProjectWorkbookBuffer(buffer, "troitsk.xlsx", "project");
+    const preview = parseProjectWorkbookBuffer(buffer, "troitsk.xlsx", "project");
+
+    expect(analysis.errors).toEqual([]);
+    expect(analysis.summary).toMatchObject({
+      reviewSheets: 0,
+      budgetItems: 4,
+      materials: 2,
+      scheduleItems: 2,
+      sourceDirectCost: 3000,
+      reconciliationGap: 0
+    });
+    expect(analysis.summary.estimatedDirectCost).toBe(3000);
+    expect(analysis.suggestions).toMatchObject({
+      contractAmount: 3000,
+      startsAt: "2026-09-07",
+      endsAt: "2026-09-26"
+    });
+    expect(analysis.sheets.find((sheet) => sheet.sheetName === "КП-250826")).toMatchObject({ role: "works", included: true });
+    expect(analysis.sheets.find((sheet) => sheet.sheetName === "Реестр")).toMatchObject({ role: "materials", included: true });
+    expect(analysis.sheets.find((sheet) => sheet.sheetName === "КС детализация")).toMatchObject({ role: "schedule", included: true });
+    expect(analysis.sheets.find((sheet) => sheet.sheetName === "Прогноз КС")).toMatchObject({ role: "reference", included: false });
+    expect(analysis.sheets.find((sheet) => sheet.sheetName === "Весь объект")).toMatchObject({ role: "reference", included: false });
+    expect(preview.budgetItems.filter((item) => item.kind === "work")).toEqual([
+      expect.objectContaining({ section: "Раздел 1. Демонтажные работы", name: "Демонтаж покрытия", qty: 10, plannedUnitPrice: 100 }),
+      expect.objectContaining({ section: "Раздел 2. Новая кровля", name: "Устройство мембраны", qty: 20, plannedUnitPrice: 100 })
+    ]);
+    expect(preview.materials).toEqual([
+      expect.objectContaining({ name: expect.stringContaining("[МЗ-01] Бетон"), requiredQty: 5, neededAt: "2026-09-04" }),
+      expect.objectContaining({ name: expect.stringContaining("[МЗ-02] Крепеж"), requiredQty: 0, neededAt: "2026-09-18" })
+    ]);
+    expect(preview.materials.some((item) => item.name.includes("Арматура"))).toBe(false);
+    expect(preview.scheduleItems).toEqual([
+      expect.objectContaining({ startsAt: "2026-09-07", endsAt: "2026-09-19", plannedQty: 10 }),
+      expect.objectContaining({ startsAt: "2026-09-14", endsAt: "2026-09-26", plannedQty: 20 })
+    ]);
+    expect(preview.previewRows?.find((row) => row.name?.includes("Крепеж"))).toMatchObject({
+      status: "warning",
+      suspiciousFlags: expect.arrayContaining(["missingQuantity", "missingPrice"])
+    });
+  });
+
   it("recalculates the workbook from confirmed sheet roles and exclusions", () => {
     const analysis = analyzeProjectWorkbookBuffer(workbookBuffer(), "project.xlsx", "preview", {
       startsAt: "2026-07-01",

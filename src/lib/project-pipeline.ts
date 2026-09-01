@@ -303,6 +303,7 @@ export function buildProcurementDraft(data: PipelineData) {
         materialId: material.id,
         material: material.name,
         unit: material.unit,
+        neededAt: material.neededAt,
         requiredQty: material.requiredQty,
         orderedQty: material.orderedQty,
         deliveredQty: material.deliveredQty,
@@ -706,14 +707,16 @@ export async function commitProcurementDraft(projectId: string, userId: string) 
   const draft = buildProcurementDraft(data);
   if (!draft.items.length) return { draft, created: [] };
   const created = await prisma.$transaction(
-    draft.items.map((item) =>
-      prisma.procurementRequest.create({
+    draft.items.map((item) => {
+      const importedNeededAt = new Date(item.neededAt);
+      const neededAt = Number.isNaN(importedNeededAt.getTime()) ? new Date() : importedNeededAt;
+      return prisma.procurementRequest.create({
         data: {
           organizationId: data.project.organizationId,
           projectId,
           title: `Черновик снабжения: ${item.material}`,
           initiator: "PGS Pipeline",
-          neededAt: new Date(),
+          neededAt,
           priority: item.status === "quote_needed" ? "high" : "medium",
           status: "draft",
           createdBy: userId,
@@ -730,8 +733,8 @@ export async function commitProcurementDraft(projectId: string, userId: string) 
           }
         },
         include: { items: true }
-      })
-    )
+      });
+    })
   );
   return { draft, created: created.map(serializeProcurementRequest) };
 }

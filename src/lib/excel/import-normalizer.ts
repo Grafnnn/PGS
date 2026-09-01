@@ -52,6 +52,7 @@ export function parseQuantity(value: unknown) {
 }
 
 export function parseMoney(value: unknown) {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
   return parseLocalizedNumber(normalizeCellValue(value).replace(currencyRegex, ""));
 }
 

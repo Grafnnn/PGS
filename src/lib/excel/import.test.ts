@@ -34,6 +34,7 @@ describe("excel budget import", () => {
     expect(normalizeNumber("6 100 руб.")).toBe(6100);
     expect(parseMoney("1.234.567,89 ₽")).toBe(1234567.89);
     expect(parseMoney("1,234.56")).toBe(1234.56);
+    expect(parseMoney(1_162_108.875)).toBe(1_162_108.875);
     expect(normalizeNumber("")).toBeNull();
   });
 
