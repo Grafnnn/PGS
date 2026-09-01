@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Prisma } from "@prisma/client";
+import { Prisma, type DailyReport as DbDailyReport, type ScheduleItem as DbScheduleItem } from "@prisma/client";
 import { ZodError } from "zod";
 import { askProjectAssistant, buildProjectContext, localAiFallback } from "@/lib/ai";
 import { writeAudit } from "@/lib/audit";
@@ -14,6 +14,7 @@ import {
   normalizeDailyReportFields
 } from "@/lib/daily-reports";
 import { buildDailyReportCrewMembers, dailyReportCrewCounts } from "@/lib/daily-report-crew";
+import { dailyReportProgressDeltas, scheduleStatusForActual } from "@/lib/daily-report-progress";
 import { dailyReportWorkScopeSummary, parseDailyReportWorkScopes } from "@/lib/daily-report-work-scopes";
 import { demoState } from "@/lib/demo-data";
 import { getDemoContext, getProjectBundleFromDb, listProjectsFromDb } from "@/lib/project-data";
@@ -111,7 +112,10 @@ export async function GET(request: NextRequest, { params }: { params: { path?: s
       if (resource === "daily-reports") {
         const items = await prisma.dailyReport.findMany({
           where: { projectId },
-          include: { evidenceDocuments: { orderBy: { uploadedAt: "asc" } } },
+          include: {
+            evidenceDocuments: { orderBy: { uploadedAt: "asc" } },
+            progressEntries: { orderBy: { createdAt: "asc" } }
+          },
           orderBy: [{ date: "desc" }, { createdAt: "desc" }]
         });
         return json({ items: items.map(serializeDailyReport) });
@@ -617,6 +621,11 @@ async function updateResource(resource: string, id: string, body: unknown, expec
     return json({ item: serializePayment(item) });
   }
   if (resource === "daily-reports") {
+    const control = body && typeof body === "object" ? body as Record<string, unknown> : {};
+    const applyProgress = control.applyProgress === true;
+    const correctionReason = typeof control.correctionReason === "string"
+      ? control.correctionReason.trim().replace(/\s+/g, " ")
+      : "";
     const parsed = normalizeDailyReportFields(partial(dailyReportSchema).parse(body));
     const before = await prisma.dailyReport.findUniqueOrThrow({ where: { id } });
     const normalizedWorkScopes = parsed.workScopes === undefined && parsed.workCategory === undefined
@@ -642,14 +651,24 @@ async function updateResource(resource: string, id: string, body: unknown, expec
         engineers: counts?.engineers ?? 0
       } : {})
     };
-    if (!Object.keys(data).length || (data.status === before.status && Object.keys(data).length === 1)) {
+    if ((!Object.keys(data).length && !applyProgress) || (data.status === before.status && Object.keys(data).length === 1 && !applyProgress)) {
       return json({ error: "No daily report changes requested" }, 409);
     }
+    if (applyProgress && Object.keys(data).length) {
+      return json({ error: "Progress synchronization must be requested separately" }, 409);
+    }
+    const role = data.status || applyProgress ? await getEffectiveProjectRole(user, before.projectId) : null;
     if (data.status) {
-      const role = await getEffectiveProjectRole(user, before.projectId);
       if (!canTransitionDailyReport(before.status, data.status, role)) {
         return json({ error: "Invalid daily report status transition" }, 409);
       }
+    }
+    if (applyProgress && (before.status !== "approved" || (role !== "OWNER" && role !== "ADMIN"))) {
+      return json({ error: "Only an owner or administrator can synchronize an approved report" }, 403);
+    }
+    const reopeningApproved = before.status === "approved" && data.status === "draft";
+    if (reopeningApproved && correctionReason.length < 5) {
+      return json({ error: "Укажите причину возврата рапорта на доработку (минимум 5 символов)." }, 400);
     }
     if (before.status !== "draft" && Object.keys(data).some((key) => key !== "status")) {
       return json({ error: "Only draft reports can be edited" }, 409);
@@ -665,37 +684,66 @@ async function updateResource(resource: string, id: string, body: unknown, expec
       const action = data.status ? "не готов к отправке" : "не обновлён";
       return json({ error: `Рапорт ${action}: ${issues[0].message}`, issues }, data.status ? 409 : 400);
     }
-    const item = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx) => {
+      const progress = applyProgress
+        ? await applyDailyReportProgress(tx, before, user)
+        : reopeningApproved
+          ? await rollbackDailyReportProgress(tx, before)
+          : { mode: "none" as const, entries: 0, scheduleItems: [] as DbScheduleItem[] };
       const { crewMembers: updatedCrew, workOutputs: updatedOutputs, workScopes: updatedScopes, ...scalarData } = data;
-      const updated = await tx.dailyReport.update({
-        where: { id },
-        data: {
-          ...scalarData,
-          ...(updatedCrew !== undefined
-            ? { crewMembers: updatedCrew as unknown as Prisma.InputJsonValue }
-            : {}),
-          ...(updatedOutputs !== undefined
-            ? { workOutputs: updatedOutputs as unknown as Prisma.InputJsonValue }
-            : {}),
-          ...(updatedScopes !== undefined
-            ? { workScopes: updatedScopes as unknown as Prisma.InputJsonValue }
-            : {})
-        }
-      });
+      const updated = applyProgress ? before : await tx.dailyReport.update({
+          where: { id },
+          data: {
+            ...scalarData,
+            ...(updatedCrew !== undefined
+              ? { crewMembers: updatedCrew as unknown as Prisma.InputJsonValue }
+              : {}),
+            ...(updatedOutputs !== undefined
+              ? { workOutputs: updatedOutputs as unknown as Prisma.InputJsonValue }
+              : {}),
+            ...(updatedScopes !== undefined
+              ? { workScopes: updatedScopes as unknown as Prisma.InputJsonValue }
+              : {})
+          }
+        });
+      const approvalProgress = before.status === "checked" && data.status === "approved"
+        ? await applyDailyReportProgress(tx, before, user)
+        : progress;
       await writeAudit(tx, {
         organizationId: before.organizationId,
         projectId: before.projectId,
         ...auditActor(user),
         entity: "daily_report",
         entityId: id,
-        action: data.status === "approved" ? "accept" : "update",
-        summary: data.status ? `Статус рапорта изменен: ${before.status} → ${data.status}` : `Обновлен ежедневный рапорт: ${updated.date.toISOString().slice(0, 10)}`,
+        action: data.status === "approved" || applyProgress ? "accept" : "update",
+        summary: applyProgress
+          ? `Факт рапорта применен к графику: ${approvalProgress.scheduleItems.length} работ`
+          : reopeningApproved
+            ? `Рапорт возвращен на доработку: ${correctionReason}`
+            : data.status
+              ? `Статус рапорта изменен: ${before.status} → ${data.status}`
+              : `Обновлен ежедневный рапорт: ${updated.date.toISOString().slice(0, 10)}`,
         before: serializeDailyReport(before),
-        after: serializeDailyReport(updated)
+        after: {
+          ...serializeDailyReport(updated),
+          ...(correctionReason ? { correctionReason } : {}),
+          progress: {
+            mode: approvalProgress.mode,
+            entries: approvalProgress.entries,
+            scheduleItemIds: approvalProgress.scheduleItems.map((item) => item.id)
+          }
+        }
       });
-      return updated;
+      return { report: updated, progress: approvalProgress };
     });
-    return json({ item: serializeDailyReport(item) });
+    return json({
+      item: serializeDailyReport(result.report),
+      progress: {
+        mode: result.progress.mode,
+        entries: result.progress.entries,
+        scheduleItems: result.progress.scheduleItems.map(serializeScheduleItem)
+      }
+    });
   }
   if (resource === "risks") {
     const data = partial(riskSchema).parse(body);
@@ -843,6 +891,116 @@ async function resolveDailyReportCrew(projectId: string, resourceIds: string[]) 
 
 class DailyReportCrewError extends Error {}
 
+class DailyReportProgressError extends Error {}
+
+type DailyReportProgressResult = {
+  mode: "applied" | "already_applied" | "rolled_back" | "none";
+  entries: number;
+  scheduleItems: DbScheduleItem[];
+};
+
+function decimalNumber(value: Prisma.Decimal | number) {
+  return typeof value === "number" ? value : value.toNumber();
+}
+
+async function applyDailyReportProgress(
+  tx: Prisma.TransactionClient,
+  report: DbDailyReport,
+  user: AppUser | null
+): Promise<DailyReportProgressResult> {
+  const deltas = dailyReportProgressDeltas(report.workOutputs);
+  if (!deltas.length) return { mode: "none", entries: 0, scheduleItems: [] };
+
+  const existing = await tx.workProgressEntry.findMany({ where: { dailyReportId: report.id } });
+  if (existing.length) {
+    const scheduleItems = await tx.scheduleItem.findMany({
+      where: { projectId: report.projectId, id: { in: existing.map((entry) => entry.scheduleItemId).filter((id): id is string => Boolean(id)) } }
+    });
+    return { mode: "already_applied", entries: existing.length, scheduleItems };
+  }
+
+  const scheduleItems = await tx.scheduleItem.findMany({
+    where: { projectId: report.projectId, id: { in: deltas.map((delta) => delta.scheduleItemId) } }
+  });
+  if (scheduleItems.length !== deltas.length) {
+    throw new DailyReportProgressError("Одна или несколько работ рапорта больше не существуют в графике проекта.");
+  }
+
+  const byId = new Map(scheduleItems.map((item) => [item.id, item]));
+  const updatedScheduleItems: DbScheduleItem[] = [];
+  for (const delta of deltas) {
+    const scheduleItem = byId.get(delta.scheduleItemId)!;
+    await tx.workProgressEntry.create({
+      data: {
+        organizationId: report.organizationId,
+        projectId: report.projectId,
+        scheduleItemId: scheduleItem.id,
+        dailyReportId: report.id,
+        date: report.date,
+        qty: new Prisma.Decimal(delta.quantity),
+        performer: report.author,
+        comment: `Рапорт ${report.date.toISOString().slice(0, 10)} · ${delta.workNames.join(", ")}`,
+        status: "approved",
+        createdBy: user?.authenticated ? user.id : report.createdBy
+      }
+    });
+    const incremented = await tx.scheduleItem.update({
+      where: { id: scheduleItem.id },
+      data: { actualQty: { increment: new Prisma.Decimal(delta.quantity) } }
+    });
+    const nextStatus = scheduleStatusForActual(
+      incremented.status as Parameters<typeof scheduleStatusForActual>[0],
+      decimalNumber(incremented.plannedQty),
+      decimalNumber(incremented.actualQty)
+    );
+    const updated = nextStatus === incremented.status
+      ? incremented
+      : await tx.scheduleItem.update({ where: { id: scheduleItem.id }, data: { status: nextStatus } });
+    updatedScheduleItems.push(updated);
+  }
+  return { mode: "applied", entries: deltas.length, scheduleItems: updatedScheduleItems };
+}
+
+async function rollbackDailyReportProgress(
+  tx: Prisma.TransactionClient,
+  report: DbDailyReport
+): Promise<DailyReportProgressResult> {
+  const entries = await tx.workProgressEntry.findMany({ where: { dailyReportId: report.id } });
+  if (!entries.length) return { mode: "none", entries: 0, scheduleItems: [] };
+
+  const grouped = new Map<string, number>();
+  for (const entry of entries) {
+    if (!entry.scheduleItemId) continue;
+    grouped.set(entry.scheduleItemId, (grouped.get(entry.scheduleItemId) ?? 0) + decimalNumber(entry.qty));
+  }
+  const scheduleItems = await tx.scheduleItem.findMany({
+    where: { projectId: report.projectId, id: { in: [...grouped.keys()] } }
+  });
+  const updatedScheduleItems: DbScheduleItem[] = [];
+  for (const scheduleItem of scheduleItems) {
+    const quantity = grouped.get(scheduleItem.id) ?? 0;
+    const decremented = await tx.scheduleItem.update({
+      where: { id: scheduleItem.id },
+      data: { actualQty: { decrement: new Prisma.Decimal(quantity) } }
+    });
+    const actualQty = Math.max(0, decimalNumber(decremented.actualQty));
+    const nextStatus = scheduleStatusForActual(
+      decremented.status as Parameters<typeof scheduleStatusForActual>[0],
+      decimalNumber(decremented.plannedQty),
+      actualQty
+    );
+    const updated = actualQty !== decimalNumber(decremented.actualQty) || nextStatus !== decremented.status
+      ? await tx.scheduleItem.update({
+          where: { id: scheduleItem.id },
+          data: { actualQty: new Prisma.Decimal(actualQty), status: nextStatus }
+        })
+      : decremented;
+    updatedScheduleItems.push(updated);
+  }
+  await tx.workProgressEntry.deleteMany({ where: { dailyReportId: report.id } });
+  return { mode: "rolled_back", entries: entries.length, scheduleItems: updatedScheduleItems };
+}
+
 function budgetUpdateData(data: Partial<ReturnType<typeof budgetItemSchema.parse>>) {
   return {
     ...data,
@@ -904,6 +1062,9 @@ function auditActor(user?: AppUser | null) {
 function handleError(error: unknown) {
   if (error instanceof DailyReportCrewError) {
     return json({ error: error.message }, 400);
+  }
+  if (error instanceof DailyReportProgressError) {
+    return json({ error: error.message }, 409);
   }
   if (error instanceof ProjectDeleteError) {
     return json({ error: error.message }, error.status);

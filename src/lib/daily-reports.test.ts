@@ -29,7 +29,9 @@ describe("daily report workflow", () => {
     expect(canTransitionDailyReport("submitted", "checked", "MANAGER")).toBe(true);
     expect(canTransitionDailyReport("checked", "approved", "MANAGER")).toBe(false);
     expect(canTransitionDailyReport("checked", "approved", "ADMIN")).toBe(true);
-    expect(canTransitionDailyReport("approved", "draft", "OWNER")).toBe(false);
+    expect(canTransitionDailyReport("approved", "draft", "OWNER")).toBe(true);
+    expect(canTransitionDailyReport("approved", "draft", "ADMIN")).toBe(true);
+    expect(canTransitionDailyReport("approved", "draft", "MANAGER")).toBe(false);
   });
 
   it("rejects unknown states and provides Russian labels", () => {

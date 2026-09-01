@@ -94,14 +94,15 @@ export function FieldOperationsWorkspace({
   const evidenceDocuments = documents.filter((document) =>
     /фото|photo|рапорт|исполн|акт|журнал|evidence/i.test(`${document.category} ${document.title} ${document.fileName ?? ""}`)
   );
+  const reportEvidenceDocuments = evidenceDocuments.filter((document) => document.dailyReportId);
 
   return (
     <section className="field-ops-workspace" aria-label="Стройплощадка и ежедневные рапорты">
       <div className={`field-ops-header tone-${model.summary.tone}`}>
         <div>
-          <div className="eyebrow">Стройплощадка и ежедневные рапорты</div>
-          <h3>Площадка / Рапорты</h3>
-          <p>Ежедневный факт стройплощадки: люди, техника, объемы, материалы, простои, замечания и связь с графиком, КС, рисками и снабжением.</p>
+          <div className="eyebrow">Сводка по утверждённым рапортам</div>
+          <h3>Контроль площадки</h3>
+          <p>Это обзорный экран: он собирает людей, технику, объёмы, простои и замечания из рапортов. Сам сменный факт вводится и исправляется в журнале «Рапорты».</p>
           <div className="field-ops-badges">
             <span className={`badge ${badgeClass(model.summary.tone)}`}>{model.summary.headline}</span>
             <span className="badge blue">{model.summary.reportCount} рапортов</span>
@@ -111,6 +112,10 @@ export function FieldOperationsWorkspace({
           </div>
         </div>
         <div className="field-ops-actions">
+          <button className="button primary compact-button" type="button" onClick={() => onNavigate("Рапорты")}>
+            <ClipboardList size={16} />
+            Открыть рапорты
+          </button>
           <button className="button secondary compact-button" type="button" onClick={() => onNavigate("График")}>
             <TimerReset size={16} />
             График
@@ -185,9 +190,9 @@ export function FieldOperationsWorkspace({
         <article className="field-ops-card wide">
           <div className="section-title">
             <Camera size={18} />
-            <h4>Фото / evidence · {evidenceDocuments.length}</h4>
+            <h4>Фото из рапортов · {reportEvidenceDocuments.length}</h4>
           </div>
-          <p className="muted">Фото, акты и исполнительские файлы хранятся в разделе «Документы». Прямой связи файла с конкретным ежедневным рапортом в текущей модели данных нет.</p>
+          <p className="muted">Фото сохраняются с привязкой к конкретному рапорту и одновременно доступны в разделе «Документы». Откройте рапорт, чтобы увидеть его галерею и производственный факт вместе.</p>
           <div className="field-ops-actions">
             <button className="button secondary compact-button" type="button" onClick={() => onNavigate("Документы")}>
               <FileText size={16} /> Открыть документы площадки

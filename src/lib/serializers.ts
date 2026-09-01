@@ -9,7 +9,8 @@ import type {
   AuditLog as DbAuditLog,
   Project as DbProject,
   Risk as DbRisk,
-  ScheduleItem as DbScheduleItem
+  ScheduleItem as DbScheduleItem,
+  WorkProgressEntry as DbWorkProgressEntry
 } from "@prisma/client";
 import { parseDailyReportWorkOutputs } from "@/lib/daily-report-work-outputs";
 import { parseDailyReportCrewMembers } from "@/lib/daily-report-crew";
@@ -142,7 +143,7 @@ export function serializePayment(item: DbPayment): Payment {
   };
 }
 
-export function serializeDailyReport(item: DbDailyReport & { evidenceDocuments?: DbDocument[] }): DailyReport {
+export function serializeDailyReport(item: DbDailyReport & { evidenceDocuments?: DbDocument[]; progressEntries?: DbWorkProgressEntry[] }): DailyReport {
   return {
     id: item.id,
     projectId: item.projectId,
@@ -164,6 +165,11 @@ export function serializeDailyReport(item: DbDailyReport & { evidenceDocuments?:
     plannedWorks: item.plannedWorks,
     crewMembers: parseDailyReportCrewMembers(item.crewMembers),
     evidenceDocuments: item.evidenceDocuments?.map(serializeDocument),
+    progressImpact: item.progressEntries ? {
+      applied: item.progressEntries.length > 0,
+      entries: item.progressEntries.length,
+      scheduleItems: new Set(item.progressEntries.map((entry) => entry.scheduleItemId).filter(Boolean)).size
+    } : undefined,
     status: item.status as DailyReport["status"]
   };
 }

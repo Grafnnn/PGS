@@ -6,6 +6,7 @@ import {
   getMenuArrowTarget,
   ProjectModuleMenu,
   projectDomainGroups,
+  projectTabLabel,
   projectTabGroups,
   projectTabs
 } from "@/components/project-module-menu";
@@ -35,7 +36,10 @@ describe("ProjectModuleMenu", () => {
     expect(html).toContain("Приёмка");
     expect(html).toContain("Система проекта");
     expect(html).not.toContain("<select");
-    for (const tab of projectTabs) expect(html).toContain(tab);
+    for (const tab of projectTabs) expect(html).toContain(projectTabLabel(tab));
+    expect(html).toContain("Полевой режим");
+    expect(html).toContain("Offline-запись и синхронизация");
+    expect(html).toContain("Факт, фото и прогресс графика");
   });
 
   it("exposes six domain menu triggers with stable semantics", () => {

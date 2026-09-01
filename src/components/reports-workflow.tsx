@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  ArrowUpRight,
   Bot,
   CalendarDays,
   Camera,
@@ -13,6 +14,7 @@ import {
   Pencil,
   Plus,
   RefreshCw,
+  RotateCcw,
   Save,
   Search,
   Send,
@@ -52,9 +54,19 @@ type Props = {
   currentUser: UserContext | null;
   currentUserLoaded: boolean;
   onReportsChange: (items: DailyReport[]) => void;
+  onScheduleItemsChange?: (items: ScheduleItem[]) => void;
 };
 
-type ReportForm = Omit<DailyReport, "id" | "projectId" | "status" | "workOutputs" | "workScopes" | "crewMembers" | "evidenceDocuments"> & {
+type ReportMutationResponse = {
+  item?: DailyReport;
+  progress?: {
+    mode: "applied" | "already_applied" | "rolled_back" | "none";
+    entries: number;
+    scheduleItems: ScheduleItem[];
+  };
+};
+
+type ReportForm = Omit<DailyReport, "id" | "projectId" | "status" | "workOutputs" | "workScopes" | "crewMembers" | "evidenceDocuments" | "progressImpact"> & {
   phase: "open" | "closed";
   workCategory: string;
   workScopes: DailyReportWorkScope[];
@@ -233,13 +245,39 @@ function tone(status: string) {
   return "gray";
 }
 
+function ReportEvidenceGallery({ documents, projectId }: { documents: ProjectDocument[]; projectId: string }) {
+  const images = documents.filter((document) => (document.mimeType ?? "").startsWith("image/"));
+  const otherDocuments = documents.filter((document) => !(document.mimeType ?? "").startsWith("image/"));
+  return (
+    <section className="daily-report-evidence" aria-label={`Фото и документы рапорта: ${documents.length}`}>
+      <div className="daily-report-evidence-count"><Camera size={14} /> {images.length} фото{otherDocuments.length ? ` · ${otherDocuments.length} файлов` : ""}</div>
+      {images.length ? (
+        <div className="daily-report-evidence-gallery">
+          {images.slice(0, 6).map((document) => (
+            <a aria-label={`Открыть фото: ${document.title}`} href={`/api/projects/${projectId}/documents/${document.id}/download`} key={document.id} rel="noreferrer" target="_blank">
+              <Image alt={document.title} height={180} src={`/api/projects/${projectId}/documents/${document.id}/download`} unoptimized width={240} />
+              <span>{document.title}</span>
+              <ArrowUpRight aria-hidden="true" size={13} />
+            </a>
+          ))}
+        </div>
+      ) : null}
+      {otherDocuments.length ? (
+        <div className="daily-report-evidence-files">
+          {otherDocuments.map((document) => <a href={`/api/projects/${projectId}/documents/${document.id}/download`} key={document.id} rel="noreferrer" target="_blank"><FileDown size={13} />{document.title}</a>)}
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
 async function responseError(response: Response, fallback: string) {
   const body = (await response.json().catch(() => ({}))) as { error?: string };
   if (response.status === 401 || response.status === 403) return "Недостаточно прав для этой операции.";
   return body.error ?? fallback;
 }
 
-export function ReportsWorkflow({ projectId, reports, scheduleItems, currentUser, currentUserLoaded, onReportsChange }: Props) {
+export function ReportsWorkflow({ projectId, reports, scheduleItems, currentUser, currentUserLoaded, onReportsChange, onScheduleItemsChange }: Props) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [form, setForm] = useState<ReportForm>(() => emptyReport(currentUser?.name));
@@ -260,6 +298,9 @@ export function ReportsWorkflow({ projectId, reports, scheduleItems, currentUser
   const [selectedPhotoIds, setSelectedPhotoIds] = useState<string[]>([]);
   const [photoQuestion, setPhotoQuestion] = useState("");
   const [photoAnswer, setPhotoAnswer] = useState<PhotoQuestionResult | null>(null);
+  const [photoNotice, setPhotoNotice] = useState("");
+  const [correctionReportId, setCorrectionReportId] = useState<string | null>(null);
+  const [correctionReason, setCorrectionReason] = useState("");
 
   const role = currentUser?.role;
   const canEdit = role === "OWNER" || role === "ADMIN" || role === "MANAGER";
@@ -363,6 +404,7 @@ export function ReportsWorkflow({ projectId, reports, scheduleItems, currentUser
     setSelectedPhotoIds([]);
     setPhotoQuestion("");
     setPhotoAnswer(null);
+    setPhotoNotice("");
     setCrewSearch("");
     setWorkDraft("");
     setError("");
@@ -396,6 +438,7 @@ export function ReportsWorkflow({ projectId, reports, scheduleItems, currentUser
     setSelectedPhotoIds(item.evidenceDocuments?.filter((document) => (document.mimeType ?? "").startsWith("image/")).map((document) => document.id).slice(0, 4) ?? []);
     setPhotoQuestion("");
     setPhotoAnswer(null);
+    setPhotoNotice("");
     setCrewSearch("");
     setWorkDraft("");
     setFormOpen(true);
@@ -489,8 +532,10 @@ export function ReportsWorkflow({ projectId, reports, scheduleItems, currentUser
     if (!editingId || !photoFiles.length) return;
     setBusy("photo-upload");
     setError("");
+    setPhotoNotice("");
     try {
       const uploadedIds: string[] = [];
+      const uploadedDocuments: ProjectDocument[] = [];
       for (const file of photoFiles) {
         const data = new FormData();
         data.set("file", file);
@@ -500,9 +545,14 @@ export function ReportsWorkflow({ projectId, reports, scheduleItems, currentUser
         if (!response.ok) throw new Error(await responseError(response, `Не удалось загрузить ${file.name}.`));
         const body = (await response.json()) as { item: ProjectDocument };
         uploadedIds.push(body.item.id);
+        uploadedDocuments.push(body.item);
       }
       setPhotoFiles([]);
       setSelectedPhotoIds((current) => [...new Set([...current, ...uploadedIds])].slice(0, 4));
+      onReportsChange(reports.map((report) => report.id === editingId
+        ? { ...report, evidenceDocuments: [...(report.evidenceDocuments ?? []), ...uploadedDocuments] }
+        : report));
+      setPhotoNotice(`Прикреплено: ${uploadedDocuments.length}. Фото сохранены в рапорте и в разделе «Документы».`);
       await loadDailyReports();
     } catch (uploadError) {
       setError(uploadError instanceof Error ? uploadError.message : "Не удалось загрузить фото смены.");
@@ -563,10 +613,55 @@ export function ReportsWorkflow({ projectId, reports, scheduleItems, currentUser
         body: JSON.stringify({ status })
       });
       if (!response.ok) throw new Error(await responseError(response, "Не удалось изменить статус рапорта."));
-      await response.json();
+      const body = (await response.json()) as ReportMutationResponse;
+      if (body.progress?.scheduleItems.length) onScheduleItemsChange?.(body.progress.scheduleItems);
       await loadDailyReports();
     } catch (transitionError) {
       setError(transitionError instanceof Error ? transitionError.message : "Не удалось изменить статус рапорта.");
+    } finally {
+      setBusy("");
+    }
+  }
+
+  async function synchronizeReportProgress(item: DailyReport) {
+    if (!window.confirm("Учесть объёмы этого ранее утверждённого рапорта в графике? Действие не продублируется при повторном запуске.")) return;
+    setBusy(`daily-${item.id}`);
+    setError("");
+    try {
+      const response = await fetch(`/api/daily-reports/${item.id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ applyProgress: true })
+      });
+      if (!response.ok) throw new Error(await responseError(response, "Не удалось учесть факт рапорта в графике."));
+      const body = (await response.json()) as ReportMutationResponse;
+      if (body.progress?.scheduleItems.length) onScheduleItemsChange?.(body.progress.scheduleItems);
+      await loadDailyReports();
+    } catch (progressError) {
+      setError(progressError instanceof Error ? progressError.message : "Не удалось учесть факт рапорта в графике.");
+    } finally {
+      setBusy("");
+    }
+  }
+
+  async function reopenReport(item: DailyReport) {
+    if (correctionReason.trim().length < 5) return;
+    setBusy(`daily-${item.id}`);
+    setError("");
+    try {
+      const response = await fetch(`/api/daily-reports/${item.id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ status: "draft", correctionReason })
+      });
+      if (!response.ok) throw new Error(await responseError(response, "Не удалось вернуть рапорт на доработку."));
+      const body = (await response.json()) as ReportMutationResponse;
+      if (body.progress?.scheduleItems.length) onScheduleItemsChange?.(body.progress.scheduleItems);
+      setCorrectionReportId(null);
+      setCorrectionReason("");
+      await loadDailyReports();
+    } catch (correctionError) {
+      setError(correctionError instanceof Error ? correctionError.message : "Не удалось вернуть рапорт на доработку.");
     } finally {
       setBusy("");
     }
@@ -664,7 +759,7 @@ export function ReportsWorkflow({ projectId, reports, scheduleItems, currentUser
         <div>
           <div className="eyebrow">Смена и рапорт прораба</div>
           <h3>План дня → состав → факт → фото</h3>
-          <p className="muted">Утром откройте смену и выберите людей. В конце дня внесите объёмы, приложите фото и отправьте рапорт на проверку.</p>
+          <p className="muted">Утром откройте смену и выберите людей. В конце дня внесите объёмы и фото. После утверждения связанные объёмы автоматически обновят график и сводку площадки.</p>
         </div>
         <div className="form-actions">
           <button className="button secondary" disabled={busy === "daily-load"} type="button" onClick={() => void loadDailyReports()}>
@@ -793,6 +888,7 @@ export function ReportsWorkflow({ projectId, reports, scheduleItems, currentUser
                     <span>{photoFiles.length ? `Выбрано: ${photoFiles.length}` : "Фото ещё не выбраны"}</span>
                     <button className="button secondary" disabled={!photoFiles.length || busy === "photo-upload"} type="button" onClick={() => void uploadEvidence()}>{busy === "photo-upload" ? "Загружаю..." : "Прикрепить"}</button>
                   </div>
+                  {photoNotice ? <div className="daily-photo-notice" role="status">{photoNotice}</div> : null}
                   {evidence.length ? (
                     <div className="daily-photo-grid">
                       {evidence.map((document) => (
@@ -844,7 +940,7 @@ export function ReportsWorkflow({ projectId, reports, scheduleItems, currentUser
             <small>{item.weather || "Погода не указана"} · {item.equipment || "Техника не указана"}</small>
             {parseDailyReportWorkScopes(item.workScopes, item.workCategory).length > 1 ? <div className="daily-report-work-scope-summary">{parseDailyReportWorkScopes(item.workScopes, item.workCategory).map((scope) => <span key={dailyReportWorkScopeKey(scope)}>{scope.workName}</span>)}</div> : null}
             {item.crewMembers?.length ? <div className="daily-report-crew-summary">{item.crewMembers.map((member) => <span key={member.resourceId}>{member.name}</span>)}</div> : null}
-            {item.evidenceDocuments?.length ? <div className="daily-report-evidence-count"><Camera size={14} /> {item.evidenceDocuments.length} фото / документов</div> : null}
+            {item.evidenceDocuments?.length ? <ReportEvidenceGallery documents={item.evidenceDocuments} projectId={projectId} /> : null}
             {item.workOutputs?.length ? (
               <div className="daily-report-output-summary">
                 {item.workOutputs.map((output, index) => {
@@ -859,6 +955,16 @@ export function ReportsWorkflow({ projectId, reports, scheduleItems, currentUser
                 })}
               </div>
             ) : null}
+            {item.status === "approved" && item.workOutputs?.some((output) => output.scheduleItemId) ? (
+              <div className={`daily-report-progress-impact ${item.progressImpact?.applied ? "is-applied" : "is-pending"}`}>
+                <span>{item.progressImpact?.applied
+                  ? `Учтено в графике · ${item.progressImpact.scheduleItems} работ`
+                  : item.progressImpact
+                    ? "Факт ещё не учтён в графике"
+                    : "Проверяем связь с графиком..."}</span>
+                {item.progressImpact && !item.progressImpact.applied && canApprove ? <button className="button secondary compact-button" disabled={busy === `daily-${item.id}`} type="button" onClick={() => void synchronizeReportProgress(item)}>Учесть в графике</button> : null}
+              </div>
+            ) : null}
             {item.issues || item.downtime ? <div className="daily-report-alert">{item.issues || item.downtime}</div> : null}
             <div className="daily-report-actions">
               {item.status === "draft" && (item.phase ?? "closed") === "open" && canEdit ? <button className="button primary compact-button" type="button" onClick={() => openEditReport(item, true)}><Pencil size={15} /> Внести факт</button> : null}
@@ -866,8 +972,19 @@ export function ReportsWorkflow({ projectId, reports, scheduleItems, currentUser
               {item.status === "draft" && (item.phase ?? "closed") === "closed" && canEdit ? <button className="button primary compact-button" disabled={busy === `daily-${item.id}`} type="button" onClick={() => void transitionReport(item, "submitted")}><Send size={15} /> Отправить</button> : null}
               {item.status === "submitted" && canEdit ? <button className="button primary compact-button" disabled={busy === `daily-${item.id}`} type="button" onClick={() => void transitionReport(item, "checked")}><Check size={15} /> Проверить</button> : null}
               {item.status === "checked" && canApprove ? <button className="button primary compact-button" disabled={busy === `daily-${item.id}`} type="button" onClick={() => void transitionReport(item, "approved")}><ShieldCheck size={15} /> Утвердить</button> : null}
+              {item.status === "approved" && canApprove ? <button className="button secondary compact-button" disabled={busy === `daily-${item.id}`} type="button" onClick={() => { setCorrectionReportId(item.id); setCorrectionReason(""); }}><RotateCcw size={15} /> Исправить</button> : null}
               {item.status === "draft" && canApprove ? <button className="icon-button danger" type="button" title="Удалить черновик" onClick={() => void removeReport(item)}><Trash2 size={16} /></button> : null}
             </div>
+            {correctionReportId === item.id ? (
+              <div className="daily-report-correction">
+                <label>Причина исправления<input autoFocus maxLength={300} placeholder="Например: уточнить объём и заменить фото" value={correctionReason} onChange={(event) => setCorrectionReason(event.target.value)} /></label>
+                <p>Рапорт вернётся в черновик. Учтённые им объёмы будут вычтены из графика; после правки рапорт нужно согласовать заново.</p>
+                <div className="form-actions">
+                  <button className="button primary compact-button" disabled={correctionReason.trim().length < 5 || busy === `daily-${item.id}`} type="button" onClick={() => void reopenReport(item)}>Вернуть на доработку</button>
+                  <button className="button secondary compact-button" type="button" onClick={() => { setCorrectionReportId(null); setCorrectionReason(""); }}>Отмена</button>
+                </div>
+              </div>
+            ) : null}
           </article>
         )) : <div className="reports-empty">Рапортов пока нет. Первый рапорт создаётся только после заполнения и сохранения формы.</div>}
       </div>
