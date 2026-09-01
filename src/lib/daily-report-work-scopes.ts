@@ -86,6 +86,24 @@ export function dailyReportWorkScopeLabel(scopes: unknown, fallback = "Смен�
   return `${visible.join(" · ")}${remaining > 0 ? ` · +${remaining}` : ""}`;
 }
 
+export function seedDailyReportCompletedWorks(
+  scopes: DailyReportWorkScope[],
+  completedWorks: string
+) {
+  if (completedWorks.trim()) return completedWorks;
+  return parseDailyReportWorkScopes(scopes).map((scope) => scope.workName).join("\n");
+}
+
+export function syncDailyReportCompletedWorks(
+  previousScopes: DailyReportWorkScope[],
+  nextScopes: DailyReportWorkScope[],
+  completedWorks: string
+) {
+  const previousDefault = seedDailyReportCompletedWorks(previousScopes, "");
+  if (completedWorks.trim() && completedWorks !== previousDefault) return completedWorks;
+  return seedDailyReportCompletedWorks(nextScopes, "");
+}
+
 export function seedDailyReportWorkOutputs(
   scopes: DailyReportWorkScope[],
   outputs: DailyReportWorkOutput[]

@@ -4,7 +4,9 @@ import {
   dailyReportWorkScopeSummary,
   dailyReportWorkScopesComplete,
   parseDailyReportWorkScopes,
-  seedDailyReportWorkOutputs
+  seedDailyReportCompletedWorks,
+  seedDailyReportWorkOutputs,
+  syncDailyReportCompletedWorks
 } from "@/lib/daily-report-work-scopes";
 
 describe("daily report work scopes", () => {
@@ -67,5 +69,29 @@ describe("daily report work scopes", () => {
         laborHours: 0
       }
     ]);
+  });
+
+  it("prefills completed work names from the day plan without overwriting entered facts", () => {
+    const scopes = [
+      { scheduleItemId: "schedule-1", workName: "Демонтаж рулонной гидроизоляции", source: "schedule" as const },
+      { scheduleItemId: "schedule-2", workName: "Демонтаж цементно-песчанной стяжки", source: "schedule" as const }
+    ];
+
+    expect(seedDailyReportCompletedWorks(scopes, "")).toBe([
+      "Демонтаж рулонной гидроизоляции",
+      "Демонтаж цементно-песчанной стяжки"
+    ].join("\n"));
+    expect(seedDailyReportCompletedWorks(scopes, "Фактически выполнено только примыкание")).toBe("Фактически выполнено только примыкание");
+  });
+
+  it("keeps an automatic completed-work list in sync but preserves a manual correction", () => {
+    const previous = [{ scheduleItemId: "schedule-1", workName: "Демонтаж гидроизоляции", source: "schedule" as const }];
+    const next = [
+      ...previous,
+      { scheduleItemId: "schedule-2", workName: "Демонтаж стяжки", source: "schedule" as const }
+    ];
+
+    expect(syncDailyReportCompletedWorks(previous, next, "Демонтаж гидроизоляции")).toBe("Демонтаж гидроизоляции\nДемонтаж стяжки");
+    expect(syncDailyReportCompletedWorks(previous, next, "Выполнено частично: гидроизоляция")).toBe("Выполнено частично: гидроизоляция");
   });
 });

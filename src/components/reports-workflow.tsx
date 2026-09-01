@@ -30,7 +30,9 @@ import {
   dailyReportWorkScopeLabel,
   dailyReportWorkScopeSummary,
   parseDailyReportWorkScopes,
-  seedDailyReportWorkOutputs
+  seedDailyReportCompletedWorks,
+  seedDailyReportWorkOutputs,
+  syncDailyReportCompletedWorks
 } from "@/lib/daily-report-work-scopes";
 import { dailyReportStatusLabel } from "@/lib/daily-reports";
 import type { SerializedExecutiveReport } from "@/lib/executive-reports";
@@ -368,6 +370,8 @@ export function ReportsWorkflow({ projectId, reports, scheduleItems, currentUser
 
   function openEditReport(item: DailyReport, closeShift = false) {
     const workScopes = parseDailyReportWorkScopes(item.workScopes, item.workCategory);
+    const phase = closeShift ? "closed" : item.phase ?? "closed";
+    const seedFactFromPlan = closeShift;
     setEditingId(item.id);
     setForm({
       date: item.date,
@@ -376,17 +380,17 @@ export function ReportsWorkflow({ projectId, reports, scheduleItems, currentUser
       workers: item.workers,
       engineers: item.engineers,
       equipment: item.equipment,
-      completedWorks: item.completedWorks,
+      completedWorks: seedFactFromPlan ? seedDailyReportCompletedWorks(workScopes, item.completedWorks) : item.completedWorks,
       materialsReceived: item.materialsReceived,
       materialsConsumed: item.materialsConsumed,
       downtime: item.downtime,
       issues: item.issues,
-      phase: closeShift ? "closed" : item.phase ?? "closed",
+      phase,
       workCategory: dailyReportWorkScopeSummary(workScopes, item.workCategory),
       workScopes,
       plannedWorks: item.plannedWorks ?? "",
       crewResourceIds: (item.crewMembers ?? []).map((member) => member.resourceId),
-      workOutputs: closeShift ? seedDailyReportWorkOutputs(workScopes, item.workOutputs ?? []) : item.workOutputs ?? []
+      workOutputs: seedFactFromPlan ? seedDailyReportWorkOutputs(workScopes, item.workOutputs ?? []) : item.workOutputs ?? []
     });
     setPhotoFiles([]);
     setSelectedPhotoIds(item.evidenceDocuments?.filter((document) => (document.mimeType ?? "").startsWith("image/")).map((document) => document.id).slice(0, 4) ?? []);
@@ -414,6 +418,9 @@ export function ReportsWorkflow({ projectId, reports, scheduleItems, currentUser
         ...current,
         workScopes,
         workCategory: dailyReportWorkScopeSummary(workScopes),
+        completedWorks: current.phase === "closed"
+          ? syncDailyReportCompletedWorks(current.workScopes, workScopes, current.completedWorks)
+          : current.completedWorks,
         workOutputs: current.phase === "closed"
           ? seedDailyReportWorkOutputs(workScopes, retainedOutputs)
           : retainedOutputs
@@ -770,7 +777,7 @@ export function ReportsWorkflow({ projectId, reports, scheduleItems, currentUser
           {form.phase === "closed" ? (
             <>
               <div className="daily-report-form-grid daily-fact-grid">
-                <label className="wide">Выполненные работы <span aria-hidden="true">*</span><textarea aria-invalid={!form.completedWorks.trim()} required rows={3} value={form.completedWorks} onChange={(event) => setForm({ ...form, completedWorks: event.target.value })} /></label>
+                <label className="wide">Выполненные работы <span aria-hidden="true">*</span><textarea aria-invalid={!form.completedWorks.trim()} required rows={3} value={form.completedWorks} onChange={(event) => setForm({ ...form, completedWorks: event.target.value })} /><small>Работы из утреннего плана подставлены автоматически. Скорректируйте список, если фактический состав работ изменился.</small></label>
                 <label>Материалы получены<textarea rows={2} value={form.materialsReceived} onChange={(event) => setForm({ ...form, materialsReceived: event.target.value })} /></label>
                 <label>Материалы израсходованы<textarea rows={2} value={form.materialsConsumed} onChange={(event) => setForm({ ...form, materialsConsumed: event.target.value })} /></label>
                 <label>Простои<textarea rows={2} value={form.downtime} onChange={(event) => setForm({ ...form, downtime: event.target.value })} /></label>
