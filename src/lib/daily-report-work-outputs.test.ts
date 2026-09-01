@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  allocateDailyReportLabor,
   approvedDailyReportProductivitySamples,
+  dailyReportLaborCapacity,
   dailyReportWorkOutputIssues,
   dailyReportWorkOutputNorm,
   dailyReportWorkOutputTotals,
@@ -72,5 +74,62 @@ describe("daily report work outputs", () => {
       unit: "м²/чел.-мес.",
       source: "daily-report"
     })]);
+  });
+
+  it("distributes one crew shift across several works without double counting people", () => {
+    const rows = allocateDailyReportLabor([
+      { ...output, workName: "Работа 1", laborHours: 0, laborAllocationMode: "auto" },
+      { ...output, workName: "Работа 2", laborHours: 0, laborAllocationMode: "auto" }
+    ], 12, 8);
+
+    expect(dailyReportLaborCapacity(12, 8)).toBe(96);
+    expect(rows).toEqual([
+      expect.objectContaining({ workerCount: 12, hoursPerWorker: 4, laborHours: 48, laborAllocationMode: "auto" }),
+      expect.objectContaining({ workerCount: 12, hoursPerWorker: 4, laborHours: 48, laborAllocationMode: "auto" })
+    ]);
+    expect(dailyReportWorkOutputTotals(rows).laborHours).toBe(96);
+  });
+
+  it("splits a worker's shift by time when works outnumber available parallel crews", () => {
+    const rows = allocateDailyReportLabor([
+      { ...output, workName: "Работа 1", laborHours: 0 },
+      { ...output, workName: "Работа 2", laborHours: 0 }
+    ], 1, 8);
+
+    expect(rows).toEqual([
+      expect.objectContaining({ workerCount: 1, hoursPerWorker: 4, laborHours: 4 }),
+      expect.objectContaining({ workerCount: 1, hoursPerWorker: 4, laborHours: 4 })
+    ]);
+  });
+
+  it("preserves manual rows and gives the remaining shift capacity to automatic rows", () => {
+    const rows = allocateDailyReportLabor([
+      { ...output, laborHours: 16, workerCount: 2, hoursPerWorker: 8, laborAllocationMode: "manual" },
+      { ...output, workName: "Работа 2", laborHours: 0, laborAllocationMode: "auto" }
+    ], 12, 8);
+
+    expect(rows[0]).toEqual(expect.objectContaining({ workerCount: 2, hoursPerWorker: 8, laborHours: 16, laborAllocationMode: "manual" }));
+    expect(rows[1]).toEqual(expect.objectContaining({ workerCount: 12, hoursPerWorker: 6.666667, laborHours: 80, laborAllocationMode: "auto" }));
+  });
+
+  it("keeps fractional allocation totals inside the exact shift capacity", () => {
+    const rows = allocateDailyReportLabor(Array.from({ length: 3 }, (_, index) => ({
+      ...output,
+      workName: `Работа ${index + 1}`,
+      laborHours: 0,
+      laborAllocationMode: "auto" as const
+    })), 10, 8);
+
+    expect(dailyReportWorkOutputTotals(rows).laborHours).toBe(80);
+  });
+
+  it("derives persisted person-hours from people and hours per person", () => {
+    expect(parseDailyReportWorkOutputs([{
+      ...output,
+      laborHours: 999,
+      workerCount: 3,
+      hoursPerWorker: 7.5,
+      laborAllocationMode: "manual"
+    }])).toEqual([expect.objectContaining({ workerCount: 3, hoursPerWorker: 7.5, laborHours: 22.5 })]);
   });
 });

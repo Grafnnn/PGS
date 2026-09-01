@@ -52,6 +52,7 @@ type DailyReportValidationInput = {
   downtime?: string;
   issues?: string;
   workOutputs?: unknown;
+  shiftHours?: number;
   phase?: "open" | "closed";
   workCategory?: string;
   workScopes?: unknown;
@@ -118,6 +119,9 @@ export function dailyReportDraftIssues(report: DailyReportValidationInput): Dail
   }
   if (!Number.isInteger(report.workers) || report.workers < 0) issues.push({ field: "workers", message: "Количество рабочих должно быть целым неотрицательным числом." });
   if (!Number.isInteger(report.engineers) || report.engineers < 0) issues.push({ field: "engineers", message: "Количество ИТР должно быть целым неотрицательным числом." });
+  if (!Number.isFinite(report.shiftHours ?? 8) || (report.shiftHours ?? 8) < 0.5 || (report.shiftHours ?? 8) > 24) {
+    issues.push({ field: "shiftHours", message: "Продолжительность смены должна быть от 0,5 до 24 часов." });
+  }
 
   for (const [field, limit, label] of reportTextLimits) {
     const value = report[field];
@@ -143,6 +147,7 @@ export function dailyReportSubmissionIssues(report: DailyReportValidationInput):
     issues.push({ field: "phase", message: "Сначала внесите фактические результаты и закройте смену." });
   }
   const personnel = Math.max(0, report.workers) + Math.max(0, report.engineers);
+  const shiftHours = Number.isFinite(report.shiftHours ?? 8) ? Math.max(0, report.shiftHours ?? 8) : 0;
   const outputs = parseDailyReportWorkOutputs(report.workOutputs);
   const totals = dailyReportWorkOutputTotals(outputs);
 
@@ -151,10 +156,14 @@ export function dailyReportSubmissionIssues(report: DailyReportValidationInput):
   }
   if (outputs.length && personnel === 0) {
     issues.push({ field: "workOutputs", message: "Нельзя отправить выработку без указанного персонала смены." });
-  } else if (outputs.length && totals.laborHours > personnel * 24) {
+  } else if (outputs.some((output) => output.workerCount !== undefined && output.workerCount > personnel)) {
+    issues.push({ field: "workOutputs", message: "В строке работ указано больше людей, чем выбрано в составе смены." });
+  } else if (outputs.some((output) => output.hoursPerWorker !== undefined && output.hoursPerWorker > shiftHours)) {
+    issues.push({ field: "workOutputs", message: "Часы на человека не могут превышать продолжительность смены." });
+  } else if (outputs.length && totals.laborHours > personnel * shiftHours + 0.001) {
     issues.push({
       field: "workOutputs",
-      message: `Трудозатраты ${totals.laborHours.toLocaleString("ru-RU")} ч превышают физический максимум для ${personnel} чел. за сутки.`
+      message: `Трудозатраты ${totals.laborHours.toLocaleString("ru-RU")} чел.-ч превышают фонд смены: ${personnel} чел. × ${shiftHours.toLocaleString("ru-RU")} ч.`
     });
   }
   return issues;

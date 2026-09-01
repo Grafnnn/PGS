@@ -26,7 +26,12 @@ import {
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { DailyReportWorkOutputEditor } from "@/components/daily-report-work-output-editor";
-import { dailyReportWorkOutputNorm, dailyReportWorkOutputsComplete } from "@/lib/daily-report-work-outputs";
+import {
+  allocateDailyReportLabor,
+  dailyReportWorkOutputAllocation,
+  dailyReportWorkOutputNorm,
+  dailyReportWorkOutputsComplete
+} from "@/lib/daily-report-work-outputs";
 import {
   dailyReportWorkScopeKey,
   dailyReportWorkScopeLabel,
@@ -233,6 +238,7 @@ const emptyReport = (author = "Прораб", phase: "open" | "closed" = "open")
   materialsConsumed: "",
   downtime: "",
   issues: "",
+  shiftHours: 8,
   phase,
   workCategory: "",
   workScopes: [],
@@ -324,7 +330,9 @@ export function ReportsWorkflow({ projectId, reports, scheduleItems, documents =
   const evidence = activeReport?.evidenceDocuments?.filter((item) => (item.mimeType ?? "").startsWith("image/")) ?? [];
   const availableProjectPhotos = useMemo(() => documents.filter(isProjectEvidenceCandidate), [documents]);
   const selectedCrew = workforce.filter((item) => form.crewResourceIds.includes(item.resourceId));
-  const selectedHeadcount = selectedCrew.reduce((sum, item) => sum + item.headcount, 0);
+  const selectedHeadcount = selectedCrew.length
+    ? selectedCrew.reduce((sum, item) => sum + item.headcount, 0)
+    : form.workers + form.engineers;
   const visibleWorkforce = useMemo(() => {
     const query = crewSearch.trim().toLocaleLowerCase("ru-RU");
     if (!query) return workforce;
@@ -429,6 +437,13 @@ export function ReportsWorkflow({ projectId, reports, scheduleItems, documents =
     const workScopes = parseDailyReportWorkScopes(item.workScopes, item.workCategory);
     const phase = closeShift ? "closed" : item.phase ?? "closed";
     const seedFactFromPlan = closeShift;
+    const shiftHours = item.shiftHours ?? 8;
+    const reportHeadcount = item.crewMembers?.length
+      ? item.crewMembers.reduce((sum, member) => sum + member.headcount, 0)
+      : item.workers + item.engineers;
+    const seededOutputs = seedFactFromPlan
+      ? seedDailyReportWorkOutputs(workScopes, item.workOutputs ?? [])
+      : item.workOutputs ?? [];
     setEditingId(item.id);
     setForm({
       date: item.date,
@@ -442,12 +457,15 @@ export function ReportsWorkflow({ projectId, reports, scheduleItems, documents =
       materialsConsumed: item.materialsConsumed,
       downtime: item.downtime,
       issues: item.issues,
+      shiftHours,
       phase,
       workCategory: dailyReportWorkScopeSummary(workScopes, item.workCategory),
       workScopes,
       plannedWorks: item.plannedWorks ?? "",
       crewResourceIds: (item.crewMembers ?? []).map((member) => member.resourceId),
-      workOutputs: seedFactFromPlan ? seedDailyReportWorkOutputs(workScopes, item.workOutputs ?? []) : item.workOutputs ?? []
+      workOutputs: seedFactFromPlan
+        ? allocateDailyReportLabor(seededOutputs, reportHeadcount, shiftHours)
+        : seededOutputs
     });
     setPhotoFiles([]);
     setSelectedPhotoIds(item.evidenceDocuments?.filter((document) => (document.mimeType ?? "").startsWith("image/")).map((document) => document.id).slice(0, 4) ?? []);
@@ -470,9 +488,15 @@ export function ReportsWorkflow({ projectId, reports, scheduleItems, documents =
         const removed = removedScopes.some((scope) => scope.scheduleItemId
           ? scope.scheduleItemId === output.scheduleItemId
           : scope.workName.trim().toLocaleLowerCase("ru-RU") === output.workName.trim().toLocaleLowerCase("ru-RU"));
-        const untouched = !output.profession.trim() && output.quantity === 0 && !output.unit.trim() && output.laborHours === 0;
+        const untouched = !output.profession.trim()
+          && output.quantity === 0
+          && !output.unit.trim()
+          && (output.laborAllocationMode === "auto" || output.laborHours === 0);
         return !(removed && untouched);
       });
+      const seededOutputs = current.phase === "closed"
+        ? seedDailyReportWorkOutputs(workScopes, retainedOutputs)
+        : retainedOutputs;
       return {
         ...current,
         workScopes,
@@ -481,8 +505,8 @@ export function ReportsWorkflow({ projectId, reports, scheduleItems, documents =
           ? syncDailyReportCompletedWorks(current.workScopes, workScopes, current.completedWorks)
           : current.completedWorks,
         workOutputs: current.phase === "closed"
-          ? seedDailyReportWorkOutputs(workScopes, retainedOutputs)
-          : retainedOutputs
+          ? allocateDailyReportLabor(seededOutputs, selectedHeadcount, current.shiftHours ?? 8)
+          : seededOutputs
       };
     });
   }
@@ -518,23 +542,54 @@ export function ReportsWorkflow({ projectId, reports, scheduleItems, documents =
   }
 
   function toggleCrew(resourceId: string) {
-    setForm((current) => ({
-      ...current,
-      crewResourceIds: current.crewResourceIds.includes(resourceId)
+    setForm((current) => {
+      const crewResourceIds = current.crewResourceIds.includes(resourceId)
         ? current.crewResourceIds.filter((id) => id !== resourceId)
-        : [...current.crewResourceIds, resourceId]
-    }));
+        : [...current.crewResourceIds, resourceId];
+      return withSelectedCrew(current, crewResourceIds);
+    });
   }
 
   function selectVisibleCrew() {
-    setForm((current) => ({
-      ...current,
-      crewResourceIds: Array.from(new Set([...current.crewResourceIds, ...visibleWorkforce.map((item) => item.resourceId)]))
-    }));
+    setForm((current) => withSelectedCrew(
+      current,
+      Array.from(new Set([...current.crewResourceIds, ...visibleWorkforce.map((item) => item.resourceId)]))
+    ));
   }
 
   function clearCrew() {
-    setForm((current) => ({ ...current, crewResourceIds: [] }));
+    setForm((current) => withSelectedCrew(current, []));
+  }
+
+  function withSelectedCrew(current: ReportForm, crewResourceIds: string[]) {
+    const selected = workforce.filter((item) => crewResourceIds.includes(item.resourceId));
+    const counts = selected.reduce((totals, item) => {
+      if (item.kind === "engineer") totals.engineers += item.headcount;
+      else totals.workers += item.headcount;
+      return totals;
+    }, { workers: 0, engineers: 0 });
+    const headcount = counts.workers + counts.engineers;
+    return {
+      ...current,
+      ...counts,
+      crewResourceIds,
+      workOutputs: current.phase === "closed"
+        ? allocateDailyReportLabor(current.workOutputs, headcount, current.shiftHours ?? 8)
+        : current.workOutputs
+    };
+  }
+
+  function updateManualCrew(field: "workers" | "engineers", value: number) {
+    setForm((current) => {
+      const next = { ...current, [field]: value };
+      const headcount = next.workers + next.engineers;
+      return {
+        ...next,
+        workOutputs: next.phase === "closed"
+          ? allocateDailyReportLabor(next.workOutputs, headcount, next.shiftHours ?? 8)
+          : next.workOutputs
+      };
+    });
   }
 
   function togglePhoto(documentId: string) {
@@ -917,7 +972,7 @@ export function ReportsWorkflow({ projectId, reports, scheduleItems, documents =
             ) : workforceLoaded ? (
               <div className="daily-crew-empty">
                 <p>Сотрудники ещё не назначены на проект. Создайте и согласуйте заявку в «ФОТ» → «Заявки на допуск», импортируйте Excel-реестр или укажите численность вручную.</p>
-                <div><label>Рабочие<input min="0" type="number" value={form.workers} onChange={(event) => setForm({ ...form, workers: Number(event.target.value) })} /></label><label>ИТР<input min="0" type="number" value={form.engineers} onChange={(event) => setForm({ ...form, engineers: Number(event.target.value) })} /></label></div>
+                <div><label>Рабочие<input min="0" type="number" value={form.workers} onChange={(event) => updateManualCrew("workers", Number(event.target.value))} /></label><label>ИТР<input min="0" type="number" value={form.engineers} onChange={(event) => updateManualCrew("engineers", Number(event.target.value))} /></label></div>
               </div>
             ) : <div className="reports-empty">Загружаю состав проекта...</div>}
           </section>
@@ -931,8 +986,18 @@ export function ReportsWorkflow({ projectId, reports, scheduleItems, documents =
                 <label>Простои<textarea rows={2} value={form.downtime} onChange={(event) => setForm({ ...form, downtime: event.target.value })} /></label>
                 <label>Проблемы / замечания<textarea rows={2} value={form.issues} onChange={(event) => setForm({ ...form, issues: event.target.value })} /></label>
               </div>
-              {form.workScopes.length ? <p className="daily-work-output-plan-note"><strong>{form.workScopes.length} {form.workScopes.length === 1 ? "работа перенесена" : "работы перенесены"} из плана.</strong> Укажите отдельный объём, единицу и трудозатраты по каждой позиции.</p> : null}
-              <DailyReportWorkOutputEditor outputs={form.workOutputs} onChange={(workOutputs) => setForm({ ...form, workOutputs })} />
+              {form.workScopes.length ? <p className="daily-work-output-plan-note"><strong>{form.workScopes.length} {form.workScopes.length === 1 ? "работа перенесена" : "работы перенесены"} из плана.</strong> Объём и единица указываются отдельно, а фонд времени выбранной бригады распределяется между работами автоматически.</p> : null}
+              <DailyReportWorkOutputEditor
+                crewHeadcount={selectedHeadcount}
+                outputs={form.workOutputs}
+                shiftHours={form.shiftHours ?? 8}
+                onChange={(workOutputs) => setForm((current) => ({ ...current, workOutputs }))}
+                onShiftHoursChange={(shiftHours) => setForm((current) => ({
+                  ...current,
+                  shiftHours,
+                  workOutputs: allocateDailyReportLabor(current.workOutputs, selectedHeadcount, shiftHours)
+                }))}
+              />
               {editingId ? (
                 <section className="daily-photo-workspace" aria-label="Фото смены и AI-анализ">
                   <div className="daily-crew-heading"><span><Camera size={18} /><strong>Фото смены</strong></span><small>JPEG, PNG или WebP</small></div>
@@ -1022,10 +1087,12 @@ export function ReportsWorkflow({ projectId, reports, scheduleItems, documents =
               <div className="daily-report-output-summary">
                 {item.workOutputs.map((output, index) => {
                   const actual = dailyReportWorkOutputNorm(output);
+                  const allocation = dailyReportWorkOutputAllocation(output, item.shiftHours ?? 8);
                   return (
                     <span key={`${output.profession}-${output.workName}-${index}`}>
                       <strong>{output.profession} · {output.workName}</strong>
                       {output.quantity.toLocaleString("ru-RU", { maximumFractionDigits: 3 })} {output.unit}
+                      {` · ${allocation.workerCount} чел. × ${allocation.hoursPerWorker.toLocaleString("ru-RU", { maximumFractionDigits: 3 })} ч = ${output.laborHours.toLocaleString("ru-RU", { maximumFractionDigits: 3 })} чел.-ч`}
                       {actual ? ` · ${actual.norm.toLocaleString("ru-RU", { maximumFractionDigits: 3 })} ${actual.unit}` : ""}
                     </span>
                   );

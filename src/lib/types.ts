@@ -154,6 +154,7 @@ export interface DailyReport {
   downtime: string;
   issues: string;
   workOutputs?: DailyReportWorkOutput[];
+  shiftHours?: number;
   phase?: "open" | "closed";
   workCategory?: string;
   workScopes?: DailyReportWorkScope[];
@@ -183,6 +184,9 @@ export interface DailyReportWorkOutput {
   quantity: number;
   unit: string;
   laborHours: number;
+  workerCount?: number;
+  hoursPerWorker?: number;
+  laborAllocationMode?: "auto" | "manual";
 }
 
 export interface DailyReportWorkScope {

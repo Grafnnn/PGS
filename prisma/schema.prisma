@@ -653,6 +653,7 @@ model DailyReport {
   downtime          String
   issues            String
   workOutputs       Json?                 @map("work_outputs")
+  shiftHours        Decimal               @default(8) @map("shift_hours") @db.Decimal(5, 2)
   phase             String                @default("closed")
   workCategory      String                @default("") @map("work_category")
   workScopes        Json?                 @map("work_scopes")
