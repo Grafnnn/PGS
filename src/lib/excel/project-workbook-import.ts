@@ -17,7 +17,7 @@ import { enrichLaborDemandsWithAverageProductivity } from "@/lib/workforce-produ
 
 export type { ProjectWorkbookQualityGate, ProjectWorkbookQualityIssue, ProjectWorkbookQualityStatus } from "./project-workbook-quality";
 
-export const PROJECT_WORKBOOK_PARSER_VERSION = "project_workbook_v3";
+export const PROJECT_WORKBOOK_PARSER_VERSION = "project_workbook_v4";
 
 export type ProjectWorkbookSheetRole =
   | "works"
@@ -258,13 +258,21 @@ function buildProjectWorkbook(buffer: Buffer, fileName: string, projectId: strin
 
   const sheetData = workbook.SheetNames.map((name) => buildSheetData(name, workbook.Sheets[name], options.sheetOverrides?.[name]));
   const finalMaterialSheet = sheetData.find((sheet) => sheet.enabled && sheet.role === "materials" && isFinalMaterialRequestSheet(sheet.name));
+  const authoritativeGprSheet = sheetData.find((sheet) => sheet.enabled && sheet.role === "schedule" && approvedGprFormat(sheet.rows) === "dated")
+    ?? sheetData.find((sheet) => sheet.enabled && sheet.role === "schedule" && approvedGprFormat(sheet.rows) === "weekly");
   const isSupersededMaterialSheet = (sheet: SheetData) => Boolean(
     finalMaterialSheet &&
     sheet !== finalMaterialSheet &&
     sheet.role === "materials" &&
     !sheet.overridden
   );
-  const enabledSheetData = sheetData.filter((sheet) => sheet.enabled && !isSupersededMaterialSheet(sheet));
+  const isSupersededScheduleSheet = (sheet: SheetData) => Boolean(
+    authoritativeGprSheet &&
+    sheet !== authoritativeGprSheet &&
+    sheet.role === "schedule" &&
+    !sheet.overridden
+  );
+  const enabledSheetData = sheetData.filter((sheet) => sheet.enabled && !isSupersededMaterialSheet(sheet) && !isSupersededScheduleSheet(sheet));
   const budgetItems: ImportBudgetItem[] = [];
   const parsedLaborDemands: ImportLaborDemand[] = [];
   const materials: ImportMaterial[] = [];
@@ -278,7 +286,8 @@ function buildProjectWorkbook(buffer: Buffer, fileName: string, projectId: strin
 
   for (const sheet of sheetData) {
     const supersededMaterialSheet = isSupersededMaterialSheet(sheet);
-    const parsed = sheet.enabled && !supersededMaterialSheet ? parseSheet(sheet, startsAt, vatPercent, weeklyPeriods) : emptyParsedSheet();
+    const supersededScheduleSheet = isSupersededScheduleSheet(sheet);
+    const parsed = sheet.enabled && !supersededMaterialSheet && !supersededScheduleSheet ? parseSheet(sheet, startsAt, vatPercent, weeklyPeriods) : emptyParsedSheet();
     budgetItems.push(...parsed.budgetItems);
     parsedLaborDemands.push(...parsed.laborDemands);
     materials.push(...parsed.materials);
@@ -302,6 +311,8 @@ function buildProjectWorkbook(buffer: Buffer, fileName: string, projectId: strin
         ? "Лист исключен пользователем из анализа и импорта."
         : supersededMaterialSheet
           ? `Материалы берутся из итогового листа «${finalMaterialSheet?.name}»; исходный реестр оставлен для сверки без дублей.`
+          : supersededScheduleSheet
+            ? `График берется из утвержденного листа «${authoritativeGprSheet?.name}»; альтернативная детализация оставлена для сверки без дублей.`
           : sheet.reason
     });
     mappings.push({
@@ -324,6 +335,8 @@ function buildProjectWorkbook(buffer: Buffer, fileName: string, projectId: strin
               ? "Лист исключен пользователем."
               : supersededMaterialSheet
                 ? `Материалы импортируются из итогового листа «${finalMaterialSheet?.name}».`
+                : supersededScheduleSheet
+                  ? `График импортируется из утвержденного листа «${authoritativeGprSheet?.name}».`
               : sheet.role === "summary" || sheet.role === "reference" || sheet.role === "control"
                 ? "Лист используется для сверки и не переносится как рабочие строки."
                 : "Импортируемые строки не найдены."
@@ -448,7 +461,7 @@ function buildProjectWorkbook(buffer: Buffer, fileName: string, projectId: strin
   };
 
   const specializedRoles = new Set(enabledSheetData.filter((sheet) => sheet.role !== "unknown" && sheet.role !== "control" && sheet.role !== "reference").map((sheet) => sheet.role));
-  const specialized = workbook.SheetNames.length >= 3 && specializedRoles.size >= 2 && parsedRows > 0;
+  const specialized = parsedRows > 0 && (Boolean(authoritativeGprSheet) || (workbook.SheetNames.length >= 3 && specializedRoles.size >= 2));
   const analysis = buildAnalysis(fileName, buffer.byteLength, sheets, uniqueBudgetItems, uniqueMaterials, scheduleItems, laborDemands, suggestions, warnings, errors, duplicateRows, sourceDirectCost, reconciliationGap);
   return { preview, analysis, specialized };
 }
@@ -475,6 +488,13 @@ function classifySheet(name: string, rows: unknown[][]): Pick<SheetData, "role" 
   const sample = rows.slice(0, 16).flat().map(normalizeHeader).join(" ");
   const monthColumns = rows.slice(0, 12).reduce((max, row) => Math.max(max, row.map(normalizeHeader).filter((value) => /^[mм]\d{1,2}$/.test(value)).length), 0);
   const weekColumns = rows.slice(0, 12).reduce((max, row) => Math.max(max, row.map(normalizeHeader).filter((value) => /^н\d{1,2}$/.test(value)).length), 0);
+  const gprFormat = approvedGprFormat(rows);
+  if (gprFormat === "dated") {
+    return { role: "schedule", confidence: 1, reason: "Распознан утвержденный ГПР с идентификаторами, фронтами и точными датами." };
+  }
+  if (gprFormat === "weekly" && (/гпр|график|календар/.test(normalizedName) || /календарн.*график/.test(sample))) {
+    return { role: "schedule", confidence: 0.99, reason: "Распознан утвержденный укрупненный ГПР с недельным распределением." };
+  }
   if (/заявк.*итог/.test(normalizedName) && /очередь заказа.*заказать до.*материал.*к заказу/.test(sample)) {
     return { role: "materials", confidence: 1, reason: "Распознана итоговая консолидированная заявка; она заменяет промежуточные реестры материалов." };
   }
@@ -868,6 +888,8 @@ function parseEquipment(sheet: SheetData): ParsedSheetItems {
 }
 
 function parseSchedule(sheet: SheetData, startsAt: Date, weeklyPeriods: Map<number, WeeklySchedulePeriod>): ParsedSheetItems {
+  const approved = parseApprovedGprSchedule(sheet, startsAt, weeklyPeriods);
+  if (approved) return approved;
   const weekly = parseWeeklySchedule(sheet, startsAt, weeklyPeriods);
   if (weekly) return weekly;
   const headerIndex = findHeader(sheet.rows, [["раздел", "этап", "наименование"], ["м1", "m1"], ["м2", "m2"]]);
@@ -905,6 +927,102 @@ function parseSchedule(sheet: SheetData, startsAt: Date, weeklyPeriods: Map<numb
     });
   }
   return { budgetItems: [], laborDemands: [], materials: [], scheduleItems, headerRow: headerIndex + 1, columns: columnMap({ nameCol, codeCol }) };
+}
+
+function approvedGprFormat(rows: unknown[][]): "dated" | "weekly" | null {
+  for (const row of rows.slice(0, 20)) {
+    const headers = row.map(normalizeHeader);
+    const hasWork = headers.some((header) => /укрупн[её]н.*(?:вид.*)?работ/.test(header));
+    if (!hasWork) continue;
+    if (headers.includes("id") && headers.includes("начало") && headers.includes("окончание")) return "dated";
+    if (headers.filter((header) => /^неделя\s*\d{1,2}\b/.test(header)).length >= 2) return "weekly";
+  }
+  return null;
+}
+
+function parseApprovedGprSchedule(sheet: SheetData, startsAt: Date, weeklyPeriods: Map<number, WeeklySchedulePeriod>): ParsedSheetItems | null {
+  const format = approvedGprFormat(sheet.rows);
+  if (!format) return null;
+
+  const headerIndex = sheet.rows.slice(0, 20).findIndex((row) => row.map(normalizeHeader).some((header) => /укрупн[её]н.*(?:вид.*)?работ/.test(header)));
+  if (headerIndex < 0) return null;
+  const headers = sheet.rows[headerIndex].map(normalizeHeader);
+  const numberCol = findColumn(headers, ["№", "номер"]);
+  const codeCol = findColumn(headers, ["id", "код"]);
+  const stageCol = findColumn(headers, ["этап"]);
+  const frontCol = findColumn(headers, ["фронт", "захватка"]);
+  const nameCol = headers.findIndex((header) => /укрупн[её]н.*(?:вид.*)?работ/.test(header));
+  const volumeCol = findColumn(headers, ["объем ориентир", "объём ориентир", "объем", "объём"]);
+  const ownerCol = findColumn(headers, ["бригада поток", "бригада", "поток"]);
+  const startCol = findColumn(headers, ["начало"]);
+  const endCol = findColumn(headers, ["окончание"]);
+  const predecessorCol = findColumn(headers, ["предшественник допуск", "предшественник", "допуск"]);
+  const conditionCol = findColumn(headers, ["технологическое условие", "условие"]);
+  const weekCols = headers
+    .map((header, index) => {
+      const match = header.match(/^неделя\s*(\d{1,2})\b/);
+      return match ? { index, week: Number(match[1]) } : null;
+    })
+    .filter(Boolean) as Array<{ index: number; week: number }>;
+  const scheduleItems: ImportScheduleItem[] = [];
+
+  for (let index = headerIndex + 1; index < sheet.rows.length; index += 1) {
+    const row = sheet.rows[index];
+    const work = textAt(row, nameCol);
+    const stage = textAt(row, stageCol);
+    if (!work || !stage || isTotal(work)) continue;
+
+    const sequence = numberAt(row, numberCol);
+    const explicitCode = textAt(row, codeCol);
+    const code = explicitCode || (sequence && sequence > 0 ? `G${String(Math.round(sequence)).padStart(2, "0")}` : "");
+    const front = textAt(row, frontCol);
+    let itemStart = startCol >= 0 ? normalizeDate(row[startCol]) : null;
+    let itemEnd = endCol >= 0 ? normalizeDate(row[endCol]) : null;
+
+    if (!itemStart || !itemEnd) {
+      const activeWeeks = weekCols.filter((column) => (numberAt(row, column.index) ?? 0) > 0).map((column) => column.week);
+      if (!activeWeeks.length) continue;
+      const firstWeek = activeWeeks[0];
+      const lastWeek = activeWeeks[activeWeeks.length - 1];
+      itemStart = (weeklyPeriods.get(firstWeek)?.startsAt ?? addDays(startsAt, (firstWeek - 1) * 7)).toISOString().slice(0, 10);
+      itemEnd = (weeklyPeriods.get(lastWeek)?.endsAt ?? addDays(startsAt, (lastWeek - 1) * 7 + 5)).toISOString().slice(0, 10);
+    }
+
+    scheduleItems.push({
+      name: [code, front, work].filter(Boolean).join(" · "),
+      owner: textAt(row, ownerCol) || "ПТО",
+      startsAt: itemStart,
+      endsAt: itemEnd,
+      plannedQty: 1,
+      actualQty: 0,
+      status: "not_started",
+      dependency: joinComment(
+        `Этап ГПР: ${stage}`,
+        front ? `Фронт: ${front}` : "",
+        textAt(row, volumeCol) ? `Объем/ориентир: ${textAt(row, volumeCol)}` : "",
+        textAt(row, predecessorCol) ? `Предшественник/допуск: ${textAt(row, predecessorCol)}` : "",
+        textAt(row, conditionCol) ? `Технологическое условие: ${textAt(row, conditionCol)}` : ""
+      ),
+      sheetName: sheet.name,
+      rowNumber: index + 1
+    });
+  }
+
+  return {
+    budgetItems: [],
+    laborDemands: [],
+    materials: [],
+    scheduleItems,
+    headerRow: headerIndex + 1,
+    columns: cleanColumns({
+      name: nameCol,
+      index: codeCol,
+      stage: stageCol,
+      front: frontCol,
+      startsAt: startCol,
+      endsAt: endCol
+    })
+  };
 }
 
 function parseWeeklySchedule(sheet: SheetData, startsAt: Date, weeklyPeriods: Map<number, WeeklySchedulePeriod>): ParsedSheetItems | null {
@@ -1312,7 +1430,7 @@ function findLabeledWorkbookValue(sheets: SheetData[], patterns: RegExp[]) {
 
 function extractWorkbookStartDate(sheetData: SheetData[]) {
   const metadataSheets = sheetData.filter((sheet) => ["summary", "reference", "control", "unknown"].includes(sheet.role));
-  const start = findLabeledWorkbookValue(metadataSheets.length ? metadataSheets : sheetData.slice(0, 3), [/^дата начала$/, /^начало работ$/, /^начало строительства$/]);
+  const start = findLabeledWorkbookValue(metadataSheets.length ? metadataSheets : sheetData.slice(0, 3), [/^дата начала$/, /^начало работ$/, /^начало строительства$/, /^старт$/]);
   const normalized = start ? normalizeDate(start.rawValue) ?? normalizeDate(start.value) : null;
   return normalized ? safeDate(normalized) : undefined;
 }
@@ -1327,17 +1445,23 @@ function extractWeeklySchedulePeriods(sheetData: SheetData[]) {
 
   for (const sheet of sheetData) {
     for (const row of sheet.rows.slice(0, 60)) {
-      const weekText = row.map(normalizeText).find((value) => /^н\d{1,2}$/i.test(value));
-      const week = Number(weekText?.match(/\d+/)?.[0]);
-      if (!week) continue;
-      const period = row.map(normalizeText).find((value) => /^\d{1,2}[.]\d{1,2}\s*[–—-]\s*\d{1,2}[.]\d{1,2}$/.test(value));
-      const match = period?.match(/^(\d{1,2})[.](\d{1,2})\s*[–—-]\s*(\d{1,2})[.](\d{1,2})$/);
-      if (!match) continue;
-      const startYear = Number(year);
-      const endYear = Number(match[4]) < Number(match[2]) ? startYear + 1 : startYear;
-      const startsAt = safeDate(`${startYear}-${match[2].padStart(2, "0")}-${match[1].padStart(2, "0")}`);
-      const endsAt = safeDate(`${endYear}-${match[4].padStart(2, "0")}-${match[3].padStart(2, "0")}`);
-      if (startsAt && endsAt) periods.set(week, { startsAt, endsAt });
+      const values = row.map(normalizeText);
+      for (let index = 0; index < values.length; index += 1) {
+        const combined = values[index].match(/^н(?:еделя)?\s*(\d{1,2})(?:\s+|\r?\n)+(\d{1,2})[.](\d{1,2})\s*[–—-]\s*(\d{1,2})[.](\d{1,2})$/i);
+        const weekText = combined ? values[index] : /^н\d{1,2}$/i.test(values[index]) ? values[index] : "";
+        const week = Number(combined?.[1] ?? weekText.match(/\d+/)?.[0]);
+        if (!week) continue;
+        const period = combined
+          ? `${combined[2]}.${combined[3]}–${combined[4]}.${combined[5]}`
+          : values.find((value) => /^\d{1,2}[.]\d{1,2}\s*[–—-]\s*\d{1,2}[.]\d{1,2}$/.test(value));
+        const match = period?.match(/^(\d{1,2})[.](\d{1,2})\s*[–—-]\s*(\d{1,2})[.](\d{1,2})$/);
+        if (!match) continue;
+        const startYear = Number(year);
+        const endYear = Number(match[4]) < Number(match[2]) ? startYear + 1 : startYear;
+        const startsAt = safeDate(`${startYear}-${match[2].padStart(2, "0")}-${match[1].padStart(2, "0")}`);
+        const endsAt = safeDate(`${endYear}-${match[4].padStart(2, "0")}-${match[3].padStart(2, "0")}`);
+        if (startsAt && endsAt) periods.set(week, { startsAt, endsAt });
+      }
     }
   }
   return periods;

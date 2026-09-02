@@ -143,6 +143,8 @@ function itemProgress(item: ScheduleItem) {
 
 function dependencySection(dependency?: string) {
   const section = dependency?.split(" · ")[0]?.trim() ?? "";
+  const approvedStage = section.match(/^этап гпр:\s*(.+)$/iu)?.[1]?.trim();
+  if (approvedStage) return approvedStage;
   return /^раздел(?:\s|$)/iu.test(section) ? section : "";
 }
 
