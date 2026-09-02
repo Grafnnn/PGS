@@ -439,6 +439,65 @@ describe("project workbook import", () => {
     });
   });
 
+  it("treats the dated full GPR as the authoritative representation of an approved aggregate schedule", () => {
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([
+      ["КАЛЕНДАРНЫЙ ГРАФИК ПРОИЗВОДСТВА РАБОТ — ТРОИЦК — 2 ЗАХВАТКИ / 10 НЕДЕЛЬ"],
+      [],
+      ["№", "Этап", "Захватка", "Укрупнённые вида работ", "Объём / ориентир", "Неделя 1", "Неделя 2"],
+      [1, "0. Организация", "Общая", "Организация площадки", "1 компл.", 0.5, 0.5],
+      [2, "1. Демонтаж", "Захватка 1", "Демонтаж кровли", "882,9 м²", 1, 0]
+    ]), "ГПР Основной");
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([
+      ["КАЛЕНДАРНЫЙ ГРАФИК ПРОИЗВОДСТВА РАБОТ — ТРОИЦК — 2 ЗАХВАТКИ / 10 НЕДЕЛЬ"],
+      [],
+      ["Старт", "07.09.2026", "Финиш", "13.11.2026"],
+      [],
+      ["№", "ID", "Этап", "Фронт", "Укрупнённая работа (состав через «+»)", "Объём / ориентир", "Бригада / поток", "Начало", "Окончание", "Раб. дн.", "Предшественник / допуск", "Технологическое условие", "Неделя 1\n07.09–12.09", "Неделя 2\n14.09–19.09"],
+      [1, "G01", "0. Организация", "Общая", "Организация площадки", "1 компл.", "ИТР", "07.09.2026", "13.11.2026", 58, "М0", "ППР утверждён", 0.5, 0.5],
+      [2, "G02", "1. Демонтаж", "Захватка 1", "Демонтаж кровли", "882,9 м²", "Демонтажная З1", "07.09.2026", "15.09.2026", 8, "G01", "Не вскрывать весь фронт", 1, 0]
+    ]), "ГПР фулл");
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([
+      ["Строка КП", "Раздел / подраздел", "№", "Наименование работ", "Ед.", "Кол-во КП", "Расценка КП, ₽", "Утверждено КП, ₽", "Профиль ГПР", "Н1", "Н2", "Н3"],
+      [10, "Раздел 1. Демонтажные работы", 1, "Детальная сметная строка 1", "м2", 10, 100, 1000, "G02", 600, 400, 0],
+      [11, "Раздел 1. Демонтажные работы", 2, "Детальная сметная строка 2", "м2", 20, 100, 2000, "G02", 1000, 1000, 0]
+    ]), "КС детализация");
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([
+      ["Контроль технологии"],
+      ["ID", "Условие"],
+      ["G02", "Акт допуска"]
+    ]), "Контроль технологии");
+    const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" }) as Buffer;
+
+    const analysis = analyzeProjectWorkbookBuffer(buffer, "approved-gpr.xlsx", "project");
+    const preview = parseProjectWorkbookBuffer(buffer, "approved-gpr.xlsx", "project");
+
+    expect(analysis.parserVersion).toBe("project_workbook_v4");
+    expect(analysis.errors).toEqual([]);
+    expect(analysis.summary.scheduleItems).toBe(2);
+    expect(analysis.suggestions.startsAt).toBe("2026-09-07");
+    expect(analysis.sheets.find((sheet) => sheet.sheetName === "ГПР фулл")).toMatchObject({ role: "schedule", included: true, importedRows: 2 });
+    expect(analysis.sheets.find((sheet) => sheet.sheetName === "ГПР Основной")).toMatchObject({ role: "schedule", included: false, importedRows: 0 });
+    expect(analysis.sheets.find((sheet) => sheet.sheetName === "КС детализация")).toMatchObject({ role: "schedule", included: false, importedRows: 0 });
+    expect(preview.scheduleItems).toEqual([
+      expect.objectContaining({
+        name: "G01 · Общая · Организация площадки",
+        owner: "ИТР",
+        startsAt: "2026-09-07",
+        endsAt: "2026-11-13",
+        dependency: expect.stringContaining("Этап ГПР: 0. Организация")
+      }),
+      expect.objectContaining({
+        name: "G02 · Захватка 1 · Демонтаж кровли",
+        owner: "Демонтажная З1",
+        startsAt: "2026-09-07",
+        endsAt: "2026-09-15",
+        dependency: expect.stringContaining("Предшественник/допуск: G01")
+      })
+    ]);
+    expect(preview.scheduleItems.some((item) => item.name.includes("Детальная сметная строка"))).toBe(false);
+  });
+
   it("treats заявки_итог as the authoritative material list and preserves request deadlines and marks", () => {
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([

@@ -115,6 +115,21 @@ describe("ProductionScheduleWorkspace", () => {
     expect(groups[0]?.items[0]?.id).toBe("schedule-imported");
   });
 
+  it("groups approved aggregate GPR rows by their stage marker", () => {
+    const approvedItem: ScheduleItem = {
+      ...scheduleItems[2],
+      id: "schedule-gpr",
+      name: "G02 · Захватка 1 · Демонтаж кровли",
+      dependency: "Этап ГПР: 1. Демонтаж · Фронт: Захватка 1 · Предшественник/допуск: G01"
+    };
+
+    const groups = buildScheduleGroups([approvedItem], budgetItems, new Date(2026, 7, 26, 12).getTime());
+
+    expect(groups).toHaveLength(1);
+    expect(groups[0]?.title).toBe("1. Демонтаж");
+    expect(groups[0]?.items[0]?.id).toBe("schedule-gpr");
+  });
+
   it("builds the weekly PTO control from confirmed schedule dates", () => {
     const rows = buildWeeklyControl(scheduleItems, new Date(2026, 7, 26, 12).getTime());
 
