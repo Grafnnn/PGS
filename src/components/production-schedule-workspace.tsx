@@ -23,6 +23,7 @@ import {
   type ScheduleCashflowTone
 } from "@/lib/schedule-cashflow-intelligence";
 import type { BudgetItem, Material, Payment, ProcurementRequest, ScheduleItem } from "@/lib/types";
+import { ProjectCalendarShiftControl } from "./project-calendar-shift-control";
 
 type ScheduleDraftState = {
   kind: string;
@@ -46,6 +47,7 @@ type ScheduleUpdateInput = Omit<Partial<ScheduleItem>, "budgetItemId"> & {
 };
 
 type Props = {
+  projectId?: string;
   projectName: string;
   projectStartsAt?: string;
   projectEndsAt?: string;
@@ -60,6 +62,7 @@ type Props = {
   loading: string;
   busy: boolean;
   canEdit: boolean;
+  canShiftCalendar?: boolean;
   onCreate: (item: ScheduleCreateInput) => Promise<void>;
   onUpdate: (item: ScheduleItem, payload: ScheduleUpdateInput) => Promise<void>;
   onDelete: (item: ScheduleItem) => Promise<void>;
@@ -531,6 +534,7 @@ function DraftRows({ draft, kind }: { draft: ScheduleDraftState; kind: "schedule
 }
 
 export function ProductionScheduleWorkspace({
+  projectId,
   projectName,
   projectStartsAt,
   projectEndsAt,
@@ -545,6 +549,7 @@ export function ProductionScheduleWorkspace({
   loading,
   busy,
   canEdit,
+  canShiftCalendar = false,
   onCreate,
   onUpdate,
   onDelete,
@@ -813,6 +818,7 @@ export function ProductionScheduleWorkspace({
               <button className="button secondary compact-button" onClick={() => onNavigate("Бюджет / ВОР")} type="button">Открыть ВОР</button>
             </div>
             <DraftRows draft={draft} kind="schedule" />
+            {projectId ? <ProjectCalendarShiftControl canShift={canShiftCalendar} projectId={projectId} scheduleItems={scheduleItems} /> : null}
           </div>
         </details>
       </div>
