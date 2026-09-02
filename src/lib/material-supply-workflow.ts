@@ -12,6 +12,7 @@ export type MaterialSupplyDemand = {
   name: string;
   unit: string;
   category: string;
+  requestCode?: string;
   requiredQty: number;
   orderedQty: number;
   deliveredQty: number;
@@ -100,6 +101,11 @@ function earliestDate(values: Array<string | undefined>) {
     .sort()[0];
 }
 
+function sourceRequestCode(name: string) {
+  const match = name.match(/^\s*\[([^\]]+)\]\s*/);
+  return match?.[1]?.trim() || undefined;
+}
+
 export function materialSupplyCategory(name: string) {
   const value = normalize(name);
   if (/бетон|раствор|цемент|песок|щеб/.test(value)) return "Бетон и инертные";
@@ -156,7 +162,8 @@ export function buildMaterialSupplyWorkflow({
       ? earliestDate((scheduleByCostCode.get(material.costCodeId) ?? []).map((item) => item.startsAt))
       : undefined;
     const deliveryAt = earliestDate([scheduleStart, material.neededAt]) ?? material.neededAt;
-    const requestAt = shiftDays(deliveryAt, -leadTimeDays);
+    const requestAt = earliestDate([material.orderByAt]) ?? shiftDays(deliveryAt, -leadTimeDays);
+    const requestCode = sourceRequestCode(material.name);
     const orderedOrConfirmedQty = Math.max(
       material.orderedQty,
       material.deliveredQty,
@@ -179,6 +186,7 @@ export function buildMaterialSupplyWorkflow({
       name: material.name,
       unit: material.unit,
       category: materialSupplyCategory(material.name),
+      requestCode,
       requiredQty: material.requiredQty,
       orderedQty: material.orderedQty,
       deliveredQty: material.deliveredQty,
@@ -200,11 +208,16 @@ export function buildMaterialSupplyWorkflow({
   const upcomingDemands = demands.filter((item) => item.phase === "upcoming" && item.deficitQty > 0);
   const grouped = new Map<string, MaterialSupplyRequestGroup>();
   for (const item of dueDemands) {
-    const key = `${weekStart(item.deliveryAt)}|${item.category}`;
+    const groupCategory = item.requestCode ? `${item.requestCode} · ${item.category}` : item.category;
+    const key = item.requestCode
+      ? `${item.requestAt}|${normalize(item.requestCode)}`
+      : `${weekStart(item.deliveryAt)}|${item.category}`;
     const existing = grouped.get(key) ?? {
       key,
-      title: `Автозаявка · ${item.category} · поставка до ${item.deliveryAt}`,
-      category: item.category,
+      title: item.requestCode
+        ? `${item.requestCode} · поставка до ${item.deliveryAt}`
+        : `Автозаявка · ${item.category} · поставка до ${item.deliveryAt}`,
+      category: groupCategory,
       requestAt: item.requestAt,
       neededAt: item.deliveryAt,
       priority: priorityForDelivery(today, item.deliveryAt),

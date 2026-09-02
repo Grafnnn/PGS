@@ -12,11 +12,12 @@ import type {
   ImportSheetMapping
 } from "./import-types";
 import { buildProjectWorkbookQualityGate, failedProjectWorkbookQualityGate, type ProjectWorkbookQualityGate } from "./project-workbook-quality";
+import { DEFAULT_SUPPLY_LEAD_DAYS } from "@/lib/material-supply-workflow";
 import { enrichLaborDemandsWithAverageProductivity } from "@/lib/workforce-productivity";
 
 export type { ProjectWorkbookQualityGate, ProjectWorkbookQualityIssue, ProjectWorkbookQualityStatus } from "./project-workbook-quality";
 
-export const PROJECT_WORKBOOK_PARSER_VERSION = "project_workbook_v2";
+export const PROJECT_WORKBOOK_PARSER_VERSION = "project_workbook_v3";
 
 export type ProjectWorkbookSheetRole =
   | "works"
@@ -256,7 +257,14 @@ function buildProjectWorkbook(buffer: Buffer, fileName: string, projectId: strin
   }
 
   const sheetData = workbook.SheetNames.map((name) => buildSheetData(name, workbook.Sheets[name], options.sheetOverrides?.[name]));
-  const enabledSheetData = sheetData.filter((sheet) => sheet.enabled);
+  const finalMaterialSheet = sheetData.find((sheet) => sheet.enabled && sheet.role === "materials" && isFinalMaterialRequestSheet(sheet.name));
+  const isSupersededMaterialSheet = (sheet: SheetData) => Boolean(
+    finalMaterialSheet &&
+    sheet !== finalMaterialSheet &&
+    sheet.role === "materials" &&
+    !sheet.overridden
+  );
+  const enabledSheetData = sheetData.filter((sheet) => sheet.enabled && !isSupersededMaterialSheet(sheet));
   const budgetItems: ImportBudgetItem[] = [];
   const parsedLaborDemands: ImportLaborDemand[] = [];
   const materials: ImportMaterial[] = [];
@@ -269,7 +277,8 @@ function buildProjectWorkbook(buffer: Buffer, fileName: string, projectId: strin
   const vatPercent = extractVatPercent(enabledSheetData) ?? 0;
 
   for (const sheet of sheetData) {
-    const parsed = sheet.enabled ? parseSheet(sheet, startsAt, vatPercent, weeklyPeriods) : emptyParsedSheet();
+    const supersededMaterialSheet = isSupersededMaterialSheet(sheet);
+    const parsed = sheet.enabled && !supersededMaterialSheet ? parseSheet(sheet, startsAt, vatPercent, weeklyPeriods) : emptyParsedSheet();
     budgetItems.push(...parsed.budgetItems);
     parsedLaborDemands.push(...parsed.laborDemands);
     materials.push(...parsed.materials);
@@ -289,7 +298,11 @@ function buildProjectWorkbook(buffer: Buffer, fileName: string, projectId: strin
       importedRows,
       formulaCells: sheet.formulaCells,
       hiddenRows: sheet.hiddenRows,
-      reason: sheet.enabled ? sheet.reason : "Лист исключен пользователем из анализа и импорта."
+      reason: !sheet.enabled
+        ? "Лист исключен пользователем из анализа и импорта."
+        : supersededMaterialSheet
+          ? `Материалы берутся из итогового листа «${finalMaterialSheet?.name}»; исходный реестр оставлен для сверки без дублей.`
+          : sheet.reason
     });
     mappings.push({
       sheetName: sheet.name,
@@ -309,6 +322,8 @@ function buildProjectWorkbook(buffer: Buffer, fileName: string, projectId: strin
         : [
             !sheet.enabled
               ? "Лист исключен пользователем."
+              : supersededMaterialSheet
+                ? `Материалы импортируются из итогового листа «${finalMaterialSheet?.name}».`
               : sheet.role === "summary" || sheet.role === "reference" || sheet.role === "control"
                 ? "Лист используется для сверки и не переносится как рабочие строки."
                 : "Импортируемые строки не найдены."
@@ -460,6 +475,9 @@ function classifySheet(name: string, rows: unknown[][]): Pick<SheetData, "role" 
   const sample = rows.slice(0, 16).flat().map(normalizeHeader).join(" ");
   const monthColumns = rows.slice(0, 12).reduce((max, row) => Math.max(max, row.map(normalizeHeader).filter((value) => /^[mм]\d{1,2}$/.test(value)).length), 0);
   const weekColumns = rows.slice(0, 12).reduce((max, row) => Math.max(max, row.map(normalizeHeader).filter((value) => /^н\d{1,2}$/.test(value)).length), 0);
+  if (/заявк.*итог/.test(normalizedName) && /очередь заказа.*заказать до.*материал.*к заказу/.test(sample)) {
+    return { role: "materials", confidence: 1, reason: "Распознана итоговая консолидированная заявка; она заменяет промежуточные реестры материалов." };
+  }
   if (/кс детализац/.test(normalizedName) && weekColumns >= 3 && /наименование работ/.test(sample)) {
     return { role: "schedule", confidence: 0.99, reason: "Распознана детализация КС с недельным распределением работ." };
   }
@@ -598,16 +616,22 @@ function parseMaterials(sheet: SheetData, startsAt: Date, vatPercent: number): P
   const totalCol = findColumn(headers, ["стоимость без ндс", "стоимость по струкова с ндс", "стоимость исходная", "стоимость"]);
   const priceIncludesVat = priceCol >= 0 && /с ндс/.test(headers[priceCol]) && !/без ндс/.test(headers[priceCol]);
   const totalIncludesVat = totalCol >= 0 && /с ндс/.test(headers[totalCol]) && !/без ндс/.test(headers[totalCol]);
-  const sectionCol = findColumn(headers, ["раздел", "подраздел", "система"]);
+  const sectionCol = findColumn(headers, ["вид закупки", "раздел", "подраздел", "система"]);
   const codeCol = findColumn(headers, ["№", "номер", "код"]);
   const noteCol = findColumn(headers, ["источник основание", "примечание", "комментарий", "источник"]);
   const rowTypeCol = findColumn(headers, ["тип строки"]);
   const requestCol = findColumn(headers, ["заявка"]);
-  const characteristicCol = findColumn(headers, ["характеристика", "марка поз рд"]);
+  const characteristicCol = findColumn(headers, ["марка тип размер", "характеристика", "марка поз рд"]);
+  const specificationCol = findColumn(headers, ["спецификация гост", "спецификация", "гост"]);
   const workCol = findColumn(headers, ["вид работ"]);
-  const sourceIdCol = findColumn(headers, ["source row id", "source_row_id"]);
-  const packageCol = findColumn(headers, ["пакет размещения"]);
+  const frontCol = findColumn(headers, ["gpr фронт", "фронт"]);
+  const sourceIdCol = findColumn(headers, ["source row id", "source_row_id", "исходные строки"]);
+  const packageCol = findColumn(headers, ["очередь заказа", "пакет размещения"]);
   const deadlineCol = findColumn(headers, ["заказать запустить до", "заказать до", "требуется к", "нужно к"]);
+  const needWindowCol = findColumn(headers, ["окно потребности на площадке", "окно потребности"]);
+  const volumeStatusCol = findColumn(headers, ["статус объёма", "статус объема"]);
+  const specificationStatusCol = findColumn(headers, ["статус спецификации"]);
+  const reconciliationCol = findColumn(headers, ["сверка объёма", "сверка объема"]);
   const budgetItems: ImportBudgetItem[] = [];
   const materials: ImportMaterial[] = [];
   for (let index = headerIndex + 1; index < sheet.rows.length; index += 1) {
@@ -622,19 +646,35 @@ function parseMaterials(sheet: SheetData, startsAt: Date, vatPercent: number): P
     if (!rawName || !unit || isTotal(rawName)) continue;
     const request = textAt(row, requestCol);
     const characteristic = textAt(row, characteristicCol);
+    const specification = textAt(row, specificationCol);
     const work = textAt(row, workCol);
-    const name = joinMaterialName(request, rawName, characteristic, work);
+    const front = textAt(row, frontCol);
+    const name = joinMaterialName(request, rawName, characteristic, specification, work);
     const vatFactor = vatPercent > 0 ? 1 + vatPercent / 100 : 1;
     const normalizedTotal = total && total > 0 ? total / (totalIncludesVat ? vatFactor : 1) : 0;
     const normalizedPrice = price && price > 0 ? price / (priceIncludesVat ? vatFactor : 1) : 0;
     const unitPrice = normalizedTotal > 0 ? normalizedTotal / qty : normalizedPrice;
-    const section = textAt(row, sectionCol) || textAt(row, packageCol) || "Материалы";
-    const neededAt = normalizeDate(row[deadlineCol]) ?? startsAt.toISOString().slice(0, 10);
+    const orderQueue = textAt(row, packageCol);
+    const section = textAt(row, sectionCol) || orderQueue || "Материалы";
+    const deadline = normalizeDate(row[deadlineCol]);
+    const deadlineIsOrderDate = deadlineCol >= 0 && /заказать|запустить/.test(headers[deadlineCol]);
+    const orderByAt = deadlineIsOrderDate ? deadline ?? undefined : undefined;
+    const neededAt = needDateFromWindow(textAt(row, needWindowCol), orderByAt ?? deadline ?? startsAt.toISOString().slice(0, 10))
+      ?? (orderByAt ? addDays(new Date(`${orderByAt}T00:00:00.000Z`), DEFAULT_SUPPLY_LEAD_DAYS).toISOString().slice(0, 10) : deadline)
+      ?? startsAt.toISOString().slice(0, 10);
     const sourceId = textAt(row, sourceIdCol);
     const sourceNote = joinComment(
       rowType ? `Тип строки: ${rowType.toUpperCase()}` : "",
       sourceId ? `Источник: ${sourceId}` : "",
       request ? `Заявка: ${request}` : "",
+      orderQueue ? `Очередь: ${orderQueue}` : "",
+      orderByAt ? `Заказать до: ${orderByAt}` : "",
+      textAt(row, needWindowCol) ? `Потребность: ${textAt(row, needWindowCol)}` : "",
+      front ? `Фронт: ${front}` : "",
+      specification ? `Спецификация: ${specification}` : "",
+      textAt(row, volumeStatusCol) ? `Объем: ${textAt(row, volumeStatusCol)}` : "",
+      textAt(row, specificationStatusCol) ? `Статус спецификации: ${textAt(row, specificationStatusCol)}` : "",
+      textAt(row, reconciliationCol) ? `Сверка: ${textAt(row, reconciliationCol)}` : "",
       work ? `Вид работ: ${work}` : "",
       textAt(row, noteCol)
     );
@@ -664,6 +704,7 @@ function parseMaterials(sheet: SheetData, startsAt: Date, vatPercent: number): P
       plannedUnitPrice: unitPrice,
       actualUnitPrice: 0,
       supplier: "Не выбран",
+      orderByAt,
       neededAt,
       status: "required",
       sheetName: sheet.name,
@@ -937,8 +978,8 @@ function parseWeeklySchedule(sheet: SheetData, startsAt: Date, weeklyPeriods: Ma
   };
 }
 
-function joinMaterialName(request: string, name: string, characteristic: string, work: string) {
-  const details = [characteristic, work]
+function joinMaterialName(request: string, name: string, ...sourceDetails: string[]) {
+  const details = sourceDetails
     .map(normalizeText)
     .filter((value, index, values) => value && normalizeHeader(value) !== normalizeHeader(name) && values.indexOf(value) === index);
   return [request ? `[${request}]` : "", name, ...details.map((detail) => `· ${detail}`)].filter(Boolean).join(" ");
@@ -1638,8 +1679,30 @@ function reconcilePersistenceRounding(items: ImportBudgetItem[], gap: number) {
 }
 
 function preferredMaterialSource(candidate: string, current: string) {
-  const score = (sheetName: string) => (/струков|обновлен|принят/i.test(sheetName) ? 3 : /желт|контрол/i.test(sheetName) ? 1 : 2);
+  const score = (sheetName: string) => (/заявк.*итог/i.test(sheetName) ? 4 : /струков|обновлен|принят/i.test(sheetName) ? 3 : /желт|контрол/i.test(sheetName) ? 1 : 2);
   return score(candidate) > score(current);
+}
+
+function isFinalMaterialRequestSheet(sheetName: string) {
+  return /заявк.*итог/.test(normalizeHeader(sheetName));
+}
+
+function needDateFromWindow(value: string, reference: string) {
+  const text = normalizeText(value);
+  const match = text.match(/(\d{1,2})[./](\d{1,2})(?:[./](\d{2,4}))?/);
+  if (!match) return null;
+  const referenceDate = safeDate(reference) ?? new Date();
+  let year = match[3] ? Number(match[3].length === 2 ? `20${match[3]}` : match[3]) : referenceDate.getUTCFullYear();
+  const month = Number(match[2]);
+  const day = Number(match[1]);
+  let result = new Date(Date.UTC(year, month - 1, day));
+  if (!match[3] && result.getTime() < referenceDate.getTime() && referenceDate.getUTCMonth() >= 10 && month <= 2) {
+    year += 1;
+    result = new Date(Date.UTC(year, month - 1, day));
+  }
+  return Number.isNaN(result.getTime()) || result.getUTCMonth() !== month - 1 || result.getUTCDate() !== day
+    ? null
+    : result.toISOString().slice(0, 10);
 }
 
 function failedResult(fileName: string, fileSize: number, projectId: string, error: string): BuildResult {

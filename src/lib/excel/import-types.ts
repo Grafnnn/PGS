@@ -83,6 +83,7 @@ export interface ImportMaterial {
   plannedUnitPrice: number;
   actualUnitPrice: number;
   supplier: string;
+  orderByAt?: string;
   neededAt: string;
   status: string;
   sheetName: string;
@@ -303,6 +304,7 @@ export const importMaterialSchema = z.object({
   plannedUnitPrice: z.coerce.number().nonnegative(),
   actualUnitPrice: z.coerce.number().nonnegative(),
   supplier: z.string().default("Не выбран"),
+  orderByAt: z.coerce.date().optional(),
   neededAt: z.coerce.date(),
   status: z.string().default("required"),
   sheetName: z.string(),

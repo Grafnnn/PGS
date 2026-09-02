@@ -61,6 +61,7 @@ export const materialSchema = z.object({
   plannedUnitPrice: z.coerce.number().nonnegative(),
   actualUnitPrice: z.coerce.number().nonnegative().default(0),
   supplier: z.string().optional().nullable(),
+  orderByAt: z.coerce.date().optional().nullable(),
   neededAt: z.coerce.date(),
   status: z.string().default("required")
 });
