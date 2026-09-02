@@ -87,7 +87,9 @@ export function MaterialSupplyWorkspace({
     [materials, requests, scheduleItems]
   );
   const currentDraft = draft?.kind === "procurement" ? draft : null;
-  const previewReady = currentDraft?.mode === "preview" && currentDraft.draft.items.length > 0;
+  const previewCount = currentDraft?.mode === "preview" ? currentDraft.draft.items.length : null;
+  const planHasChanged = previewCount !== null && previewCount !== model.summary.due;
+  const canCreateDrafts = canEdit && model.summary.dueGroups > 0 && !pipelineLoading;
 
   const lanes: Array<{ id: SupplyView; label: string; count: number; icon: React.ReactNode }> = [
     { id: "plan", label: "План 14 дней", count: model.summary.due, icon: <CalendarClock size={18} /> },
@@ -146,7 +148,14 @@ export function MaterialSupplyWorkspace({
             {pipelineLoading === "procurement-preview" ? <RefreshCw className="spin" size={16} /> : <CalendarClock size={16} />}
             {pipelineLoading === "procurement-preview" ? "Считаю" : "Пересчитать план"}
           </button>
-          <button className="button primary compact-button" disabled={!canEdit || !previewReady || Boolean(pipelineLoading)} onClick={onCommit} type="button">
+          <button
+            aria-label="Создать черновики заявок из актуального плана"
+            className="button primary compact-button"
+            disabled={!canCreateDrafts}
+            onClick={onCommit}
+            title={model.summary.dueGroups ? "Состав будет повторно проверен перед созданием" : "Нет позиций, срок формирования которых наступил"}
+            type="button"
+          >
             <PackageCheck size={16} />
             {pipelineLoading === "procurement-commit" ? "Создаю" : `Создать ${model.summary.dueGroups || ""} чернов.`}
           </button>
@@ -189,7 +198,7 @@ export function MaterialSupplyWorkspace({
         <div className="material-supply-panel">
           <div className="material-supply-panel-heading">
             <div><strong>Потребность, которую пора запускать</strong><span>Дата формирования берётся из «Заказать до»; если она не задана, PGS рассчитывает её за 14 дней до потребности.</span></div>
-            {currentDraft?.mode === "preview" ? <span className="badge blue">Preview: {currentDraft.draft.items.length} поз.</span> : null}
+            {previewCount !== null ? <span className={`badge ${planHasChanged ? "yellow" : "blue"}`}>{planHasChanged ? "План изменился · пересчитается при создании" : `Preview: ${previewCount} поз.`}</span> : null}
           </div>
           {model.groups.length ? <div className="material-supply-group-list">{model.groups.map((group) => (
             <article className="material-supply-group" key={group.key}>
