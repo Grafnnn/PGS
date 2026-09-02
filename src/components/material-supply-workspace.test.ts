@@ -50,4 +50,50 @@ describe("MaterialSupplyWorkspace", () => {
     expect(onPreview).not.toHaveBeenCalled();
     expect(onCommit).not.toHaveBeenCalled();
   });
+
+  it("allows an explicit commit when the live plan has due groups but the saved preview is stale", () => {
+    const html = renderToStaticMarkup(createElement(MaterialSupplyWorkspace, {
+      projectId: "project-1",
+      projectName: "Троицк",
+      materials: [material({ neededAt: "2000-01-15", orderByAt: "2000-01-01" })],
+      scheduleItems: [],
+      requests: [] satisfies ProcurementRequest[],
+      draft: { kind: "procurement", mode: "preview", draft: { summary: {}, items: [] } },
+      pipelineLoading: "",
+      canEdit: true,
+      canApprove: true,
+      onPreview: vi.fn(),
+      onCommit: vi.fn(),
+      onRequestUpdated: vi.fn(),
+      onMaterialsUpdated: vi.fn(),
+      onNavigate: vi.fn()
+    }));
+
+    const createButton = html.match(/<button[^>]*aria-label="Создать черновики заявок из актуального плана"[^>]*>/)?.[0] ?? "";
+    expect(createButton).not.toContain("disabled");
+    expect(html).toContain("Создать 1 чернов.");
+    expect(html).toContain("План изменился · пересчитается при создании");
+  });
+
+  it("keeps creation disabled when no request group is due", () => {
+    const html = renderToStaticMarkup(createElement(MaterialSupplyWorkspace, {
+      projectId: "project-1",
+      projectName: "Троицк",
+      materials: [material()],
+      scheduleItems: [],
+      requests: [] satisfies ProcurementRequest[],
+      draft: null,
+      pipelineLoading: "",
+      canEdit: true,
+      canApprove: true,
+      onPreview: vi.fn(),
+      onCommit: vi.fn(),
+      onRequestUpdated: vi.fn(),
+      onMaterialsUpdated: vi.fn(),
+      onNavigate: vi.fn()
+    }));
+
+    const createButton = html.match(/<button[^>]*aria-label="Создать черновики заявок из актуального плана"[^>]*>/)?.[0] ?? "";
+    expect(createButton).toContain("disabled");
+  });
 });
