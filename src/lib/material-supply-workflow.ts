@@ -45,7 +45,9 @@ export type MaterialSupplyWorkflowModel = {
   demands: MaterialSupplyDemand[];
   dueDemands: MaterialSupplyDemand[];
   upcomingDemands: MaterialSupplyDemand[];
+  clarificationDemands: MaterialSupplyDemand[];
   groups: MaterialSupplyRequestGroup[];
+  upcomingGroups: MaterialSupplyRequestGroup[];
   drafts: ProcurementRequest[];
   submitted: ProcurementRequest[];
   awaiting: ProcurementRequest[];
@@ -54,6 +56,12 @@ export type MaterialSupplyWorkflowModel = {
   summary: {
     due: number;
     dueGroups: number;
+    sourcePositions: number;
+    actionablePositions: number;
+    clarificationPositions: number;
+    sourcePackages: number;
+    approval: number;
+    drafts: number;
     submitted: number;
     awaiting: number;
     overdue: number;
@@ -122,6 +130,34 @@ function priorityForDelivery(today: string, deliveryAt: string): RiskPriority {
   if (days <= 0) return "critical";
   if (days <= 7) return "high";
   return "medium";
+}
+
+function groupSupplyDemands(items: MaterialSupplyDemand[], today: string) {
+  const grouped = new Map<string, MaterialSupplyRequestGroup>();
+  for (const item of items) {
+    const groupCategory = item.requestCode ? `${item.requestCode} · ${item.category}` : item.category;
+    const key = item.requestCode
+      ? `${item.requestAt}|${normalize(item.requestCode)}`
+      : `${weekStart(item.deliveryAt)}|${item.category}`;
+    const existing = grouped.get(key) ?? {
+      key,
+      title: item.requestCode
+        ? `${item.requestCode} · поставка до ${item.deliveryAt}`
+        : `Автозаявка · ${item.category} · поставка до ${item.deliveryAt}`,
+      category: groupCategory,
+      requestAt: item.requestAt,
+      neededAt: item.deliveryAt,
+      priority: priorityForDelivery(today, item.deliveryAt),
+      items: []
+    };
+    existing.items.push(item);
+    if (item.deliveryAt < existing.neededAt) existing.neededAt = item.deliveryAt;
+    if (item.requestAt < existing.requestAt) existing.requestAt = item.requestAt;
+    const nextPriority = priorityForDelivery(today, item.deliveryAt);
+    if (nextPriority === "critical" || (nextPriority === "high" && existing.priority === "medium")) existing.priority = nextPriority;
+    grouped.set(key, existing);
+  }
+  return Array.from(grouped.values()).sort((left, right) => left.requestAt.localeCompare(right.requestAt) || left.category.localeCompare(right.category, "ru"));
 }
 
 export function buildMaterialSupplyWorkflow({
@@ -206,32 +242,9 @@ export function buildMaterialSupplyWorkflow({
 
   const dueDemands = demands.filter((item) => item.phase === "due" && item.deficitQty > 0);
   const upcomingDemands = demands.filter((item) => item.phase === "upcoming" && item.deficitQty > 0);
-  const grouped = new Map<string, MaterialSupplyRequestGroup>();
-  for (const item of dueDemands) {
-    const groupCategory = item.requestCode ? `${item.requestCode} · ${item.category}` : item.category;
-    const key = item.requestCode
-      ? `${item.requestAt}|${normalize(item.requestCode)}`
-      : `${weekStart(item.deliveryAt)}|${item.category}`;
-    const existing = grouped.get(key) ?? {
-      key,
-      title: item.requestCode
-        ? `${item.requestCode} · поставка до ${item.deliveryAt}`
-        : `Автозаявка · ${item.category} · поставка до ${item.deliveryAt}`,
-      category: groupCategory,
-      requestAt: item.requestAt,
-      neededAt: item.deliveryAt,
-      priority: priorityForDelivery(today, item.deliveryAt),
-      items: []
-    };
-    existing.items.push(item);
-    if (item.deliveryAt < existing.neededAt) existing.neededAt = item.deliveryAt;
-    if (item.requestAt < existing.requestAt) existing.requestAt = item.requestAt;
-    const nextPriority = priorityForDelivery(today, item.deliveryAt);
-    if (nextPriority === "critical" || (nextPriority === "high" && existing.priority === "medium")) existing.priority = nextPriority;
-    grouped.set(key, existing);
-  }
-
-  const groups = Array.from(grouped.values()).sort((left, right) => left.neededAt.localeCompare(right.neededAt) || left.category.localeCompare(right.category, "ru"));
+  const clarificationDemands = demands.filter((item) => item.requiredQty <= 0);
+  const groups = groupSupplyDemands(dueDemands, today);
+  const upcomingGroups = groupSupplyDemands(upcomingDemands, today);
   const drafts = procurementRequests.filter((item) => item.status === "draft");
   const submitted = procurementRequests.filter((item) => item.status === "submitted");
   const awaiting = procurementRequests.filter((item) => AWAITING_REQUEST_STATUSES.has(item.status));
@@ -248,7 +261,9 @@ export function buildMaterialSupplyWorkflow({
     demands,
     dueDemands,
     upcomingDemands,
+    clarificationDemands,
     groups,
+    upcomingGroups,
     drafts,
     submitted,
     awaiting,
@@ -257,6 +272,12 @@ export function buildMaterialSupplyWorkflow({
     summary: {
       due: dueDemands.length,
       dueGroups: groups.length,
+      sourcePositions: demands.length,
+      actionablePositions: demands.filter((item) => item.requiredQty > 0).length,
+      clarificationPositions: clarificationDemands.length,
+      sourcePackages: new Set(demands.map((item) => item.requestCode).filter(Boolean)).size,
+      approval: drafts.length + submitted.length,
+      drafts: drafts.length,
       submitted: submitted.length,
       awaiting: awaiting.length,
       overdue,

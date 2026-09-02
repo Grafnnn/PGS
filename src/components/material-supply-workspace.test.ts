@@ -4,10 +4,13 @@ import { describe, expect, it, vi } from "vitest";
 import { MaterialSupplyWorkspace } from "./material-supply-workspace";
 import type { Material, ProcurementRequest } from "@/lib/types";
 
-const material: Material = {
-  id: "material-1", projectId: "project-1", name: "Мембрана кровельная", unit: "м2", requiredQty: 100, orderedQty: 0,
-  deliveredQty: 0, consumedQty: 0, plannedUnitPrice: 500, actualUnitPrice: 0, supplier: "Не выбран", neededAt: "2026-09-10", status: "required"
-};
+function material(overrides: Partial<Material> = {}): Material {
+  return {
+    id: "material-1", projectId: "project-1", name: "[МЗ-05] Мембрана кровельная", unit: "м2", requiredQty: 100, orderedQty: 0,
+    deliveredQty: 0, consumedQty: 0, plannedUnitPrice: 500, actualUnitPrice: 0, supplier: "Не выбран", neededAt: "2099-09-10", orderByAt: "2099-08-27", status: "required",
+    ...overrides
+  };
+}
 
 describe("MaterialSupplyWorkspace", () => {
   it("renders a compact four-stage supply workflow without triggering mutations", () => {
@@ -16,7 +19,11 @@ describe("MaterialSupplyWorkspace", () => {
     const html = renderToStaticMarkup(createElement(MaterialSupplyWorkspace, {
       projectId: "project-1",
       projectName: "Троицк",
-      materials: [material],
+      materials: [
+        material(),
+        material({ id: "material-2", name: "[МЗ-05] Вторая позиция" }),
+        material({ id: "material-3", name: "[МЗ-06] Количество уточняется", requiredQty: 0 })
+      ],
       scheduleItems: [],
       requests: [] satisfies ProcurementRequest[],
       draft: null,
@@ -34,7 +41,12 @@ describe("MaterialSupplyWorkspace", () => {
     expect(html).toContain("Подтверждение");
     expect(html).toContain("Ожидается");
     expect(html).toContain("Склад");
-    expect(html).toContain("Дата формирования = дата потребности минус 14 дней");
+    expect(html).toContain("Сверка с итоговой заявкой");
+    expect(html).toContain("2 к заказу · 1 на уточнение · 2 пакета МЗ");
+    expect(html).toContain("3 поз.");
+    expect(html).toContain("Дата формирования берётся из «Заказать до»");
+    expect(html).toContain("Будущие пакеты: 1 · 2 поз.");
+    expect(html).toContain("На уточнение: 1 поз.");
     expect(onPreview).not.toHaveBeenCalled();
     expect(onCommit).not.toHaveBeenCalled();
   });
