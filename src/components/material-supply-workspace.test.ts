@@ -36,15 +36,16 @@ describe("MaterialSupplyWorkspace", () => {
       onMaterialsUpdated: vi.fn(),
       onNavigate: vi.fn()
     }));
-    expect(html).toContain("От графика работ до приёмки на склад");
-    expect(html).toContain("План 14 дней");
-    expect(html).toContain("Подтверждение");
-    expect(html).toContain("Ожидается");
+    expect(html).toContain("Заявки и поставки");
+    expect(html).toContain("К оформлению");
+    expect(html).toContain("На согласовании");
+    expect(html).toContain("В пути");
     expect(html).toContain("Склад");
-    expect(html).toContain("Сверка с итоговой заявкой");
-    expect(html).toContain("2 к заказу · 1 на уточнение · 2 пакета МЗ");
-    expect(html).toContain("3 поз.");
-    expect(html).toContain("Дата формирования берётся из «Заказать до»");
+    expect(html).toContain("Исходная заявка");
+    expect(html).toContain("<b>2</b> к заказу");
+    expect(html).toContain("<b>1</b> уточнить");
+    expect(html).toContain("<b>2</b> пакета МЗ");
+    expect(html).toContain("срок по полю «Заказать до»");
     expect(html).toContain("Будущие пакеты: 1 · 2 поз.");
     expect(html).toContain("На уточнение: 1 поз.");
     expect(onPreview).not.toHaveBeenCalled();
@@ -71,8 +72,10 @@ describe("MaterialSupplyWorkspace", () => {
 
     const createButton = html.match(/<button[^>]*aria-label="Создать черновики заявок из актуального плана"[^>]*>/)?.[0] ?? "";
     expect(createButton).not.toContain("disabled");
-    expect(html).toContain("Создать 1 чернов.");
-    expect(html).toContain("План изменился · пересчитается при создании");
+    expect(html).toContain("Создать заявки · 1");
+    expect(html).toContain("План изменился · обновится при создании");
+    expect(html).toContain("material-supply-batch priority-critical");
+    expect(html).toContain("Срочно");
   });
 
   it("keeps creation disabled when no request group is due", () => {
