@@ -1094,6 +1094,7 @@ export function ProjectWorkspace({
           budgetItems={budgetItems}
           busy={saving === "schedule"}
           canEdit={canEditCurrentProject}
+          canShiftCalendar={canDeleteCurrentProject}
           contractAmount={initialBundle.project.contractAmount}
           draft={pipelineDraft}
           importHistory={importHistory}
@@ -1118,6 +1119,7 @@ export function ProjectWorkspace({
           }}
           payments={payments}
           procurementRequests={procurementRequests}
+          projectId={initialBundle.project.id}
           projectEndsAt={initialBundle.project.endsAt}
           projectName={initialBundle.project.name}
           projectStartsAt={initialBundle.project.startsAt}

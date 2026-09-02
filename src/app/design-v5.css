@@ -1313,6 +1313,89 @@ body.design-v5 .production-gantt-controls {
   justify-content: flex-end;
 }
 
+body.design-v5 .project-calendar-shift-control {
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 10px;
+  padding-top: 12px;
+}
+
+body.design-v5 .project-calendar-shift-control > header {
+  align-items: center;
+  display: flex;
+  gap: 9px;
+}
+
+body.design-v5 .project-calendar-shift-control > header > svg {
+  color: var(--blue);
+}
+
+body.design-v5 .project-calendar-shift-control > header > div {
+  display: grid;
+  gap: 2px;
+}
+
+body.design-v5 .project-calendar-shift-control > header span,
+body.design-v5 .project-calendar-shift-control label > span,
+body.design-v5 .project-calendar-shift-inputs > div > span,
+body.design-v5 .project-calendar-shift-preview span,
+body.design-v5 .project-calendar-shift-preview small {
+  color: var(--muted);
+  font-size: 10px;
+}
+
+body.design-v5 .project-calendar-shift-inputs {
+  align-items: end;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(170px, 0.45fr) minmax(150px, 0.45fr) auto;
+}
+
+body.design-v5 .project-calendar-shift-inputs label,
+body.design-v5 .project-calendar-shift-inputs > div {
+  display: grid;
+  gap: 4px;
+}
+
+body.design-v5 .project-calendar-shift-inputs input {
+  min-height: 34px;
+}
+
+body.design-v5 .project-calendar-shift-preview {
+  align-items: center;
+  background: color-mix(in srgb, var(--blue-soft) 48%, var(--panel));
+  border: 1px solid color-mix(in srgb, var(--blue) 20%, var(--line));
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 80px repeat(3, minmax(150px, 1fr));
+  padding: 10px;
+}
+
+body.design-v5 .project-calendar-shift-preview > div {
+  display: grid;
+  gap: 2px;
+}
+
+body.design-v5 .project-calendar-shift-confirm {
+  align-items: center;
+  display: flex;
+  gap: 7px;
+  grid-column: 1 / -2;
+}
+
+body.design-v5 .project-calendar-shift-confirm > span {
+  align-items: center;
+  color: var(--text);
+  display: inline-flex;
+  gap: 5px;
+}
+
+body.design-v5 .project-calendar-shift-control .error-text {
+  color: var(--red);
+  font-size: 11px;
+  margin: 0;
+}
+
 body.design-v5 .production-gantt-controls button,
 body.design-v5 .production-gantt-zoom,
 body.design-v5 .production-gantt-density {
@@ -1861,6 +1944,19 @@ body.design-v5 .production-gantt-track:focus .production-gantt-tooltip {
   body.design-v5 .production-gantt-controls {
     justify-content: flex-start;
     overflow-x: auto;
+  }
+
+  body.design-v5 .project-calendar-shift-inputs,
+  body.design-v5 .project-calendar-shift-preview {
+    grid-template-columns: 1fr;
+  }
+
+  body.design-v5 .project-calendar-shift-confirm {
+    grid-column: 1;
+  }
+
+  body.design-v5 .project-calendar-shift-preview > .button {
+    width: 100%;
   }
 }
 
