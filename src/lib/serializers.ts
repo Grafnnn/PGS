@@ -101,6 +101,7 @@ export function serializeMaterial(item: DbMaterial): Material {
     plannedUnitPrice: num(item.plannedUnitPrice),
     actualUnitPrice: num(item.actualUnitPrice),
     supplier: item.supplier ?? "Не выбран",
+    orderByAt: item.orderByAt ? dateOnly(item.orderByAt) : undefined,
     neededAt: dateOnly(item.neededAt),
     status: item.status as Material["status"]
   };

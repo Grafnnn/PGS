@@ -358,6 +358,7 @@ model Material {
   plannedUnitPrice Decimal          @map("planned_unit_price") @db.Decimal(14, 2)
   actualUnitPrice  Decimal          @map("actual_unit_price") @db.Decimal(14, 2)
   supplier         String?
+  orderByAt        DateTime?        @map("order_by_at")
   neededAt         DateTime         @map("needed_at")
   status           String
   createdBy        String?          @map("created_by")

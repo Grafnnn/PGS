@@ -176,6 +176,112 @@ describe("budget import commit route", () => {
     expect(transactionMock).not.toHaveBeenCalled();
   });
 
+  it("replaces materials after removing draft procurement requests and keeps the source order deadline", async () => {
+    const tx = {
+      budgetItem: { deleteMany: vi.fn(), create: vi.fn() },
+      budgetSection: { deleteMany: vi.fn(), upsert: vi.fn() },
+      procurementRequest: {
+        count: vi.fn(async () => 0),
+        deleteMany: vi.fn(async () => ({ count: 67 }))
+      },
+      material: {
+        deleteMany: vi.fn(),
+        create: vi.fn(async ({ data }) => ({
+          id: "material-1",
+          ...data,
+          orderByAt: new Date("2026-09-04T00:00:00.000Z"),
+          neededAt: new Date("2026-10-30T00:00:00.000Z")
+        }))
+      },
+      scheduleItem: { deleteMany: vi.fn(), create: vi.fn() },
+      importBatch: { update: vi.fn() }
+    };
+    const importPreview = preview({
+      summary: { ...preview().summary, budgetItems: 0, materials: 1, materialRows: 1 },
+      budgetItems: [],
+      materials: [{
+        name: "[МЗ-06] Балка · Б1",
+        unit: "шт",
+        requiredQty: 1,
+        orderedQty: 0,
+        deliveredQty: 0,
+        consumedQty: 0,
+        plannedUnitPrice: 0,
+        actualUnitPrice: 0,
+        supplier: "Не выбран",
+        orderByAt: "2026-09-04",
+        neededAt: "2026-10-30",
+        status: "required",
+        sheetName: "заявки_итог",
+        rowNumber: 7
+      }]
+    });
+    getCurrentUserMock.mockResolvedValue(authorizedUser);
+    canProjectMock.mockResolvedValue(true);
+    projectFindUniqueMock.mockResolvedValue({ id: "project-demo", organizationId: "org-demo" });
+    importBatchFindFirstMock.mockResolvedValue({ id: "batch-1", status: "previewed", previewJson: importPreview });
+    transactionMock.mockImplementation(async (callback) => callback(tx));
+    const { POST } = await import("./route");
+
+    const response = await POST(requestJson({
+      importBatchId: "batch-1",
+      mode: "replace_materials",
+      replaceConfirmed: true
+    }), { params: { projectId: "project-demo" } });
+
+    expect(response.status).toBe(200);
+    expect(tx.procurementRequest.count).toHaveBeenCalledWith({
+      where: {
+        projectId: "project-demo",
+        status: { in: ["submitted", "approved", "ordered", "expected", "partially_received"] }
+      }
+    });
+    expect(tx.procurementRequest.deleteMany).toHaveBeenCalledWith({
+      where: { projectId: "project-demo", status: "draft" }
+    });
+    expect(tx.material.deleteMany).toHaveBeenCalledWith({ where: { projectId: "project-demo" } });
+    expect(tx.material.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        orderByAt: new Date("2026-09-04T00:00:00.000Z"),
+        neededAt: new Date("2026-10-30T00:00:00.000Z")
+      })
+    }));
+    await expect(responseJson(response)).resolves.toMatchObject({
+      ok: true,
+      removedDraftRequests: 67,
+      materials: [expect.objectContaining({ orderByAt: "2026-09-04", neededAt: "2026-10-30" })]
+    });
+  });
+
+  it("blocks material replacement while procurement requests are active", async () => {
+    const tx = {
+      procurementRequest: {
+        count: vi.fn(async () => 1),
+        deleteMany: vi.fn()
+      },
+      material: { deleteMany: vi.fn() }
+    };
+    getCurrentUserMock.mockResolvedValue(authorizedUser);
+    canProjectMock.mockResolvedValue(true);
+    projectFindUniqueMock.mockResolvedValue({ id: "project-demo", organizationId: "org-demo" });
+    importBatchFindFirstMock.mockResolvedValue({ id: "batch-1", status: "previewed", previewJson: preview() });
+    transactionMock.mockImplementation(async (callback) => callback(tx));
+    const { POST } = await import("./route");
+
+    const response = await POST(requestJson({
+      importBatchId: "batch-1",
+      mode: "replace_materials",
+      replaceConfirmed: true
+    }), { params: { projectId: "project-demo" } });
+
+    expect(response.status).toBe(422);
+    await expect(responseJson(response)).resolves.toEqual({
+      error: "Нельзя сохранить замену материалов: сначала закройте или отмените активные заявки на снабжение."
+    });
+    expect(tx.procurementRequest.deleteMany).not.toHaveBeenCalled();
+    expect(tx.material.deleteMany).not.toHaveBeenCalled();
+  });
+
   it("commits the stored server-side batch instead of trusting client rows", async () => {
     const tx = {
       budgetItem: {

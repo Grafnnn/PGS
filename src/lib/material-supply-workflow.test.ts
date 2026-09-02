@@ -52,6 +52,47 @@ describe("material supply workflow", () => {
     expect(model.upcomingDemands[0].requestAt).toBe("2026-10-06");
   });
 
+  it("uses the source order deadline instead of subtracting the lead time twice", () => {
+    const model = buildMaterialSupplyWorkflow({
+      materials: [material({
+        name: "[МЗ-06] Балка · Б1",
+        costCodeId: null,
+        orderByAt: "2026-09-04",
+        neededAt: "2026-10-30"
+      })],
+      scheduleItems: [],
+      procurementRequests: [],
+      today: "2026-09-02"
+    });
+
+    expect(model.dueDemands).toEqual([]);
+    expect(model.upcomingDemands[0]).toMatchObject({
+      requestAt: "2026-09-04",
+      deliveryAt: "2026-10-30",
+      requestCode: "МЗ-06"
+    });
+  });
+
+  it("groups due positions by the request code imported from the final request sheet", () => {
+    const model = buildMaterialSupplyWorkflow({
+      materials: [
+        material({ id: "material-1", name: "[МЗ-05] Плита · П1", costCodeId: null, orderByAt: "2026-09-04" }),
+        material({ id: "material-2", name: "[МЗ-05] Плита · П2", costCodeId: null, orderByAt: "2026-09-04" })
+      ],
+      scheduleItems: [],
+      procurementRequests: [],
+      today: "2026-09-04"
+    });
+
+    expect(model.groups).toHaveLength(1);
+    expect(model.groups[0]).toMatchObject({
+      title: "МЗ-05 · поставка до 2026-09-20",
+      requestAt: "2026-09-04"
+    });
+    expect(model.groups[0].category).toContain("МЗ-05");
+    expect(model.groups[0].items).toHaveLength(2);
+  });
+
   it("does not duplicate a material covered by an active request", () => {
     const request: ProcurementRequest = {
       id: "request-1",

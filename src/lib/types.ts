@@ -110,6 +110,7 @@ export interface Material {
   plannedUnitPrice: number;
   actualUnitPrice: number;
   supplier: string;
+  orderByAt?: string;
   neededAt: string;
   status: "required" | "requested" | "approving" | "ordered" | "in_transit" | "delivered" | "closed" | "cancelled";
 }

@@ -49,11 +49,23 @@ export async function POST(request: NextRequest, { params }: { params: { project
     const plan = buildCommitPlan(preview, payload.mode);
 
     const result = await prisma.$transaction(async (tx) => {
+      let removedDraftRequests = 0;
       if (plan.mode === "replace_all" || plan.mode === "replace_budget" || plan.mode === "replace_budget_materials") {
         await tx.budgetItem.deleteMany({ where: { projectId: project.id } });
         await tx.budgetSection.deleteMany({ where: { projectId: project.id } });
       }
       if (plan.mode === "replace_all" || plan.mode === "replace_materials" || plan.mode === "replace_budget_materials") {
+        const activeRequestCount = await tx.procurementRequest.count({
+          where: {
+            projectId: project.id,
+            status: { in: ["submitted", "approved", "ordered", "expected", "partially_received"] }
+          }
+        });
+        if (activeRequestCount > 0) {
+          throw new Error("Нельзя сохранить замену материалов: сначала закройте или отмените активные заявки на снабжение.");
+        }
+        const removed = await tx.procurementRequest.deleteMany({ where: { projectId: project.id, status: "draft" } });
+        removedDraftRequests = removed.count;
         await tx.material.deleteMany({ where: { projectId: project.id } });
       }
       if (plan.mode === "replace_all" || plan.mode === "replace_schedule") {
@@ -113,6 +125,7 @@ export async function POST(request: NextRequest, { params }: { params: { project
               plannedUnitPrice: new Prisma.Decimal(item.plannedUnitPrice),
               actualUnitPrice: new Prisma.Decimal(item.actualUnitPrice),
               supplier: item.supplier,
+              orderByAt: item.orderByAt,
               neededAt: item.neededAt,
               status: item.status,
               createdBy: user.id
@@ -150,7 +163,8 @@ export async function POST(request: NextRequest, { params }: { params: { project
         warnings: preview.summary.warnings,
         budgetItems: budgetItems.length,
         materials: materials.length,
-        scheduleItems: scheduleItems.length
+        scheduleItems: scheduleItems.length,
+        removedDraftRequests
       };
 
       await tx.importBatch.update({

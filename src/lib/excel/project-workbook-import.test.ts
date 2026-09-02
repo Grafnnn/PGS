@@ -425,8 +425,8 @@ describe("project workbook import", () => {
       expect.objectContaining({ section: "Раздел 2. Новая кровля", name: "Устройство мембраны", qty: 20, plannedUnitPrice: 100 })
     ]);
     expect(preview.materials).toEqual([
-      expect.objectContaining({ name: expect.stringContaining("[МЗ-01] Бетон"), requiredQty: 5, neededAt: "2026-09-04" }),
-      expect.objectContaining({ name: expect.stringContaining("[МЗ-02] Крепеж"), requiredQty: 0, neededAt: "2026-09-18" })
+      expect.objectContaining({ name: expect.stringContaining("[МЗ-01] Бетон"), requiredQty: 5, orderByAt: "2026-09-04", neededAt: "2026-09-07" }),
+      expect.objectContaining({ name: expect.stringContaining("[МЗ-02] Крепеж"), requiredQty: 0, orderByAt: "2026-09-18", neededAt: "2026-09-21" })
     ]);
     expect(preview.materials.some((item) => item.name.includes("Арматура"))).toBe(false);
     expect(preview.scheduleItems).toEqual([
@@ -437,6 +437,52 @@ describe("project workbook import", () => {
       status: "warning",
       suspiciousFlags: expect.arrayContaining(["missingQuantity", "missingPrice"])
     });
+  });
+
+  it("treats заявки_итог as the authoritative material list and preserves request deadlines and marks", () => {
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([
+      ["Коммерческое предложение"],
+      [],
+      ["№", "Наименование конструктивных решений", "Ед.", "Кол-во", "Ед. расценка", "Всего"],
+      [1, "Монтаж металлоконструкций", "т", 1, 1000, 1000]
+    ]), "КП-250826");
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([
+      ["Source_Row_ID", "Тип строки", "Пакет размещения", "Заказать / запустить до", "Окно потребности на площадке", "Вид закупки", "Заявка", "Материал", "Марка / поз. РД", "Ед.", "К заказу"],
+      ["OLD-1", "ORDER", "Н1–2", "01.09.2026", "07.09–19.09.2026", "Металл", "МЗ-OLD", "Старая позиция", "С1", "шт", 99]
+    ]), "Реестр");
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([
+      ["Итоговая заявка"],
+      [],
+      [],
+      [],
+      [],
+      ["№", "Очередь заказа", "Заказать до", "Окно потребности", "Статус объёма", "Вид закупки", "Материал", "Марка / тип / размер", "Спецификация / ГОСТ", "Ед.", "К заказу", "Масса нетто, кг", "Заявка(и)", "GPR / фронт", "Исходные строки", "Статус спецификации", "Сверка объёма", "Комментарий снабжению"],
+      [1, "Длинный цикл / предзаказ", "04.09.2026", "Изготовление до 30.10; монтаж Н9–10", "Подтверждено", "Металлоконструкции", "Балка", "Б1", "ГОСТ 26020-83", "шт", 1, 100, "МЗ-06", "G06", "12", "Подтверждено", "OK", "В заказ"],
+      [2, "Длинный цикл / предзаказ", "04.09.2026", "Изготовление до 30.10; монтаж Н9–10", "Подтверждено", "Металлоконструкции", "Балка", "Б2", "ГОСТ 26020-83", "шт", 10, 1000, "МЗ-06", "G06", "13", "Подтверждено", "OK", "В заказ"],
+      [3, "Длинный цикл / предзаказ", "04.09.2026", "Изготовление до 30.10; монтаж Н9–10", "Требует уточнения", "Металлоконструкции", "Балка", "Б3", "По РД", "шт", "", "", "МЗ-06", "G06", "14", "HOLD/RFI", "Проверить", "Уточнить объём"]
+    ]), "заявки_итог");
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([
+      ["Календарный график"],
+      ["Код", "Раздел", "Этап", "M1", "M2"],
+      [1, "Металлоконструкции", "Монтаж", 1000, 0]
+    ]), "График");
+    const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" }) as Buffer;
+
+    const analysis = analyzeProjectWorkbookBuffer(buffer, "troitsk-final.xlsx", "project", { startsAt: "2026-09-01" });
+    const preview = parseProjectWorkbookBuffer(buffer, "troitsk-final.xlsx", "project", { startsAt: "2026-09-01" });
+
+    expect(analysis.errors).toEqual([]);
+    expect(analysis.summary.materials).toBe(3);
+    expect(analysis.sheets.find((sheet) => sheet.sheetName === "заявки_итог")).toMatchObject({ role: "materials", included: true });
+    expect(analysis.sheets.find((sheet) => sheet.sheetName === "Реестр")).toMatchObject({ role: "materials", included: false });
+    expect(analysis.sheets.find((sheet) => sheet.sheetName === "Реестр")?.reason).toContain("итогового листа");
+    expect(preview.materials).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: expect.stringContaining("[МЗ-06] Балка · Б1"), unit: "шт", requiredQty: 1, orderByAt: "2026-09-04", neededAt: "2026-10-30" }),
+      expect.objectContaining({ name: expect.stringContaining("[МЗ-06] Балка · Б2"), unit: "шт", requiredQty: 10, orderByAt: "2026-09-04", neededAt: "2026-10-30" }),
+      expect.objectContaining({ name: expect.stringContaining("[МЗ-06] Балка · Б3"), unit: "шт", requiredQty: 0, orderByAt: "2026-09-04", neededAt: "2026-10-30" })
+    ]));
+    expect(preview.materials.some((item) => item.name.includes("Старая позиция"))).toBe(false);
   });
 
   it("recalculates the workbook from confirmed sheet roles and exclusions", () => {

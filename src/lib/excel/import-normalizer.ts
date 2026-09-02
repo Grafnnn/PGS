@@ -22,7 +22,8 @@ export function normalizeHeader(value: unknown) {
     .trim()
     .toLowerCase()
     .replace(punctuationRegex, " ")
-    .replace(/\s+/g, " ");
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 export function normalizeText(value: unknown) {
