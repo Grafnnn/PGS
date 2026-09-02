@@ -856,7 +856,7 @@ export function ProjectWorkspace({
           <div className="eyebrow">{initialBundle.project.customer}</div>
           <div className="project-title-row">
             <h1>{initialBundle.project.name}</h1>
-            <StatusBadge tone="good">В работе</StatusBadge>
+            <StatusBadge tone={statusTone(initialBundle.project.status)}>{readableStatus(initialBundle.project.status)}</StatusBadge>
           </div>
           <div className="project-summary">
             <span>{initialBundle.project.object}</span>
@@ -1171,26 +1171,10 @@ export function ProjectWorkspace({
               id: "add",
               label: "Добавить",
               description: "Создать единичную потребность вручную.",
-              content: <button
-                className="button primary"
-                onClick={async () => {
-                  const saved = await createResource<Material>("materials", {
-                    name: "Кабель",
-                    unit: "м",
-                    requiredQty: 500,
-                    orderedQty: 0,
-                    deliveredQty: 0,
-                    consumedQty: 0,
-                    plannedUnitPrice: 240,
-                    actualUnitPrice: 0,
-                    supplier: "Не выбран",
-                    neededAt: new Date().toISOString().slice(0, 10),
-                    status: "required"
-                  });
-                  setMaterials((current) => [...current, saved]);
-                }}
-                type="button"
-              ><Plus size={18} />Добавить материал</button>
+              content: <MaterialCreateForm onAdd={async (payload) => {
+                const saved = await createResource<Material>("materials", payload);
+                setMaterials((current) => [...current, saved]);
+              }} />
             }
           ]}
         />
@@ -1563,24 +1547,10 @@ export function ProjectWorkspace({
               onNavigate={setActiveTab}
             /> },
           { id: "matrix", label: "Матрица", description: "Приоритеты рисков и полный реестр карточек.", content: <><RiskMatrix items={allRisks} /><RiskTable items={allRisks} /></> },
-          { id: "add", label: "Добавить", description: "Создать риск вручную и назначить владельца.", content: <button
-            className="button primary"
-            onClick={async () => {
-              const saved = await createResource<Risk>("risks", {
-                title: "Новый риск",
-                reason: "Опишите причину и требуемое решение.",
-                priority: "medium",
-                owner: "РП",
-                dueAt: new Date().toISOString().slice(0, 10),
-                status: "open"
-              });
-              setRisks((current) => [...current, saved]);
-            }}
-            type="button"
-          >
-            <Plus size={18} />
-            Добавить риск
-          </button> }
+          { id: "add", label: "Добавить", description: "Создать риск вручную и назначить владельца.", content: <RiskCreateForm onAdd={async (payload) => {
+            const saved = await createResource<Risk>("risks", payload);
+            setRisks((current) => [...current, saved]);
+          }} /> }
         ]} />
       )}
 
@@ -2907,6 +2877,68 @@ function MaterialEditForm({ item, onSave, onCancel }: { item: Material; onSave: 
         &nbsp;
         <button className="button secondary" type="button" onClick={onCancel}>Отмена</button>
       </label>
+    </form>
+  );
+}
+
+function MaterialCreateForm({ onAdd }: { onAdd: (payload: Omit<Material, "id" | "projectId" | "costCodeId">) => Promise<void> }) {
+  return (
+    <form
+      className="form-grid form-surface"
+      onSubmit={(event) => {
+        event.preventDefault();
+        const form = event.currentTarget;
+        const data = new FormData(form);
+        void onAdd({
+          name: String(data.get("name") ?? "").trim(),
+          unit: String(data.get("unit") ?? "").trim(),
+          requiredQty: Number(data.get("requiredQty") ?? 0),
+          orderedQty: 0,
+          deliveredQty: 0,
+          consumedQty: 0,
+          plannedUnitPrice: Number(data.get("plannedUnitPrice") ?? 0),
+          actualUnitPrice: 0,
+          supplier: String(data.get("supplier") ?? "").trim() || "Не выбран",
+          neededAt: String(data.get("neededAt") ?? ""),
+          status: "required"
+        }).then(() => form.reset()).catch(() => undefined);
+      }}
+    >
+      <label>Материал<input name="name" minLength={2} required placeholder="Например, мембрана ПВХ" /></label>
+      <label>Ед.<input name="unit" required placeholder="м²" /></label>
+      <label>Потребность<input name="requiredQty" min="0" required step="0.001" type="number" /></label>
+      <label>Плановая цена<input name="plannedUnitPrice" min="0" required step="0.01" type="number" /></label>
+      <label>Поставщик<input name="supplier" placeholder="Можно указать позже" /></label>
+      <label>Нужно на объекте<input defaultValue={new Date().toISOString().slice(0, 10)} name="neededAt" required type="date" /></label>
+      <label>&nbsp;<button className="button primary" type="submit"><Plus size={18} />Создать потребность</button></label>
+    </form>
+  );
+}
+
+function RiskCreateForm({ onAdd }: { onAdd: (payload: Omit<Risk, "id" | "projectId">) => Promise<void> }) {
+  return (
+    <form
+      className="form-grid form-surface"
+      onSubmit={(event) => {
+        event.preventDefault();
+        const form = event.currentTarget;
+        const data = new FormData(form);
+        void onAdd({
+          title: String(data.get("title") ?? "").trim(),
+          reason: String(data.get("reason") ?? "").trim(),
+          priority: String(data.get("priority") ?? "medium") as Risk["priority"],
+          owner: String(data.get("owner") ?? "").trim(),
+          dueAt: String(data.get("dueAt") ?? ""),
+          status: "open"
+        }).then(() => form.reset()).catch(() => undefined);
+      }}
+    >
+      <label>Риск<input name="title" minLength={3} required placeholder="Что может повлиять на проект" /></label>
+      <label className="wide">Причина и влияние<textarea name="reason" minLength={3} required rows={3} placeholder="Источник риска, возможные последствия и что нужно решить" /></label>
+      <label>Приоритет<select defaultValue="medium" name="priority"><option value="low">Низкий</option><option value="medium">Средний</option><option value="high">Высокий</option><option value="critical">Критичный</option></select></label>
+      <label>Ответственный<input name="owner" minLength={2} required placeholder="ФИО или роль" /></label>
+      <label>Срок реакции<input defaultValue={new Date().toISOString().slice(0, 10)} name="dueAt" required type="date" /></label>
+      <label>&nbsp;<button className="button primary" type="submit"><Plus size={18} />Создать риск</button></label>
     </form>
   );
 }

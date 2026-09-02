@@ -472,7 +472,7 @@ describe("project workbook import", () => {
     const analysis = analyzeProjectWorkbookBuffer(buffer, "approved-gpr.xlsx", "project");
     const preview = parseProjectWorkbookBuffer(buffer, "approved-gpr.xlsx", "project");
 
-    expect(analysis.parserVersion).toBe("project_workbook_v4");
+    expect(analysis.parserVersion).toBe("project_workbook_v5");
     expect(analysis.errors).toEqual([]);
     expect(analysis.summary.scheduleItems).toBe(2);
     expect(analysis.suggestions.startsAt).toBe("2026-09-07");
@@ -485,6 +485,9 @@ describe("project workbook import", () => {
         owner: "ИТР",
         startsAt: "2026-09-07",
         endsAt: "2026-11-13",
+        plannedQty: 1,
+        unit: "компл.",
+        progressMode: "quantity",
         dependency: expect.stringContaining("Этап ГПР: 0. Организация")
       }),
       expect.objectContaining({
@@ -492,6 +495,9 @@ describe("project workbook import", () => {
         owner: "Демонтажная З1",
         startsAt: "2026-09-07",
         endsAt: "2026-09-15",
+        plannedQty: 882.9,
+        unit: "м²",
+        progressMode: "quantity",
         dependency: expect.stringContaining("Предшественник/допуск: G01")
       })
     ]);

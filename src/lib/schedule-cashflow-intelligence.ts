@@ -309,7 +309,12 @@ function dateTime(value?: string) {
 
 function importedScheduleSection(dependency?: string) {
   const section = dependency?.split(" · ")[0]?.trim() ?? "";
-  return /^раздел(?:\s|$)/iu.test(section) ? section : "";
+  if (/^раздел(?:\s|$)/iu.test(section)) return section;
+  const gprStage = section.replace(/^этап\s+гпр\s*:\s*/iu, "").trim();
+  if (!gprStage || gprStage === section) return "";
+  if (/^раздел(?:\s|$)/iu.test(gprStage)) return gprStage;
+  const numberedStage = gprStage.match(/^(\d+(?:[.,]\d+)*)[.)]?\s*(.*)$/u);
+  return numberedStage ? `Раздел ${numberedStage[1]}${numberedStage[2] ? `. ${numberedStage[2]}` : ""}` : gprStage;
 }
 
 function sectionKey(section: string) {

@@ -15,6 +15,14 @@ const workflowSchema = z.object({
 
 class ProcurementWorkflowConflict extends Error {}
 
+function normalizedUnit(value: string) {
+  return value.trim().toLocaleLowerCase("ru-RU").replace(/\s+/g, "");
+}
+
+function materialLinkError(lineName: string) {
+  return new ProcurementWorkflowConflict(`Позиция «${lineName}» не связана с актуальным материалом проекта. Исправьте заявку перед продолжением.`);
+}
+
 function json(body: unknown, status = 200) {
   return NextResponse.json(body, { status });
 }
@@ -72,17 +80,30 @@ export async function POST(
       if (current.status !== "submitted") return json({ error: "Подтвердить можно только заявку со статусом «На подтверждении»." }, 409);
       const expectedAt = data.expectedAt ?? current.neededAt;
       const result = await prisma.$transaction(async (tx) => {
+        await tx.$queryRaw`SELECT id FROM "procurement_requests" WHERE id = ${current.id} FOR UPDATE`;
+        const fresh = await tx.procurementRequest.findFirstOrThrow({
+          where: { id: current.id, projectId: params.projectId },
+          include: { items: true }
+        });
+        if (fresh.status !== "submitted") throw new ProcurementWorkflowConflict();
+
+        const materials = new Map<string, Awaited<ReturnType<typeof tx.material.findFirst>>>();
+        for (const line of fresh.items) {
+          if (!line.materialId) throw materialLinkError(line.name);
+          const material = await tx.material.findFirst({ where: { id: line.materialId, projectId: params.projectId } });
+          if (!material || normalizedUnit(material.unit) !== normalizedUnit(line.unit)) throw materialLinkError(line.name);
+          materials.set(line.id, material);
+        }
+
         const claimed = await tx.procurementRequest.updateMany({
-          where: { id: current.id, projectId: params.projectId, status: "submitted" },
+          where: { id: fresh.id, projectId: params.projectId, status: "submitted" },
           data: { status: "expected", approvedAt: new Date(), approvedBy: access.user.id, expectedAt }
         });
         if (claimed.count !== 1) throw new ProcurementWorkflowConflict();
 
         const updatedMaterials = [];
-        for (const line of current.items) {
-          if (!line.materialId) continue;
-          const material = await tx.material.findFirst({ where: { id: line.materialId, projectId: params.projectId } });
-          if (!material) continue;
+        for (const line of fresh.items) {
+          const material = materials.get(line.id)!;
           const orderedQty = Math.max(material.orderedQty.toNumber() + line.qty.toNumber(), material.deliveredQty.toNumber());
           updatedMaterials.push(await tx.material.update({
             where: { id: material.id },
@@ -90,16 +111,16 @@ export async function POST(
           }));
         }
 
-        const updated = await tx.procurementRequest.findUniqueOrThrow({ where: { id: current.id }, include: { items: true } });
+        const updated = await tx.procurementRequest.findUniqueOrThrow({ where: { id: fresh.id }, include: { items: true } });
         await writeAudit(tx, {
-          organizationId: current.organizationId,
+          organizationId: fresh.organizationId,
           projectId: params.projectId,
           ...actor(access.user),
           entity: "procurement_request",
-          entityId: current.id,
+          entityId: fresh.id,
           action: "accept",
-          summary: `${current.requestNumber ?? current.title}: подтверждена, ожидается ${expectedAt.toISOString().slice(0, 10)}`,
-          before: { status: current.status },
+          summary: `${fresh.requestNumber ?? fresh.title}: подтверждена, ожидается ${expectedAt.toISOString().slice(0, 10)}`,
+          before: { status: fresh.status },
           after: { status: "expected", expectedAt: expectedAt.toISOString() }
         });
         return { updated, updatedMaterials };
@@ -123,6 +144,18 @@ export async function POST(
 
       const updatedMaterials = [];
       const receivedLines: Array<{ itemId: string; qty: number }> = [];
+      const selectedLines = fresh.items.filter((line) => {
+        const remaining = Math.max(line.qty.toNumber() - line.receivedQty.toNumber(), 0);
+        const qty = requestedQuantities.size ? requestedQuantities.get(line.id) ?? 0 : remaining;
+        return qty > 0;
+      });
+      const materials = new Map<string, Awaited<ReturnType<typeof tx.material.findFirst>>>();
+      for (const line of selectedLines) {
+        if (!line.materialId) throw materialLinkError(line.name);
+        const material = await tx.material.findFirst({ where: { id: line.materialId, projectId: params.projectId } });
+        if (!material || normalizedUnit(material.unit) !== normalizedUnit(line.unit)) throw materialLinkError(line.name);
+        materials.set(line.id, material);
+      }
       for (const line of fresh.items) {
         const remaining = Math.max(line.qty.toNumber() - line.receivedQty.toNumber(), 0);
         const qty = requestedQuantities.size ? requestedQuantities.get(line.id) ?? 0 : remaining;
@@ -135,9 +168,8 @@ export async function POST(
         });
         receivedLines.push({ itemId: line.id, qty });
 
-        if (!line.materialId) continue;
-        const material = await tx.material.findFirst({ where: { id: line.materialId, projectId: params.projectId } });
-        if (!material) continue;
+        const material = materials.get(line.id);
+        if (!material) throw materialLinkError(line.name);
         const deliveredQty = material.deliveredQty.toNumber() + qty;
         const orderedQty = Math.max(material.orderedQty.toNumber(), deliveredQty);
         updatedMaterials.push(await tx.material.update({

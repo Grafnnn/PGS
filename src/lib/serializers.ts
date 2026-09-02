@@ -82,6 +82,13 @@ export function serializeScheduleItem(item: DbScheduleItem): ScheduleItem {
     endsAt: dateOnly(item.endsAt),
     plannedQty: num(item.plannedQty),
     actualQty: num(item.actualQty),
+    manualActualQty: num(item.manualActualQty),
+    reportActualQty: num(item.reportActualQty),
+    unit: item.unit ?? undefined,
+    progressMode: item.progressMode === "milestone" ? "milestone" : "quantity",
+    revision: item.revision,
+    isCurrent: item.isCurrent,
+    supersededAt: item.supersededAt?.toISOString(),
     status: item.status as ScheduleItem["status"],
     dependency: item.dependency ?? undefined
   };
@@ -153,7 +160,14 @@ export function serializePayment(item: DbPayment): Payment {
   };
 }
 
-export function serializeDailyReport(item: DbDailyReport & { evidenceDocuments?: DbDocument[]; progressEntries?: DbWorkProgressEntry[] }): DailyReport {
+export function serializeDailyReport(
+  item: DbDailyReport & { evidenceDocuments?: DbDocument[]; progressEntries?: DbWorkProgressEntry[] },
+  currentScheduleIds?: ReadonlySet<string>
+): DailyReport {
+  const activeProgressEntries = item.progressEntries?.filter((entry) => Boolean(entry.scheduleItemId && currentScheduleIds?.has(entry.scheduleItemId))) ?? [];
+  const historicalProgressEntries = currentScheduleIds
+    ? (item.progressEntries?.length ?? 0) - activeProgressEntries.length
+    : 0;
   return {
     id: item.id,
     projectId: item.projectId,
@@ -177,9 +191,11 @@ export function serializeDailyReport(item: DbDailyReport & { evidenceDocuments?:
     crewMembers: parseDailyReportCrewMembers(item.crewMembers),
     evidenceDocuments: item.evidenceDocuments?.map(serializeDocument),
     progressImpact: item.progressEntries ? {
-      applied: item.progressEntries.length > 0,
+      applied: currentScheduleIds ? activeProgressEntries.length > 0 : item.progressEntries.length > 0,
       entries: item.progressEntries.length,
-      scheduleItems: new Set(item.progressEntries.map((entry) => entry.scheduleItemId).filter(Boolean)).size
+      scheduleItems: new Set((currentScheduleIds ? activeProgressEntries : item.progressEntries).map((entry) => entry.scheduleItemId).filter(Boolean)).size,
+      activeEntries: currentScheduleIds ? activeProgressEntries.length : item.progressEntries.length,
+      historicalEntries: historicalProgressEntries
     } : undefined,
     status: item.status as DailyReport["status"]
   };

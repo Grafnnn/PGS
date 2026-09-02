@@ -23,7 +23,7 @@ export async function POST(request: Request, { params }: { params: { projectId: 
         organizationId: true,
         startsAt: true,
         endsAt: true,
-        scheduleItems: { select: { startsAt: true, endsAt: true } },
+        scheduleItems: { where: { isCurrent: true }, select: { startsAt: true, endsAt: true } },
         materials: { select: { neededAt: true, orderByAt: true } },
         materialNeeds: { select: { requiredAt: true } },
         procurementRequests: {
@@ -63,6 +63,7 @@ export async function POST(request: Request, { params }: { params: { projectId: 
               "ends_at" = "ends_at" + (${preview.deltaDays} * INTERVAL '1 day'),
               "updated_at" = NOW()
           WHERE "project_id" = ${project.id}
+            AND "is_current" = true
         `;
         await tx.$executeRaw`
           UPDATE "materials"

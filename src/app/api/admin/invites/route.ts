@@ -8,6 +8,7 @@ import { normalizeAdminRole } from "@/lib/admin/users";
 import { getEnv } from "@/lib/env";
 import { buildInviteEmail, getEmailProvider } from "@/lib/email";
 import { prisma } from "@/lib/prisma";
+import { getUserOrganizationContext } from "@/lib/project-data";
 
 export async function POST(request: Request) {
   const requestId = getRequestId(request);
@@ -16,6 +17,8 @@ export async function POST(request: Request) {
 
   try {
     const env = getEnv();
+    const context = await getUserOrganizationContext(currentUser);
+    if (!context) return apiError(requestId, "ORGANIZATION_NOT_FOUND", "Organization membership is required", 403);
     const body = await request.json().catch(() => ({}));
     const email = String(body.email ?? "").trim().toLowerCase();
     const role = normalizeAdminRole(body.role);
@@ -23,17 +26,21 @@ export async function POST(request: Request) {
     const projectId = body.projectId ? String(body.projectId) : null;
     if (!email || !email.includes("@")) return apiError(requestId, "VALIDATION_ERROR", "Valid email is required", 400);
 
-    const project = projectId ? await prisma.project.findUnique({ where: { id: projectId }, select: { id: true, name: true, organizationId: true } }) : null;
+    const project = projectId
+      ? await prisma.project.findFirst({
+          where: { id: projectId, organizationId: context.organizationId },
+          select: { id: true, name: true, organizationId: true }
+        })
+      : null;
     if (projectId && !project) return apiError(requestId, "PROJECT_NOT_FOUND", "Project not found", 404);
-    const organization = project ? { id: project.organizationId } : await prisma.organization.findFirst({ select: { id: true } });
-    if (!organization) return apiError(requestId, "ORGANIZATION_NOT_FOUND", "Organization not found", 404);
+    const organizationId = context.organizationId;
 
     const rawToken = generateOneTimeToken();
     const expiresAt = tokenExpiresAt(INVITE_TOKEN_TTL_HOURS);
     const invite = await prisma.$transaction(async (tx) => {
       const created = await tx.userInvite.create({
         data: {
-          organizationId: organization.id,
+          organizationId,
           email,
           role,
           projectId,
@@ -44,7 +51,7 @@ export async function POST(request: Request) {
         }
       });
       await writeAudit(tx, {
-        organizationId: organization.id,
+        organizationId,
         projectId,
         actorId: currentUser?.authenticated ? currentUser.id : null,
         actorName: currentUser?.name ?? "local-user",

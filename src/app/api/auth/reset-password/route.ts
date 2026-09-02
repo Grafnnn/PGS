@@ -28,15 +28,17 @@ export async function POST(request: Request) {
   try {
     const candidates = await prisma.passwordResetToken.findMany({
       where: { usedAt: null, expiresAt: { gt: new Date() } },
-      include: { user: true },
+      include: {
+        user: {
+          include: { memberships: { select: { organizationId: true } } }
+        }
+      },
       take: 50
     });
     const reset = candidates.find((candidate) => tokenHashMatches(token, candidate.tokenHash));
     if (!reset || !tokenIsUsable({ expiresAt: reset.expiresAt, usedAt: reset.usedAt })) {
       return apiError(requestId, "INVALID_TOKEN", "Reset token is invalid or expired", 400);
     }
-    const organization = await prisma.organization.findFirst({ select: { id: true } });
-
     await prisma.$transaction(async (tx) => {
       await tx.user.update({
         where: { id: reset.userId },
@@ -46,9 +48,9 @@ export async function POST(request: Request) {
         }
       });
       await tx.passwordResetToken.update({ where: { id: reset.id }, data: { usedAt: new Date() } });
-      if (organization) {
+      for (const membership of reset.user.memberships) {
         await writeAudit(tx, {
-          organizationId: organization.id,
+          organizationId: membership.organizationId,
           actorId: reset.userId,
           actorName: reset.user.name,
           actorEmail: reset.user.email,

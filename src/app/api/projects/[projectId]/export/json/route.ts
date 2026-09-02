@@ -31,7 +31,7 @@ export async function GET(_request: Request, { params }: { params: { projectId: 
       include: {
         budgetSections: { orderBy: { sortOrder: "asc" } },
         budgetItems: { orderBy: [{ section: "asc" }, { code: "asc" }] },
-        scheduleItems: { orderBy: { startsAt: "asc" } },
+        scheduleItems: { where: { isCurrent: true }, orderBy: { startsAt: "asc" } },
         materials: { orderBy: { neededAt: "asc" } },
         procurementRequests: { include: { items: true }, orderBy: { neededAt: "asc" } },
         payments: { orderBy: { plannedAt: "asc" } },
@@ -52,7 +52,7 @@ export async function GET(_request: Request, { params }: { params: { projectId: 
       materials: project.materials.map(serializeMaterial),
       procurementRequests: project.procurementRequests.map(serializeProcurementRequest),
       payments: project.payments.map(serializePayment),
-      dailyReports: project.dailyReports.map(serializeDailyReport),
+      dailyReports: project.dailyReports.map((item) => serializeDailyReport(item)),
       risks: project.risks.map(serializeRisk),
       documents: project.documents.map((document) => ({
         ...serializeDocument(document),

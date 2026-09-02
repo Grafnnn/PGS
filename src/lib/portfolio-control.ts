@@ -1,3 +1,5 @@
+import { scheduleProgressPercent } from "./calculations";
+
 export type PortfolioHealth = "critical" | "attention" | "stable" | "no_data";
 
 export interface PortfolioProjectSource {
@@ -95,9 +97,7 @@ function calculateProject(source: PortfolioProjectSource, now: Date): PortfolioP
   const nowTime = now.getTime();
   const plannedCost = sum(source.budgetItems.map((item) => item.qty * item.plannedUnitPrice));
   const forecastCost = sum(source.budgetItems.map((item) => item.qty * item.forecastUnitPrice));
-  const plannedQty = sum(source.scheduleItems.map((item) => item.plannedQty));
-  const actualQty = sum(source.scheduleItems.map((item) => item.actualQty));
-  const progressPercent = plannedQty > 0 ? Math.min(100, Math.max(0, (actualQty / plannedQty) * 100)) : null;
+  const progressPercent = scheduleProgressPercent(source.scheduleItems);
   const forecastProfit = source.contractAmount - forecastCost;
   const forecastMarginPercent = source.contractAmount > 0 ? (forecastProfit / source.contractAmount) * 100 : null;
   const paidIncoming = sum(source.payments.filter((item) => item.direction === "incoming" && isPaid(item.status)).map((item) => item.amount));

@@ -1684,7 +1684,8 @@ function BaselinePreviewList({ title, items, empty }: { title: string; items: st
 }
 
 function ProjectCard({ project, riskCount, managerCount }: { project: Project; riskCount: number; managerCount: number }) {
-  const progress = project.status === "completed" ? 100 : project.status === "planning" ? 8 : 42;
+  const progress = project.progressPercent ?? (project.status === "completed" ? 100 : null);
+  const progressLabel = progress === null ? "нет данных" : percent(progress);
   const margin = Math.max(8, 18 - riskCount);
 
   return (
@@ -1705,8 +1706,8 @@ function ProjectCard({ project, riskCount, managerCount }: { project: Project; r
           <span>{project.customer}</span>
           <span>РП: {project.manager}</span>
         </div>
-        <div className="progress-line" aria-label={`Готовность ${progress}%`}>
-          <span style={{ width: `${progress}%` }} />
+        <div className="progress-line" aria-label={`Готовность: ${progressLabel}`}>
+          <span style={{ width: `${progress ?? 0}%` }} />
         </div>
         <div className="project-card-kpis">
           <span>
@@ -1727,7 +1728,7 @@ function ProjectCard({ project, riskCount, managerCount }: { project: Project; r
           </span>
         </div>
         <div className="project-card-footer">
-          <span>{managerCount} руководитель в контуре</span>
+          <span>{managerCount} руководитель в контуре · готовность {progressLabel}</span>
           <strong>Открыть штаб объекта</strong>
         </div>
       </div>

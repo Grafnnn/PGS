@@ -31,7 +31,7 @@ export async function resolveQualityReferences(projectId: string, input: {
 }) {
   const [scheduleItem, costCode, dailyReport, document] = await Promise.all([
     input.linkedScheduleItemId
-      ? prisma.scheduleItem.findFirst({ where: { id: input.linkedScheduleItemId, projectId }, select: { id: true, costCodeId: true } })
+      ? prisma.scheduleItem.findFirst({ where: { id: input.linkedScheduleItemId, projectId, isCurrent: true }, select: { id: true, costCodeId: true } })
       : null,
     input.costCodeId
       ? prisma.projectCostCode.findFirst({ where: { id: input.costCodeId, projectId, status: "active" }, select: { id: true } })

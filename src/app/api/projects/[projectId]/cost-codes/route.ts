@@ -13,7 +13,7 @@ export async function GET(_request: Request, { params }: { params: { projectId: 
     const [codes, budgetItems, scheduleItems, materials, procurementItems, payments, changeOrderItems, commitmentLines] = await Promise.all([
       prisma.projectCostCode.findMany({ where: { projectId: params.projectId }, orderBy: [{ sortOrder: "asc" }, { code: "asc" }] }),
       prisma.budgetItem.findMany({ where: { projectId: params.projectId }, select: { id: true, code: true, name: true, section: true, costCodeId: true } }),
-      prisma.scheduleItem.findMany({ where: { projectId: params.projectId }, select: { id: true, name: true, budgetItemId: true, costCodeId: true } }),
+      prisma.scheduleItem.findMany({ where: { projectId: params.projectId, isCurrent: true }, select: { id: true, name: true, budgetItemId: true, costCodeId: true } }),
       prisma.material.findMany({ where: { projectId: params.projectId }, select: { id: true, name: true, costCodeId: true } }),
       prisma.procurementRequestItem.findMany({ where: { request: { projectId: params.projectId } }, select: { id: true, name: true, costCodeId: true, request: { select: { title: true } } } }),
       prisma.payment.findMany({ where: { projectId: params.projectId }, select: { id: true, title: true, direction: true, costCodeId: true } }),

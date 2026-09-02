@@ -7,15 +7,8 @@ import { getProjectBundleFromDb } from "@/lib/project-data";
 const mocks = vi.hoisted(() => ({
   aggregate: vi.fn(),
   create: vi.fn(),
-  audit: vi.fn(async () => ({}))
-}));
-
-vi.mock("@/lib/auth/session", () => ({ getCurrentUser: vi.fn() }));
-vi.mock("@/lib/auth/project-permissions", () => ({ canProject: vi.fn() }));
-vi.mock("@/lib/project-data", () => ({ getProjectBundleFromDb: vi.fn() }));
-vi.mock("@/lib/project-pipeline", () => ({ buildPipelineSnapshot: vi.fn(async () => null) }));
-vi.mock("@/lib/risk-executive-intelligence", () => ({
-  buildRiskExecutiveIntelligence: vi.fn(() => ({
+  expenses: vi.fn(),
+  buildRiskExecutive: vi.fn(() => ({
     executiveReport: {
       status: "amber",
       statusReason: "partial",
@@ -27,12 +20,22 @@ vi.mock("@/lib/risk-executive-intelligence", () => ({
       sections: [{ title: "Статус проекта", text: "Требует внимания" }],
       copyText: "Статус проекта\nТребует внимания"
     }
-  }))
+  })),
+  audit: vi.fn(async () => ({}))
+}));
+
+vi.mock("@/lib/auth/session", () => ({ getCurrentUser: vi.fn() }));
+vi.mock("@/lib/auth/project-permissions", () => ({ canProject: vi.fn() }));
+vi.mock("@/lib/project-data", () => ({ getProjectBundleFromDb: vi.fn() }));
+vi.mock("@/lib/project-pipeline", () => ({ buildPipelineSnapshot: vi.fn(async () => null) }));
+vi.mock("@/lib/risk-executive-intelligence", () => ({
+  buildRiskExecutiveIntelligence: mocks.buildRiskExecutive
 }));
 vi.mock("@/lib/prisma", () => ({
   prisma: {
     executiveReport: { findMany: vi.fn(), aggregate: mocks.aggregate, create: mocks.create },
     document: { findMany: vi.fn(async () => []) },
+    projectExpense: { findMany: mocks.expenses },
     auditLog: { create: mocks.audit },
     $transaction: vi.fn(async (callback: (tx: unknown) => unknown) => callback({
       executiveReport: { aggregate: mocks.aggregate, create: mocks.create },
@@ -82,6 +85,12 @@ describe("executive reports collection", () => {
     vi.mocked(prisma.executiveReport.findMany).mockResolvedValue([report] as never);
     mocks.aggregate.mockResolvedValue({ _max: { version: 1 } });
     mocks.create.mockResolvedValue(report);
+    mocks.expenses.mockResolvedValue([{
+      grossAmount: 125_000,
+      taxAmount: 5_000,
+      items: [],
+      receiptDocument: { id: "document-1" }
+    }]);
   });
 
   it("guards generation before parsing the request body", async () => {
@@ -110,6 +119,12 @@ describe("executive reports collection", () => {
     }) as never, { params: { projectId: "project-1" } });
     expect(response.status).toBe(201);
     expect(mocks.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ version: 2 }) }));
+    expect(mocks.buildRiskExecutive).toHaveBeenCalledWith(expect.objectContaining({
+      expenseSummary: expect.objectContaining({ count: 1, grossAmount: 125_000, receipts: 1 })
+    }));
+    expect(mocks.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ sourceSnapshot: expect.objectContaining({ expenses: 1, expenseGrossAmount: 125_000 }) })
+    }));
     expect(mocks.audit).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ entity: "executive_report", action: "create" }) }));
   });
 });

@@ -228,6 +228,7 @@ export function ExpenseRegisterWorkspace({ projectId, canEdit, canDelete }: { pr
   }, [categories, categoryLabels, summary]);
 
   const lineTotal = useMemo(() => form.items.reduce((sum, line) => sum + line.amount, 0), [form.items]);
+  const lineVariance = form.items.length ? Math.abs(lineTotal - numberInput(form.grossAmount)) : 0;
 
   function openNew(mode: FormMode) {
     const nextForm = emptyForm(mode);
@@ -362,7 +363,8 @@ export function ExpenseRegisterWorkspace({ projectId, canEdit, canDelete }: { pr
 
   async function save() {
     if (!form.merchant.trim()) return setError("Укажите поставщика или назначение расхода.");
-    if (!form.grossAmount || numberInput(form.grossAmount) < 0) return setError("Укажите сумму расхода.");
+    if (!form.grossAmount || numberInput(form.grossAmount) <= 0) return setError("Укажите сумму расхода больше нуля.");
+    if (lineVariance > 0.01) return setError("Сумма позиций должна совпадать с общей суммой расхода.");
     if (formMode === "receipt" && !editingId && !receiptFile) return setError("Выберите чек и выполните распознавание.");
     setSaving(true);
     setError("");
@@ -469,10 +471,10 @@ export function ExpenseRegisterWorkspace({ projectId, canEdit, canDelete }: { pr
           <input aria-label="Сумма позиции" inputMode="decimal" min="0" type="number" value={line.amount} onChange={(event) => updateLine(index, { amount: Number(event.target.value) })} />
           <button aria-label="Удалить позицию" className="icon-button" onClick={() => setForm((current) => markEdited({ ...current, items: current.items.filter((_, lineIndex) => lineIndex !== index) }))} title="Удалить позицию" type="button"><Trash2 size={16} /></button>
         </div>)}
-        {form.items.length > 0 && <div className={`expense-line-total ${Math.abs(lineTotal - numberInput(form.grossAmount)) > 0.01 ? "variance" : ""}`}><span>Сумма позиций</span><strong>{money(lineTotal)}</strong><small>{Math.abs(lineTotal - numberInput(form.grossAmount)) > 0.01 ? `Отклонение ${money(lineTotal - numberInput(form.grossAmount))}` : "Совпадает с итогом"}</small></div>}
+        {form.items.length > 0 && <div className={`expense-line-total ${lineVariance > 0.01 ? "variance" : ""}`}><span>Сумма позиций</span><strong>{money(lineTotal)}</strong><small>{lineVariance > 0.01 ? `Отклонение ${money(lineTotal - numberInput(form.grossAmount))}. Исправьте перед сохранением.` : "Совпадает с итогом"}</small></div>}
       </div>
 
-      <footer><span>Сохранение чека создаст связанный документ проекта.</span><div><button className="button secondary" onClick={closeForm} type="button">Отмена</button><button className="button" disabled={saving || analyzing} onClick={() => void save()} type="button">{saving ? <RefreshCw className="spin" size={16} /> : <FileCheck2 size={16} />}{saving ? "Сохраняем" : "Сохранить расход"}</button></div></footer>
+      <footer><span>{lineVariance > 0.01 ? "Сверьте итог и детализацию расхода." : "Сохранение чека создаст связанный документ проекта."}</span><div><button className="button secondary" onClick={closeForm} type="button">Отмена</button><button className="button" disabled={saving || analyzing || lineVariance > 0.01} onClick={() => void save()} type="button">{saving ? <RefreshCw className="spin" size={16} /> : <FileCheck2 size={16} />}{saving ? "Сохраняем" : "Сохранить расход"}</button></div></footer>
     </div>}
 
     <div className="expense-toolbar">

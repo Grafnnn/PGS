@@ -19,7 +19,7 @@ export async function POST(request: Request, { params }: { params: { projectId: 
       where: { id: params.projectId },
       include: {
         budgetItems: { orderBy: [{ section: "asc" }, { code: "asc" }] },
-        scheduleItems: { orderBy: { startsAt: "asc" } }
+        scheduleItems: { where: { isCurrent: true }, orderBy: { startsAt: "asc" } }
       }
     });
     if (!project) return apiError(requestId, "NOT_FOUND", "Project not found", 404);

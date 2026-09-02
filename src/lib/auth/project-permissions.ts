@@ -45,7 +45,13 @@ export function resolveEffectiveProjectRole(user: AppUser | null, memberRole?: s
 
 export async function getEffectiveProjectRole(user: AppUser | null, projectId: string): Promise<AppRole | null> {
   if (!user) return null;
-  if (user.role === "OWNER" || user.role === "ADMIN" || !user.authenticated) return resolveEffectiveProjectRole(user);
+  if (!user.authenticated) return resolveEffectiveProjectRole(user);
+  const projectInOrganization = await prisma.project.findFirst({
+    where: { id: projectId, organization: { users: { some: { userId: user.id } } } },
+    select: { id: true }
+  });
+  if (!projectInOrganization) return null;
+  if (user.role === "OWNER" || user.role === "ADMIN") return resolveEffectiveProjectRole(user);
   const member = await prisma.projectMember.findUnique({
     where: { projectId_userId: { projectId, userId: user.id } },
     select: { role: true }

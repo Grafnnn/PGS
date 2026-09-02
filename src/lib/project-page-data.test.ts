@@ -48,6 +48,16 @@ describe("project page data fallback", () => {
     expect(result.bundle?.project.id).toBe("project-demo");
   });
 
+  it("surfaces DB failures instead of showing demo data when authenticated mode forbids fallback", async () => {
+    await expect(loadProjectBundleForPage("project-demo", async () => {
+      throw new Error("database unavailable");
+    }, () => false)).rejects.toThrow("database unavailable");
+
+    await expect(loadProjectsForPage(async () => {
+      throw new Error("database unavailable");
+    }, () => false)).rejects.toThrow("database unavailable");
+  });
+
   it("does not replace an empty DB project list with demo projects", async () => {
     const result = await loadProjectsForPage(async () => []);
 

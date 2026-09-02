@@ -5,18 +5,9 @@ import { canManageUsers } from "@/lib/auth/permissions";
 import { getCurrentUser } from "@/lib/auth/session";
 import { isLastActiveOwner, normalizeAdminRole, serializeAdminUser } from "@/lib/admin/users";
 import { prisma } from "@/lib/prisma";
-import { getDemoContext } from "@/lib/project-data";
+import { getUserOrganizationContext } from "@/lib/project-data";
 
-async function auditOrganizationId() {
-  const organization = await prisma.organization.findFirst({ select: { id: true } });
-  if (organization) return organization.id;
-  return (await getDemoContext()).organizationId;
-}
-
-async function activeOwnerIds() {
-  const owners = await prisma.user.findMany({ where: { appRole: "OWNER", isActive: true }, select: { id: true } });
-  return owners.map((owner) => owner.id);
-}
+class LastActiveOwnerError extends Error {}
 
 function jsonError(error: unknown) {
   if (error instanceof Prisma.PrismaClientInitializationError) {
@@ -24,6 +15,9 @@ function jsonError(error: unknown) {
   }
   if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
+  }
+  if (error instanceof LastActiveOwnerError) {
+    return NextResponse.json({ error: error.message }, { status: 400 });
   }
   console.error(error);
   return NextResponse.json({ error: "Admin user update failed" }, { status: 500 });
@@ -35,18 +29,25 @@ export async function PATCH(request: NextRequest, { params }: { params: { userId
 
   try {
     const body = await request.json().catch(() => ({}));
-    const before = await prisma.user.findUniqueOrThrow({ where: { id: params.userId } });
-    const nextRole = body.role === undefined ? before.appRole : normalizeAdminRole(body.role);
-    const nextIsActive = body.isActive === undefined ? before.isActive : Boolean(body.isActive);
-
-    if ((before.appRole === "OWNER" && nextRole !== "OWNER") || (before.isActive && !nextIsActive)) {
-      if (isLastActiveOwner({ targetUserId: before.id, activeOwnerIds: await activeOwnerIds() })) {
-        return NextResponse.json({ error: "Cannot deactivate or demote the last active OWNER" }, { status: 400 });
-      }
-    }
-
-    const organizationId = await auditOrganizationId();
+    const context = await getUserOrganizationContext(currentUser);
+    if (!context) return NextResponse.json({ error: "Organization membership is required" }, { status: 403 });
+    const organizationId = context.organizationId;
     const updated = await prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM "organizations" WHERE id = ${organizationId} FOR UPDATE`;
+      const before = await tx.user.findFirstOrThrow({
+        where: { id: params.userId, memberships: { some: { organizationId } } }
+      });
+      const nextRole = body.role === undefined ? before.appRole : normalizeAdminRole(body.role);
+      const nextIsActive = body.isActive === undefined ? before.isActive : Boolean(body.isActive);
+      if ((before.appRole === "OWNER" && nextRole !== "OWNER") || (before.isActive && !nextIsActive)) {
+        const owners = await tx.user.findMany({
+          where: { appRole: "OWNER", isActive: true, memberships: { some: { organizationId } } },
+          select: { id: true }
+        });
+        if (isLastActiveOwner({ targetUserId: before.id, activeOwnerIds: owners.map((owner) => owner.id) })) {
+          throw new LastActiveOwnerError("Cannot deactivate or demote the last active OWNER");
+        }
+      }
       const user = await tx.user.update({
         where: { id: params.userId },
         data: {

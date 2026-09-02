@@ -306,6 +306,13 @@ model ScheduleItem {
   endsAt               DateTime                     @map("ends_at")
   plannedQty           Decimal                      @map("planned_qty") @db.Decimal(14, 3)
   actualQty            Decimal                      @default(0) @map("actual_qty") @db.Decimal(14, 3)
+  manualActualQty      Decimal                      @default(0) @map("manual_actual_qty") @db.Decimal(14, 3)
+  reportActualQty      Decimal                      @default(0) @map("report_actual_qty") @db.Decimal(14, 3)
+  unit                 String?
+  progressMode         String                       @default("quantity") @map("progress_mode")
+  revision             Int                          @default(1)
+  isCurrent            Boolean                      @default(true) @map("is_current")
+  supersededAt         DateTime?                    @map("superseded_at")
   status               String
   dependency           String?
   createdBy            String?                      @map("created_by")
@@ -318,6 +325,7 @@ model ScheduleItem {
   controlBaselineLines ProjectControlBaselineLine[]
 
   @@index([costCodeId])
+  @@index([projectId, isCurrent, startsAt])
   @@map("schedule_items")
 }
 

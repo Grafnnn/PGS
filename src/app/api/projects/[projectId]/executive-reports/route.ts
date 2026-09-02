@@ -10,6 +10,7 @@ import {
 } from "@/lib/executive-reports";
 import { prisma } from "@/lib/prisma";
 import { getProjectBundleFromDb } from "@/lib/project-data";
+import { buildProjectExpenseSummary } from "@/lib/project-expenses";
 import { buildPipelineSnapshot } from "@/lib/project-pipeline";
 import { buildRiskExecutiveIntelligence } from "@/lib/risk-executive-intelligence";
 import { serializeDocument } from "@/lib/serializers";
@@ -38,24 +39,30 @@ export async function POST(request: NextRequest, { params }: Params) {
 
   try {
     const data = executiveReportCreateSchema.parse(await request.json().catch(() => ({})));
-    const [bundle, pipeline, documentRecords] = await Promise.all([
+    const [bundle, pipeline, documentRecords, expenseRecords] = await Promise.all([
       getProjectBundleFromDb(params.projectId),
       buildPipelineSnapshot(params.projectId),
-      prisma.document.findMany({ where: { projectId: params.projectId }, orderBy: { createdAt: "desc" } })
+      prisma.document.findMany({ where: { projectId: params.projectId }, orderBy: { createdAt: "desc" } }),
+      prisma.projectExpense.findMany({
+        where: { projectId: params.projectId },
+        include: { items: true, receiptDocument: { select: { id: true, title: true, fileName: true, mimeType: true } } }
+      })
     ]);
     if (!bundle) return NextResponse.json({ error: "Project not found" }, { status: 404 });
     const documents = documentRecords.map(serializeDocument);
+    const expenseSummary = buildProjectExpenseSummary(expenseRecords);
 
     const content = buildRiskExecutiveIntelligence({
       ...bundle,
       documents,
+      expenseSummary,
       readiness: pipeline?.readiness ?? null,
       documentChecklist: pipeline?.documentChecklist ?? [],
       intelligence: pipeline?.intelligence ?? null,
       importHistory: []
     }).executiveReport;
     const reportDate = data.reportDate ? new Date(`${data.reportDate}T12:00:00.000Z`) : new Date();
-    const snapshot = executiveReportSourceSnapshot({ ...bundle, documents, readinessScore: pipeline?.readiness.score ?? null });
+    const snapshot = executiveReportSourceSnapshot({ ...bundle, documents, expenseSummary, readinessScore: pipeline?.readiness.score ?? null });
 
     const item = await prisma.$transaction(async (tx) => {
       const latest = await tx.executiveReport.aggregate({ where: { projectId: params.projectId }, _max: { version: true } });

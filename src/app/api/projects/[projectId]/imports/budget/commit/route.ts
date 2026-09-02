@@ -5,6 +5,13 @@ import { writeAudit } from "@/lib/audit";
 import { canProject } from "@/lib/auth/project-permissions";
 import { getCurrentUser } from "@/lib/auth/session";
 import { buildCommitPlan } from "@/lib/excel/import-parser";
+import {
+  claimImportBatch,
+  ImportCommitConflict,
+  prepareBudgetReplacement,
+  prepareScheduleRevision,
+  relinkScheduleBudgetItems
+} from "@/lib/excel/import-commit-integrity";
 import { importCommitRequestSchema, importPreviewSchema, type ImportPreview } from "@/lib/excel/import-types";
 import { prisma } from "@/lib/prisma";
 import { serializeBudgetItem, serializeMaterial, serializeScheduleItem } from "@/lib/serializers";
@@ -45,8 +52,11 @@ export async function POST(request: NextRequest, { params }: { params: { project
     const plan = buildCommitPlan(preview, payload.mode);
 
     const result = await prisma.$transaction(async (tx) => {
+      await claimImportBatch(tx, { importBatchId: batch.id, projectId: project.id });
       let removedDraftRequests = 0;
-      if (plan.mode === "replace_all" || plan.mode === "replace_budget" || plan.mode === "replace_budget_materials") {
+      const replacesBudget = plan.mode === "replace_all" || plan.mode === "replace_budget" || plan.mode === "replace_budget_materials";
+      const previousBudgetItems = await prepareBudgetReplacement(tx, { projectId: project.id, replace: replacesBudget });
+      if (replacesBudget) {
         await tx.budgetItem.deleteMany({ where: { projectId: project.id } });
         await tx.budgetSection.deleteMany({ where: { projectId: project.id } });
       }
@@ -64,9 +74,13 @@ export async function POST(request: NextRequest, { params }: { params: { project
         removedDraftRequests = removed.count;
         await tx.material.deleteMany({ where: { projectId: project.id } });
       }
-      if (plan.mode === "replace_all" || plan.mode === "replace_schedule") {
-        await tx.scheduleItem.deleteMany({ where: { projectId: project.id } });
-      }
+      const changesSchedule = plan.scheduleItems.length > 0 || plan.mode === "replace_all" || plan.mode === "replace_schedule";
+      const scheduleRevision = changesSchedule
+        ? await prepareScheduleRevision(tx, {
+            projectId: project.id,
+            replace: plan.mode === "replace_all" || plan.mode === "replace_schedule"
+          })
+        : { revision: 1, supersededCount: 0 };
       if (plan.mode === "replace_all" || plan.mode === "replace_budget" || plan.mode === "replace_budget_materials") {
         await tx.projectLaborDemand.deleteMany({ where: { projectId: project.id, importBatchId: { not: null } } });
       }
@@ -108,6 +122,11 @@ export async function POST(request: NextRequest, { params }: { params: { project
           })
         )
       );
+      const budgetRelink = await relinkScheduleBudgetItems(tx, {
+        projectId: project.id,
+        previous: previousBudgetItems,
+        created: budgetItems
+      });
 
       const materials = await Promise.all(
         plan.materials.map((item) =>
@@ -145,6 +164,12 @@ export async function POST(request: NextRequest, { params }: { params: { project
               endsAt: item.endsAt,
               plannedQty: new Prisma.Decimal(item.plannedQty),
               actualQty: new Prisma.Decimal(item.actualQty),
+              manualActualQty: new Prisma.Decimal(item.actualQty),
+              reportActualQty: new Prisma.Decimal(0),
+              unit: item.unit,
+              progressMode: item.progressMode ?? "quantity",
+              revision: scheduleRevision.revision,
+              isCurrent: true,
               status: item.status,
               dependency: item.dependency,
               createdBy: user.id
@@ -237,6 +262,10 @@ export async function POST(request: NextRequest, { params }: { params: { project
               budgetItems: budgetItems.length,
               materials: materials.length,
               scheduleItems: scheduleItems.length,
+              scheduleRevision: scheduleRevision.revision,
+              supersededScheduleItems: scheduleRevision.supersededCount,
+              relinkedScheduleBudgetItems: budgetRelink.relinked,
+              clearedScheduleBudgetItems: budgetRelink.cleared,
               removedDraftRequests,
               laborDemands: laborDemands.length,
               laborAllocations: laborDemands.reduce((sum, item) => sum + item.allocations.length, 0)
@@ -264,6 +293,10 @@ export async function POST(request: NextRequest, { params }: { params: { project
           budgetItems: budgetItems.length,
           materials: materials.length,
           scheduleItems: scheduleItems.length,
+          scheduleRevision: scheduleRevision.revision,
+          supersededScheduleItems: scheduleRevision.supersededCount,
+          relinkedScheduleBudgetItems: budgetRelink.relinked,
+          clearedScheduleBudgetItems: budgetRelink.cleared,
           removedDraftRequests,
           laborDemands: laborDemands.length,
           laborAllocations: laborDemands.reduce((sum, item) => sum + item.allocations.length, 0)
@@ -283,6 +316,9 @@ export async function POST(request: NextRequest, { params }: { params: { project
   } catch (error) {
     if (error instanceof ZodError) {
       return NextResponse.json({ error: "Validation error", issues: error.issues }, { status: 400 });
+    }
+    if (error instanceof ImportCommitConflict) {
+      return NextResponse.json({ error: error.message }, { status: 409 });
     }
     if (error instanceof Prisma.PrismaClientInitializationError) {
       return NextResponse.json({ error: "Database is not available. Start PostgreSQL and run prisma migrate/seed.", detail: error.message }, { status: 503 });

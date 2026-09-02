@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { budgetTotals, financeTotals, materialTotals, workTotals } from "./calculations";
+import { budgetTotals, financeTotals, materialTotals, scheduleProgressPercent, workTotals } from "./calculations";
 
 describe("construction calculations", () => {
   it("calculates project margin", () => {
@@ -42,6 +42,19 @@ describe("construction calculations", () => {
     expect(result.completionPercent).toBe(50);
   });
 
+  it("does not add incompatible work quantities when calculating completion", () => {
+    const result = workTotals([
+      { id: "m2", projectId: "p1", name: "Площадь", owner: "РП", startsAt: "2026-01-01", endsAt: "2026-01-10", plannedQty: 1000, actualQty: 500, unit: "м²", status: "in_progress" },
+      { id: "pcs", projectId: "p1", name: "Штучная работа", owner: "РП", startsAt: "2026-01-01", endsAt: "2026-01-10", plannedQty: 1, actualQty: 1, unit: "шт", status: "done" }
+    ]);
+
+    expect(result.completionPercent).toBe(75);
+  });
+
+  it("returns no schedule progress when a project has no schedule", () => {
+    expect(scheduleProgressPercent([])).toBeNull();
+  });
+
   it("calculates material overrun and finance gap", () => {
     expect(
       materialTotals([
@@ -77,6 +90,12 @@ describe("construction calculations", () => {
           category: "supplier"
         }
       ]).financingNeed
-    ).toBe(500_000);
+    ).toBe(2_000_000);
+  });
+
+  it("starts finance totals from a factual zero balance unless a balance is supplied", () => {
+    const result = financeTotals([]);
+    expect(result.openingBalance).toBe(0);
+    expect(result.closingBalance).toBe(0);
   });
 });

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { ExecutiveWeeklyReport } from "@/lib/risk-executive-intelligence";
+import type { ProjectExpenseSummary } from "@/lib/project-expenses";
 
 export const executiveReportStatuses = ["draft", "published", "archived"] as const;
 
@@ -70,6 +71,7 @@ export function executiveReportSourceSnapshot(input: {
   dailyReports: unknown[];
   risks: unknown[];
   documents?: unknown[];
+  expenseSummary?: ProjectExpenseSummary | null;
   readinessScore?: number | null;
 }) {
   return {
@@ -81,6 +83,8 @@ export function executiveReportSourceSnapshot(input: {
     dailyReports: input.dailyReports.length,
     risks: input.risks.length,
     documents: input.documents?.length ?? 0,
+    expenses: input.expenseSummary?.count ?? 0,
+    expenseGrossAmount: input.expenseSummary?.grossAmount ?? null,
     readinessScore: input.readinessScore ?? null,
     capturedAt: new Date().toISOString()
   };

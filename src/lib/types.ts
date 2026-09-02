@@ -46,6 +46,7 @@ export interface Project {
   selectedModules?: string[];
   status: ProjectStatus;
   isSmokeProject?: boolean;
+  progressPercent?: number | null;
 }
 
 export interface ProjectCostCode {
@@ -93,6 +94,13 @@ export interface ScheduleItem {
   endsAt: string;
   plannedQty: number;
   actualQty: number;
+  manualActualQty?: number;
+  reportActualQty?: number;
+  unit?: string;
+  progressMode?: "quantity" | "milestone";
+  revision?: number;
+  isCurrent?: boolean;
+  supersededAt?: string;
   status: WorkStatus;
   dependency?: string;
 }
@@ -174,6 +182,8 @@ export interface DailyReport {
     applied: boolean;
     entries: number;
     scheduleItems: number;
+    activeEntries?: number;
+    historicalEntries?: number;
   };
   status: "draft" | "submitted" | "checked" | "approved";
 }

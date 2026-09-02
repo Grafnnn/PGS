@@ -196,7 +196,7 @@ export async function loadPipelineData(projectId: string): Promise<PipelineData 
     include: {
       budgetItems: { orderBy: [{ section: "asc" }, { code: "asc" }] },
       materials: { orderBy: { neededAt: "asc" } },
-      scheduleItems: { orderBy: { startsAt: "asc" } },
+      scheduleItems: { where: { isCurrent: true }, orderBy: { startsAt: "asc" } },
       procurementRequests: { include: { items: true }, orderBy: { neededAt: "asc" } },
       payments: { orderBy: { plannedAt: "asc" } },
       cashflowPeriods: { orderBy: { periodStart: "asc" } },

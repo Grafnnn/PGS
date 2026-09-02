@@ -6,15 +6,21 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { hashPassword } from "@/lib/auth/password";
 import { generateTemporaryPassword } from "@/lib/admin/users";
 import { prisma } from "@/lib/prisma";
-import { getDemoContext } from "@/lib/project-data";
+import { getUserOrganizationContext } from "@/lib/project-data";
 
 export async function POST(_request: Request, { params }: { params: { userId: string } }) {
   const currentUser = await getCurrentUser();
   if (!canManageUsers(currentUser)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   try {
-    const organization = await prisma.organization.findFirst({ select: { id: true } });
-    const organizationId = organization?.id ?? (await getDemoContext()).organizationId;
+    const context = await getUserOrganizationContext(currentUser);
+    if (!context) return NextResponse.json({ error: "Organization membership is required" }, { status: 403 });
+    const organizationId = context.organizationId;
+    const target = await prisma.user.findFirst({
+      where: { id: params.userId, memberships: { some: { organizationId } } },
+      select: { id: true }
+    });
+    if (!target) return NextResponse.json({ error: "User not found" }, { status: 404 });
     const temporaryPassword = generateTemporaryPassword();
     const updated = await prisma.$transaction(async (tx) => {
       const user = await tx.user.update({

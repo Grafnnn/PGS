@@ -35,6 +35,9 @@ describe("project expense helpers", () => {
     });
     expect(valid.items).toHaveLength(1);
     expect(projectExpenseInputSchema.safeParse({ ...valid, taxAmount: 1300 }).success).toBe(false);
+    expect(projectExpenseInputSchema.safeParse({ ...valid, grossAmount: 0 }).success).toBe(false);
+    expect(projectExpenseInputSchema.safeParse({ ...valid, grossAmount: 1300 }).success).toBe(false);
+    expect(projectExpenseInputSchema.safeParse({ ...valid, items: [{ ...valid.items[0], taxAmount: 1300 }] }).success).toBe(false);
     expect(projectExpenseInputSchema.safeParse({ ...valid, category: "custom:category-1" }).success).toBe(true);
     expect(projectExpenseInputSchema.safeParse({ ...valid, category: "invented-category" }).success).toBe(false);
   });

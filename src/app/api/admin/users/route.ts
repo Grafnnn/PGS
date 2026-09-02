@@ -6,13 +6,7 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { hashPassword } from "@/lib/auth/password";
 import { prisma } from "@/lib/prisma";
 import { generateTemporaryPassword, normalizeAdminRole, serializeAdminUser, validatePasswordCandidate } from "@/lib/admin/users";
-import { getDemoContext } from "@/lib/project-data";
-
-async function auditOrganizationId() {
-  const organization = await prisma.organization.findFirst({ select: { id: true } });
-  if (organization) return organization.id;
-  return (await getDemoContext()).organizationId;
-}
+import { getUserOrganizationContext } from "@/lib/project-data";
 
 function jsonError(error: unknown) {
   if (error instanceof Prisma.PrismaClientInitializationError) {
@@ -27,7 +21,12 @@ export async function GET() {
   if (!canManageUsers(currentUser)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   try {
-    const users = await prisma.user.findMany({ orderBy: [{ isActive: "desc" }, { createdAt: "asc" }] });
+    const context = await getUserOrganizationContext(currentUser);
+    if (!context) return NextResponse.json({ error: "Organization membership is required" }, { status: 403 });
+    const users = await prisma.user.findMany({
+      where: { memberships: { some: { organizationId: context.organizationId } } },
+      orderBy: [{ isActive: "desc" }, { createdAt: "asc" }]
+    });
     return NextResponse.json({ items: users.map(serializeAdminUser) });
   } catch (error) {
     return jsonError(error);
@@ -50,7 +49,9 @@ export async function POST(request: NextRequest) {
     if (!name) return NextResponse.json({ error: "Name is required" }, { status: 400 });
     if (passwordError) return NextResponse.json({ error: passwordError }, { status: 400 });
 
-    const organizationId = await auditOrganizationId();
+    const context = await getUserOrganizationContext(currentUser);
+    if (!context) return NextResponse.json({ error: "Organization membership is required" }, { status: 403 });
+    const organizationId = context.organizationId;
     const created = await prisma.$transaction(async (tx) => {
       const user = await tx.user.create({
         data: {

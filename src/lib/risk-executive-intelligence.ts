@@ -3,6 +3,7 @@ import { buildContractTenderIntelligence } from "@/lib/contract-tender-intellige
 import { buildProcurementIntelligenceModel, type ProcurementImportHistoryItem } from "@/lib/procurement-intelligence";
 import { buildDocumentComplianceIntelligence, type DocumentPriority } from "@/lib/document-compliance-intelligence";
 import type { DocumentChecklistItem, PipelineAction, PipelineReadiness } from "@/lib/project-pipeline";
+import type { ProjectExpenseSummary } from "@/lib/project-expenses";
 import { buildScheduleCashflowIntelligenceModel } from "@/lib/schedule-cashflow-intelligence";
 import type { BudgetItem, DailyReport, Material, Payment, ProcurementRequest, Project, ProjectDocument, Risk, ScheduleItem } from "@/lib/types";
 
@@ -103,6 +104,7 @@ export type RiskExecutiveInput = {
   materials?: Material[] | null;
   procurementRequests?: ProcurementRequest[] | null;
   payments?: Payment[] | null;
+  expenseSummary?: ProjectExpenseSummary | null;
   dailyReports?: DailyReport[] | null;
   risks?: Risk[] | null;
   documents?: ProjectDocument[] | null;
@@ -504,6 +506,11 @@ export function buildRiskSignalsFromCashflow(input: RiskExecutiveInput): RiskIte
   const risks: RiskItem[] = [];
   const payments = input.payments ?? [];
   const overduePayments = payments.filter((payment) => payment.status === "overdue");
+  const registeredExpenses = Math.max(0, input.expenseSummary?.grossAmount ?? 0);
+  const plannedCost = (input.budgetItems ?? []).reduce(
+    (sum, item) => sum + Math.max(0, item.qty) * Math.max(0, item.plannedUnitPrice),
+    0
+  );
 
   if (model.summary.peakCashNeed > 0) {
     addRiskUnique(
@@ -545,6 +552,28 @@ export function buildRiskSignalsFromCashflow(input: RiskExecutiveInput): RiskIte
         ownerRole: "finance",
         evidence: overduePayments.slice(0, 4).map((payment) => `${payment.title}: ${compactMoney(payment.amount)}`),
         createdFrom: "cashflow-signals"
+      })
+    );
+  }
+
+  if (plannedCost > 0 && registeredExpenses > plannedCost) {
+    addRiskUnique(
+      risks,
+      risk({
+        id: "finance:registered-expenses-over-plan",
+        title: "Фактические расходы превысили плановую себестоимость",
+        description: `В реестре расходов учтено ${compactMoney(registeredExpenses)} при плане ${compactMoney(plannedCost)}.`,
+        severity: registeredExpenses > plannedCost * 1.1 ? "critical" : "high",
+        category: "finance",
+        sourceArea: "Finance",
+        sourceRef: "expenses.register",
+        status: "blocked",
+        suggestedAction: "Сверить расходы с ВОР, ФОТ и платежами, исключить дубли и утвердить корректирующий прогноз.",
+        decisionRequired: true,
+        decisionText: "Подтвердить источник перерасхода и план защиты маржи.",
+        ownerRole: "finance",
+        evidence: [`реестр расходов: ${compactMoney(registeredExpenses)}`, `плановая себестоимость: ${compactMoney(plannedCost)}`],
+        createdFrom: "expense-register"
       })
     );
   }
@@ -784,7 +813,7 @@ function sourcePresent(input: RiskExecutiveInput, source: SourceArea) {
   if (source === "Documents") return Boolean((input.documentChecklist ?? []).length || (input.documents ?? []).length);
   if (source === "Procurement") return Boolean((input.materials ?? []).length || (input.procurementRequests ?? []).length);
   if (source === "Schedule") return Boolean((input.scheduleItems ?? []).length || (input.budgetItems ?? []).length);
-  if (source === "Cashflow" || source === "Finance") return Boolean((input.payments ?? []).length || (input.budgetItems ?? []).length);
+  if (source === "Cashflow" || source === "Finance") return Boolean((input.payments ?? []).length || input.expenseSummary?.count || (input.budgetItems ?? []).length);
   if (source === "Contract") return Boolean((input.documents ?? []).some((document) => normalize(`${document.title} ${document.category} ${document.fileName ?? ""}`).includes("договор")) || (input.documentChecklist ?? []).some((item) => normalize(`${item.key} ${item.title}`).includes("договор")));
   if (source === "Acceptance") return Boolean((input.scheduleItems ?? []).length || (input.budgetItems ?? []).length);
   if (source === "Reports") return Boolean((input.dailyReports ?? []).length);
@@ -915,6 +944,10 @@ export function buildExecutiveWeeklyReport(input: RiskExecutiveInput, risks: Ris
     procurementRequests: input.procurementRequests ?? [],
     importHistory: input.importHistory ?? []
   });
+  const expenseSummary = input.expenseSummary;
+  const expenseText = expenseSummary
+    ? `Фактические расходы по реестру: ${compactMoney(expenseSummary.grossAmount)} (${expenseSummary.count} записей, ${expenseSummary.receipts} с чеком). Реестр расходов и платежи показаны раздельно, чтобы не задвоить начисление и оплату.`
+    : "Реестр фактических расходов в этот срез не передан; финансовый вывод ограничен плановыми платежами и бюджетом.";
   const missingText = summary.missingSources.length ? `Не хватает источников: ${summary.missingSources.join(", ")}.` : "Ключевые источники для управленческого отчета присутствуют.";
   const statusReason =
     status === "red"
@@ -930,7 +963,7 @@ export function buildExecutiveWeeklyReport(input: RiskExecutiveInput, risks: Ris
     { title: "Работы на ближайший период", text: scheduleModel.executivePlan.thisWeekFocus.join("; ") || "Нет подтвержденного недельного фокуса по графику." },
     { title: "Снабжение", text: procurementModel.candidates.length ? `К заявке снабжения: ${procurementModel.candidates.slice(0, 3).map((item) => item.name).join(", ")}.` : "Критичные кандидаты снабжения по доступным данным не выявлены." },
     { title: "График", text: scheduleModel.readiness.blockers.length ? `Блокеры графика: ${scheduleModel.readiness.blockers.join("; ")}.` : scheduleModel.readiness.nextStep },
-    { title: "Финансы / cashflow", text: scheduleModel.summary.peakCashNeed ? `Пиковая потребность cashflow: ${compactMoney(scheduleModel.summary.peakCashNeed)} (${scheduleModel.summary.peakCashWeek}).` : "Пиковая потребность cashflow по текущему черновику не выявлена." },
+    { title: "Финансы / cashflow", text: `${expenseText} ${scheduleModel.summary.peakCashNeed ? `Пиковая потребность cashflow: ${compactMoney(scheduleModel.summary.peakCashNeed)} (${scheduleModel.summary.peakCashWeek}).` : "Пиковая потребность cashflow по текущему черновику не выявлена."}` },
     { title: "Риски", text: topRisks.length ? topRisks.map((item) => `${item.severity}: ${item.title}`).join("; ") : "Открытых рисков по доступным данным нет, но это не заменяет регулярный риск-ревью." },
     { title: "Решения руководства", text: decisions.length ? decisions.slice(0, 3).map((item) => item.title).join("; ") : "Срочные решения руководства по доступным данным не сформированы." },
     { title: "Следующие действия", text: topActions.length ? topActions.map((item) => item.title).join("; ") : "Обновить исходные данные проекта и повторить риск-анализ." }

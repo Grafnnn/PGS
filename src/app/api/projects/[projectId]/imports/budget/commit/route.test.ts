@@ -194,7 +194,7 @@ describe("budget import commit route", () => {
         }))
       },
       scheduleItem: { deleteMany: vi.fn(), create: vi.fn() },
-      importBatch: { update: vi.fn() }
+      importBatch: { updateMany: vi.fn(async () => ({ count: 1 })), update: vi.fn() }
     };
     const importPreview = preview({
       summary: { ...preview().summary, budgetItems: 0, materials: 1, materialRows: 1 },
@@ -255,6 +255,7 @@ describe("budget import commit route", () => {
 
   it("blocks material replacement while procurement requests are active", async () => {
     const tx = {
+      importBatch: { updateMany: vi.fn(async () => ({ count: 1 })) },
       procurementRequest: {
         count: vi.fn(async () => 1),
         deleteMany: vi.fn()
@@ -301,6 +302,7 @@ describe("budget import commit route", () => {
         create: vi.fn()
       },
       importBatch: {
+        updateMany: vi.fn(async () => ({ count: 1 })),
         update: vi.fn()
       }
     };
@@ -345,7 +347,7 @@ describe("budget import commit route", () => {
       projectLaborAllocation: {
         create: vi.fn(async ({ data }) => ({ id: "allocation-1", ...data }))
       },
-      importBatch: { update: vi.fn() }
+      importBatch: { updateMany: vi.fn(async () => ({ count: 1 })), update: vi.fn() }
     };
     const importPreview = preview({
       summary: {

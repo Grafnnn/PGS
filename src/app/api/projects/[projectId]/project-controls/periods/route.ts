@@ -33,7 +33,7 @@ export async function POST(request: Request, { params }: { params: { projectId: 
     if (Number.isNaN(cutOff.getTime())) return apiError(requestId, "INVALID_DATE", "Invalid reporting date", 400);
     if (cutOff < baseline.dataDate) return apiError(requestId, "INVALID_DATE", "Reporting date cannot precede the baseline data date", 409);
     const [scheduleItems, progressEntries, payments] = await Promise.all([
-      prisma.scheduleItem.findMany({ where: { projectId: params.projectId }, orderBy: { startsAt: "asc" } }),
+      prisma.scheduleItem.findMany({ where: { projectId: params.projectId, isCurrent: true }, orderBy: { startsAt: "asc" } }),
       prisma.workProgressEntry.findMany({ where: { projectId: params.projectId, date: { lte: cutOff } }, orderBy: { date: "asc" } }),
       prisma.payment.findMany({ where: { projectId: params.projectId }, orderBy: { plannedAt: "asc" } })
     ]);

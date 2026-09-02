@@ -43,4 +43,15 @@ describe("buildPortfolioControlModel", () => {
     expect(model.projects[0].attentionReasons).toContain("Отрицательная прогнозная маржа");
     expect(model.projects[0].cashExposure).toBe(-3_000_000);
   });
+
+  it("averages work progress per item instead of adding incompatible units", () => {
+    const model = buildPortfolioControlModel([base({
+      scheduleItems: [
+        { name: "Бетон", plannedQty: 1000, actualQty: 500, status: "in_progress", endsAt: "2026-10-01T00:00:00.000Z" },
+        { name: "Двери", plannedQty: 2, actualQty: 2, status: "done", endsAt: "2026-10-01T00:00:00.000Z" }
+      ]
+    })]);
+
+    expect(model.projects[0].progressPercent).toBe(75);
+  });
 });

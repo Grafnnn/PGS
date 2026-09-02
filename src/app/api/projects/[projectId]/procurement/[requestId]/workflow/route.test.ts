@@ -91,6 +91,7 @@ describe("procurement request workflow", () => {
 
   it("requires an owner or admin to approve and moves ordered quantity", async () => {
     mocks.requestFindFirst.mockResolvedValue(requestRecord("submitted"));
+    mocks.findFirstOrThrow.mockResolvedValue(requestRecord("submitted"));
     mocks.materialFindFirst.mockResolvedValue(materialRecord());
     mocks.materialUpdate.mockResolvedValue(materialRecord(0, 100));
     mocks.findUniqueOrThrow.mockResolvedValue({ ...requestRecord("expected"), expectedAt: new Date("2026-09-17T00:00:00.000Z") });
@@ -101,6 +102,19 @@ describe("procurement request workflow", () => {
     mocks.effectiveRole.mockResolvedValue("MANAGER");
     const forbidden = (await POST(post({ action: "approve", expectedAt: "2026-09-17" }), context))!;
     expect(forbidden.status).toBe(403);
+  });
+
+  it("does not approve a request whose line is not linked to a current project material", async () => {
+    const original = requestRecord("submitted");
+    const request = { ...original, items: [{ ...original.items[0], materialId: null }] };
+    mocks.requestFindFirst.mockResolvedValue(request);
+    mocks.findFirstOrThrow.mockResolvedValue(request);
+
+    const response = (await POST(post({ action: "approve", expectedAt: "2026-09-17" }), context))!;
+
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toMatchObject({ error: expect.stringContaining("не связана") });
+    expect(mocks.updateMany).not.toHaveBeenCalled();
   });
 
   it("records a partial receipt and increments warehouse delivery quantity", async () => {
@@ -115,5 +129,17 @@ describe("procurement request workflow", () => {
     expect(mocks.queryRaw).toHaveBeenCalledOnce();
     expect(mocks.itemUpdate).toHaveBeenCalledWith(expect.objectContaining({ data: { receivedQty: { increment: expect.any(Prisma.Decimal) } } }));
     expect(mocks.requestUpdate).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ status: "partially_received" }) }));
+  });
+
+  it("rolls back receipt before changing quantities when a linked material is stale", async () => {
+    mocks.requestFindFirst.mockResolvedValue(requestRecord("expected"));
+    mocks.findFirstOrThrow.mockResolvedValue(requestRecord("expected"));
+    mocks.materialFindFirst.mockResolvedValue(null);
+
+    const response = (await POST(post({ action: "receive", items: [{ itemId: "line-1", qty: 40 }] }), context))!;
+
+    expect(response.status).toBe(409);
+    expect(mocks.itemUpdate).not.toHaveBeenCalled();
+    expect(mocks.requestUpdate).not.toHaveBeenCalled();
   });
 });

@@ -7,6 +7,7 @@ import { generateOneTimeToken, hashOneTimeToken, RESET_TOKEN_TTL_HOURS, tokenExp
 import { getEnv } from "@/lib/env";
 import { buildResetPasswordEmail, getEmailProvider } from "@/lib/email";
 import { prisma } from "@/lib/prisma";
+import { getUserOrganizationContext } from "@/lib/project-data";
 
 export async function POST(request: Request, { params }: { params: { userId: string } }) {
   const requestId = getRequestId(request);
@@ -15,9 +16,11 @@ export async function POST(request: Request, { params }: { params: { userId: str
 
   try {
     const env = getEnv();
-    const organization = await prisma.organization.findFirst({ select: { id: true } });
-    if (!organization) return apiError(requestId, "ORGANIZATION_NOT_FOUND", "Organization not found", 404);
-    const user = await prisma.user.findUnique({ where: { id: params.userId } });
+    const context = await getUserOrganizationContext(currentUser);
+    if (!context) return apiError(requestId, "ORGANIZATION_NOT_FOUND", "Organization membership is required", 403);
+    const user = await prisma.user.findFirst({
+      where: { id: params.userId, memberships: { some: { organizationId: context.organizationId } } }
+    });
     if (!user) return apiError(requestId, "USER_NOT_FOUND", "User not found", 404);
 
     const rawToken = generateOneTimeToken();
@@ -27,7 +30,7 @@ export async function POST(request: Request, { params }: { params: { userId: str
         data: { userId: user.id, tokenHash: hashOneTimeToken(rawToken), expiresAt }
       });
       await writeAudit(tx, {
-        organizationId: organization.id,
+        organizationId: context.organizationId,
         actorId: currentUser?.authenticated ? currentUser.id : null,
         actorName: currentUser?.name ?? "local-user",
         actorEmail: currentUser?.email ?? null,

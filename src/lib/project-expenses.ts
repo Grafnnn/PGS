@@ -2,6 +2,7 @@ import { z } from "zod";
 import { customExpenseCategoryId, expenseCategories, expensePaymentMethods, isExpenseCategoryValue } from "@/lib/project-expense-config";
 
 const moneySchema = z.number().finite().min(0).max(1_000_000_000_000);
+const positiveMoneySchema = z.number().finite().positive().max(1_000_000_000_000);
 const dateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 
 export const projectExpenseItemInputSchema = z.object({
@@ -12,6 +13,10 @@ export const projectExpenseItemInputSchema = z.object({
   unitPrice: moneySchema,
   amount: moneySchema,
   taxAmount: moneySchema.default(0)
+}).superRefine((value, context) => {
+  if (value.taxAmount > value.amount) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ["taxAmount"], message: "Line tax cannot exceed the line total" });
+  }
 });
 
 export const projectExpenseInputSchema = z.object({
@@ -21,7 +26,7 @@ export const projectExpenseInputSchema = z.object({
   category: z.string().trim().min(1).max(220).refine(isExpenseCategoryValue),
   paymentMethod: z.enum(expensePaymentMethods).default("unknown"),
   currency: z.string().trim().regex(/^[A-Z]{3}$/).default("RUB"),
-  grossAmount: moneySchema,
+  grossAmount: positiveMoneySchema,
   taxAmount: moneySchema.default(0),
   costCodeId: z.string().trim().max(200).nullable().optional(),
   notes: z.string().trim().max(2_000).nullable().optional(),
@@ -32,6 +37,12 @@ export const projectExpenseInputSchema = z.object({
 }).superRefine((value, context) => {
   if (value.taxAmount > value.grossAmount) {
     context.addIssue({ code: z.ZodIssueCode.custom, path: ["taxAmount"], message: "Tax cannot exceed the expense total" });
+  }
+  if (value.items.length) {
+    const linesAmount = value.items.reduce((sum, item) => sum + item.amount, 0);
+    if (Math.abs(linesAmount - value.grossAmount) > 0.01) {
+      context.addIssue({ code: z.ZodIssueCode.custom, path: ["items"], message: "The sum of expense lines must equal the expense total" });
+    }
   }
 });
 
@@ -101,12 +112,21 @@ export function serializeProjectExpense(item: ProjectExpenseRecord) {
 
 export type SerializedProjectExpense = ReturnType<typeof serializeProjectExpense>;
 
+export type ProjectExpenseSummary = {
+  count: number;
+  grossAmount: number;
+  taxAmount: number;
+  receipts: number;
+  withoutReceipt: number;
+  byCategory: Record<string, number>;
+};
+
 export function projectExpenseCustomCategoryIds(input: Pick<ProjectExpenseInput, "category" | "items">) {
   const values = [input.category, ...input.items.map((item) => item.category)];
   return [...new Set(values.map(customExpenseCategoryId).filter((id): id is string => Boolean(id)))];
 }
 
-export function buildProjectExpenseSummary(items: ProjectExpenseRecord[], additionalCategories: string[] = []) {
+export function buildProjectExpenseSummary(items: ProjectExpenseRecord[], additionalCategories: string[] = []): ProjectExpenseSummary {
   const byCategory: Record<string, number> = Object.fromEntries(expenseCategories.map((category) => [category, 0]));
   for (const category of additionalCategories) byCategory[category] ??= 0;
   let grossAmount = 0;

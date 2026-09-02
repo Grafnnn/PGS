@@ -82,6 +82,7 @@ function request(body: unknown) {
 
 describe("daily reports catch-all workflow", () => {
   let scheduleActual = 40;
+  let scheduleReportActual = 0;
   let scheduleStatus = "in_progress";
 
   beforeEach(() => {
@@ -101,14 +102,30 @@ describe("daily reports catch-all workflow", () => {
     mocks.progressCreate.mockResolvedValue({ id: "progress-1" });
     mocks.progressDeleteMany.mockResolvedValue({ count: 0 });
     scheduleActual = 40;
+    scheduleReportActual = 0;
     scheduleStatus = "in_progress";
-    mocks.scheduleFindMany.mockImplementation(async () => [{ ...schedule, actualQty: new Prisma.Decimal(scheduleActual), status: scheduleStatus }]);
-    mocks.scheduleUpdate.mockImplementation(async ({ data }: { data: { actualQty?: Prisma.Decimal | { increment?: Prisma.Decimal; decrement?: Prisma.Decimal }; status?: string } }) => {
+    mocks.scheduleFindMany.mockImplementation(async () => [{
+      ...schedule,
+      actualQty: new Prisma.Decimal(scheduleActual),
+      manualActualQty: new Prisma.Decimal(Math.max(0, scheduleActual - scheduleReportActual)),
+      reportActualQty: new Prisma.Decimal(scheduleReportActual),
+      status: scheduleStatus
+    }]);
+    mocks.scheduleUpdate.mockImplementation(async ({ data }: { data: { actualQty?: Prisma.Decimal | { increment?: Prisma.Decimal; decrement?: Prisma.Decimal }; reportActualQty?: Prisma.Decimal | { increment?: Prisma.Decimal; decrement?: Prisma.Decimal }; status?: string } }) => {
       if (data.actualQty instanceof Prisma.Decimal) scheduleActual = data.actualQty.toNumber();
       else if (data.actualQty?.increment) scheduleActual += data.actualQty.increment.toNumber();
       else if (data.actualQty?.decrement) scheduleActual -= data.actualQty.decrement.toNumber();
+      if (data.reportActualQty instanceof Prisma.Decimal) scheduleReportActual = data.reportActualQty.toNumber();
+      else if (data.reportActualQty?.increment) scheduleReportActual += data.reportActualQty.increment.toNumber();
+      else if (data.reportActualQty?.decrement) scheduleReportActual -= data.reportActualQty.decrement.toNumber();
       if (data.status) scheduleStatus = data.status;
-      return { ...schedule, actualQty: new Prisma.Decimal(scheduleActual), status: scheduleStatus };
+      return {
+        ...schedule,
+        actualQty: new Prisma.Decimal(scheduleActual),
+        manualActualQty: new Prisma.Decimal(Math.max(0, scheduleActual - scheduleReportActual)),
+        reportActualQty: new Prisma.Decimal(scheduleReportActual),
+        status: scheduleStatus
+      };
     });
   });
 
@@ -368,6 +385,7 @@ describe("daily reports catch-all workflow", () => {
   it("returns an approved report to draft and rolls back only its linked progress", async () => {
     mocks.effectiveRole.mockResolvedValue("OWNER");
     scheduleActual = 50;
+    scheduleReportActual = 10;
     mocks.reportFind.mockResolvedValue({ ...before, status: "approved" });
     mocks.progressFindMany.mockResolvedValue([{ id: "progress-1", dailyReportId: "daily-1", scheduleItemId: "schedule-1", qty: new Prisma.Decimal(10) }]);
     const { PATCH } = await import("./route");

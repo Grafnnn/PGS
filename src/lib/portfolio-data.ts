@@ -28,7 +28,7 @@ export async function loadPortfolioProjects(user: AppUser): Promise<PortfolioPro
       startsAt: true,
       endsAt: true,
       budgetItems: { select: { qty: true, plannedUnitPrice: true, forecastUnitPrice: true } },
-      scheduleItems: { select: { name: true, plannedQty: true, actualQty: true, status: true, endsAt: true } },
+      scheduleItems: { where: { isCurrent: true }, select: { name: true, plannedQty: true, actualQty: true, status: true, endsAt: true } },
       materials: { select: { requiredQty: true, orderedQty: true, deliveredQty: true, status: true, neededAt: true } },
       payments: { select: { direction: true, amount: true, status: true, plannedAt: true, paidAt: true } },
       risks: { select: { priority: true, status: true, dueAt: true } },
