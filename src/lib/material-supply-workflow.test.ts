@@ -93,6 +93,57 @@ describe("material supply workflow", () => {
     expect(model.groups[0].items).toHaveLength(2);
   });
 
+  it("reconciles every source row while separating orderable and clarification positions", () => {
+    const model = buildMaterialSupplyWorkflow({
+      materials: [
+        material({ id: "material-1", name: "[МЗ-05] Плита · П1", costCodeId: null, orderByAt: "2026-09-04" }),
+        material({ id: "material-2", name: "[МЗ-05] Плита · П2", costCodeId: null, orderByAt: "2026-09-04" }),
+        material({ id: "material-3", name: "[МЗ-06] Балка · уточнить объём", costCodeId: null, orderByAt: "2026-09-04", requiredQty: 0 })
+      ],
+      scheduleItems: [],
+      procurementRequests: [],
+      today: "2026-09-02"
+    });
+
+    expect(model.summary).toMatchObject({
+      sourcePositions: 3,
+      actionablePositions: 2,
+      clarificationPositions: 1,
+      sourcePackages: 2
+    });
+    expect(model.upcomingGroups).toHaveLength(1);
+    expect(model.upcomingGroups[0].items).toHaveLength(2);
+    expect(model.clarificationDemands[0]).toMatchObject({ requestCode: "МЗ-06", requiredQty: 0 });
+  });
+
+  it("uses one approval count for both draft and submitted requests", () => {
+    const requests: ProcurementRequest[] = [
+      {
+        id: "request-draft",
+        projectId: "project-1",
+        title: "Черновик",
+        initiator: "ПТО",
+        neededAt: "2026-09-18",
+        priority: "high",
+        status: "draft",
+        items: []
+      },
+      {
+        id: "request-submitted",
+        projectId: "project-1",
+        title: "На подтверждении",
+        initiator: "ПТО",
+        neededAt: "2026-09-18",
+        priority: "high",
+        status: "submitted",
+        items: []
+      }
+    ];
+    const model = buildMaterialSupplyWorkflow({ materials: [], scheduleItems: [], procurementRequests: requests, today: "2026-09-02" });
+
+    expect(model.summary).toMatchObject({ approval: 2, drafts: 1, submitted: 1 });
+  });
+
   it("does not duplicate a material covered by an active request", () => {
     const request: ProcurementRequest = {
       id: "request-1",

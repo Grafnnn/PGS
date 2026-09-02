@@ -344,6 +344,21 @@ export function ProjectWorkspace({
     }
   }, [initialBundle.project.id]);
 
+  const loadProcurementRequests = useCallback(async () => {
+    try {
+      const response = await fetch(`/api/projects/${initialBundle.project.id}/procurement`, { cache: "no-store" });
+      const data = (await response.json()) as { items?: ProcurementRequest[] };
+      if (response.ok) setProcurementRequests(data.items ?? []);
+    } catch {
+      // Keep the last confirmed client state if the background refresh is unavailable.
+    }
+  }, [initialBundle.project.id]);
+
+  useEffect(() => {
+    if (activeTab !== "Заявки") return;
+    void loadProcurementRequests();
+  }, [activeTab, loadProcurementRequests]);
+
   useEffect(() => {
     if (!["Бюджет / ВОР", "ФОТ", "График", "Материалы", "Заявки", "Финансы", "Договор / Тендер", "КП / Подача", "КС", "Исполнение", "Аналитика"].includes(activeTab)) return;
     void loadImportHistory();
@@ -782,8 +797,15 @@ export function ProjectWorkspace({
       if (["replace_budget", "replace_budget_materials", "replace_all"].includes(importMode)) setBudgetItems(data.budgetItems ?? []);
       else setBudgetItems((current) => [...current, ...(data.budgetItems ?? [])]);
 
-      if (["replace_materials", "replace_budget_materials", "replace_all"].includes(importMode)) setMaterials(data.materials ?? []);
+      const replacesMaterials = ["replace_materials", "replace_budget_materials", "replace_all"].includes(importMode);
+      if (replacesMaterials) setMaterials(data.materials ?? []);
       else setMaterials((current) => [...current, ...(data.materials ?? [])]);
+
+      if (replacesMaterials) {
+        setProcurementRequests((current) => current.filter((request) => request.status !== "draft"));
+        setPipelineDraft((current) => current?.kind === "procurement" ? null : current);
+        void loadProcurementRequests();
+      }
 
       if (importMode === "replace_schedule" || importMode === "replace_all") setScheduleItems(data.scheduleItems ?? []);
       else setScheduleItems((current) => [...current, ...(data.scheduleItems ?? [])]);

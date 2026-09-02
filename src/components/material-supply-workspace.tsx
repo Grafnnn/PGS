@@ -1,6 +1,6 @@
 "use client";
 
-import { Archive, CalendarClock, Check, ChevronDown, ClipboardCheck, Download, PackageCheck, RefreshCw, Send, Truck } from "lucide-react";
+import { Archive, CalendarClock, Check, ChevronDown, CircleAlert, ClipboardCheck, Download, PackageCheck, RefreshCw, Send, Truck } from "lucide-react";
 import React, { useMemo, useState } from "react";
 import { buildMaterialSupplyWorkflow } from "@/lib/material-supply-workflow";
 import type { Material, ProcurementRequest, ScheduleItem } from "@/lib/types";
@@ -139,7 +139,7 @@ export function MaterialSupplyWorkspace({
         <div>
           <span className="eyebrow">Снабжение по производственной потребности</span>
           <h3>От графика работ до приёмки на склад</h3>
-          <p>PGS поднимает потребность за 14 дней до доставки, группирует позиции и не меняет склад без явного подтверждения пользователя.</p>
+          <p>PGS использует срок «Заказать до» из итоговой заявки, группирует позиции по исходным пакетам МЗ и не меняет склад без явного подтверждения пользователя.</p>
         </div>
         <div className="material-supply-hero-actions">
           <button className="button secondary compact-button" disabled={!canEdit || Boolean(pipelineLoading)} onClick={onPreview} type="button">
@@ -155,9 +155,15 @@ export function MaterialSupplyWorkspace({
 
       <div className="material-supply-kpis" aria-label="Состояние снабжения">
         <div className={model.summary.due ? "tone-warn" : "tone-good"}><span>Пора формировать</span><strong>{model.summary.due}</strong><small>{model.summary.dueGroups} групп заявок</small></div>
-        <div><span>На подтверждении</span><strong>{model.summary.submitted}</strong><small>требуют решения</small></div>
+        <div><span>Черновики / подтверждение</span><strong>{model.summary.approval}</strong><small>{model.summary.drafts} черн. · {model.summary.submitted} на согласовании</small></div>
         <div className={model.summary.overdue ? "tone-bad" : ""}><span>Ожидаются</span><strong>{model.summary.awaiting}</strong><small>{model.summary.overdue ? `${model.summary.overdue} просрочено` : "по графику"}</small></div>
         <div><span>Складской остаток</span><strong>{money(model.summary.warehouseValue)}</strong><small>{model.summary.warehousePositions} позиций</small></div>
+      </div>
+
+      <div className="material-supply-reconciliation" aria-label="Сверка с итоговой заявкой">
+        <PackageCheck size={20} />
+        <div><strong>Сверка с итоговой заявкой</strong><span>{model.summary.actionablePositions} к заказу · {model.summary.clarificationPositions} на уточнение · {model.summary.sourcePackages} пакета МЗ</span></div>
+        <b>{model.summary.sourcePositions} поз.</b>
       </div>
 
       <nav className="material-supply-lanes" aria-label="Этапы заявки">
@@ -182,7 +188,7 @@ export function MaterialSupplyWorkspace({
       {view === "plan" && (
         <div className="material-supply-panel">
           <div className="material-supply-panel-heading">
-            <div><strong>Потребность, которую пора запускать</strong><span>Дата формирования = дата потребности минус 14 дней.</span></div>
+            <div><strong>Потребность, которую пора запускать</strong><span>Дата формирования берётся из «Заказать до»; если она не задана, PGS рассчитывает её за 14 дней до потребности.</span></div>
             {currentDraft?.mode === "preview" ? <span className="badge blue">Preview: {currentDraft.draft.items.length} поз.</span> : null}
           </div>
           {model.groups.length ? <div className="material-supply-group-list">{model.groups.map((group) => (
@@ -192,7 +198,8 @@ export function MaterialSupplyWorkspace({
               <div className="material-supply-lines">{group.items.slice(0, 5).map((item) => <span key={item.id}>{item.name}<b>{item.deficitQty.toLocaleString("ru-RU")} {item.unit}</b></span>)}</div>
             </article>
           ))}</div> : <div className="material-supply-empty"><Check size={22} /><strong>На сегодня новых заявок не требуется</strong><span>Следующая потребность появится автоматически за 14 дней до поставки.</span></div>}
-          {model.upcomingDemands.length ? <details className="material-supply-upcoming"><summary>Будущая потребность: {model.upcomingDemands.length} поз. <ChevronDown size={16} /></summary><div>{model.upcomingDemands.slice(0, 12).map((item) => <span key={item.id}>{item.name}<small>формировать {formatDate(item.requestAt)} · доставка {formatDate(item.deliveryAt)}</small></span>)}</div></details> : null}
+          {model.upcomingGroups.length ? <details className="material-supply-upcoming"><summary>Будущие пакеты: {model.upcomingGroups.length} · {model.upcomingDemands.length} поз. <ChevronDown size={16} /></summary><div>{model.upcomingGroups.map((group) => <span key={group.key}><strong>{group.category}</strong><small>формировать {formatDate(group.requestAt)} · поставка {formatDate(group.neededAt)}</small><b>{group.items.length} поз.</b></span>)}</div></details> : null}
+          {model.clarificationDemands.length ? <details className="material-supply-upcoming material-supply-clarifications"><summary><CircleAlert size={16} />На уточнение: {model.clarificationDemands.length} поз. <ChevronDown size={16} /></summary><div>{model.clarificationDemands.map((item) => <span key={item.id}><strong>{item.requestCode ?? "Без пакета"}</strong>{item.name}<small>Укажите количество перед формированием заявки.</small></span>)}</div></details> : null}
         </div>
       )}
 
