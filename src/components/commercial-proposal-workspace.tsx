@@ -65,8 +65,8 @@ function CopyBlock({ title, text }: { title: string; text: string }) {
 function Checklist({ model }: { model: CommercialProposalIntelligence }) {
   return (
     <div className="commercial-checklist">
-      {model.submissionChecklist.items.slice(0, 12).map((item) => (
-        <div className={`commercial-checklist-item status-${item.status}`} key={`${item.title}-${item.source}`}>
+      {model.submissionChecklist.items.slice(0, 12).map((item, index) => (
+        <div className={`commercial-checklist-item status-${item.status}`} key={`${item.title}-${item.source}-${index}`}>
           <div>
             <strong>{item.title}</strong>
             <span>{item.reason}</span>

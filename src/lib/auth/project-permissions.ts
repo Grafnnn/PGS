@@ -2,6 +2,10 @@ import { prisma } from "@/lib/prisma";
 import { getEnvStatus } from "@/lib/env";
 import type { AppRole, AppUser } from "./permissions";
 import { toAppRole } from "./session";
+import { organizationRoleToAppRole } from "./organization-roles";
+import type { Prisma } from "@prisma/client";
+
+type DbClient = Prisma.TransactionClient | typeof prisma;
 
 export type ProjectAction =
   | "view"
@@ -34,32 +38,51 @@ export function roleAllowsProjectAction(role: AppRole | null, action: ProjectAct
   return Boolean(role && actionRoles[action].includes(role));
 }
 
-export function resolveEffectiveProjectRole(user: AppUser | null, memberRole?: string | null): AppRole | null {
+export function resolveEffectiveProjectRole(
+  user: AppUser | null,
+  memberRole?: string | null,
+  organizationRole?: string | null
+): AppRole | null {
   if (!user) return null;
-  if (user.role === "OWNER" || user.role === "ADMIN") return user.role;
   if (!user.authenticated) return user.role;
+  const scopedOrganizationRole = organizationRoleToAppRole(organizationRole);
+  if (scopedOrganizationRole === "OWNER" || scopedOrganizationRole === "ADMIN") return scopedOrganizationRole;
   if (memberRole) return toAppRole(memberRole);
   if (!getEnvStatus().authRequired) return user.role;
   return null;
 }
 
-export async function getEffectiveProjectRole(user: AppUser | null, projectId: string): Promise<AppRole | null> {
+export async function getEffectiveProjectRoleWithClient(db: DbClient, user: AppUser | null, projectId: string): Promise<AppRole | null> {
   if (!user) return null;
   if (!user.authenticated) return resolveEffectiveProjectRole(user);
-  const projectInOrganization = await prisma.project.findFirst({
-    where: { id: projectId, organization: { users: { some: { userId: user.id } } } },
-    select: { id: true }
+  const project = await db.project.findUnique({
+    where: { id: projectId },
+    select: { organizationId: true }
   });
-  if (!projectInOrganization) return null;
-  if (user.role === "OWNER" || user.role === "ADMIN") return resolveEffectiveProjectRole(user);
-  const member = await prisma.projectMember.findUnique({
+  if (!project) return null;
+  const membership = await db.membership.findUnique({
+    where: { organizationId_userId: { organizationId: project.organizationId, userId: user.id } },
+    select: { role: true }
+  });
+  if (!membership) return null;
+  const organizationRole = organizationRoleToAppRole(membership.role);
+  if (organizationRole === "OWNER" || organizationRole === "ADMIN") return organizationRole;
+  const member = await db.projectMember.findUnique({
     where: { projectId_userId: { projectId, userId: user.id } },
     select: { role: true }
   });
-  return resolveEffectiveProjectRole(user, member?.role);
+  return member ? toAppRole(member.role) : null;
+}
+
+export async function getEffectiveProjectRole(user: AppUser | null, projectId: string): Promise<AppRole | null> {
+  return getEffectiveProjectRoleWithClient(prisma, user, projectId);
+}
+
+export async function canProjectWithClient(db: DbClient, user: AppUser | null, projectId: string, action: ProjectAction) {
+  const role = await getEffectiveProjectRoleWithClient(db, user, projectId);
+  return roleAllowsProjectAction(role, action);
 }
 
 export async function canProject(user: AppUser | null, projectId: string, action: ProjectAction) {
-  const role = await getEffectiveProjectRole(user, projectId);
-  return roleAllowsProjectAction(role, action);
+  return canProjectWithClient(prisma, user, projectId, action);
 }

@@ -11,12 +11,12 @@ export interface UserRecordForAdmin {
   updatedAt?: Date;
 }
 
-export function serializeAdminUser(user: UserRecordForAdmin) {
+export function serializeAdminUser(user: UserRecordForAdmin, effectiveRole?: AppRole) {
   return {
     id: user.id,
     email: user.email,
     name: user.name,
-    role: normalizeAdminRole(user.appRole),
+    role: effectiveRole ?? normalizeAdminRole(user.appRole),
     isActive: user.isActive,
     lastLoginAt: user.lastLoginAt?.toISOString() ?? null,
     createdAt: user.createdAt.toISOString()

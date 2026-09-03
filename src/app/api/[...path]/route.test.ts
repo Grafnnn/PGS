@@ -74,6 +74,14 @@ const authorizedUser: AppUser = {
   authenticated: true
 };
 
+const localDemoUser: AppUser = {
+  id: "local-user",
+  name: "Local User",
+  email: "local@pgs.dev",
+  role: "OWNER",
+  authenticated: false
+};
+
 function postRequest(body: unknown = { prompt: "Что важно?" }) {
   return new Request("https://pgs.local/api/projects/project-demo/ai/chat", {
     method: "POST",
@@ -84,6 +92,12 @@ function postRequest(body: unknown = { prompt: "Что важно?" }) {
 
 function getRequest() {
   return new Request("https://pgs.local/api/projects/project-demo/ai/summary") as never;
+}
+
+function authMeRequest(projectId?: string) {
+  const url = new URL("https://pgs.local/api/auth/me");
+  if (projectId) url.searchParams.set("projectId", projectId);
+  return { nextUrl: url } as never;
 }
 
 async function responseJson(response: Response) {
@@ -135,6 +149,48 @@ describe("catch-all AI routes", () => {
     expect(patchResponse.status).toBe(403);
     expect(postJson).not.toHaveBeenCalled();
     expect(patchJson).not.toHaveBeenCalled();
+  });
+
+  it("returns the effective role and organization for the requested project", async () => {
+    getCurrentUserMock.mockResolvedValue(authorizedUser);
+    getEffectiveProjectRoleMock.mockResolvedValue("VIEWER");
+    projectFindUniqueMock.mockResolvedValue({ organization: { id: "org-target", name: "Целевая организация" } });
+    const { GET } = await import("./route");
+
+    const response = await GET(authMeRequest("project-1"), { params: { path: ["auth", "me"] } });
+
+    expect(response.status).toBe(200);
+    await expect(responseJson(response)).resolves.toMatchObject({
+      user: { id: "user-1", role: "VIEWER" },
+      organization: { id: "org-target", name: "Целевая организация" }
+    });
+    expect(getEffectiveProjectRoleMock).toHaveBeenCalledWith(authorizedUser, "project-1");
+  });
+
+  it("resolves project-scoped local demo identity without querying the database", async () => {
+    getCurrentUserMock.mockResolvedValue(localDemoUser);
+    const { GET } = await import("./route");
+
+    const response = await GET(authMeRequest("project-demo"), { params: { path: ["auth", "me"] } });
+
+    expect(response.status).toBe(200);
+    await expect(responseJson(response)).resolves.toMatchObject({
+      user: { id: "local-user", role: "OWNER", authenticated: false },
+      organization: { id: "org-demo", name: "Локальная организация" }
+    });
+    expect(getUserOrganizationContextMock).not.toHaveBeenCalled();
+    expect(projectFindUniqueMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects an unknown project in local demo identity lookup", async () => {
+    getCurrentUserMock.mockResolvedValue(localDemoUser);
+    const { GET } = await import("./route");
+
+    const response = await GET(authMeRequest("missing-project"), { params: { path: ["auth", "me"] } });
+
+    expect(response.status).toBe(403);
+    await expect(responseJson(response)).resolves.toEqual({ error: "Forbidden" });
+    expect(projectFindUniqueMock).not.toHaveBeenCalled();
   });
 
   it("returns safe validation errors for invalid project creation payload", async () => {

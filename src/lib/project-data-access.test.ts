@@ -5,17 +5,19 @@ import { getUserOrganizationContext, listProjectsFromDb } from "@/lib/project-da
 const mocks = vi.hoisted(() => ({
   projectFindMany: vi.fn(),
   projectFindFirst: vi.fn(),
+  projectFindUnique: vi.fn(),
   projectMemberFindUnique: vi.fn(),
   membershipFindFirst: vi.fn(),
+  membershipFindUnique: vi.fn(),
   organizationFindUnique: vi.fn(),
   userFindUnique: vi.fn()
 }));
 
 vi.mock("@/lib/prisma", () => ({
   prisma: {
-    project: { findMany: mocks.projectFindMany, findFirst: mocks.projectFindFirst },
+    project: { findMany: mocks.projectFindMany, findFirst: mocks.projectFindFirst, findUnique: mocks.projectFindUnique },
     projectMember: { findUnique: mocks.projectMemberFindUnique },
-    membership: { findFirst: mocks.membershipFindFirst },
+    membership: { findFirst: mocks.membershipFindFirst, findUnique: mocks.membershipFindUnique },
     organization: { findUnique: mocks.organizationFindUnique },
     user: { findUnique: mocks.userFindUnique }
   }
@@ -30,11 +32,18 @@ describe("organization-scoped project data", () => {
     mocks.projectFindMany.mockResolvedValue([]);
   });
 
-  it("limits owners to projects in organizations where they are members", async () => {
+  const expectedScope = (userId: string) => ({
+    OR: [
+      { organization: { users: { some: { userId, role: { in: ["owner", "super_admin"] } } } } },
+      { organization: { users: { some: { userId } } }, members: { some: { userId } } }
+    ]
+  });
+
+  it("derives organization-wide visibility from the target membership role", async () => {
     await listProjectsFromDb(owner);
 
     expect(mocks.projectFindMany).toHaveBeenCalledWith(expect.objectContaining({
-      where: { organization: { users: { some: { userId: "owner-1" } } } }
+      where: expectedScope("owner-1")
     }));
   });
 
@@ -42,17 +51,15 @@ describe("organization-scoped project data", () => {
     await listProjectsFromDb(manager);
 
     expect(mocks.projectFindMany).toHaveBeenCalledWith(expect.objectContaining({
-      where: {
-        organization: { users: { some: { userId: "manager-1" } } },
-        members: { some: { userId: "manager-1" } }
-      }
+      where: expectedScope("manager-1")
     }));
   });
 
   it("denies even a global owner role outside the user's organizations", async () => {
-    mocks.projectFindFirst.mockResolvedValue(null);
+    mocks.projectFindUnique.mockResolvedValue(null);
 
     await expect(getEffectiveProjectRole(owner, "foreign-project")).resolves.toBeNull();
+    expect(mocks.membershipFindUnique).not.toHaveBeenCalled();
     expect(mocks.projectMemberFindUnique).not.toHaveBeenCalled();
   });
 
@@ -110,5 +117,19 @@ describe("organization-scoped project data", () => {
         }
       }
     }));
+  });
+
+  it("reports missing schedule progress as unknown instead of zero percent", async () => {
+    mocks.projectFindMany.mockResolvedValue([{
+      id: "project-1", organizationId: "org-1", name: "Project", code: null, customer: "Customer", object: "Object",
+      objectType: null, address: "Address", description: null, contractAmount: { toNumber: () => 1000 }, vatMode: "vat",
+      vatPercent: null, startsAt: new Date("2026-01-01"), endsAt: new Date("2026-12-31"), manager: "Manager",
+      tenderSource: null, paymentNotes: null, volumeChangeMode: null, templateId: null, selectedModules: [], status: "active",
+      isSmokeProject: false, scheduleItems: []
+    }]);
+
+    const projects = await listProjectsFromDb(owner);
+
+    expect(projects[0]?.progressPercent).toBeNull();
   });
 });

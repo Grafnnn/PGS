@@ -62,7 +62,7 @@ export async function DELETE(_request: Request, { params }: { params: Params }) 
     const [children, budget, schedule, materials, procurement, payments, changes, commitments] = await Promise.all([
       prisma.projectCostCode.count({ where: { parentId: current.id } }),
       prisma.budgetItem.count({ where: { costCodeId: current.id } }),
-      prisma.scheduleItem.count({ where: { costCodeId: current.id, isCurrent: true } }),
+      prisma.scheduleItem.count({ where: { costCodeId: current.id } }),
       prisma.material.count({ where: { costCodeId: current.id } }),
       prisma.procurementRequestItem.count({ where: { costCodeId: current.id } }),
       prisma.payment.count({ where: { costCodeId: current.id } }),

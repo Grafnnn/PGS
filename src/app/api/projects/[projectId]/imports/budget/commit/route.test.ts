@@ -166,18 +166,24 @@ describe("budget import commit route", () => {
     getCurrentUserMock.mockResolvedValue(authorizedUser);
     canProjectMock.mockResolvedValue(true);
     projectFindUniqueMock.mockResolvedValue({ id: "project-demo", organizationId: "org-demo" });
-    importBatchFindFirstMock.mockResolvedValue({ id: "batch-1", status: "committed", previewJson: preview() });
+    const tx = {
+      $queryRaw: vi.fn(),
+      importBatch: { findFirst: vi.fn(async () => ({ id: "batch-1", status: "committed", previewJson: preview() })) }
+    };
+    transactionMock.mockImplementation(async (callback) => callback(tx));
     const { POST } = await import("./route");
 
     const response = await POST(requestJson({ importBatchId: "batch-1", mode: "append" }), { params: { projectId: "project-demo" } });
 
     expect(response.status).toBe(409);
     await expect(responseJson(response)).resolves.toEqual({ error: "Import batch already committed" });
-    expect(transactionMock).not.toHaveBeenCalled();
+    expect(tx.$queryRaw).toHaveBeenCalledOnce();
+    expect(tx.importBatch.findFirst).toHaveBeenCalledWith({ where: { id: "batch-1", projectId: "project-demo" } });
   });
 
   it("replaces materials after removing draft procurement requests and keeps the source order deadline", async () => {
     const tx = {
+      $queryRaw: vi.fn(),
       budgetItem: { deleteMany: vi.fn(), create: vi.fn() },
       budgetSection: { deleteMany: vi.fn(), upsert: vi.fn() },
       procurementRequest: {
@@ -194,7 +200,11 @@ describe("budget import commit route", () => {
         }))
       },
       scheduleItem: { deleteMany: vi.fn(), create: vi.fn() },
-      importBatch: { updateMany: vi.fn(async () => ({ count: 1 })), update: vi.fn() }
+      importBatch: {
+        findFirst: vi.fn(async () => ({ id: "batch-1", status: "previewed", previewJson: importPreview })),
+        updateMany: vi.fn(async () => ({ count: 1 })),
+        update: vi.fn()
+      }
     };
     const importPreview = preview({
       summary: { ...preview().summary, budgetItems: 0, materials: 1, materialRows: 1 },
@@ -255,7 +265,11 @@ describe("budget import commit route", () => {
 
   it("blocks material replacement while procurement requests are active", async () => {
     const tx = {
-      importBatch: { updateMany: vi.fn(async () => ({ count: 1 })) },
+      $queryRaw: vi.fn(),
+      importBatch: {
+        findFirst: vi.fn(async () => ({ id: "batch-1", status: "previewed", previewJson: preview() })),
+        updateMany: vi.fn(async () => ({ count: 1 }))
+      },
       procurementRequest: {
         count: vi.fn(async () => 1),
         deleteMany: vi.fn()
@@ -285,6 +299,7 @@ describe("budget import commit route", () => {
 
   it("commits the stored server-side batch instead of trusting client rows", async () => {
     const tx = {
+      $queryRaw: vi.fn(),
       budgetItem: {
         deleteMany: vi.fn(),
         create: vi.fn(async ({ data }) => ({ id: "budget-1", ...data }))
@@ -302,6 +317,7 @@ describe("budget import commit route", () => {
         create: vi.fn()
       },
       importBatch: {
+        findFirst: vi.fn(async () => ({ id: "batch-1", status: "previewed", previewJson: preview() })),
         updateMany: vi.fn(async () => ({ count: 1 })),
         update: vi.fn()
       }
@@ -332,6 +348,7 @@ describe("budget import commit route", () => {
 
   it("commits Excel labor demand and links its hours to the created VOR row", async () => {
     const tx = {
+      $queryRaw: vi.fn(),
       budgetItem: {
         deleteMany: vi.fn(),
         create: vi.fn(async ({ data }) => ({ id: "budget-1", ...data }))
@@ -347,7 +364,11 @@ describe("budget import commit route", () => {
       projectLaborAllocation: {
         create: vi.fn(async ({ data }) => ({ id: "allocation-1", ...data }))
       },
-      importBatch: { updateMany: vi.fn(async () => ({ count: 1 })), update: vi.fn() }
+      importBatch: {
+        findFirst: vi.fn(async () => ({ id: "batch-1", status: "previewed", previewJson: importPreview })),
+        updateMany: vi.fn(async () => ({ count: 1 })),
+        update: vi.fn()
+      }
     };
     const importPreview = preview({
       summary: {

@@ -12,10 +12,16 @@ export interface PortfolioProjectSource {
   contractAmount: number;
   startsAt: string;
   endsAt: string;
-  budgetItems: Array<{ qty: number; plannedUnitPrice: number; forecastUnitPrice: number }>;
+  budgetItems: Array<{ qty: number; plannedUnitPrice: number; forecastUnitPrice: number; kind: string }>;
   scheduleItems: Array<{ name: string; plannedQty: number; actualQty: number; status: string; endsAt: string }>;
   materials: Array<{ requiredQty: number; orderedQty: number; deliveredQty: number; status: string; neededAt: string }>;
   payments: Array<{ direction: string; amount: number; status: string; plannedAt: string; paidAt?: string | null }>;
+  expenses: Array<{
+    grossAmount: number;
+    category: string;
+    currency: string;
+    items?: Array<{ amount: number; category: string }>;
+  }>;
   risks: Array<{ priority: string; status: string; dueAt: string }>;
   actionItems: Array<{ priority: string; status: string; dueAt?: string | null; assignee?: string | null }>;
 }
@@ -31,6 +37,9 @@ export interface PortfolioProjectRow {
   forecastCost: number;
   forecastProfit: number;
   forecastMarginPercent: number | null;
+  actualExpenses: number;
+  excludedNonRubExpenses: number;
+  financialForecastAvailable: boolean;
   budgetDeviation: number;
   progressPercent: number | null;
   cashExposure: number;
@@ -57,6 +66,9 @@ export interface PortfolioControlModel {
     contractAmount: number;
     forecastCost: number;
     forecastProfit: number;
+    actualExpenses: number;
+    excludedNonRubExpenses: number;
+    financialForecastProjects: number;
     paidIncoming: number;
     paidOutgoing: number;
     cashExposure: number;
@@ -74,6 +86,29 @@ export interface PortfolioControlModel {
 const number = (value: number) => Number.isFinite(value) ? value : 0;
 const sum = (values: number[]) => values.reduce((total, value) => total + number(value), 0);
 const monthKey = (value: string) => value.slice(0, 7);
+
+const costKindLabels: Record<string, string> = {
+  work: "Работы",
+  material: "Материалы",
+  equipment: "Техника",
+  payroll: "ФОТ",
+  subcontract: "Субподряд",
+  overhead: "Накладные",
+  other: "Прочее"
+};
+
+const expenseCategoryKinds: Record<string, string> = {
+  materials: "material",
+  labor: "payroll",
+  equipment: "equipment",
+  subcontract: "subcontract",
+  transport: "overhead",
+  travel: "overhead",
+  overhead: "overhead",
+  tax: "overhead",
+  services: "other",
+  other: "other"
+};
 
 function isClosed(status: string) {
   return ["closed", "done", "completed", "archived", "cancelled"].includes(status.toLowerCase());
@@ -95,11 +130,17 @@ function calculateCashExposure(payments: PortfolioProjectSource["payments"]) {
 
 function calculateProject(source: PortfolioProjectSource, now: Date): PortfolioProjectRow {
   const nowTime = now.getTime();
+  const hasBudget = source.budgetItems.length > 0;
   const plannedCost = sum(source.budgetItems.map((item) => item.qty * item.plannedUnitPrice));
-  const forecastCost = sum(source.budgetItems.map((item) => item.qty * item.forecastUnitPrice));
+  const budgetForecastCost = sum(source.budgetItems.map((item) => item.qty * item.forecastUnitPrice));
+  const rubExpenses = source.expenses.filter((item) => item.currency.toUpperCase() === "RUB");
+  const excludedNonRubExpenses = source.expenses.length - rubExpenses.length;
+  const actualExpenses = sum(rubExpenses.map((item) => item.grossAmount));
+  const financialForecastAvailable = hasBudget;
+  const forecastCost = financialForecastAvailable ? Math.max(budgetForecastCost, actualExpenses) : 0;
   const progressPercent = scheduleProgressPercent(source.scheduleItems);
-  const forecastProfit = source.contractAmount - forecastCost;
-  const forecastMarginPercent = source.contractAmount > 0 ? (forecastProfit / source.contractAmount) * 100 : null;
+  const forecastProfit = financialForecastAvailable ? source.contractAmount - forecastCost : 0;
+  const forecastMarginPercent = financialForecastAvailable && source.contractAmount > 0 ? (forecastProfit / source.contractAmount) * 100 : null;
   const paidIncoming = sum(source.payments.filter((item) => item.direction === "incoming" && isPaid(item.status)).map((item) => item.amount));
   const paidOutgoing = sum(source.payments.filter((item) => item.direction === "outgoing" && isPaid(item.status)).map((item) => item.amount));
   const activeRisks = source.risks.filter((item) => !isClosed(item.status));
@@ -112,13 +153,18 @@ function calculateProject(source: PortfolioProjectSource, now: Date): PortfolioP
     .filter((item) => !isClosed(item.status) && new Date(item.endsAt).getTime() >= nowTime)
     .sort((a, b) => a.endsAt.localeCompare(b.endsAt))[0];
   const cashExposure = calculateCashExposure(source.payments);
-  const evidence = [source.budgetItems.length, source.scheduleItems.length, source.materials.length, source.payments.length, source.risks.length + source.actionItems.length]
+  const evidence = [hasBudget || actualExpenses > 0, source.scheduleItems.length, source.materials.length, source.payments.length, source.risks.length + source.actionItems.length]
     .filter(Boolean).length;
   const coveragePercent = evidence * 20;
-  const budgetDeviation = forecastCost - plannedCost;
+  const budgetDeviation = hasBudget ? forecastCost - plannedCost : 0;
+  const actualAboveBudgetForecast = hasBudget && actualExpenses > budgetForecastCost;
+  const budgetMissing = !hasBudget && actualExpenses > 0;
   const reasons: string[] = [];
   if (forecastMarginPercent !== null && forecastMarginPercent < 0) reasons.push("Отрицательная прогнозная маржа");
+  if (budgetMissing) reasons.push("Фактические расходы не сопоставлены с бюджетом");
+  else if (actualAboveBudgetForecast) reasons.push("Фактические расходы выше прогноза затрат");
   else if (budgetDeviation > 0) reasons.push("Прогноз затрат выше плана");
+  if (excludedNonRubExpenses) reasons.push(`Расходы не в RUB исключены из итога: ${excludedNonRubExpenses}`);
   if (cashExposure < 0) reasons.push("Есть кассовый разрыв в плане платежей");
   if (criticalRisks) reasons.push(`Критические риски: ${criticalRisks}`);
   if (overdueActions) reasons.push(`Просроченные действия: ${overdueActions}`);
@@ -133,6 +179,8 @@ function calculateProject(source: PortfolioProjectSource, now: Date): PortfolioP
   } else {
     const penalty = Math.min(100,
       (forecastMarginPercent !== null && forecastMarginPercent < 0 ? 35 : budgetDeviation > 0 ? 12 : 0) +
+      (budgetMissing ? 26 : 0) +
+      (excludedNonRubExpenses ? 8 : 0) +
       (cashExposure < 0 ? 22 : 0) + criticalRisks * 20 + overdueActions * 6 + delayedWorks * 7 + materialDeficits * 4
     );
     healthScore = Math.max(0, 100 - penalty);
@@ -150,6 +198,9 @@ function calculateProject(source: PortfolioProjectSource, now: Date): PortfolioP
     forecastCost,
     forecastProfit,
     forecastMarginPercent,
+    actualExpenses,
+    excludedNonRubExpenses,
+    financialForecastAvailable,
     budgetDeviation,
     progressPercent,
     cashExposure,
@@ -220,6 +271,9 @@ export function buildPortfolioControlModel(sources: PortfolioProjectSource[], no
       contractAmount: sum(projects.map((project) => project.contractAmount)),
       forecastCost: sum(projects.map((project) => project.forecastCost)),
       forecastProfit: sum(projects.map((project) => project.forecastProfit)),
+      actualExpenses: sum(projects.map((project) => project.actualExpenses)),
+      excludedNonRubExpenses: sum(projects.map((project) => project.excludedNonRubExpenses)),
+      financialForecastProjects: projects.filter((project) => project.financialForecastAvailable).length,
       paidIncoming: sum(projects.map((project) => project.paidIncoming)),
       paidOutgoing: sum(projects.map((project) => project.paidOutgoing)),
       cashExposure: sum(projects.map((project) => project.cashExposure)),
@@ -233,4 +287,45 @@ export function buildPortfolioControlModel(sources: PortfolioProjectSource[], no
     workload,
     attention
   };
+}
+
+export function buildPortfolioCostStructure(sources: PortfolioProjectSource[]) {
+  const buckets = new Map<string, { key: string; label: string; forecast: number; actual: number }>();
+  const bucket = (key: string) => {
+    const normalized = costKindLabels[key] ? key : "other";
+    const current = buckets.get(normalized) ?? { key: normalized, label: costKindLabels[normalized], forecast: 0, actual: 0 };
+    buckets.set(normalized, current);
+    return current;
+  };
+
+  for (const source of sources) {
+    for (const item of source.budgetItems) {
+      bucket(item.kind).forecast += number(item.qty) * number(item.forecastUnitPrice);
+    }
+    for (const expense of source.expenses) {
+      if (expense.currency.toUpperCase() !== "RUB") continue;
+      const grossAmount = number(expense.grossAmount);
+      const lines = expense.items ?? [];
+      const linesAmount = sum(lines.map((line) => number(line.amount)));
+      const useLines = lines.length > 0 && linesAmount > 0 && linesAmount <= grossAmount + 0.01;
+      if (useLines) {
+        for (const line of lines) {
+          const kind = line.category.startsWith("custom:") ? "other" : (expenseCategoryKinds[line.category] ?? "other");
+          bucket(kind).actual += number(line.amount);
+        }
+        const unallocated = Math.max(0, grossAmount - linesAmount);
+        if (unallocated > 0.01) {
+          const kind = expense.category.startsWith("custom:") ? "other" : (expenseCategoryKinds[expense.category] ?? "other");
+          bucket(kind).actual += unallocated;
+        }
+      } else {
+        const kind = expense.category.startsWith("custom:") ? "other" : (expenseCategoryKinds[expense.category] ?? "other");
+        bucket(kind).actual += grossAmount;
+      }
+    }
+  }
+
+  return [...buckets.values()]
+    .filter((item) => item.forecast > 0 || item.actual > 0)
+    .sort((left, right) => Math.max(right.forecast, right.actual) - Math.max(left.forecast, left.actual));
 }

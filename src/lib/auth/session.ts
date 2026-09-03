@@ -4,6 +4,7 @@ import { Prisma } from "@prisma/client";
 import { getEnvStatus } from "@/lib/env";
 import { prisma } from "@/lib/prisma";
 import { localUser, type AppRole, type AppUser } from "./permissions";
+import { organizationRoleToAppRole } from "./organization-roles";
 
 export const SESSION_COOKIE = "pgs_session";
 export const SESSION_TTL_DAYS = 30;
@@ -67,7 +68,17 @@ export async function getCurrentUser(): Promise<AppUser | null> {
     try {
       const session = await prisma.session.findUnique({
         where: { tokenHash: hashSessionToken(sessionToken) },
-        include: { user: true }
+        include: {
+          user: {
+            include: {
+              memberships: {
+                orderBy: { createdAt: "asc" },
+                select: { role: true },
+                take: 1
+              }
+            }
+          }
+        }
       });
 
       if (session && !session.revokedAt && session.expiresAt > new Date() && session.user.isActive) {
@@ -75,7 +86,7 @@ export async function getCurrentUser(): Promise<AppUser | null> {
           id: session.user.id,
           name: session.user.name,
           email: session.user.email,
-          role: toAppRole(session.user.appRole),
+          role: organizationRoleToAppRole(session.user.memberships[0]?.role),
           authenticated: true
         };
       }

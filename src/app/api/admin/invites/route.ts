@@ -1,23 +1,21 @@
 import { Prisma } from "@prisma/client";
 import { apiError, apiOk, getRequestId } from "@/lib/api/errors";
 import { writeAudit } from "@/lib/audit";
-import { canManageUsers } from "@/lib/auth/permissions";
 import { getCurrentUser } from "@/lib/auth/session";
 import { generateOneTimeToken, hashOneTimeToken, INVITE_TOKEN_TTL_HOURS, tokenExpiresAt } from "@/lib/auth/tokens";
 import { normalizeAdminRole } from "@/lib/admin/users";
+import { getAdminOrganizationContext } from "@/lib/admin/user-scope";
 import { getEnv } from "@/lib/env";
 import { buildInviteEmail, getEmailProvider } from "@/lib/email";
 import { prisma } from "@/lib/prisma";
-import { getUserOrganizationContext } from "@/lib/project-data";
 
 export async function POST(request: Request) {
   const requestId = getRequestId(request);
   const currentUser = await getCurrentUser();
-  if (!canManageUsers(currentUser)) return apiError(requestId, "FORBIDDEN", "Forbidden", 403);
 
   try {
     const env = getEnv();
-    const context = await getUserOrganizationContext(currentUser);
+    const context = await getAdminOrganizationContext(currentUser);
     if (!context) return apiError(requestId, "ORGANIZATION_NOT_FOUND", "Organization membership is required", 403);
     const body = await request.json().catch(() => ({}));
     const email = String(body.email ?? "").trim().toLowerCase();

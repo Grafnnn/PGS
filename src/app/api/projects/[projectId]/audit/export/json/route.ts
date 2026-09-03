@@ -35,7 +35,7 @@ export async function GET(request: NextRequest, { params }: { params: { projectI
     return NextResponse.json({ exportedAt: new Date().toISOString(), items: items.map(serializeAuditLog) });
   } catch (error) {
     if (error instanceof Prisma.PrismaClientInitializationError) {
-      return NextResponse.json({ error: "Database is not available. Start PostgreSQL and run prisma migrate/seed.", detail: error.message }, { status: 503 });
+      return NextResponse.json({ error: "Database is not available" }, { status: 503 });
     }
     console.error(error);
     return NextResponse.json({ error: "Audit export failed" }, { status: 500 });

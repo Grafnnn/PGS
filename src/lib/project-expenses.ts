@@ -25,7 +25,7 @@ export const projectExpenseInputSchema = z.object({
   documentNumber: z.string().trim().max(120).nullable().optional(),
   category: z.string().trim().min(1).max(220).refine(isExpenseCategoryValue),
   paymentMethod: z.enum(expensePaymentMethods).default("unknown"),
-  currency: z.string().trim().regex(/^[A-Z]{3}$/).default("RUB"),
+  currency: z.literal("RUB").default("RUB"),
   grossAmount: positiveMoneySchema,
   taxAmount: moneySchema.default(0),
   costCodeId: z.string().trim().max(200).nullable().optional(),
@@ -118,6 +118,7 @@ export type ProjectExpenseSummary = {
   taxAmount: number;
   receipts: number;
   withoutReceipt: number;
+  excludedNonRub?: number;
   byCategory: Record<string, number>;
 };
 
@@ -129,10 +130,11 @@ export function projectExpenseCustomCategoryIds(input: Pick<ProjectExpenseInput,
 export function buildProjectExpenseSummary(items: ProjectExpenseRecord[], additionalCategories: string[] = []): ProjectExpenseSummary {
   const byCategory: Record<string, number> = Object.fromEntries(expenseCategories.map((category) => [category, 0]));
   for (const category of additionalCategories) byCategory[category] ??= 0;
+  const rubItems = items.filter((item) => String(item.currency || "RUB").toUpperCase() === "RUB");
   let grossAmount = 0;
   let taxAmount = 0;
   let receipts = 0;
-  for (const item of items) {
+  for (const item of rubItems) {
     const amount = numberValue(item.grossAmount);
     grossAmount += amount;
     taxAmount += numberValue(item.taxAmount);
@@ -155,5 +157,33 @@ export function buildProjectExpenseSummary(items: ProjectExpenseRecord[], additi
     }
     if (item.receiptDocument) receipts += 1;
   }
-  return { count: items.length, grossAmount, taxAmount, receipts, withoutReceipt: items.length - receipts, byCategory };
+  return {
+    count: rubItems.length,
+    grossAmount,
+    taxAmount,
+    receipts,
+    withoutReceipt: rubItems.length - receipts,
+    excludedNonRub: items.length - rubItems.length,
+    byCategory
+  };
+}
+
+export function buildExpenseAwareForecast(input: {
+  contractAmount: number;
+  budgetForecastCost: number;
+  hasBudget: boolean;
+  expenseSummary: Pick<ProjectExpenseSummary, "count" | "grossAmount"> | null;
+  expenseDataAvailable: boolean;
+}) {
+  const actualExpenses = input.expenseDataAvailable ? Math.max(0, input.expenseSummary?.grossAmount ?? 0) : null;
+  const forecastAvailable = input.hasBudget;
+  const forecastCost = forecastAvailable
+    ? Math.max(Math.max(0, input.budgetForecastCost), actualExpenses ?? 0)
+    : null;
+  const forecastProfit = forecastCost === null ? null : input.contractAmount - forecastCost;
+  const forecastMarginPercent = forecastProfit !== null && input.contractAmount > 0
+    ? forecastProfit / input.contractAmount * 100
+    : null;
+
+  return { actualExpenses, forecastAvailable, forecastCost, forecastProfit, forecastMarginPercent };
 }

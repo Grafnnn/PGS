@@ -19,7 +19,14 @@ vi.mock("@/lib/prisma", () => ({
 const now = new Date("2026-07-24T12:00:00.000Z");
 const owner = { id: "owner-1", name: "Owner", email: "owner@example.test", role: "OWNER" as const, authenticated: true };
 const manager = { id: "manager-1", name: "Manager", email: "manager@example.test", role: "MANAGER" as const, authenticated: true };
-const project = { id: "project-1", organizationId: "org-1", name: "Школа", code: "PGS-01", members: [] };
+const project = {
+  id: "project-1",
+  organizationId: "org-1",
+  name: "Школа",
+  code: "PGS-01",
+  organization: { users: [{ role: "owner" }] },
+  members: []
+};
 
 describe("approval inbox data loader", () => {
   beforeEach(() => {
@@ -150,8 +157,25 @@ describe("approval inbox data loader", () => {
   });
 
   it("excludes owner decisions from a manager while retaining project attention work", async () => {
-    vi.mocked(prisma.project.findMany).mockResolvedValue([{ ...project, members: [{ role: "MANAGER" }] }] as never);
+    vi.mocked(prisma.project.findMany).mockResolvedValue([{
+      ...project,
+      organization: { users: [{ role: "project_manager" }] },
+      members: [{ role: "MANAGER" }]
+    }] as never);
     const inbox = await loadApprovalInbox(manager, now);
+    expect(inbox.items.map((item) => item.key)).toEqual(["project_action:action-1"]);
+    expect(inbox.summary).toMatchObject({ active: 1, approvals: 0, blocked: 1 });
+  });
+
+  it("does not carry a session owner role into another organization", async () => {
+    vi.mocked(prisma.project.findMany).mockResolvedValue([{
+      ...project,
+      organization: { users: [{ role: "project_manager" }] },
+      members: [{ role: "VIEWER" }]
+    }] as never);
+
+    const inbox = await loadApprovalInbox(owner, now);
+
     expect(inbox.items.map((item) => item.key)).toEqual(["project_action:action-1"]);
     expect(inbox.summary).toMatchObject({ active: 1, approvals: 0, blocked: 1 });
   });

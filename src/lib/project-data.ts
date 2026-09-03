@@ -2,6 +2,7 @@ import { prisma } from "./prisma";
 import type { AppUser } from "./auth/permissions";
 import type { Project } from "./types";
 import { scheduleProgressPercent } from "./calculations";
+import { visibleProjectWhere } from "./project-data-scope";
 import {
   serializeBudgetItem,
   serializeDailyReport,
@@ -15,12 +16,7 @@ import {
 
 export async function listProjectsFromDb(user?: AppUser | null): Promise<Project[]> {
   const projects = await prisma.project.findMany({
-    where: user?.authenticated
-      ? {
-          organization: { users: { some: { userId: user.id } } },
-          ...(user.role === "OWNER" || user.role === "ADMIN" ? {} : { members: { some: { userId: user.id } } })
-        }
-      : undefined,
+    where: visibleProjectWhere(user),
     include: {
       scheduleItems: {
         where: { isCurrent: true },

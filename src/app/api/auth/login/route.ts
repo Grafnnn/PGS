@@ -4,7 +4,8 @@ import { apiError, getRequestId } from "@/lib/api/errors";
 import { getEnv } from "@/lib/env";
 import { prisma } from "@/lib/prisma";
 import { verifyPassword } from "@/lib/auth/password";
-import { createUserSession, SESSION_COOKIE, SESSION_TTL_DAYS, toAppRole } from "@/lib/auth/session";
+import { createUserSession, SESSION_COOKIE, SESSION_TTL_DAYS } from "@/lib/auth/session";
+import { organizationRoleToAppRole } from "@/lib/auth/organization-roles";
 import { checkRateLimit } from "@/lib/rate-limit";
 
 export async function POST(request: NextRequest) {
@@ -14,19 +15,42 @@ export async function POST(request: NextRequest) {
   const email = String(body.email ?? "").trim().toLowerCase();
   const password = String(body.password ?? "");
   const ipAddress = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
-  const rateLimit = checkRateLimit({
-    key: `login:${ipAddress}:${email}`,
-    limit: env.LOGIN_RATE_LIMIT_MAX,
-    windowMs: env.LOGIN_RATE_LIMIT_WINDOW_MS
-  });
-  if (!rateLimit.allowed) {
-    return apiError(requestId, "RATE_LIMITED", `Too many login attempts. Retry after ${rateLimit.retryAfterSeconds} seconds.`, 429);
+  const rateLimits = [
+    checkRateLimit({
+      key: `login:ip:${ipAddress}`,
+      limit: env.LOGIN_RATE_LIMIT_MAX,
+      windowMs: env.LOGIN_RATE_LIMIT_WINDOW_MS
+    }),
+    checkRateLimit({
+      key: `login:account:${email || "missing"}`,
+      limit: env.LOGIN_RATE_LIMIT_MAX,
+      windowMs: env.LOGIN_RATE_LIMIT_WINDOW_MS
+    }),
+    checkRateLimit({
+      key: `login:pair:${ipAddress}:${email || "missing"}`,
+      limit: env.LOGIN_RATE_LIMIT_MAX,
+      windowMs: env.LOGIN_RATE_LIMIT_WINDOW_MS
+    })
+  ];
+  const blockedRateLimit = rateLimits.find((result) => !result.allowed);
+  if (blockedRateLimit) {
+    const retryAfterSeconds = Math.max(...rateLimits.map((result) => result.retryAfterSeconds));
+    return apiError(requestId, "RATE_LIMITED", `Too many login attempts. Retry after ${retryAfterSeconds || blockedRateLimit.retryAfterSeconds} seconds.`, 429);
   }
 
   if (!email || !password) return apiError(requestId, "VALIDATION_ERROR", "Email and password are required", 400);
 
   try {
-    const user = await prisma.user.findUnique({ where: { email } });
+    const user = await prisma.user.findUnique({
+      where: { email },
+      include: {
+        memberships: {
+          orderBy: { createdAt: "asc" },
+          select: { role: true },
+          take: 1
+        }
+      }
+    });
     if (!user?.isActive || !(await verifyPassword(password, user.passwordHash))) {
       return apiError(requestId, "INVALID_CREDENTIALS", "Invalid credentials", 401);
     }
@@ -43,7 +67,7 @@ export async function POST(request: NextRequest) {
         id: user.id,
         email: user.email,
         name: user.name,
-        role: toAppRole(user.appRole)
+        role: organizationRoleToAppRole(user.memberships[0]?.role)
       }
     }, { headers: { "x-request-id": requestId } });
 

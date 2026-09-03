@@ -7,7 +7,9 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { buildCommitPlan } from "@/lib/excel/import-parser";
 import {
   claimImportBatch,
+  ImportBatchNotFound,
   ImportCommitConflict,
+  lockProjectForMutation,
   prepareBudgetReplacement,
   prepareScheduleRevision,
   relinkScheduleBudgetItems
@@ -38,21 +40,22 @@ export async function POST(request: NextRequest, { params }: { params: { project
       return NextResponse.json({ error: "Replacement import requires explicit confirmation." }, { status: 409 });
     }
 
-    const batch = await prisma.importBatch.findFirst({
-      where: {
-        id: payload.importBatchId,
-        projectId: project.id
-      }
-    });
-    if (!batch) return NextResponse.json({ error: "Import batch not found" }, { status: 404 });
-    if (batch.status === "committed") return NextResponse.json({ error: "Import batch already committed" }, { status: 409 });
-    if (batch.status !== "previewed") return NextResponse.json({ error: "Import batch is not commit-ready" }, { status: 409 });
-
-    const preview = importPreviewSchema.parse(batch.previewJson) as unknown as ImportPreview;
-    const plan = buildCommitPlan(preview, payload.mode);
-
     const result = await prisma.$transaction(async (tx) => {
-      await claimImportBatch(tx, { importBatchId: batch.id, projectId: project.id });
+      await lockProjectForMutation(tx, project.id);
+      const batch = await tx.importBatch.findFirst({
+        where: { id: payload.importBatchId, projectId: project.id }
+      });
+      if (!batch) throw new ImportBatchNotFound("Import batch not found");
+      if (batch.status === "committed") throw new ImportCommitConflict("Import batch already committed");
+      if (batch.status !== "previewed") throw new ImportCommitConflict("Import batch is not commit-ready");
+      await claimImportBatch(tx, {
+        importBatchId: batch.id,
+        projectId: project.id,
+        expectedUpdatedAt: batch.updatedAt
+      });
+
+      const preview = importPreviewSchema.parse(batch.previewJson) as unknown as ImportPreview;
+      const plan = buildCommitPlan(preview, payload.mode);
       let removedDraftRequests = 0;
       const replacesBudget = plan.mode === "replace_all" || plan.mode === "replace_budget" || plan.mode === "replace_budget_materials";
       const previousBudgetItems = await prepareBudgetReplacement(tx, { projectId: project.id, replace: replacesBudget });
@@ -304,6 +307,7 @@ export async function POST(request: NextRequest, { params }: { params: { project
       });
 
       return {
+        importBatchId: batch.id,
         budgetItems: budgetItems.map(serializeBudgetItem),
         materials: materials.map(serializeMaterial),
         scheduleItems: scheduleItems.map(serializeScheduleItem),
@@ -312,7 +316,7 @@ export async function POST(request: NextRequest, { params }: { params: { project
       };
     }, { maxWait: 10_000, timeout: 30_000 });
 
-    return NextResponse.json({ ok: true, importBatchId: batch.id, ...result });
+    return NextResponse.json({ ok: true, ...result });
   } catch (error) {
     if (error instanceof ZodError) {
       return NextResponse.json({ error: "Validation error", issues: error.issues }, { status: 400 });
@@ -320,8 +324,11 @@ export async function POST(request: NextRequest, { params }: { params: { project
     if (error instanceof ImportCommitConflict) {
       return NextResponse.json({ error: error.message }, { status: 409 });
     }
+    if (error instanceof ImportBatchNotFound) {
+      return NextResponse.json({ error: error.message }, { status: 404 });
+    }
     if (error instanceof Prisma.PrismaClientInitializationError) {
-      return NextResponse.json({ error: "Database is not available. Start PostgreSQL and run prisma migrate/seed.", detail: error.message }, { status: 503 });
+      return NextResponse.json({ error: "Database is not available" }, { status: 503 });
     }
     if (error instanceof Error && error.message.startsWith("Нельзя сохранить")) {
       return NextResponse.json({ error: error.message }, { status: 422 });

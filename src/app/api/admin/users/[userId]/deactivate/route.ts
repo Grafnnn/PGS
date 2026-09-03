@@ -1,10 +1,15 @@
 import { NextResponse } from "next/server";
 import { writeAudit } from "@/lib/audit";
-import { isLastActiveOwner } from "@/lib/admin/users";
-import { canManageUsers } from "@/lib/auth/permissions";
 import { getCurrentUser } from "@/lib/auth/session";
+import { organizationRoleToAppRole } from "@/lib/auth/organization-roles";
+import {
+  assertSingleOrganizationUser,
+  getAdminOrganizationContext,
+  lockOrganization,
+  lockUser,
+  MultiOrganizationUserMutationError
+} from "@/lib/admin/user-scope";
 import { prisma } from "@/lib/prisma";
-import { getUserOrganizationContext } from "@/lib/project-data";
 
 class AdminUserMutationError extends Error {
   constructor(public readonly status: number, message: string) {
@@ -14,26 +19,35 @@ class AdminUserMutationError extends Error {
 
 export async function POST(_request: Request, { params }: { params: { userId: string } }) {
   const currentUser = await getCurrentUser();
-  if (!canManageUsers(currentUser)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  const context = await getUserOrganizationContext(currentUser);
-  if (!context) return NextResponse.json({ error: "Organization membership is required" }, { status: 403 });
   try {
+    const context = await getAdminOrganizationContext(currentUser);
+    if (!context) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     await prisma.$transaction(async (tx) => {
-      await tx.$queryRaw`SELECT id FROM "organizations" WHERE id = ${context.organizationId} FOR UPDATE`;
-      const user = await tx.user.findFirst({
-        where: { id: params.userId, memberships: { some: { organizationId: context.organizationId } } }
+      await lockOrganization(tx, context.organizationId);
+      await lockUser(tx, params.userId);
+      const membership = await tx.membership.findUnique({
+        where: { organizationId_userId: { organizationId: context.organizationId, userId: params.userId } },
+        include: { user: true }
       });
-      if (!user) throw new AdminUserMutationError(404, "User not found");
-      const owners = await tx.user.findMany({
-        where: { appRole: "OWNER", isActive: true, memberships: { some: { organizationId: context.organizationId } } },
-        select: { id: true }
-      });
-      if (user.appRole === "OWNER" && isLastActiveOwner({ targetUserId: user.id, activeOwnerIds: owners.map((owner) => owner.id) })) {
-        throw new AdminUserMutationError(400, "Cannot deactivate the last active OWNER");
+      if (!membership) throw new AdminUserMutationError(404, "User not found");
+      await assertSingleOrganizationUser(tx, params.userId);
+
+      if (organizationRoleToAppRole(membership.role) === "OWNER" && membership.user.isActive) {
+        const activeOwners = await tx.membership.findMany({
+          where: { organizationId: context.organizationId, role: "owner", user: { isActive: true } },
+          select: { userId: true }
+        });
+        if (activeOwners.length === 1 && activeOwners[0]?.userId === params.userId) {
+          throw new AdminUserMutationError(400, "Cannot deactivate the last active OWNER");
+        }
       }
+
       const updated = await tx.user.update({
         where: { id: params.userId },
-        data: { isActive: false, sessions: { updateMany: { where: { revokedAt: null }, data: { revokedAt: new Date() } } } }
+        data: {
+          isActive: false,
+          sessions: { updateMany: { where: { revokedAt: null }, data: { revokedAt: new Date() } } }
+        }
       });
       await writeAudit(tx, {
         organizationId: context.organizationId,
@@ -44,13 +58,15 @@ export async function POST(_request: Request, { params }: { params: { userId: st
         entityId: updated.id,
         action: "update",
         summary: `Деактивирован пользователь: ${updated.email}`,
-        before: { isActive: user.isActive },
+        before: { isActive: membership.user.isActive },
         after: { isActive: false }
       });
     });
+    return NextResponse.json({ ok: true });
   } catch (error) {
+    if (error instanceof MultiOrganizationUserMutationError) return NextResponse.json({ error: error.message }, { status: 409 });
     if (error instanceof AdminUserMutationError) return NextResponse.json({ error: error.message }, { status: error.status });
-    throw error;
+    console.error(error);
+    return NextResponse.json({ error: "User deactivation failed" }, { status: 500 });
   }
-  return NextResponse.json({ ok: true });
 }

@@ -25,6 +25,7 @@ export function budgetTotals(contractAmount: number, items: BudgetItem[]) {
   const totalPlannedCost = sum(items.map((item) => item.qty * item.plannedUnitPrice));
   const totalActualCost = sum(items.map((item) => item.qty * item.actualUnitPrice));
   const totalForecastCost = sum(items.map((item) => item.qty * item.forecastUnitPrice));
+  const marginPercent = (cost: number) => contractAmount > 0 ? ((contractAmount - cost) / contractAmount) * 100 : 0;
 
   return {
     plannedByKind,
@@ -37,9 +38,9 @@ export function budgetTotals(contractAmount: number, items: BudgetItem[]) {
     plannedProfit: contractAmount - totalPlannedCost,
     actualProfit: contractAmount - totalActualCost,
     forecastProfit: contractAmount - totalForecastCost,
-    plannedMarginPercent: ((contractAmount - totalPlannedCost) / contractAmount) * 100,
-    actualMarginPercent: ((contractAmount - totalActualCost) / contractAmount) * 100,
-    forecastMarginPercent: ((contractAmount - totalForecastCost) / contractAmount) * 100
+    plannedMarginPercent: marginPercent(totalPlannedCost),
+    actualMarginPercent: marginPercent(totalActualCost),
+    forecastMarginPercent: marginPercent(totalForecastCost)
   };
 }
 

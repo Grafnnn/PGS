@@ -4,9 +4,16 @@ const mocks = vi.hoisted(() => ({
   user: vi.fn(),
   role: vi.fn(),
   baselineFind: vi.fn(),
+  txBaselineFind: vi.fn(),
   scheduleFind: vi.fn(),
+  txScheduleFind: vi.fn(),
   progressFind: vi.fn(),
+  txProgressFind: vi.fn(),
   paymentFind: vi.fn(),
+  txPaymentFind: vi.fn(),
+  queryRaw: vi.fn(),
+  periodFind: vi.fn(),
+  periodCreate: vi.fn(),
   transaction: vi.fn(),
   serializeBaseline: vi.fn()
 }));
@@ -63,6 +70,22 @@ describe("project controls reporting period route", () => {
     vi.clearAllMocks();
     mocks.user.mockResolvedValue({ authenticated: true, id: "user-1", name: "Manager" });
     mocks.serializeBaseline.mockReturnValue(storedBaseline);
+    mocks.queryRaw.mockResolvedValue([{ id: "project-1" }]);
+    mocks.txBaselineFind.mockResolvedValue({ id: "baseline-1", organizationId: "org-1", status: "active" });
+    mocks.txScheduleFind.mockResolvedValue([]);
+    mocks.txProgressFind.mockResolvedValue([]);
+    mocks.txPaymentFind.mockResolvedValue([]);
+    mocks.periodFind.mockResolvedValue(null);
+    mocks.periodCreate.mockResolvedValue({ id: "period-1", label: "Отчет", status: "published" });
+    const tx = {
+      $queryRaw: mocks.queryRaw,
+      projectControlBaseline: { findFirst: mocks.txBaselineFind },
+      projectControlPeriod: { findFirst: mocks.periodFind, create: mocks.periodCreate },
+      scheduleItem: { findMany: mocks.txScheduleFind },
+      workProgressEntry: { findMany: mocks.txProgressFind },
+      payment: { findMany: mocks.txPaymentFind }
+    };
+    mocks.transaction.mockImplementation(async (callback: (client: typeof tx) => unknown) => callback(tx));
   });
 
   it("rejects before body parsing and database access when edit permission is missing", async () => {
@@ -88,6 +111,41 @@ describe("project controls reporting period route", () => {
     const body = await response.json();
     expect(response.status).toBe(200);
     expect(body.preview.summary).toMatchObject({ plannedValue: 500, earnedValue: 300, actualCost: 250, costPerformanceIndex: 1.2, schedulePerformanceIndex: 0.6 });
+    expect(mocks.scheduleFind).toHaveBeenCalledWith(expect.objectContaining({
+      where: { projectId: "project-1", id: { in: ["schedule-1"] } }
+    }));
     expect(mocks.transaction).not.toHaveBeenCalled();
+  });
+
+  it("locks the project and republishes from fresh baseline-linked historical schedule data", async () => {
+    mocks.role.mockResolvedValue("MANAGER");
+    const order: string[] = [];
+    mocks.queryRaw.mockImplementation(async () => {
+      order.push("lock");
+      return [{ id: "project-1" }];
+    });
+    mocks.txBaselineFind.mockImplementation(async () => {
+      order.push("baseline");
+      return { id: "baseline-1", organizationId: "org-1", status: "active" };
+    });
+    mocks.txScheduleFind.mockResolvedValue([{ id: "schedule-1", projectId: "project-1", budgetItemId: "budget-1", costCodeId: "cc-1", name: "Монтаж", owner: "ПТО", startsAt: new Date("2026-01-01"), endsAt: new Date("2026-01-11"), plannedQty: 10, actualQty: 3, status: "in_progress", dependency: null, isCurrent: false }]);
+    mocks.txProgressFind.mockResolvedValue([{ scheduleItemId: "schedule-1", date: new Date("2026-01-05"), qty: 3, status: "approved" }]);
+    mocks.txPaymentFind.mockResolvedValue([]);
+    const { POST } = await import("./route");
+    const response = await POST(new Request("https://pgs.local", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ mode: "publish", baselineId: "baseline-1", dataDate: "2026-01-06", confirm: true })
+    }), { params: { projectId: "project-1" } });
+
+    expect(response.status).toBe(201);
+    expect(order).toEqual(["lock", "baseline"]);
+    expect(mocks.baselineFind).not.toHaveBeenCalled();
+    expect(mocks.txScheduleFind).toHaveBeenCalledWith(expect.objectContaining({
+      where: { projectId: "project-1", id: { in: ["schedule-1"] } }
+    }));
+    expect(mocks.periodCreate).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ earnedValue: 300, baselineId: "baseline-1" })
+    }));
   });
 });

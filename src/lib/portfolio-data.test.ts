@@ -2,14 +2,21 @@ import { describe, expect, it } from "vitest";
 import { portfolioProjectScopeWhere } from "@/lib/portfolio-data";
 
 describe("portfolioProjectScopeWhere", () => {
-  it("limits owners and admins to organizations where they are members", () => {
-    expect(portfolioProjectScopeWhere({ id: "owner-1", name: "Owner", email: "owner@pgs.local", role: "OWNER", authenticated: true }))
-      .toEqual({ organization: { users: { some: { userId: "owner-1" } } } });
+  const expectedScope = (userId: string) => ({
+    OR: [
+      { organization: { users: { some: { userId, role: { in: ["owner", "super_admin"] } } } } },
+      { organization: { users: { some: { userId } } }, members: { some: { userId } } }
+    ]
   });
 
-  it("limits managers and viewers to explicit project membership", () => {
+  it("uses organization membership roles instead of a global owner flag", () => {
+    expect(portfolioProjectScopeWhere({ id: "owner-1", name: "Owner", email: "owner@pgs.local", role: "OWNER", authenticated: true }))
+      .toEqual(expectedScope("owner-1"));
+  });
+
+  it("requires explicit project membership when the target organization role is not privileged", () => {
     expect(portfolioProjectScopeWhere({ id: "manager-1", name: "Manager", email: "manager@pgs.local", role: "MANAGER", authenticated: true }))
-      .toEqual({ members: { some: { userId: "manager-1" } } });
+      .toEqual(expectedScope("manager-1"));
   });
 
   it("keeps local fallback mode available", () => {

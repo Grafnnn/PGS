@@ -98,4 +98,23 @@ describe("construction calculations", () => {
     expect(result.openingBalance).toBe(0);
     expect(result.closingBalance).toBe(0);
   });
+
+  it("keeps margin percentages finite until a contract amount is entered", () => {
+    const result = budgetTotals(0, [{
+      id: "budget-1",
+      projectId: "project-1",
+      section: "Работы",
+      code: "1",
+      name: "Монтаж",
+      unit: "м2",
+      qty: 10,
+      plannedUnitPrice: 100,
+      actualUnitPrice: 110,
+      forecastUnitPrice: 120,
+      kind: "work",
+      source: "manual"
+    }]);
+
+    expect(result).toMatchObject({ plannedMarginPercent: 0, actualMarginPercent: 0, forecastMarginPercent: 0 });
+  });
 });

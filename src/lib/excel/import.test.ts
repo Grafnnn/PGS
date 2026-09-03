@@ -92,6 +92,20 @@ describe("excel budget import", () => {
     expect(unknown.kind).toBe("unknown");
   });
 
+  it("classifies dated schedule rows without physical quantities as percent milestones", () => {
+    const columns = detectColumns(["Наименование", "Начало", "Окончание"]);
+    const classified = classifyRow(
+      { sheetName: "График", rowNumber: 2, values: ["Передача объекта", "2026-09-01", "2026-09-03"] },
+      columns,
+      { currentSection: "График" }
+    );
+
+    expect(classified.kind).toBe("schedule_item");
+    if (classified.kind === "schedule_item") {
+      expect(classified.scheduleItem).toMatchObject({ plannedQty: 100, unit: "%", progressMode: "milestone" });
+    }
+  });
+
   it("builds preview summary", () => {
     const preview = buildPreview({
       projectId: "project-demo",

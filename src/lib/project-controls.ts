@@ -386,7 +386,7 @@ export function buildProjectControlPeriodPreview({
   const baselineFinish = asDate(baseline.plannedFinish);
   const budgetAtCompletion = round(Math.max(baseline.budgetAtCompletion, 0));
   const scheduleById = new Map(scheduleItems.map((item) => [item.id, item]));
-  const acceptedProgress = progressEntries.filter((entry) => entry.scheduleItemId && asDate(entry.date) <= cutOff && ["submitted", "checked", "approved"].includes(entry.status));
+  const acceptedProgress = progressEntries.filter((entry) => entry.scheduleItemId && asDate(entry.date) <= cutOff && entry.status === "approved");
   const progressBySchedule = new Map<string, number>();
   for (const entry of acceptedProgress) progressBySchedule.set(entry.scheduleItemId!, (progressBySchedule.get(entry.scheduleItemId!) ?? 0) + Math.max(entry.qty, 0));
 
@@ -403,7 +403,7 @@ export function buildProjectControlPeriodPreview({
     baselineBudgetByCostCode.set(line.costCodeId, (baselineBudgetByCostCode.get(line.costCodeId) ?? 0) + Math.max(line.budget, 0));
   }
 
-  let fallbackCount = 0;
+  let ignoredScheduleActualCount = 0;
   let earnedCoveredBudget = 0;
   const periodLines = lines.map<ProjectControlPeriodLinePreview>((line) => {
     const start = asDate(line.plannedStart);
@@ -413,12 +413,12 @@ export function buildProjectControlPeriodPreview({
     const confirmedQty = line.scheduleItemId ? progressBySchedule.get(line.scheduleItemId) : undefined;
     let earnedShare = 0;
     if (scheduleItem && line.plannedQty > 0) {
-      if (confirmedQty !== undefined) earnedShare = clamp(confirmedQty / line.plannedQty);
-      else if (cutOff >= start) {
-        earnedShare = clamp(Math.max(scheduleItem.actualQty, 0) / line.plannedQty);
-        fallbackCount += 1;
+      if (confirmedQty !== undefined) {
+        earnedShare = clamp(confirmedQty / line.plannedQty);
+        earnedCoveredBudget += Math.max(line.budget, 0);
+      } else if (cutOff >= start && scheduleItem.actualQty > 0) {
+        ignoredScheduleActualCount += 1;
       }
-      earnedCoveredBudget += Math.max(line.budget, 0);
     }
     const plannedValue = round(line.budget * plannedShare);
     const earnedValue = round(line.budget * earnedShare);
@@ -498,7 +498,7 @@ export function buildProjectControlPeriodPreview({
   const limitations = [
     ...(baseline.limitations ?? []),
     ...(earnedValueCoveragePercent < 80 ? [`EV подтвержден для ${earnedValueCoveragePercent.toFixed(1)}% BAC; остальные работы не имеют связанного факта.`] : []),
-    ...(fallbackCount ? [`Для ${fallbackCount} работ использован накопительный actualQty графика из-за отсутствия подтвержденных записей выполнения на дату.`] : []),
+    ...(ignoredScheduleActualCount ? [`Для ${ignoredScheduleActualCount} работ накопительный факт графика не включен в EV без утвержденной записи выполнения на отчетную дату.`] : []),
     ...(missingActualCost ? ["Выполнение подтверждено, но оплаченный факт затрат отсутствует: CPI, EAC и финансовый прогноз пока не рассчитываются."] : []),
     ...(unallocatedActualCost > 0 ? [`${Math.round(unallocatedActualCost).toLocaleString("ru-RU")} ₽ фактических оплат не распределены по cost code и учитываются только в агрегированном AC.`] : []),
     "AC v1 включает только оплаченные исходящие платежи на дату отчета; начисления и незакрытая первичка должны быть отражены отдельно.",
@@ -540,7 +540,7 @@ export function buildProjectControlPeriodPreview({
       earnedValueCoveragePercent,
       actualCostCoveragePercent,
       progressEntryCount: acceptedProgress.length,
-      scheduleActualFallbackCount: fallbackCount,
+      scheduleActualFallbackCount: 0,
       paidOutgoingCount: actualPayments.length,
       unallocatedActualCost
     },

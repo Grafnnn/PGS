@@ -27,7 +27,7 @@ export async function GET(_request: Request, { params }: { params: { projectId: 
     });
   } catch (error) {
     if (error instanceof Prisma.PrismaClientInitializationError) {
-      return NextResponse.json({ error: "Database is not available. Start PostgreSQL and run prisma migrate/seed.", detail: error.message }, { status: 503 });
+      return NextResponse.json({ error: "Database is not available" }, { status: 503 });
     }
     return NextResponse.json({ error: "File is missing from configured storage" }, { status: 404 });
   }

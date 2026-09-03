@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   documentFind: vi.fn(),
   documentCreate: vi.fn(),
   versionCreate: vi.fn(),
+  projectLock: vi.fn(),
   audit: vi.fn(),
   save: vi.fn(),
   remove: vi.fn(),
@@ -36,6 +37,8 @@ vi.mock("@/lib/prisma", () => ({
     document: { findUnique: mocks.documentFind, create: mocks.documentCreate },
     documentVersion: { create: mocks.versionCreate },
     $transaction: vi.fn(async (callback: (tx: unknown) => unknown) => callback({
+      $queryRaw: mocks.projectLock,
+      dailyReport: { findFirst: mocks.reportFind },
       fieldSyncReceipt: { create: mocks.receiptCreate },
       document: { create: mocks.documentCreate },
       documentVersion: { create: mocks.versionCreate }
@@ -84,6 +87,7 @@ describe("document upload field idempotency", () => {
     mocks.documentFind.mockResolvedValue(documentItem);
     mocks.documentCreate.mockResolvedValue(documentItem);
     mocks.versionCreate.mockResolvedValue({});
+    mocks.projectLock.mockResolvedValue([{ id: "project-1" }]);
     mocks.receiptCreate.mockResolvedValue({});
     mocks.audit.mockResolvedValue({});
     mocks.demoContext.mockResolvedValue({ userId: "demo-user" });
@@ -108,6 +112,8 @@ describe("document upload field idempotency", () => {
     expect(mocks.documentCreate).toHaveBeenCalledOnce();
     expect(mocks.audit).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ entity: "document", action: "create" }));
     expect(mocks.receiptCreate).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ clientMutationId: "mutation_photo_1", kind: "photo_evidence" }) }));
+    expect(mocks.projectLock).toHaveBeenCalledOnce();
+    expect(mocks.projectLock.mock.invocationCallOrder[0]).toBeLessThan(mocks.documentCreate.mock.invocationCallOrder[0]);
   });
 
   it("returns an existing document without writing storage again", async () => {
@@ -141,5 +147,22 @@ describe("document upload field idempotency", () => {
     const response = await POST(new Request("https://pgs.local", { method: "POST", body: form }) as never, { params: { projectId: "project-1" } });
     expect(response.status).toBe(404);
     expect(mocks.save).not.toHaveBeenCalled();
+  });
+
+  it("removes the stored file when the report is approved during upload", async () => {
+    mocks.reportFind
+      .mockResolvedValueOnce({ id: "report-1", status: "draft" })
+      .mockResolvedValueOnce({ id: "report-1", status: "approved" });
+    const form = new FormData();
+    form.set("file", new File(["test"], "evidence.jpg", { type: "image/jpeg" }));
+    form.set("category", "фотофиксация");
+    form.set("dailyReportId", "report-1");
+    const { POST } = await import("./route");
+    const response = await POST(new Request("https://pgs.local", { method: "POST", body: form }) as never, { params: { projectId: "project-1" } });
+
+    expect(response.status).toBe(409);
+    expect(mocks.save).toHaveBeenCalledOnce();
+    expect(mocks.remove).toHaveBeenCalledWith("project-1/storage-key.jpg");
+    expect(mocks.documentCreate).not.toHaveBeenCalled();
   });
 });

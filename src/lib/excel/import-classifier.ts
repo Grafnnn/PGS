@@ -80,6 +80,7 @@ export function classifyRow(raw: RawSheetRow, columns: ColumnMap, state: Classif
 
   if (startsAt || endsAt) {
     const start = startsAt ?? new Date().toISOString().slice(0, 10);
+    const hasPhysicalQuantity = hasUnit && hasQty;
     return {
       kind: "schedule_item",
       scheduleItem: {
@@ -87,8 +88,10 @@ export function classifyRow(raw: RawSheetRow, columns: ColumnMap, state: Classif
         owner: "РП",
         startsAt: start,
         endsAt: endsAt ?? start,
-        plannedQty: qty ?? 1,
+        plannedQty: hasPhysicalQuantity ? qty : 100,
         actualQty: 0,
+        unit: hasPhysicalQuantity ? unit : "%",
+        progressMode: hasPhysicalQuantity ? "quantity" : "milestone",
         status: "not_started",
         sheetName: raw.sheetName,
         rowNumber: raw.rowNumber

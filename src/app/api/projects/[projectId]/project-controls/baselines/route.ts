@@ -7,6 +7,55 @@ import { prisma } from "@/lib/prisma";
 import { buildProjectControlBaselinePreview, projectControlBaselineRequestSchema } from "@/lib/project-controls";
 import { projectControlBaselineInclude, serializeProjectControlBaseline } from "@/lib/project-controls-db";
 
+const baselineProjectQuery = {
+  include: {
+    budgetItems: { orderBy: [{ section: "asc" as const }, { code: "asc" as const }] },
+    scheduleItems: { where: { isCurrent: true }, orderBy: { startsAt: "asc" as const } }
+  }
+} satisfies Prisma.ProjectDefaultArgs;
+
+type BaselineProject = Prisma.ProjectGetPayload<typeof baselineProjectQuery>;
+
+class BaselineProjectNotFoundError extends Error {}
+class BaselineNotReadyError extends Error {}
+
+function buildBaselinePreview(project: BaselineProject) {
+  return buildProjectControlBaselinePreview({
+    project: { startsAt: project.startsAt.toISOString(), endsAt: project.endsAt.toISOString() },
+    budgetItems: project.budgetItems.map((item) => ({
+      id: item.id,
+      projectId: item.projectId,
+      costCodeId: item.costCodeId,
+      section: item.section,
+      subsection: item.subsection ?? undefined,
+      code: item.code,
+      name: item.name,
+      unit: item.unit,
+      qty: Number(item.qty),
+      plannedUnitPrice: Number(item.plannedUnitPrice),
+      actualUnitPrice: Number(item.actualUnitPrice),
+      forecastUnitPrice: Number(item.forecastUnitPrice),
+      kind: item.kind,
+      source: item.source,
+      comment: item.comment ?? undefined
+    })),
+    scheduleItems: project.scheduleItems.map((item) => ({
+      id: item.id,
+      projectId: item.projectId,
+      budgetItemId: item.budgetItemId ?? undefined,
+      costCodeId: item.costCodeId,
+      name: item.name,
+      owner: item.owner,
+      startsAt: item.startsAt.toISOString(),
+      endsAt: item.endsAt.toISOString(),
+      plannedQty: Number(item.plannedQty),
+      actualQty: Number(item.actualQty),
+      status: item.status as "not_started" | "in_progress" | "done" | "delayed" | "stopped",
+      dependency: item.dependency ?? undefined
+    }))
+  });
+}
+
 export async function POST(request: Request, { params }: { params: { projectId: string } }) {
   const requestId = getRequestId(request);
   const user = await getCurrentUser();
@@ -15,53 +64,19 @@ export async function POST(request: Request, { params }: { params: { projectId: 
   try {
     const data = projectControlBaselineRequestSchema.parse(await request.json().catch(() => ({})));
     if (data.activate && role !== "OWNER" && role !== "ADMIN") return apiError(requestId, "FORBIDDEN", "Only OWNER or ADMIN can activate a baseline", 403);
-    const project = await prisma.project.findUnique({
-      where: { id: params.projectId },
-      include: {
-        budgetItems: { orderBy: [{ section: "asc" }, { code: "asc" }] },
-        scheduleItems: { where: { isCurrent: true }, orderBy: { startsAt: "asc" } }
-      }
-    });
-    if (!project) return apiError(requestId, "NOT_FOUND", "Project not found", 404);
-    const preview = buildProjectControlBaselinePreview({
-      project: { startsAt: project.startsAt.toISOString(), endsAt: project.endsAt.toISOString() },
-      budgetItems: project.budgetItems.map((item) => ({
-        id: item.id,
-        projectId: item.projectId,
-        costCodeId: item.costCodeId,
-        section: item.section,
-        subsection: item.subsection ?? undefined,
-        code: item.code,
-        name: item.name,
-        unit: item.unit,
-        qty: Number(item.qty),
-        plannedUnitPrice: Number(item.plannedUnitPrice),
-        actualUnitPrice: Number(item.actualUnitPrice),
-        forecastUnitPrice: Number(item.forecastUnitPrice),
-        kind: item.kind,
-        source: item.source,
-        comment: item.comment ?? undefined
-      })),
-      scheduleItems: project.scheduleItems.map((item) => ({
-        id: item.id,
-        projectId: item.projectId,
-        budgetItemId: item.budgetItemId ?? undefined,
-        costCodeId: item.costCodeId,
-        name: item.name,
-        owner: item.owner,
-        startsAt: item.startsAt.toISOString(),
-        endsAt: item.endsAt.toISOString(),
-        plannedQty: Number(item.plannedQty),
-        actualQty: Number(item.actualQty),
-        status: item.status as "not_started" | "in_progress" | "done" | "delayed" | "stopped",
-        dependency: item.dependency ?? undefined
-      }))
-    });
-    if (data.mode === "preview") return apiOk(requestId, { preview });
-    if (!preview.summary.budgetAtCompletion) return apiError(requestId, "BASELINE_NOT_READY", "A baseline requires budget data", 409);
-    if (data.activate && !preview.summary.canActivate) return apiError(requestId, "BASELINE_NOT_READY", "An active baseline requires budget and schedule data", 409);
+    if (data.mode === "preview") {
+      const project = await prisma.project.findUnique({ where: { id: params.projectId }, ...baselineProjectQuery });
+      if (!project) return apiError(requestId, "NOT_FOUND", "Project not found", 404);
+      return apiOk(requestId, { preview: buildBaselinePreview(project) });
+    }
 
     const baseline = await prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM "projects" WHERE id = ${params.projectId} FOR UPDATE`;
+      const project = await tx.project.findUnique({ where: { id: params.projectId }, ...baselineProjectQuery });
+      if (!project) throw new BaselineProjectNotFoundError("Project not found");
+      const preview = buildBaselinePreview(project);
+      if (!preview.summary.budgetAtCompletion) throw new BaselineNotReadyError("A baseline requires budget data");
+      if (data.activate && !preview.summary.canActivate) throw new BaselineNotReadyError("An active baseline requires budget and schedule data");
       const latest = await tx.projectControlBaseline.findFirst({
         where: { projectId: params.projectId },
         orderBy: { sequence: "desc" },
@@ -130,6 +145,8 @@ export async function POST(request: Request, { params }: { params: { projectId: 
     });
     return apiOk(requestId, { baseline: serializeProjectControlBaseline(baseline) }, 201);
   } catch (error) {
+    if (error instanceof BaselineProjectNotFoundError) return apiError(requestId, "NOT_FOUND", error.message, 404);
+    if (error instanceof BaselineNotReadyError) return apiError(requestId, "BASELINE_NOT_READY", error.message, 409);
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") return apiError(requestId, "BASELINE_CONFLICT", "Baseline sequence conflict; retry", 409);
     if (error instanceof Prisma.PrismaClientInitializationError) return apiError(requestId, "DB_UNAVAILABLE", "Database is not available", 503);
     if (error instanceof Error && error.name === "ZodError") return apiError(requestId, "INVALID_REQUEST", "Invalid baseline request", 400);

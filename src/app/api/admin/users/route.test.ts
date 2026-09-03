@@ -1,8 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { canManageUsers } from "@/lib/auth/permissions";
 import { getCurrentUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
-import { getUserOrganizationContext } from "@/lib/project-data";
+import { getAdminOrganizationContext } from "@/lib/admin/user-scope";
 
 const mocks = vi.hoisted(() => ({
   findMany: vi.fn(),
@@ -12,9 +11,8 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@/lib/auth/session", () => ({ getCurrentUser: vi.fn() }));
-vi.mock("@/lib/auth/permissions", () => ({ canManageUsers: vi.fn() }));
 vi.mock("@/lib/auth/password", () => ({ hashPassword: mocks.hashPassword }));
-vi.mock("@/lib/project-data", () => ({ getUserOrganizationContext: vi.fn() }));
+vi.mock("@/lib/admin/user-scope", () => ({ getAdminOrganizationContext: vi.fn() }));
 vi.mock("@/lib/prisma", () => ({
   prisma: {
     user: { findMany: mocks.findMany },
@@ -33,15 +31,15 @@ const user = {
   appRole: "MANAGER",
   isActive: true,
   lastLoginAt: null,
-  createdAt: new Date("2026-09-01T00:00:00.000Z")
+  createdAt: new Date("2026-09-01T00:00:00.000Z"),
+  memberships: [{ role: "project_manager" }]
 };
 
 describe("admin users organization scope", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(getCurrentUser).mockResolvedValue(admin);
-    vi.mocked(canManageUsers).mockReturnValue(true);
-    vi.mocked(getUserOrganizationContext).mockResolvedValue({ organizationId: "org-1", organizationName: "Org 1", userId: admin.id });
+    vi.mocked(getAdminOrganizationContext).mockResolvedValue({ organizationId: "org-1", userId: admin.id, role: "ADMIN" });
     mocks.findMany.mockResolvedValue([user]);
     mocks.create.mockResolvedValue(user);
   });
@@ -74,7 +72,7 @@ describe("admin users organization scope", () => {
   });
 
   it("rejects administration without an organization membership", async () => {
-    vi.mocked(getUserOrganizationContext).mockResolvedValue(null);
+    vi.mocked(getAdminOrganizationContext).mockResolvedValue(null);
     const { GET } = await import("./route");
     const response = await GET();
 

@@ -1,5 +1,5 @@
 import { randomBytes } from "crypto";
-import { Prisma } from "@prisma/client";
+import { Prisma, type UserRole } from "@prisma/client";
 import * as XLSX from "xlsx";
 import { AI_COMMAND_PROMPT_VERSION } from "@/lib/ai-run-journal";
 import { connectorSummary, getConnectorStatuses } from "@/lib/connectors/status";
@@ -1008,16 +1008,27 @@ async function runAiDecisionJournalSmoke(
 }
 
 async function grantTemporaryProjectAdminRole() {
-  const user = await prisma.user.findUnique({ where: { email: STAGING_SMOKE_EMAIL }, select: { id: true, appRole: true } });
+  const user = await prisma.user.findUnique({ where: { email: STAGING_SMOKE_EMAIL }, select: { id: true } });
   if (!user) throw new Error("Smoke project creation user is missing.");
-  if (user.appRole !== "ADMIN") {
-    await prisma.user.update({ where: { id: user.id }, data: { appRole: "ADMIN" } });
+  const membership = await prisma.membership.findUnique({
+    where: { organizationId_userId: { organizationId: "org-demo", userId: user.id } },
+    select: { role: true }
+  });
+  if (!membership) throw new Error("Smoke project creation user has no org-demo membership.");
+  if (membership.role !== "super_admin") {
+    await prisma.membership.update({
+      where: { organizationId_userId: { organizationId: "org-demo", userId: user.id } },
+      data: { role: "super_admin" }
+    });
   }
-  return { userId: user.id, previousRole: user.appRole };
+  return { userId: user.id, previousRole: membership.role };
 }
 
-async function restoreTemporaryProjectAdminRole(input: { userId: string; previousRole: string }) {
-  await prisma.user.update({ where: { id: input.userId }, data: { appRole: input.previousRole } });
+async function restoreTemporaryProjectAdminRole(input: { userId: string; previousRole: UserRole }) {
+  await prisma.membership.update({
+    where: { organizationId_userId: { organizationId: "org-demo", userId: input.userId } },
+    data: { role: input.previousRole }
+  });
 }
 
 async function cleanupProjectAdminRole(input: Awaited<ReturnType<typeof grantTemporaryProjectAdminRole>> | undefined, operations: string[]) {

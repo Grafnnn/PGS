@@ -58,6 +58,23 @@ export async function GET(request: NextRequest, { params }: { params: { path?: s
     if (path.join("/") === "auth/me") {
       const user = await getCurrentUser();
       if (!user) return json({ user: null, organization: null }, 401);
+      const projectId = request.nextUrl.searchParams.get("projectId");
+      if (projectId) {
+        if (!user.authenticated) {
+          const project = demoState.projects.find((item) => item.id === projectId);
+          if (!project) return json({ error: "Forbidden" }, 403);
+          return json({ user, organization: { id: project.organizationId, name: "Локальная организация" } });
+        }
+        const [role, project] = await Promise.all([
+          getEffectiveProjectRole(user, projectId),
+          prisma.project.findUnique({
+            where: { id: projectId },
+            select: { organization: { select: { id: true, name: true } } }
+          })
+        ]);
+        if (!role || !project) return json({ error: "Forbidden" }, 403);
+        return json({ user: { ...user, role }, organization: project.organization });
+      }
       const context = await getUserOrganizationContext(user);
       return json({ user, organization: context ? { id: context.organizationId, name: context.organizationName } : null });
     }
@@ -645,7 +662,9 @@ async function updateResource(resource: string, id: string, readBody: () => Prom
   if (resource === "schedule") {
     const data = partial(scheduleItemSchema).parse(body);
     const item = await prisma.$transaction(async (tx) => {
+      await lockDailyReportProject(tx, scopedProjectId);
       const before = await tx.scheduleItem.findUniqueOrThrow({ where: { id } });
+      if (before.projectId !== scopedProjectId) throw new ResourceConflictError("Работа больше не принадлежит выбранному проекту.");
       if (!before.isCurrent) throw new DailyReportProgressError("Историческую версию графика нельзя редактировать.");
       if (data.actualQty !== undefined && data.actualQty + 0.0001 < decimalNumber(before.reportActualQty)) {
         throw new DailyReportProgressError("Общий факт не может быть меньше объёма, уже учтённого утверждёнными рапортами.");
@@ -802,13 +821,18 @@ async function updateResource(resource: string, id: string, readBody: () => Prom
       return json({ error: `Рапорт ${action}: ${issues[0].message}`, issues }, data.status ? 409 : 400);
     }
     const result = await prisma.$transaction(async (tx) => {
+      await lockDailyReportProject(tx, before.projectId);
+      const current = await tx.dailyReport.findUniqueOrThrow({ where: { id } });
+      if (current.projectId !== before.projectId || dailyReportChangedSinceRead(before, current)) {
+        throw new ResourceConflictError("Рапорт уже изменён другим пользователем. Обновите страницу и повторите действие.");
+      }
       const progress = applyProgress
-        ? await applyDailyReportProgress(tx, before, user)
+        ? await applyDailyReportProgress(tx, current, user)
         : reopeningApproved
-          ? await rollbackDailyReportProgress(tx, before)
+          ? await rollbackDailyReportProgress(tx, current)
           : { mode: "none" as const, entries: 0, scheduleItems: [] as DbScheduleItem[] };
       const { crewMembers: updatedCrew, workOutputs: updatedOutputs, workScopes: updatedScopes, ...scalarData } = data;
-      const updated = applyProgress ? before : await tx.dailyReport.update({
+      const updated = applyProgress ? current : await tx.dailyReport.update({
           where: { id },
           data: {
             ...scalarData,
@@ -823,12 +847,12 @@ async function updateResource(resource: string, id: string, readBody: () => Prom
               : {})
           }
         });
-      const approvalProgress = before.status === "checked" && data.status === "approved"
-        ? await applyDailyReportProgress(tx, before, user)
+      const approvalProgress = current.status === "checked" && data.status === "approved"
+        ? await applyDailyReportProgress(tx, current, user)
         : progress;
       await writeAudit(tx, {
-        organizationId: before.organizationId,
-        projectId: before.projectId,
+        organizationId: current.organizationId,
+        projectId: current.projectId,
         ...auditActor(user),
         entity: "daily_report",
         entityId: id,
@@ -838,9 +862,9 @@ async function updateResource(resource: string, id: string, readBody: () => Prom
           : reopeningApproved
             ? `Рапорт возвращен на доработку: ${correctionReason}`
             : data.status
-              ? `Статус рапорта изменен: ${before.status} → ${data.status}`
+              ? `Статус рапорта изменен: ${current.status} → ${data.status}`
               : `Обновлен ежедневный рапорт: ${updated.date.toISOString().slice(0, 10)}`,
-        before: serializeDailyReport(before),
+        before: serializeDailyReport(current),
         after: {
           ...serializeDailyReport(updated),
           ...(correctionReason ? { correctionReason } : {}),
@@ -915,7 +939,7 @@ async function deleteResource(resource: string, id: string, expectedProjectId?: 
   }
   const actor = auditActor(user);
   if (resource === "budget") await deleteWithAudit("budget_item", id, "budgetItem", serializeBudgetItem, actor);
-  else if (resource === "schedule") await archiveScheduleWithAudit(id, actor);
+  else if (resource === "schedule") await archiveScheduleWithAudit(id, scopedProjectId, actor);
   else if (resource === "materials") await deleteWithAudit("material", id, "material", serializeMaterial, actor);
   else if (resource === "procurement") {
     await prisma.$transaction(async (tx) => {
@@ -936,9 +960,11 @@ async function deleteResource(resource: string, id: string, expectedProjectId?: 
   }
   else if (resource === "finance" || resource === "payments") await deleteWithAudit("payment", id, "payment", serializePayment, actor);
   else if (resource === "daily-reports") {
-    const before = await prisma.dailyReport.findUniqueOrThrow({ where: { id } });
-    if (before.status !== "draft") return json({ error: "Only draft reports can be deleted" }, 409);
     await prisma.$transaction(async (tx) => {
+      await lockDailyReportProject(tx, scopedProjectId);
+      const before = await tx.dailyReport.findUniqueOrThrow({ where: { id } });
+      if (before.projectId !== scopedProjectId) throw new ResourceConflictError("Рапорт больше не принадлежит выбранному проекту.");
+      if (before.status !== "draft") throw new ResourceConflictError("Удалить можно только черновик рапорта.");
       await tx.dailyReport.delete({ where: { id } });
       await writeAudit(tx, {
         organizationId: before.organizationId,
@@ -988,9 +1014,11 @@ async function deleteWithAudit<T extends { organizationId: string; projectId: st
   });
 }
 
-async function archiveScheduleWithAudit(id: string, actor: ReturnType<typeof auditActor>) {
+async function archiveScheduleWithAudit(id: string, projectId: string, actor: ReturnType<typeof auditActor>) {
   await prisma.$transaction(async (tx) => {
+    await lockDailyReportProject(tx, projectId);
     const before = await tx.scheduleItem.findUniqueOrThrow({ where: { id } });
+    if (before.projectId !== projectId) throw new ResourceConflictError("Работа больше не принадлежит выбранному проекту.");
     if (!before.isCurrent) throw new DailyReportProgressError("Работа уже находится в истории графика.");
     const archived = await tx.scheduleItem.update({
       where: { id },
@@ -1086,6 +1114,15 @@ class DailyReportCrewError extends Error {}
 class DailyReportProgressError extends Error {}
 
 class ResourceConflictError extends Error {}
+
+async function lockDailyReportProject(tx: Prisma.TransactionClient, projectId: string) {
+  const rows = await tx.$queryRaw<Array<{ id: string }>>`SELECT id FROM "projects" WHERE id = ${projectId} FOR UPDATE`;
+  if (!rows.length) throw new ResourceConflictError("Проект больше не существует.");
+}
+
+function dailyReportChangedSinceRead(expected: DbDailyReport, current: DbDailyReport) {
+  return expected.status !== current.status || expected.updatedAt.getTime() !== current.updatedAt.getTime();
+}
 
 type DailyReportProgressResult = {
   mode: "applied" | "already_applied" | "rolled_back" | "none";
@@ -1290,7 +1327,7 @@ function handleError(error: unknown) {
     return json({ error: "Record not found" }, 404);
   }
   if (error instanceof Prisma.PrismaClientInitializationError) {
-    return json({ error: "Database is not available. Start PostgreSQL and run prisma migrate/seed.", detail: error.message }, 503);
+    return json({ error: "Database is not available" }, 503);
   }
   console.error(error);
   return json({ error: "Internal server error" }, 500);

@@ -11,12 +11,15 @@ const mocks = vi.hoisted(() => ({
   reportCreate: vi.fn(),
   reportUpdate: vi.fn(),
   reportDelete: vi.fn(),
+  scheduleFindScope: vi.fn(),
+  scheduleFindOne: vi.fn(),
   scheduleFindMany: vi.fn(),
   scheduleUpdate: vi.fn(),
   progressFindMany: vi.fn(),
   progressCreate: vi.fn(),
   progressDeleteMany: vi.fn(),
   assignmentFindMany: vi.fn(),
+  projectLock: vi.fn(),
   audit: vi.fn(async () => ({})),
   demoContext: vi.fn()
 }));
@@ -32,13 +35,14 @@ vi.mock("@/lib/prisma", () => ({
   prisma: {
     project: { findUnique: mocks.projectFind },
     dailyReport: { findMany: mocks.reportFindMany, findUnique: mocks.reportFind, findUniqueOrThrow: mocks.reportFind, create: mocks.reportCreate, update: mocks.reportUpdate, delete: mocks.reportDelete },
-    scheduleItem: { findMany: mocks.scheduleFindMany, update: mocks.scheduleUpdate },
+    scheduleItem: { findUnique: mocks.scheduleFindScope, findMany: mocks.scheduleFindMany, update: mocks.scheduleUpdate },
     workProgressEntry: { findMany: mocks.progressFindMany, create: mocks.progressCreate, deleteMany: mocks.progressDeleteMany },
     projectResourceAssignment: { findMany: mocks.assignmentFindMany },
     auditLog: { create: mocks.audit },
     $transaction: vi.fn(async (callback: (tx: unknown) => unknown) => callback({
-      dailyReport: { create: mocks.reportCreate, update: mocks.reportUpdate, delete: mocks.reportDelete },
-      scheduleItem: { findMany: mocks.scheduleFindMany, update: mocks.scheduleUpdate },
+      $queryRaw: mocks.projectLock,
+      dailyReport: { findUniqueOrThrow: mocks.reportFind, create: mocks.reportCreate, update: mocks.reportUpdate, delete: mocks.reportDelete },
+      scheduleItem: { findUniqueOrThrow: mocks.scheduleFindOne, findMany: mocks.scheduleFindMany, update: mocks.scheduleUpdate },
       workProgressEntry: { findMany: mocks.progressFindMany, create: mocks.progressCreate, deleteMany: mocks.progressDeleteMany },
       auditLog: { create: mocks.audit }
     }))
@@ -69,6 +73,13 @@ const schedule = {
   endsAt: new Date("2026-07-31T00:00:00Z"),
   plannedQty: new Prisma.Decimal(100),
   actualQty: new Prisma.Decimal(40),
+  manualActualQty: new Prisma.Decimal(40),
+  reportActualQty: new Prisma.Decimal(0),
+  unit: "т",
+  progressMode: "quantity",
+  revision: 1,
+  isCurrent: true,
+  supersededAt: null,
   status: "in_progress",
   dependency: null,
   createdBy: "manager-1",
@@ -97,7 +108,9 @@ describe("daily reports catch-all workflow", () => {
     mocks.reportCreate.mockResolvedValue(before);
     mocks.reportUpdate.mockImplementation(async ({ data }: { data: Record<string, unknown> }) => ({ ...before, ...data }));
     mocks.reportDelete.mockResolvedValue(before);
+    mocks.scheduleFindScope.mockResolvedValue({ projectId: "project-1" });
     mocks.assignmentFindMany.mockResolvedValue([]);
+    mocks.projectLock.mockResolvedValue([{ id: "project-1" }]);
     mocks.progressFindMany.mockResolvedValue([]);
     mocks.progressCreate.mockResolvedValue({ id: "progress-1" });
     mocks.progressDeleteMany.mockResolvedValue({ count: 0 });
@@ -111,6 +124,13 @@ describe("daily reports catch-all workflow", () => {
       reportActualQty: new Prisma.Decimal(scheduleReportActual),
       status: scheduleStatus
     }]);
+    mocks.scheduleFindOne.mockImplementation(async () => ({
+      ...schedule,
+      actualQty: new Prisma.Decimal(scheduleActual),
+      manualActualQty: new Prisma.Decimal(Math.max(0, scheduleActual - scheduleReportActual)),
+      reportActualQty: new Prisma.Decimal(scheduleReportActual),
+      status: scheduleStatus
+    }));
     mocks.scheduleUpdate.mockImplementation(async ({ data }: { data: { actualQty?: Prisma.Decimal | { increment?: Prisma.Decimal; decrement?: Prisma.Decimal }; reportActualQty?: Prisma.Decimal | { increment?: Prisma.Decimal; decrement?: Prisma.Decimal }; status?: string } }) => {
       if (data.actualQty instanceof Prisma.Decimal) scheduleActual = data.actualQty.toNumber();
       else if (data.actualQty?.increment) scheduleActual += data.actualQty.increment.toNumber();
@@ -121,12 +141,45 @@ describe("daily reports catch-all workflow", () => {
       if (data.status) scheduleStatus = data.status;
       return {
         ...schedule,
+        ...data,
         actualQty: new Prisma.Decimal(scheduleActual),
         manualActualQty: new Prisma.Decimal(Math.max(0, scheduleActual - scheduleReportActual)),
         reportActualQty: new Prisma.Decimal(scheduleReportActual),
         status: scheduleStatus
       };
     });
+  });
+
+  it("serializes a manual schedule update with report approval and revision changes", async () => {
+    const { PATCH } = await import("./route");
+    const response = await PATCH(new Request("https://pgs.local/api/projects/project-1/schedule/schedule-1", {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ actualQty: 45 })
+    }) as never, { params: { path: ["projects", "project-1", "schedule", "schedule-1"] } });
+
+    expect(response.status).toBe(200);
+    expect(mocks.projectLock).toHaveBeenCalledWith(expect.anything(), "project-1");
+    expect(mocks.projectLock.mock.invocationCallOrder[0]).toBeLessThan(mocks.scheduleFindOne.mock.invocationCallOrder[0]);
+    expect(mocks.scheduleUpdate).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: "schedule-1" },
+      data: expect.objectContaining({ manualActualQty: new Prisma.Decimal(45) })
+    }));
+  });
+
+  it("serializes schedule archival with report approval and revision changes", async () => {
+    const { DELETE } = await import("./route");
+    const response = await DELETE(new Request("https://pgs.local/api/projects/project-1/schedule/schedule-1", {
+      method: "DELETE"
+    }) as never, { params: { path: ["projects", "project-1", "schedule", "schedule-1"] } });
+
+    expect(response.status).toBe(200);
+    expect(mocks.projectLock).toHaveBeenCalledWith(expect.anything(), "project-1");
+    expect(mocks.projectLock.mock.invocationCallOrder[0]).toBeLessThan(mocks.scheduleFindOne.mock.invocationCallOrder[0]);
+    expect(mocks.scheduleUpdate).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: "schedule-1" },
+      data: expect.objectContaining({ isCurrent: false })
+    }));
   });
 
   it("loads project reports independently from the page bundle", async () => {
@@ -312,6 +365,23 @@ describe("daily reports catch-all workflow", () => {
     expect(response.status).toBe(200);
     expect(mocks.reportUpdate).toHaveBeenCalled();
     expect(mocks.audit).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ entity: "daily_report", action: "update" }) }));
+    expect(mocks.projectLock).toHaveBeenCalledOnce();
+    expect(mocks.projectLock.mock.invocationCallOrder[0]).toBeLessThan(mocks.reportUpdate.mock.invocationCallOrder[0]);
+  });
+
+  it("rejects a status transition when the report changed before the project lock", async () => {
+    const changed = { ...before, status: "submitted", updatedAt: new Date(before.updatedAt.getTime() + 1_000) };
+    mocks.reportFind
+      .mockResolvedValueOnce(before)
+      .mockResolvedValueOnce(before)
+      .mockResolvedValueOnce(changed);
+    const { PATCH } = await import("./route");
+    const response = await PATCH(request({ status: "submitted" }), { params: { path: ["daily-reports", "daily-1"] } });
+
+    expect(response.status).toBe(409);
+    expect(mocks.projectLock).toHaveBeenCalledOnce();
+    expect(mocks.reportUpdate).not.toHaveBeenCalled();
+    expect(mocks.audit).not.toHaveBeenCalled();
   });
 
   it("blocks submission when recorded labor exceeds the shift capacity", async () => {
@@ -394,6 +464,10 @@ describe("daily reports catch-all workflow", () => {
 
     expect(response.status).toBe(200);
     expect(scheduleActual).toBe(40);
+    expect(scheduleReportActual).toBe(0);
+    expect(mocks.scheduleFindMany).toHaveBeenCalledWith({
+      where: { projectId: "project-1", id: { in: ["schedule-1"] } }
+    });
     expect(mocks.progressDeleteMany).toHaveBeenCalledWith({ where: { dailyReportId: "daily-1" } });
     expect(mocks.reportUpdate).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ status: "draft" }) }));
     expect(body.progress).toEqual(expect.objectContaining({ mode: "rolled_back", entries: 1 }));
@@ -432,6 +506,22 @@ describe("daily reports catch-all workflow", () => {
     expect(secondBody.progress.mode).toBe("already_applied");
   });
 
+  it("does not apply a stale approved report to a superseded schedule revision", async () => {
+    mocks.effectiveRole.mockResolvedValue("OWNER");
+    mocks.reportFind.mockResolvedValue({
+      ...before,
+      status: "approved",
+      workOutputs: [{ ...before.workOutputs[0], scheduleItemId: "schedule-old", quantity: 5 }]
+    });
+    mocks.scheduleFindMany.mockResolvedValue([]);
+    const { PATCH } = await import("./route");
+    const response = await PATCH(request({ applyProgress: true }), { params: { path: ["daily-reports", "daily-1"] } });
+
+    expect(response.status).toBe(409);
+    expect(mocks.progressCreate).not.toHaveBeenCalled();
+    expect(mocks.scheduleUpdate).not.toHaveBeenCalled();
+  });
+
   it("deletes only draft reports and writes audit", async () => {
     const { DELETE } = await import("./route");
     const response = await DELETE(new Request("https://pgs.local", { method: "DELETE" }) as never, { params: { path: ["daily-reports", "daily-1"] } });
@@ -441,7 +531,9 @@ describe("daily reports catch-all workflow", () => {
   });
 
   it("keeps submitted and approved reports immutable during cleanup", async () => {
-    mocks.reportFind.mockResolvedValue({ ...before, status: "submitted" });
+    mocks.reportFind
+      .mockResolvedValueOnce(before)
+      .mockResolvedValueOnce({ ...before, status: "submitted" });
     const { DELETE } = await import("./route");
     const response = await DELETE(new Request("https://pgs.local", { method: "DELETE" }) as never, { params: { path: ["daily-reports", "daily-1"] } });
     expect(response.status).toBe(409);

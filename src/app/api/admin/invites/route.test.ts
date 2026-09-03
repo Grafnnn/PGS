@@ -1,8 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { canManageUsers } from "@/lib/auth/permissions";
 import { getCurrentUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
-import { getUserOrganizationContext } from "@/lib/project-data";
+import { getAdminOrganizationContext } from "@/lib/admin/user-scope";
 
 const mocks = vi.hoisted(() => ({
   projectFindFirst: vi.fn(),
@@ -12,8 +11,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@/lib/auth/session", () => ({ getCurrentUser: vi.fn() }));
-vi.mock("@/lib/auth/permissions", () => ({ canManageUsers: vi.fn() }));
-vi.mock("@/lib/project-data", () => ({ getUserOrganizationContext: vi.fn() }));
+vi.mock("@/lib/admin/user-scope", () => ({ getAdminOrganizationContext: vi.fn() }));
 vi.mock("@/lib/auth/tokens", () => ({
   generateOneTimeToken: () => "raw-token",
   hashOneTimeToken: () => "hashed-token",
@@ -49,8 +47,7 @@ describe("admin invites organization scope", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(getCurrentUser).mockResolvedValue(admin);
-    vi.mocked(canManageUsers).mockReturnValue(true);
-    vi.mocked(getUserOrganizationContext).mockResolvedValue({ organizationId: "org-1", organizationName: "Org 1", userId: admin.id });
+    vi.mocked(getAdminOrganizationContext).mockResolvedValue({ organizationId: "org-1", userId: admin.id, role: "ADMIN" });
     mocks.inviteCreate.mockResolvedValue(invite);
   });
 

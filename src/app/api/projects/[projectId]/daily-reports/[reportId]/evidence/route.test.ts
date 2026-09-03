@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   reportFind: vi.fn(),
   documentFind: vi.fn(),
   documentUpdateMany: vi.fn(),
+  projectLock: vi.fn(),
   audit: vi.fn()
 }));
 
@@ -17,6 +18,8 @@ vi.mock("@/lib/prisma", () => ({
     dailyReport: { findFirst: mocks.reportFind },
     document: { findMany: mocks.documentFind },
     $transaction: vi.fn(async (callback: (tx: unknown) => unknown) => callback({
+      $queryRaw: mocks.projectLock,
+      dailyReport: { findFirst: mocks.reportFind },
       document: { findMany: mocks.documentFind, updateMany: mocks.documentUpdateMany },
       auditLog: { create: mocks.audit }
     }))
@@ -59,6 +62,7 @@ describe("daily report existing evidence", () => {
     mocks.documentFind.mockReset();
     mocks.getCurrentUser.mockResolvedValue(user);
     mocks.canProject.mockResolvedValue(true);
+    mocks.projectLock.mockResolvedValue([{ id: "project-1" }]);
     mocks.reportFind.mockResolvedValue(report);
     mocks.documentFind
       .mockResolvedValueOnce([photo])
@@ -80,6 +84,8 @@ describe("daily report existing evidence", () => {
       data: { dailyReportId: "report-1" }
     });
     expect(mocks.audit).toHaveBeenCalled();
+    expect(mocks.projectLock).toHaveBeenCalledOnce();
+    expect(mocks.projectLock.mock.invocationCallOrder[0]).toBeLessThan(mocks.reportFind.mock.invocationCallOrder[0]);
   });
 
   it("does not change evidence on an approved report", async () => {

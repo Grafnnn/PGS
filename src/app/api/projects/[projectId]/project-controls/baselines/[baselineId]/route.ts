@@ -9,6 +9,12 @@ import { projectControlBaselineInclude, serializeProjectControlBaseline } from "
 
 type Params = { projectId: string; baselineId: string };
 
+class BaselineActionError extends Error {
+  constructor(readonly code: string, message: string, readonly status: number) {
+    super(message);
+  }
+}
+
 export async function PATCH(request: Request, { params }: { params: Params }) {
   const requestId = getRequestId(request);
   const user = await getCurrentUser();
@@ -16,17 +22,18 @@ export async function PATCH(request: Request, { params }: { params: Params }) {
   if (role !== "OWNER" && role !== "ADMIN") return apiError(requestId, "FORBIDDEN", "Only OWNER or ADMIN can manage a baseline", 403);
   try {
     const data = projectControlBaselineActionSchema.parse(await request.json().catch(() => ({})));
-    const current = await prisma.projectControlBaseline.findFirst({
-      where: { id: params.baselineId, projectId: params.projectId },
-      include: projectControlBaselineInclude
-    });
-    if (!current) return apiError(requestId, "NOT_FOUND", "Baseline not found", 404);
+    const result = await prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM "projects" WHERE id = ${params.projectId} FOR UPDATE`;
+      const current = await tx.projectControlBaseline.findFirst({
+        where: { id: params.baselineId, projectId: params.projectId },
+        include: projectControlBaselineInclude
+      });
+      if (!current) throw new BaselineActionError("NOT_FOUND", "Baseline not found", 404);
 
-    if (data.action === "delete") {
-      if (current.status !== "draft") return apiError(requestId, "BASELINE_IN_USE", "Only a draft baseline can be deleted", 409);
-      const periods = await prisma.projectControlPeriod.count({ where: { baselineId: current.id } });
-      if (periods) return apiError(requestId, "BASELINE_IN_USE", "A baseline with reporting periods cannot be deleted", 409);
-      await prisma.$transaction(async (tx) => {
+      if (data.action === "delete") {
+        if (current.status !== "draft") throw new BaselineActionError("BASELINE_IN_USE", "Only a draft baseline can be deleted", 409);
+        const periods = await tx.projectControlPeriod.count({ where: { baselineId: current.id } });
+        if (periods) throw new BaselineActionError("BASELINE_IN_USE", "A baseline with reporting periods cannot be deleted", 409);
         await tx.projectControlBaseline.delete({ where: { id: current.id } });
         await writeAudit(tx, {
           organizationId: current.organizationId,
@@ -40,19 +47,14 @@ export async function PATCH(request: Request, { params }: { params: Params }) {
           summary: `Удален draft baseline #${current.sequence}: ${current.name}`,
           before: { sequence: current.sequence, status: current.status, budgetAtCompletion: Number(current.budgetAtCompletion) }
         });
-      });
-      return apiOk(requestId, { ok: true });
-    }
+        return { deleted: true as const, baseline: null };
+      }
 
-    if (current.status !== "draft") return apiError(requestId, "INVALID_TRANSITION", "Only a draft baseline can be activated", 409);
-    if (Number(current.budgetAtCompletion) <= 0 || current.scheduleItemCount <= 0) return apiError(requestId, "BASELINE_NOT_READY", "An active baseline requires budget and schedule data", 409);
-    const baseline = await prisma.$transaction(async (tx) => {
+      if (current.status !== "draft") throw new BaselineActionError("INVALID_TRANSITION", "Only a draft baseline can be activated", 409);
+      if (Number(current.budgetAtCompletion) <= 0 || current.scheduleItemCount <= 0) {
+        throw new BaselineActionError("BASELINE_NOT_READY", "An active baseline requires budget and schedule data", 409);
+      }
       const now = new Date();
-      const claimed = await tx.projectControlBaseline.updateMany({
-        where: { id: current.id, status: "draft", updatedAt: current.updatedAt },
-        data: { updatedAt: now }
-      });
-      if (claimed.count !== 1) throw new Error("Baseline action was already handled");
       await tx.projectControlBaseline.updateMany({
         where: { projectId: params.projectId, status: "active", id: { not: current.id } },
         data: { status: "superseded", supersededAt: now }
@@ -75,13 +77,14 @@ export async function PATCH(request: Request, { params }: { params: Params }) {
         before: { status: current.status },
         after: { status: updated.status }
       });
-      return updated;
+      return { deleted: false as const, baseline: updated };
     });
-    return apiOk(requestId, { baseline: serializeProjectControlBaseline(baseline) });
+    if (result.deleted) return apiOk(requestId, { ok: true });
+    return apiOk(requestId, { baseline: serializeProjectControlBaseline(result.baseline) });
   } catch (error) {
+    if (error instanceof BaselineActionError) return apiError(requestId, error.code, error.message, error.status);
     if (error instanceof Prisma.PrismaClientInitializationError) return apiError(requestId, "DB_UNAVAILABLE", "Database is not available", 503);
     if (error instanceof Error && error.name === "ZodError") return apiError(requestId, "INVALID_REQUEST", "Invalid baseline action", 400);
-    if (error instanceof Error && /already handled/.test(error.message)) return apiError(requestId, "CONFLICT", error.message, 409);
     return apiError(requestId, "BASELINE_ACTION_FAILED", "Baseline action failed", 500);
   }
 }

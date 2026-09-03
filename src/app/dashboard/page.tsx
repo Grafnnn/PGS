@@ -3,12 +3,12 @@ import type { Route } from "next";
 import { redirect } from "next/navigation";
 import { AlertTriangle, Banknote, CalendarClock, FolderKanban, Layers3, PackageCheck, Sparkles } from "lucide-react";
 import { InteractiveChart } from "@/components/charts/interactive-chart";
-import { budgetTotals, financeTotals, materialTotals, money, percent } from "@/lib/calculations";
+import { money, percent } from "@/lib/calculations";
 import { loadDashboardData } from "@/lib/project-page-data";
 import { getCurrentUser } from "@/lib/auth/session";
 import { listProjectsFromDb } from "@/lib/project-data";
 import { loadPortfolioProjectsForPage } from "@/lib/portfolio-data";
-import { buildPortfolioControlModel } from "@/lib/portfolio-control";
+import { buildPortfolioControlModel, buildPortfolioCostStructure } from "@/lib/portfolio-control";
 
 export const dynamic = "force-dynamic";
 
@@ -22,48 +22,37 @@ function compactMoney(value: number) {
 export default async function DashboardPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
-  const { projects, bundle: loadedBundle, primaryProjectHref } = await loadDashboardData({
+  const { primaryProjectHref } = await loadDashboardData({
     loadProjects: () => listProjectsFromDb(user)
   });
   const portfolioSources = await loadPortfolioProjectsForPage(user);
   const portfolio = buildPortfolioControlModel(portfolioSources);
   const primaryProjectRoute = primaryProjectHref as Route;
-  const bundle = loadedBundle ?? {
-    project: { contractAmount: 0 },
-    budgetItems: [],
-    scheduleItems: [],
-    materials: [],
-    procurementRequests: [],
-    payments: [],
-    dailyReports: [],
-    risks: [],
-    aiMessages: []
-  };
-  const budget = budgetTotals(bundle.project.contractAmount, bundle.budgetItems);
-  const finance = financeTotals(bundle.payments);
-  const materials = materialTotals(bundle.materials);
-  const portfolioBudgetDeviation = portfolioSources.reduce((total, project) => total + project.budgetItems.reduce(
-    (projectTotal, item) => projectTotal + item.qty * (item.forecastUnitPrice - item.plannedUnitPrice),
-    0
-  ), 0);
+  const portfolioBudgetProjects = portfolioSources.filter((project) => project.budgetItems.length > 0).length;
+  const portfolioBudgetDeviation = portfolio.projects.reduce((total, project) => total + project.budgetDeviation, 0);
   const portfolioProgressValues = portfolio.projects.flatMap((project) => project.progressPercent === null ? [] : [project.progressPercent]);
   const portfolioProgress = portfolioProgressValues.length
     ? portfolioProgressValues.reduce((total, value) => total + value, 0) / portfolioProgressValues.length
     : 0;
-  const attentionCount = portfolio.summary.criticalProjects + portfolio.summary.attentionProjects;
+  const attentionCount = portfolio.summary.criticalProjects + portfolio.summary.attentionProjects + portfolio.summary.noDataProjects;
   const portfolioAttention = portfolio.attention.length
     ? portfolio.attention.slice(0, 4).map((item) => `${item.projectName}: ${item.reason}`)
-    : ["Критичных отклонений по портфелю не выявлено"];
+    : portfolio.summary.projectCount === 0
+      ? ["Нет доступных проектов. Создайте проект или проверьте права доступа."]
+      : portfolio.summary.noDataProjects > 0
+        ? ["По части проектов недостаточно данных для надёжной оценки."]
+        : ["Критичных отклонений по портфелю не выявлено"];
   const cashFlowSeries = portfolio.cashflow.map((item) => ({ label: item.label, value: item.net }));
-  const costStructure = Object.entries(
-    bundle.budgetItems.reduce<Record<string, number>>((acc, item) => {
-      acc[item.kind] = (acc[item.kind] ?? 0) + item.qty * item.forecastUnitPrice;
-      return acc;
-    }, {})
-  ).map(([label, value]) => ({
-    label: ({ work: "Работы", material: "Материалы", subcontract: "Субподряд", overhead: "Накладные" } as Record<string, string>)[label] ?? label,
-    value
-  }));
+  const costStructure = buildPortfolioCostStructure(portfolioSources);
+  const materialItems = portfolioSources.flatMap((project) => project.materials);
+  const materialRatios = materialItems
+    .filter((item) => item.requiredQty > 0)
+    .map((item) => Math.min(Math.max(item.deliveredQty / item.requiredQty, 0), 1));
+  const materialDeliveryPercent = materialRatios.length
+    ? materialRatios.reduce((total, value) => total + value, 0) / materialRatios.length * 100
+    : null;
+  const materialDeficits = portfolio.projects.reduce((total, project) => total + project.materialDeficits, 0);
+  const financingNeed = Math.abs(Math.min(0, portfolio.summary.cashExposure));
 
   return (
     <main className="page">
@@ -73,8 +62,8 @@ export default async function DashboardPage() {
           <h1>Центр управления строительными проектами</h1>
           <p className="muted">Главные отклонения, деньги и сроки по портфелю.</p>
           <div className="page-header-meta">
-            <span className="badge blue">{projects.length} проекта в реестре</span>
-            <span className={`badge ${portfolioBudgetDeviation > 0 ? "red" : "green"}`}>Отклонение бюджета: {money(portfolioBudgetDeviation)}</span>
+            <span className="badge blue">{portfolio.summary.projectCount} проекта в реестре</span>
+            <span className={`badge ${!portfolioBudgetProjects ? "" : portfolioBudgetDeviation > 0 ? "red" : "green"}`}>Отклонение бюджета: {portfolioBudgetProjects ? money(portfolioBudgetDeviation) : "—"}</span>
           </div>
         </div>
         <div className="page-header-actions">
@@ -95,9 +84,9 @@ export default async function DashboardPage() {
 
       <section className="grid grid-4 dashboard-primary-kpis">
         <Kpi title="Активные проекты" value={String(portfolio.summary.activeProjects)} hint={compactMoney(portfolio.summary.contractAmount)} icon={<FolderKanban size={18} />} />
-        <Kpi title="Общий бюджет" value={compactMoney(portfolio.summary.contractAmount)} hint="Договорная база" icon={<Banknote size={18} />} />
+        <Kpi title="Договорный портфель" value={compactMoney(portfolio.summary.contractAmount)} hint="Сумма договоров" icon={<Banknote size={18} />} />
         <Kpi title="Готовность работ" value={portfolioProgressValues.length ? percent(portfolioProgress) : "—"} hint="Среднее по проектам с графиком" icon={<CalendarClock size={18} />} />
-        <Kpi title="Требуют внимания" value={String(attentionCount)} hint="Проекты с отклонениями" tone={attentionCount ? "bad" : "good"} icon={<AlertTriangle size={18} />} />
+        <Kpi title="Требуют внимания" value={String(attentionCount)} hint="Отклонения или недостаточно данных" tone={attentionCount ? "bad" : "good"} icon={<AlertTriangle size={18} />} />
       </section>
 
       <section className="dashboard-command-grid dashboard-command-single">
@@ -135,9 +124,12 @@ export default async function DashboardPage() {
         />
         <InteractiveChart
           data={costStructure}
-          description="Прогнозная себестоимость по видам затрат из ВОР. Серии можно скрывать, данные — открыть таблицей."
+          description="Прогноз по ВОР и зарегистрированные фактические расходы по всему доступному портфелю."
           height={290}
-          series={[{ key: "value", label: "Себестоимость", color: "#b84721", type: "bar", format: "money" }]}
+          series={[
+            { key: "forecast", label: "Прогноз", color: "#b84721", type: "bar", format: "money" },
+            { key: "actual", label: "Факт по реестру", color: "#087a70", type: "bar", format: "money" }
+          ]}
           title="Структура затрат"
           xKey="label"
         />
@@ -146,12 +138,12 @@ export default async function DashboardPage() {
       <details className="panel compact-details dashboard-secondary-details">
         <summary>Дополнительные показатели <span>финансы и снабжение</span></summary>
         <div className="grid grid-3 compact-metric-grid">
-          <Kpi title="Поступления" value={compactMoney(finance.incomingPayments)} tone="good" />
-          <Kpi title="Платежи" value={compactMoney(finance.outgoingPayments)} />
-          <Kpi title="Потребность" value={compactMoney(finance.financingNeed)} tone={finance.financingNeed ? "bad" : "good"} />
-          <Kpi title="Прогнозная прибыль" value={compactMoney(budget.forecastProfit)} tone={budget.forecastProfit > 0 ? "good" : "bad"} />
-          <Kpi title="Дефицит материалов" value={String(materials.deficitItems.length)} tone={materials.deficitItems.length ? "bad" : "good"} />
-          <Kpi title="Материалы доставлены" value={percent(materials.deliveryPercent)} hint={`${materials.deficitItems.length} поз. с дефицитом`} />
+          <Kpi title="Получено" value={compactMoney(portfolio.summary.paidIncoming)} hint="Оплаченные входящие платежи" tone="good" />
+          <Kpi title="Оплачено" value={compactMoney(portfolio.summary.paidOutgoing)} hint="Оплаченные исходящие платежи" />
+          <Kpi title="Фактические расходы" value={compactMoney(portfolio.summary.actualExpenses)} hint={portfolio.summary.excludedNonRubExpenses ? `${portfolio.summary.excludedNonRubExpenses} записей не в RUB исключены` : "Рублёвый реестр расходов"} />
+          <Kpi title="Потребность" value={compactMoney(financingNeed)} hint="Минимум планового cash-flow" tone={financingNeed ? "bad" : "good"} />
+          <Kpi title="Прогнозная прибыль" value={portfolio.summary.financialForecastProjects ? compactMoney(portfolio.summary.forecastProfit) : "—"} hint={`${portfolio.summary.financialForecastProjects} из ${portfolio.summary.projectCount} проектов с финансовым прогнозом`} tone={!portfolio.summary.financialForecastProjects ? undefined : portfolio.summary.forecastProfit > 0 ? "good" : "bad"} />
+          <Kpi title="Дефицит материалов" value={String(materialDeficits)} tone={materialDeficits ? "bad" : "good"} hint={materialDeliveryPercent === null ? "нет данных о поставках" : `доставлено в среднем ${percent(materialDeliveryPercent)}`} />
         </div>
       </details>
 
