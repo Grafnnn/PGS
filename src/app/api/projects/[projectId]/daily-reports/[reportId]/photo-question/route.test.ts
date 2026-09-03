@@ -72,4 +72,14 @@ describe("daily report photo question route", () => {
     expect(JSON.stringify(body)).not.toContain("safe-key");
     expect(mocks.audit).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ entity: "daily_report_photo_question" }));
   });
+
+  it("returns a bounded gateway timeout when photo analysis stalls", async () => {
+    const { PhotoQuestionProviderError } = await import("@/lib/photo-question");
+    mocks.ask.mockRejectedValue(new PhotoQuestionProviderError("Анализ занял слишком много времени. Выберите меньше фотографий и повторите попытку.", 504));
+    const { POST } = await import("./route");
+    const response = await POST(request(), context);
+    expect(response.status).toBe(504);
+    await expect(response.json()).resolves.toEqual({ error: "Анализ занял слишком много времени. Выберите меньше фотографий и повторите попытку." });
+    expect(mocks.audit).not.toHaveBeenCalled();
+  });
 });

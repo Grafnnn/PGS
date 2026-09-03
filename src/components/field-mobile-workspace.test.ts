@@ -18,7 +18,8 @@ describe("FieldMobileWorkspace", () => {
     expect(html).toContain("Полевой режим / offline-очередь");
     expect(html).toContain("После явной синхронизации рапорт появится в разделе «Рапорты»");
     expect(html).toContain("Сохранить на устройстве");
-    expect(html).toContain("Фактическая выработка смены");
+    expect(html).toContain("Работы за смену");
+    expect(html).not.toContain("Что сделано и в каком объеме");
     expect(html).toContain("Добавить работу");
     expect(html).toContain("Синхронизировать (0)");
     expect(html).toContain("FIFO · только явная отправка");

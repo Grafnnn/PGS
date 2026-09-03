@@ -109,9 +109,12 @@ export function seedDailyReportWorkOutputs(
   outputs: DailyReportWorkOutput[],
   scheduleUnits: ReadonlyMap<string, string> = new Map()
 ) {
-  const next = [...outputs];
-  const linkedScheduleIds = new Set(outputs.flatMap((output) => output.scheduleItemId ? [output.scheduleItemId] : []));
-  const linkedNames = new Set(outputs.map((output) => normalizedName(output.workName)));
+  const next = outputs.map((output) => {
+    const scheduleUnit = output.scheduleItemId ? scheduleUnits.get(output.scheduleItemId) : undefined;
+    return scheduleUnit && output.unit !== scheduleUnit ? { ...output, unit: scheduleUnit } : output;
+  });
+  const linkedScheduleIds = new Set(next.flatMap((output) => output.scheduleItemId ? [output.scheduleItemId] : []));
+  const linkedNames = new Set(next.map((output) => normalizedName(output.workName)));
 
   for (const scope of parseDailyReportWorkScopes(scopes)) {
     const alreadyLinked = scope.scheduleItemId

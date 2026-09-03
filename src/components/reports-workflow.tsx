@@ -27,7 +27,11 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import Image from "next/image";
 import { DailyReportWorkOutputEditor } from "@/components/daily-report-work-output-editor";
 import {
+  applyDailyReportCrewAssignments,
   allocateDailyReportLabor,
+  autoAssignDailyReportCrew,
+  dailyReportAssignableCrew,
+  dailyReportCompletedWorksFromOutputs,
   dailyReportWorkOutputAllocation,
   dailyReportWorkOutputNorm,
   dailyReportWorkOutputsComplete
@@ -344,6 +348,9 @@ export function ReportsWorkflow({ projectId, reports, scheduleItems, documents =
   const selectedHeadcount = selectedCrew.length
     ? selectedCrew.reduce((sum, item) => sum + item.headcount, 0)
     : form.workers + form.engineers;
+  const selectedWorkerHeadcount = selectedCrew.length
+    ? dailyReportAssignableCrew(selectedCrew).reduce((sum, item) => sum + item.headcount, 0)
+    : form.workers;
   const visibleWorkforce = useMemo(() => {
     const query = crewSearch.trim().toLocaleLowerCase("ru-RU");
     if (!query) return workforce;
@@ -358,8 +365,8 @@ export function ReportsWorkflow({ projectId, reports, scheduleItems, documents =
       ].filter(Boolean)
     : [
         !form.author.trim() ? "автор" : "",
-        !form.completedWorks.trim() ? "выполненные работы" : "",
-        !dailyReportWorkOutputsComplete(form.workOutputs) ? "полные строки фактической выработки" : ""
+        !form.workOutputs.length && !form.downtime.trim() && !form.issues.trim() ? "работу или причину простоя" : "",
+        !dailyReportWorkOutputsComplete(form.workOutputs) ? "объём и состав по каждой работе" : ""
       ].filter(Boolean);
 
   const loadDailyReports = useCallback(async () => {
@@ -406,7 +413,7 @@ export function ReportsWorkflow({ projectId, reports, scheduleItems, documents =
       return;
     }
     try {
-      const response = await fetch(`/api/projects/${projectId}/daily-workforce`, { cache: "no-store" });
+      const response = await fetch(`/api/projects/${projectId}/daily-workforce?date=${encodeURIComponent(form.date)}`, { cache: "no-store" });
       if (!response.ok) throw new Error(await responseError(response, "Не удалось загрузить состав проекта."));
       const body = (await response.json()) as { items?: WorkforceItem[] };
       setWorkforce(body.items ?? []);
@@ -415,7 +422,7 @@ export function ReportsWorkflow({ projectId, reports, scheduleItems, documents =
     } finally {
       setWorkforceLoaded(true);
     }
-  }, [currentUser?.authenticated, currentUserLoaded, projectId]);
+  }, [currentUser?.authenticated, currentUserLoaded, form.date, projectId]);
 
   useEffect(() => {
     void loadExecutiveReports();
@@ -451,12 +458,19 @@ export function ReportsWorkflow({ projectId, reports, scheduleItems, documents =
     const phase = closeShift ? "closed" : item.phase ?? "closed";
     const seedFactFromPlan = closeShift;
     const shiftHours = item.shiftHours ?? 8;
-    const reportHeadcount = item.crewMembers?.length
-      ? item.crewMembers.reduce((sum, member) => sum + member.headcount, 0)
-      : item.workers + item.engineers;
+    const reportCrew = item.crewMembers ?? [];
+    const reportWorkerHeadcount = reportCrew.length
+      ? dailyReportAssignableCrew(reportCrew).reduce((sum, member) => sum + member.headcount, 0)
+      : item.workers;
     const seededOutputs = seedFactFromPlan
       ? seedDailyReportWorkOutputs(workScopes, item.workOutputs ?? [], scheduleUnits)
       : item.workOutputs ?? [];
+    const hasNamedAssignments = seededOutputs.some((output) => output.crewResourceIds?.length);
+    const preparedOutputs = reportCrew.length
+      ? autoAssignDailyReportCrew(seededOutputs, reportCrew, shiftHours, !hasNamedAssignments)
+      : seedFactFromPlan
+        ? allocateDailyReportLabor(seededOutputs, reportWorkerHeadcount, shiftHours, true)
+        : seededOutputs;
     setEditingId(item.id);
     setForm({
       date: item.date,
@@ -476,9 +490,7 @@ export function ReportsWorkflow({ projectId, reports, scheduleItems, documents =
       workScopes,
       plannedWorks: item.plannedWorks ?? "",
       crewResourceIds: (item.crewMembers ?? []).map((member) => member.resourceId),
-      workOutputs: seedFactFromPlan
-        ? allocateDailyReportLabor(seededOutputs, reportHeadcount, shiftHours)
-        : seededOutputs
+      workOutputs: preparedOutputs
     });
     setPhotoFiles([]);
     setSelectedPhotoIds(item.evidenceDocuments?.filter((document) => (document.mimeType ?? "").startsWith("image/")).map((document) => document.id).slice(0, 4) ?? []);
@@ -518,7 +530,9 @@ export function ReportsWorkflow({ projectId, reports, scheduleItems, documents =
           ? syncDailyReportCompletedWorks(current.workScopes, workScopes, current.completedWorks)
           : current.completedWorks,
         workOutputs: current.phase === "closed"
-          ? allocateDailyReportLabor(seededOutputs, selectedHeadcount, current.shiftHours ?? 8)
+          ? selectedCrew.length
+            ? autoAssignDailyReportCrew(seededOutputs, selectedCrew, current.shiftHours ?? 8)
+            : allocateDailyReportLabor(seededOutputs, selectedWorkerHeadcount, current.shiftHours ?? 8)
           : seededOutputs
       };
     });
@@ -581,13 +595,14 @@ export function ReportsWorkflow({ projectId, reports, scheduleItems, documents =
       else totals.workers += item.headcount;
       return totals;
     }, { workers: 0, engineers: 0 });
-    const headcount = counts.workers + counts.engineers;
     return {
       ...current,
       ...counts,
       crewResourceIds,
       workOutputs: current.phase === "closed"
-        ? allocateDailyReportLabor(current.workOutputs, headcount, current.shiftHours ?? 8)
+        ? selected.length
+          ? autoAssignDailyReportCrew(current.workOutputs, selected, current.shiftHours ?? 8)
+          : allocateDailyReportLabor(current.workOutputs, counts.workers, current.shiftHours ?? 8)
         : current.workOutputs
     };
   }
@@ -595,11 +610,10 @@ export function ReportsWorkflow({ projectId, reports, scheduleItems, documents =
   function updateManualCrew(field: "workers" | "engineers", value: number) {
     setForm((current) => {
       const next = { ...current, [field]: value };
-      const headcount = next.workers + next.engineers;
       return {
         ...next,
         workOutputs: next.phase === "closed"
-          ? allocateDailyReportLabor(next.workOutputs, headcount, next.shiftHours ?? 8)
+          ? allocateDailyReportLabor(next.workOutputs, next.workers, next.shiftHours ?? 8)
           : next.workOutputs
       };
     });
@@ -612,52 +626,63 @@ export function ReportsWorkflow({ projectId, reports, scheduleItems, documents =
     });
   }
 
+  async function persistEvidence(files: File[]) {
+    if (!editingId) return { uploadedDocuments: [] as ProjectDocument[], failedFiles: files, failureMessages: ["Сначала сохраните рапорт."] };
+    const uploadedDocuments: ProjectDocument[] = [];
+    const failedFiles: File[] = [];
+    const failureMessages: string[] = [];
+    for (const file of files) {
+      const data = new FormData();
+      data.set("file", file);
+      data.set("category", "фотофиксация");
+      data.set("dailyReportId", editingId);
+      data.set("clientMutationId", dailyReportPhotoMutationId(editingId, file));
+      try {
+        const response = await fetch(`/api/projects/${projectId}/documents/upload`, { method: "POST", body: data });
+        if (!response.ok) throw new Error(await responseError(response, `Не удалось загрузить ${file.name}.`));
+        const body = (await response.json()) as { item: ProjectDocument };
+        uploadedDocuments.push(body.item);
+      } catch (fileError) {
+        failedFiles.push(file);
+        failureMessages.push(fileError instanceof Error ? fileError.message : `Не удалось загрузить ${file.name}.`);
+      }
+    }
+    return { uploadedDocuments, failedFiles, failureMessages };
+  }
+
+  function reflectEvidenceUpload(result: { uploadedDocuments: ProjectDocument[]; failedFiles: File[]; failureMessages: string[] }) {
+    setPhotoFiles(result.failedFiles);
+    if (result.uploadedDocuments.length) {
+      const uploadedIds = result.uploadedDocuments.map((item) => item.id);
+      setSelectedPhotoIds((current) => [...new Set([...current, ...uploadedIds])].slice(0, 4));
+      onReportsChange(reports.map((report) => report.id === editingId
+        ? {
+            ...report,
+            evidenceDocuments: [...new Map([...(report.evidenceDocuments ?? []), ...result.uploadedDocuments].map((document) => [document.id, document])).values()]
+          }
+        : report));
+      onDocumentsChange?.([...new Map([...documents, ...result.uploadedDocuments].map((document) => [document.id, document])).values()]);
+      setPhotoNotice(`Прикреплено: ${result.uploadedDocuments.length}. Фото сохранены в рапорте и в разделе «Документы».`);
+    }
+    if (result.failureMessages.length) {
+      setError(`${result.failureMessages.length} фото не загружено. Успешные файлы сохранены, повторите только оставшиеся. ${result.failureMessages[0]}`);
+    }
+  }
+
   async function uploadEvidence() {
     if (!editingId || !photoFiles.length) return;
     setBusy("photo-upload");
     setError("");
     setPhotoNotice("");
     try {
-      const queuedFiles = [...photoFiles];
-      const uploadedDocuments: ProjectDocument[] = [];
-      const failedFiles: File[] = [];
-      const failureMessages: string[] = [];
-      for (const file of queuedFiles) {
-        const data = new FormData();
-        data.set("file", file);
-        data.set("category", "фотофиксация");
-        data.set("dailyReportId", editingId);
-        data.set("clientMutationId", dailyReportPhotoMutationId(editingId, file));
-        try {
-          const response = await fetch(`/api/projects/${projectId}/documents/upload`, { method: "POST", body: data });
-          if (!response.ok) throw new Error(await responseError(response, `Не удалось загрузить ${file.name}.`));
-          const body = (await response.json()) as { item: ProjectDocument };
-          uploadedDocuments.push(body.item);
-        } catch (fileError) {
-          failedFiles.push(file);
-          failureMessages.push(fileError instanceof Error ? fileError.message : `Не удалось загрузить ${file.name}.`);
-        }
-      }
-      setPhotoFiles(failedFiles);
-      if (uploadedDocuments.length) {
-        const uploadedIds = uploadedDocuments.map((item) => item.id);
-        setSelectedPhotoIds((current) => [...new Set([...current, ...uploadedIds])].slice(0, 4));
-        onReportsChange(reports.map((report) => report.id === editingId
-          ? {
-              ...report,
-              evidenceDocuments: [...new Map([...(report.evidenceDocuments ?? []), ...uploadedDocuments].map((document) => [document.id, document])).values()]
-            }
-          : report));
-        onDocumentsChange?.([...new Map([...documents, ...uploadedDocuments].map((document) => [document.id, document])).values()]);
-        setPhotoNotice(`Прикреплено: ${uploadedDocuments.length}. Фото сохранены в рапорте и в разделе «Документы».`);
+      const result = await persistEvidence([...photoFiles]);
+      reflectEvidenceUpload(result);
+      if (result.uploadedDocuments.length) {
         try {
           await loadDailyReports();
         } catch {
-          // The successful uploads remain visible in local state; a later refresh will reconcile the list.
+          // Successful uploads remain visible locally; a later refresh reconciles the list.
         }
-      }
-      if (failureMessages.length) {
-        setError(`${failureMessages.length} фото не загружено. Успешные файлы сохранены, повторите только оставшиеся. ${failureMessages[0]}`);
       }
     } catch (uploadError) {
       setError(uploadError instanceof Error ? uploadError.message : "Не удалось загрузить фото смены.");
@@ -704,15 +729,22 @@ export function ReportsWorkflow({ projectId, reports, scheduleItems, documents =
   }
 
   async function askAboutPhotos() {
-    if (!editingId || !selectedPhotoIds.length || photoQuestion.trim().length < 3) return;
+    if (!editingId || (!selectedPhotoIds.length && !photoFiles.length) || photoQuestion.trim().length < 3) return;
     setBusy("photo-ai");
     setError("");
     setPhotoAnswer(null);
     try {
+      let documentIds = selectedPhotoIds;
+      if (photoFiles.length) {
+        const result = await persistEvidence([...photoFiles]);
+        reflectEvidenceUpload(result);
+        documentIds = [...new Set([...documentIds, ...result.uploadedDocuments.map((item) => item.id)])].slice(0, 4);
+      }
+      if (!documentIds.length) throw new Error("Добавьте хотя бы одно фото для анализа.");
       const response = await fetch(`/api/projects/${projectId}/daily-reports/${editingId}/photo-question`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ question: photoQuestion, documentIds: selectedPhotoIds })
+        body: JSON.stringify({ question: photoQuestion, documentIds })
       });
       if (!response.ok) throw new Error(await responseError(response, "Не удалось проанализировать фотографии."));
       const body = (await response.json()) as { result: PhotoQuestionResult };
@@ -728,10 +760,16 @@ export function ReportsWorkflow({ projectId, reports, scheduleItems, documents =
     setBusy("daily-save");
     setError("");
     try {
+      const workOutputs = selectedCrew.length
+        ? applyDailyReportCrewAssignments(form.workOutputs, selectedCrew, form.shiftHours ?? 8)
+        : form.workOutputs;
+      const completedWorks = form.phase === "closed"
+        ? dailyReportCompletedWorksFromOutputs(workOutputs) || "Работы не выполнялись"
+        : form.completedWorks;
       const response = await fetch(editingId ? `/api/daily-reports/${editingId}` : `/api/projects/${projectId}/daily-reports`, {
         method: editingId ? "PATCH" : "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify(form)
+        body: JSON.stringify({ ...form, completedWorks, workOutputs })
       });
       if (!response.ok) throw new Error(await responseError(response, "Не удалось сохранить рапорт."));
       await response.json();
@@ -1013,26 +1051,32 @@ export function ReportsWorkflow({ projectId, reports, scheduleItems, documents =
 
           {form.phase === "closed" ? (
             <>
-              <div className="daily-report-form-grid daily-fact-grid">
-                <label className="wide">Выполненные работы <span aria-hidden="true">*</span><textarea aria-invalid={!form.completedWorks.trim()} required rows={3} value={form.completedWorks} onChange={(event) => setForm({ ...form, completedWorks: event.target.value })} /><small>Работы из утреннего плана подставлены автоматически. Скорректируйте список, если фактический состав работ изменился.</small></label>
-                <label>Материалы получены<textarea rows={2} value={form.materialsReceived} onChange={(event) => setForm({ ...form, materialsReceived: event.target.value })} /></label>
-                <label>Материалы израсходованы<textarea rows={2} value={form.materialsConsumed} onChange={(event) => setForm({ ...form, materialsConsumed: event.target.value })} /></label>
-                <label>Простои<textarea rows={2} value={form.downtime} onChange={(event) => setForm({ ...form, downtime: event.target.value })} /></label>
-                <label>Проблемы / замечания<textarea rows={2} value={form.issues} onChange={(event) => setForm({ ...form, issues: event.target.value })} /></label>
-              </div>
-              {form.workScopes.length ? <p className="daily-work-output-plan-note"><strong>{form.workScopes.length} {form.workScopes.length === 1 ? "работа перенесена" : "работы перенесены"} из плана.</strong> Объём и единица указываются отдельно, а фонд времени выбранной бригады распределяется между работами автоматически.</p> : null}
+              {form.workScopes.length ? <p className="daily-work-output-plan-note"><strong>{form.workScopes.length} {form.workScopes.length === 1 ? "работа перенесена" : "работы перенесены"} из плана.</strong> Укажите объём и распределите выбранных утром работников. Профессии, единицы и 8-часовая смена уже подставлены.</p> : null}
               <DailyReportWorkOutputEditor
-                crewHeadcount={selectedHeadcount}
+                crewHeadcount={selectedWorkerHeadcount}
+                crewMembers={selectedCrew}
                 outputs={form.workOutputs}
+                scheduleItems={scheduleItems}
                 scheduleUnits={scheduleUnits}
                 shiftHours={form.shiftHours ?? 8}
                 onChange={(workOutputs) => setForm((current) => ({ ...current, workOutputs }))}
                 onShiftHoursChange={(shiftHours) => setForm((current) => ({
                   ...current,
                   shiftHours,
-                  workOutputs: allocateDailyReportLabor(current.workOutputs, selectedHeadcount, shiftHours)
+                  workOutputs: selectedCrew.length
+                    ? applyDailyReportCrewAssignments(current.workOutputs, selectedCrew, shiftHours)
+                    : allocateDailyReportLabor(current.workOutputs, current.workers, shiftHours, true)
                 }))}
               />
+              <details className="daily-closeout-extra">
+                <summary><span><ChevronDown size={16} /><strong>Материалы, простои и замечания</strong></span><small>Заполняйте только при наличии событий</small></summary>
+                <div className="daily-report-form-grid daily-fact-grid">
+                  <label>Материалы получены<textarea rows={2} value={form.materialsReceived} onChange={(event) => setForm({ ...form, materialsReceived: event.target.value })} /></label>
+                  <label>Материалы израсходованы<textarea rows={2} value={form.materialsConsumed} onChange={(event) => setForm({ ...form, materialsConsumed: event.target.value })} /></label>
+                  <label>Простои<textarea rows={2} value={form.downtime} onChange={(event) => setForm({ ...form, downtime: event.target.value })} /></label>
+                  <label>Проблемы / замечания<textarea rows={2} value={form.issues} onChange={(event) => setForm({ ...form, issues: event.target.value })} /></label>
+                </div>
+              </details>
               {editingId ? (
                 <section className="daily-photo-workspace" aria-label="Фото смены и AI-анализ">
                   <div className="daily-crew-heading"><span><Camera size={18} /><strong>Фото смены</strong></span><small>JPEG, PNG или WebP</small></div>
@@ -1077,11 +1121,20 @@ export function ReportsWorkflow({ projectId, reports, scheduleItems, documents =
                       ))}
                     </div>
                   ) : <p className="muted">Прикрепите фото, чтобы сохранить доказательства и задать вопрос AI.</p>}
-                  <div className="daily-photo-question">
-                    <label>Вопрос по выбранным фото<textarea rows={2} value={photoQuestion} onChange={(event) => setPhotoQuestion(event.target.value)} placeholder="Например: видны ли дефекты примыкания и что проверить на месте?" /></label>
-                    <button className="button primary" disabled={!selectedPhotoIds.length || photoQuestion.trim().length < 3 || busy === "photo-ai"} type="button" onClick={() => void askAboutPhotos()}><Bot size={17} /> {busy === "photo-ai" ? "Анализирую..." : "Спросить AI"}</button>
+                  <div className="daily-photo-ai-prompt">
+                    <div className="daily-photo-ai-presets" aria-label="Быстрые вопросы по фото">
+                      {["Есть ли видимые дефекты?", "Что проверить перед приёмкой?", "Есть ли риски по качеству?"].map((question) => <button className="button secondary compact-button" key={question} type="button" onClick={() => setPhotoQuestion(question)}>{question}</button>)}
+                    </div>
+                    <div className="daily-photo-question">
+                      <label>Вопрос по фото<textarea rows={2} value={photoQuestion} onChange={(event) => setPhotoQuestion(event.target.value)} placeholder="Что нужно проверить на этих фотографиях?" /></label>
+                      <button className="button primary" disabled={(!selectedPhotoIds.length && !photoFiles.length) || photoQuestion.trim().length < 3 || busy === "photo-ai"} type="button" onClick={() => void askAboutPhotos()}><Bot size={17} /> {busy === "photo-ai" ? "Загружаю и анализирую..." : photoFiles.length ? "Загрузить и спросить AI" : "Спросить AI"}</button>
+                    </div>
+                    <p className="form-hint" role="status">{!selectedPhotoIds.length && !photoFiles.length
+                      ? "Добавьте хотя бы одно фото."
+                      : photoQuestion.trim().length < 3
+                        ? "Выберите быстрый вопрос или напишите свой."
+                        : `К анализу готово фото: ${Math.min(4, selectedPhotoIds.length + photoFiles.length)}.`}</p>
                   </div>
-                  <p className="form-hint">Для AI можно выбрать до 4 фото. Они отправляются на анализ только после нажатия «Спросить AI».</p>
                   {photoAnswer ? (
                     <div className="daily-photo-answer" role="status">
                       <div><strong>Ответ</strong><span className={`badge ${photoAnswer.confidence === "high" ? "green" : photoAnswer.confidence === "medium" ? "yellow" : "gray"}`}>Уверенность: {photoAnswer.confidence}</span></div>
@@ -1123,11 +1176,15 @@ export function ReportsWorkflow({ projectId, reports, scheduleItems, documents =
                 {item.workOutputs.map((output, index) => {
                   const actual = dailyReportWorkOutputNorm(output);
                   const allocation = dailyReportWorkOutputAllocation(output, item.shiftHours ?? 8);
+                  const assignedNames = (item.crewMembers ?? [])
+                    .filter((member) => output.crewResourceIds?.includes(member.resourceId))
+                    .map((member) => member.name);
                   return (
                     <span key={`${output.profession}-${output.workName}-${index}`}>
-                      <strong>{output.profession} · {output.workName}</strong>
+                      <strong>{output.workName}</strong>
                       {output.quantity.toLocaleString("ru-RU", { maximumFractionDigits: 3 })} {output.unit}
                       {` · ${allocation.workerCount} чел. × ${allocation.hoursPerWorker.toLocaleString("ru-RU", { maximumFractionDigits: 3 })} ч = ${output.laborHours.toLocaleString("ru-RU", { maximumFractionDigits: 3 })} чел.-ч`}
+                      {assignedNames.length ? ` · ${assignedNames.join(", ")}` : ` · ${output.profession}`}
                       {actual ? ` · ${actual.norm.toLocaleString("ru-RU", { maximumFractionDigits: 3 })} ${actual.unit}` : ""}
                     </span>
                   );

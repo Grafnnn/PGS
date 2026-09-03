@@ -2,82 +2,120 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import { DailyReportWorkOutputEditor } from "@/components/daily-report-work-output-editor";
+import type { DailyReportCrewMember, ScheduleItem } from "@/lib/types";
+
+const crew: DailyReportCrewMember[] = [
+  { resourceId: "worker-1", name: "Иван Петров", profession: "Кровельщик", kind: "worker", headcount: 1 },
+  { resourceId: "worker-2", name: "Пётр Сидоров", profession: "Монтажник", kind: "worker", headcount: 1 },
+  { resourceId: "engineer-1", name: "Анна Волкова", profession: "Инженер ПТО", kind: "engineer", headcount: 1 }
+];
+
+const scheduleItem: ScheduleItem = {
+  id: "schedule-1",
+  projectId: "project-1",
+  name: "Монтаж кровельной мембраны",
+  owner: "Прораб",
+  startsAt: "2026-09-01T00:00:00.000Z",
+  endsAt: "2026-09-10T00:00:00.000Z",
+  plannedQty: 120,
+  actualQty: 40,
+  unit: "м²",
+  status: "in_progress"
+};
 
 describe("DailyReportWorkOutputEditor", () => {
-  it("shows the calculated actual norm without mutating data", () => {
+  it("shows a compact schedule closeout with derived professions and labor", () => {
     const html = renderToStaticMarkup(createElement(DailyReportWorkOutputEditor, {
-      outputs: [{
-        profession: "Каменщик",
-        workName: "Кладка стен",
-        quantity: 20,
-        unit: "м2",
-        laborHours: 32
-      }],
-      onChange: vi.fn()
-    }));
-
-    expect(html).toContain("Фактическая выработка смены");
-    expect(html).toContain("100 м2/чел.-мес.");
-    expect(html).toContain("32 чел.-ч");
-    expect(html).toContain("данные готовы к сохранению");
-    expect(html).toContain("После утверждения рапорта");
-  });
-
-  it("marks an unfinished output row before the report is saved", () => {
-    const html = renderToStaticMarkup(createElement(DailyReportWorkOutputEditor, {
-      outputs: [{ profession: "", workName: "", quantity: 0, unit: "", laborHours: 0 }],
-      onChange: vi.fn()
-    }));
-
-    expect(html).toContain("незавершённых строк: 1");
-    expect(html).toContain("aria-invalid=\"true\"");
-    expect(html).toContain("Укажите профессию");
-    expect(html).toContain("Удалить строку выработки 1");
-  });
-
-  it("shows crew-based shift capacity and explicit labor allocation controls", () => {
-    const html = renderToStaticMarkup(createElement(DailyReportWorkOutputEditor, {
-      crewHeadcount: 12,
+      crewMembers: crew,
+      scheduleItems: [scheduleItem],
       shiftHours: 8,
       outputs: [{
-        profession: "Кровельщик",
-        workName: "Монтаж мембраны",
-        quantity: 120,
+        scheduleItemId: "schedule-1",
+        crewResourceIds: ["worker-1", "worker-2"],
+        profession: "Кровельщик, Монтажник",
+        workName: scheduleItem.name,
+        quantity: 20,
         unit: "м²",
-        workerCount: 6,
+        workerCount: 2,
         hoursPerWorker: 8,
-        laborHours: 48,
+        laborHours: 16,
         laborAllocationMode: "auto"
       }],
       onChange: vi.fn(),
       onShiftHoursChange: vi.fn()
     }));
 
-    expect(html).toContain("Состав смены");
-    expect(html).toContain("12 чел.");
-    expect(html).toContain("Фонд смены");
-    expect(html).toContain("96 чел.-ч");
-    expect(html).toContain("Людей");
-    expect(html).toContain("Часов на человека");
-    expect(html).toContain("Распределить");
-    expect(html).toContain("распределено автоматически");
+    expect(html).toContain("Работы за смену");
+    expect(html).toContain("Всего: 120 м² · выполнено ранее: 40 · осталось: 80");
+    expect(html).toContain("2 чел. × 8 ч");
+    expect(html).toContain("Кровельщик, Монтажник");
+    expect(html).toContain("16 чел.-ч");
+    expect(html).toContain("Назначено: Иван Петров, Пётр Сидоров");
+    expect(html).not.toContain("Профессия<input");
   });
 
-  it("locks the unit inherited from the current schedule", () => {
+  it("marks only the fields the foreman must still complete", () => {
     const html = renderToStaticMarkup(createElement(DailyReportWorkOutputEditor, {
-      scheduleUnits: new Map([["schedule-1", "м²"]]),
+      crewMembers: crew,
       outputs: [{
-        scheduleItemId: "schedule-1",
+        crewResourceIds: ["worker-1"],
+        profession: "",
+        workName: "Дополнительная работа",
+        quantity: 0,
+        unit: "м²",
+        laborHours: 0
+      }],
+      onChange: vi.fn()
+    }));
+
+    expect(html).toContain("требуют заполнения: 1");
+    expect(html).toContain("aria-invalid=\"true\"");
+    expect(html).toContain("Объём должен быть больше нуля");
+    expect(html).not.toContain("Укажите профессию");
+  });
+
+  it("keeps engineers out of work allocation and defaults the shift to eight hours", () => {
+    const html = renderToStaticMarkup(createElement(DailyReportWorkOutputEditor, {
+      crewMembers: crew,
+      outputs: [{
+        crewResourceIds: ["worker-1"],
         profession: "Кровельщик",
         workName: "Монтаж мембраны",
-        quantity: 10,
+        quantity: 20,
         unit: "м²",
+        workerCount: 1,
+        hoursPerWorker: 8,
         laborHours: 8
       }],
       onChange: vi.fn()
     }));
 
-    expect(html).toContain("readonly=\"\"");
-    expect(html).toContain("Единица задана действующим графиком");
+    expect(html).toContain("Рабочие</small><strong>2 чел.");
+    expect(html).toContain("value=\"8\"");
+    expect(html).toContain("Иван Петров");
+    expect(html).toContain("Пётр Сидоров");
+    expect(html).not.toContain("Анна Волкова");
+  });
+
+  it("renders the unit from the current schedule as reference instead of an input", () => {
+    const html = renderToStaticMarkup(createElement(DailyReportWorkOutputEditor, {
+      crewMembers: crew,
+      scheduleItems: [scheduleItem],
+      outputs: [{
+        scheduleItemId: "schedule-1",
+        crewResourceIds: ["worker-1"],
+        profession: "Кровельщик",
+        workName: scheduleItem.name,
+        quantity: 10,
+        unit: "м²",
+        workerCount: 1,
+        hoursPerWorker: 8,
+        laborHours: 8
+      }],
+      onChange: vi.fn()
+    }));
+
+    expect(html).toContain("<b>м²</b>");
+    expect(html).not.toContain("aria-label=\"Единица работы 1\"");
   });
 });

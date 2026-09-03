@@ -1,29 +1,44 @@
 "use client";
 
-import { Calculator, Clock3, Gauge, Plus, RefreshCw, Trash2, Users } from "lucide-react";
-import React from "react";
+import {
+  BriefcaseBusiness,
+  Check,
+  ChevronDown,
+  Clock3,
+  Gauge,
+  Plus,
+  Trash2,
+  UserRoundCheck,
+  Users,
+  WandSparkles
+} from "lucide-react";
+import React, { useMemo } from "react";
 import {
   allocateDailyReportLabor,
+  autoAssignDailyReportCrew,
+  dailyReportAssignableCrew,
+  dailyReportCrewProfession,
   dailyReportLaborCapacity,
-  dailyReportLaborHours,
-  dailyReportWorkOutputIssues,
   dailyReportWorkOutputAllocation,
-  dailyReportWorkOutputNorm,
-  dailyReportWorkOutputTotals
+  dailyReportWorkOutputIssues,
+  dailyReportWorkOutputTotals,
+  toggleDailyReportCrewAssignment
 } from "@/lib/daily-report-work-outputs";
-import type { DailyReportWorkOutput } from "@/lib/types";
+import type { DailyReportCrewMember, DailyReportWorkOutput, ScheduleItem } from "@/lib/types";
 
 type Props = {
   outputs: DailyReportWorkOutput[];
   onChange: (outputs: DailyReportWorkOutput[]) => void;
+  scheduleItems?: ScheduleItem[];
   scheduleUnits?: ReadonlyMap<string, string>;
+  crewMembers?: DailyReportCrewMember[];
   crewHeadcount?: number;
   shiftHours?: number;
   onShiftHoursChange?: (hours: number) => void;
 };
 
 const emptyOutput = (): DailyReportWorkOutput => ({
-  profession: "",
+  profession: "Рабочий",
   workName: "",
   quantity: 0,
   unit: "",
@@ -35,118 +50,176 @@ function number(value: number) {
   return value.toLocaleString("ru-RU", { maximumFractionDigits: 3 });
 }
 
-export function DailyReportWorkOutputEditor({ outputs, onChange, scheduleUnits = new Map(), crewHeadcount = 0, shiftHours = 8, onShiftHoursChange }: Props) {
+function outputKey(output: DailyReportWorkOutput, index: number) {
+  return output.scheduleItemId ? `schedule:${output.scheduleItemId}` : `manual:${index}`;
+}
+
+export function DailyReportWorkOutputEditor({
+  outputs,
+  onChange,
+  scheduleItems = [],
+  scheduleUnits = new Map(),
+  crewMembers = [],
+  crewHeadcount = 0,
+  shiftHours = 8,
+  onShiftHoursChange
+}: Props) {
+  const scheduleById = useMemo(() => new Map(scheduleItems.map((item) => [item.id, item])), [scheduleItems]);
+  const assignableCrew = useMemo(() => dailyReportAssignableCrew(crewMembers), [crewMembers]);
+  const hasNamedCrew = assignableCrew.length > 0;
   const totals = dailyReportWorkOutputTotals(outputs);
   const incompleteRows = outputs.filter((output) => Object.keys(dailyReportWorkOutputIssues(output)).length > 0).length;
-  const capacity = dailyReportLaborCapacity(crewHeadcount, shiftHours);
-  const remaining = Math.round((capacity - totals.laborHours) * 1000) / 1000;
+  const availableHeadcount = hasNamedCrew
+    ? assignableCrew.reduce((sum, member) => sum + member.headcount, 0)
+    : crewHeadcount;
+  const capacity = dailyReportLaborCapacity(availableHeadcount, shiftHours);
+  const assignedIds = new Set(outputs.flatMap((output) => output.crewResourceIds ?? []));
+  const assignedHeadcount = hasNamedCrew
+    ? assignableCrew.filter((member) => assignedIds.has(member.resourceId)).reduce((sum, member) => sum + member.headcount, 0)
+    : outputs.reduce((sum, output) => sum + dailyReportWorkOutputAllocation(output, shiftHours).workerCount, 0);
+  const remainingHours = Math.max(0, capacity - totals.laborHours);
+  const assignmentByResource = new Map<string, number>();
+  outputs.forEach((output, index) => output.crewResourceIds?.forEach((resourceId) => assignmentByResource.set(resourceId, index)));
 
   function update(index: number, patch: Partial<DailyReportWorkOutput>) {
     onChange(outputs.map((item, itemIndex) => itemIndex === index ? { ...item, ...patch } : item));
   }
 
-  function updateLabor(index: number, patch: { workerCount?: number; hoursPerWorker?: number }) {
-    const output = outputs[index];
-    const current = dailyReportWorkOutputAllocation(output, shiftHours);
-    const workerCount = patch.workerCount ?? current.workerCount;
-    const hoursPerWorker = patch.hoursPerWorker ?? current.hoursPerWorker;
-    const next = outputs.map((item, itemIndex): DailyReportWorkOutput => itemIndex === index ? {
-      ...item,
-      workerCount: workerCount > 0 ? workerCount : undefined,
-      hoursPerWorker: hoursPerWorker > 0 ? hoursPerWorker : undefined,
-      laborHours: dailyReportLaborHours(workerCount, hoursPerWorker),
+  function updateManualHeadcount(index: number, workerCount: number) {
+    const safeCount = Math.max(0, Math.floor(workerCount));
+    update(index, {
+      profession: outputs[index].profession.trim() || "Рабочий",
+      workerCount: safeCount || undefined,
+      hoursPerWorker: safeCount ? shiftHours : undefined,
+      laborHours: safeCount ? safeCount * shiftHours : 0,
       laborAllocationMode: "manual"
-    } : item);
-    onChange(allocateDailyReportLabor(next, crewHeadcount, shiftHours));
+    });
   }
 
   function autoAllocate() {
-    onChange(allocateDailyReportLabor(outputs, crewHeadcount, shiftHours, true));
+    onChange(hasNamedCrew
+      ? autoAssignDailyReportCrew(outputs, crewMembers, shiftHours, true)
+      : allocateDailyReportLabor(outputs, crewHeadcount, shiftHours, true));
+  }
+
+  function addOutput() {
+    const next = [...outputs, emptyOutput()];
+    onChange(hasNamedCrew
+      ? autoAssignDailyReportCrew(next, crewMembers, shiftHours)
+      : allocateDailyReportLabor(next, crewHeadcount, shiftHours));
   }
 
   return (
-    <section className="daily-report-output-editor" aria-label="Фактическая выработка смены">
+    <section className="daily-report-output-editor" aria-label="Закрытие выполненных работ">
       <header>
         <div>
           <Gauge size={18} />
           <span>
-            <strong>Фактическая выработка смены</strong>
-            <small>Трудозатраты считаются автоматически: люди × фактические часы. После утверждения рапорта строки уточняют норму выработки и ФОТ проекта.</small>
+            <strong>Работы за смену</strong>
+            <small>Для каждой работы укажите фактический объём и назначьте людей. Единицы, профессии и трудозатраты система заполнит сама.</small>
           </span>
         </div>
-        <button className="button secondary compact-button" disabled={outputs.length >= 40} type="button" onClick={() => onChange(allocateDailyReportLabor([...outputs, emptyOutput()], crewHeadcount, shiftHours))}>
+        <button className="button secondary compact-button" disabled={outputs.length >= 40} type="button" onClick={addOutput}>
           <Plus size={15} /> Добавить работу
         </button>
       </header>
 
-      <div className={`daily-labor-capacity${remaining < -0.001 ? " is-over" : ""}`}>
-        <div><Users size={16} /><span>Состав смены<strong>{crewHeadcount ? `${number(crewHeadcount)} чел.` : "не выбран"}</strong></span></div>
-        <label><Clock3 size={16} /><span>Продолжительность смены<input aria-label="Продолжительность смены, часов" inputMode="decimal" min={0.5} max={24} step={0.5} type="number" value={shiftHours || ""} onChange={(event) => onShiftHoursChange?.(Number(event.target.value))} /></span></label>
-        <div><Calculator size={16} /><span>Фонд смены<strong>{number(capacity)} чел.-ч</strong></span></div>
-        <div><Gauge size={16} /><span>{remaining < -0.001 ? "Превышение" : "Остаток"}<strong>{number(Math.abs(remaining))} чел.-ч</strong></span></div>
-        <button className="button secondary compact-button" disabled={!outputs.length || crewHeadcount <= 0 || shiftHours <= 0} type="button" onClick={autoAllocate}><RefreshCw size={14} /> Распределить</button>
+      <div className="daily-closeout-summary">
+        <span><Users size={16} /><small>Рабочие</small><strong>{availableHeadcount ? `${number(availableHeadcount)} чел.` : "не выбраны"}</strong></span>
+        <label><Clock3 size={16} /><span><small>Смена</small><strong><input aria-label="Продолжительность смены, часов" inputMode="decimal" min={0.5} max={24} step={0.5} type="number" value={shiftHours || ""} onChange={(event) => onShiftHoursChange?.(Number(event.target.value))} /> ч</strong></span></label>
+        <span><UserRoundCheck size={16} /><small>Распределено</small><strong>{availableHeadcount > 0 ? `${number(assignedHeadcount)} из ${number(availableHeadcount)}` : assignedHeadcount > 0 ? `${number(assignedHeadcount)} чел.` : "нет"}</strong></span>
+        <span><Gauge size={16} /><small>Трудозатраты</small><strong>{number(totals.laborHours)} чел.-ч</strong></span>
+        <button className="button secondary compact-button" disabled={!outputs.length || availableHeadcount <= 0} type="button" onClick={autoAllocate}><WandSparkles size={14} /> Распределить автоматически</button>
       </div>
-      <p className="form-hint">По умолчанию весь выбранный состав делит время смены между работами. Если бригада работала параллельными группами, скорректируйте людей и часы в строках вручную.</p>
+      {remainingHours > 0 && outputs.length ? <p className="form-hint">Свободный фонд смены: {number(remainingHours)} чел.-ч. Назначьте оставшихся работников или оставьте их без выработки, если они не выполняли измеримые работы.</p> : null}
 
       {outputs.length ? (
         <div className="daily-report-output-list">
           <p className="form-hint" role="status">
-            {totals.rows} {totals.rows === 1 ? "строка" : "строк"} · {number(totals.laborHours)} чел.-ч
-            {incompleteRows ? ` · незавершённых строк: ${incompleteRows}` : " · данные готовы к сохранению"}
+            {totals.rows} {totals.rows === 1 ? "работа" : "работы"} · {number(totals.laborHours)} чел.-ч
+            {incompleteRows ? ` · требуют заполнения: ${incompleteRows}` : " · готово к сохранению"}
           </p>
           {outputs.map((output, index) => {
-            const actual = dailyReportWorkOutputNorm(output);
             const issues = dailyReportWorkOutputIssues(output);
             const messages = Object.values(issues);
             const allocation = dailyReportWorkOutputAllocation(output, shiftHours);
-            const scheduleUnit = output.scheduleItemId ? scheduleUnits.get(output.scheduleItemId) : undefined;
+            const scheduleItem = output.scheduleItemId ? scheduleById.get(output.scheduleItemId) : undefined;
+            const scheduleUnit = scheduleItem?.unit ?? (output.scheduleItemId ? scheduleUnits.get(output.scheduleItemId) : undefined);
+            const plannedQty = scheduleItem?.plannedQty ?? 0;
+            const actualQty = scheduleItem?.actualQty ?? 0;
+            const remainingQty = Math.max(0, plannedQty - actualQty);
+            const assigned = assignableCrew.filter((member) => output.crewResourceIds?.includes(member.resourceId));
+            const profession = assigned.length ? dailyReportCrewProfession(assigned) : output.profession;
             return (
-              <div className="daily-report-output-row" key={index}>
-                <label className="field output-profession">
-                  <span>Профессия</span>
-                  <input aria-invalid={Boolean(issues.profession)} required minLength={2} maxLength={160} value={output.profession} onChange={(event) => update(index, { profession: event.target.value })} placeholder="Каменщик" />
-                </label>
-                <label className="field output-work">
-                  <span>{output.scheduleItemId ? "Работа из графика" : "Работа"}</span>
-                  <input aria-invalid={Boolean(issues.workName)} required minLength={2} maxLength={240} value={output.workName} onChange={(event) => update(index, { workName: event.target.value })} placeholder="Кладка стен" />
-                </label>
-                <label className="field output-quantity">
-                  <span>Объём</span>
-                  <input aria-invalid={Boolean(issues.quantity)} inputMode="decimal" min={0.001} max={1_000_000_000} required step="0.001" type="number" value={output.quantity || ""} onChange={(event) => update(index, { quantity: Number(event.target.value) })} />
-                </label>
-                <label className="field output-unit">
-                  <span>Ед.</span>
-                  <input aria-invalid={Boolean(issues.unit)} readOnly={Boolean(scheduleUnit)} required maxLength={40} value={scheduleUnit ?? output.unit} onChange={(event) => update(index, { unit: event.target.value })} placeholder="м²" title={scheduleUnit ? "Единица задана действующим графиком" : undefined} />
-                </label>
-                <button aria-label={`Удалить строку выработки ${index + 1}`} className="icon-button danger" type="button" title="Удалить строку фактической выработки" onClick={() => onChange(allocateDailyReportLabor(outputs.filter((_, itemIndex) => itemIndex !== index), crewHeadcount, shiftHours))}>
-                  <Trash2 size={16} />
-                </button>
-                <div className="daily-report-output-labor">
-                  <label className="field">
-                    <span>Людей</span>
-                    <input aria-invalid={Boolean(issues.workerCount)} inputMode="numeric" min={1} max={Math.max(1, crewHeadcount)} required step={1} type="number" value={allocation.workerCount || ""} onChange={(event) => updateLabor(index, { workerCount: Number(event.target.value) })} />
-                  </label>
-                  <label className="field">
-                    <span>Часов на человека</span>
-                    <input aria-invalid={Boolean(issues.hoursPerWorker)} inputMode="decimal" min={0.1} max={Math.max(0.5, shiftHours)} required step="any" type="number" value={allocation.hoursPerWorker || ""} onChange={(event) => updateLabor(index, { hoursPerWorker: Number(event.target.value) })} />
-                  </label>
-                  <div className="daily-report-output-labor-total">
-                    <small>Трудозатраты</small>
-                    <strong>{number(output.laborHours)} чел.-ч</strong>
-                    <span>{output.laborAllocationMode === "auto" ? "распределено автоматически" : "ручное распределение"}</span>
+              <article className={`daily-closeout-work${messages.length ? " is-incomplete" : ""}`} key={outputKey(output, index)}>
+                <header>
+                  <div className="daily-closeout-work-title">
+                    <span>{output.scheduleItemId ? "Работа из графика" : "Дополнительная работа"} · {index + 1} из {outputs.length}</span>
+                    {output.scheduleItemId ? <strong>{output.workName}</strong> : <input aria-invalid={Boolean(issues.workName)} aria-label={`Название работы ${index + 1}`} maxLength={240} minLength={2} placeholder="Название выполненной работы" required value={output.workName} onChange={(event) => update(index, { workName: event.target.value })} />}
+                    {scheduleItem ? (
+                      <small>Всего: {number(plannedQty)} {scheduleUnit || "ед."} · выполнено ранее: {number(actualQty)} · осталось: {number(remainingQty)}</small>
+                    ) : <small>Работа добавлена вручную: проверьте название и единицу.</small>}
                   </div>
-                  <div className="daily-report-output-norm">
-                    <small>Факт. норма</small>
-                    <strong>{actual ? `${number(actual.norm)} ${actual.unit}` : "заполните строку"}</strong>
-                    {messages.length ? <small role="alert">{messages[0]}</small> : null}
+                  <button aria-label={`Удалить работу ${index + 1}`} className="icon-button danger" type="button" title="Удалить работу" onClick={() => onChange(outputs.filter((_, itemIndex) => itemIndex !== index))}>
+                    <Trash2 size={16} />
+                  </button>
+                </header>
+
+                <div className="daily-closeout-work-main">
+                  <label className="daily-closeout-quantity">
+                    <span>Выполнено за смену</span>
+                    <span className="daily-closeout-quantity-control">
+                      <input aria-invalid={Boolean(issues.quantity)} inputMode="decimal" min={0.001} max={1_000_000_000} required step="0.001" type="number" value={output.quantity || ""} onChange={(event) => update(index, { quantity: Number(event.target.value) })} />
+                      {scheduleUnit ? <b>{scheduleUnit}</b> : <input aria-invalid={Boolean(issues.unit)} aria-label={`Единица работы ${index + 1}`} maxLength={40} placeholder="ед." required value={output.unit} onChange={(event) => update(index, { unit: event.target.value })} />}
+                    </span>
+                  </label>
+                  <div className="daily-closeout-assignment-summary">
+                    <span><Users size={16} /><small>На этой работе</small><strong>{allocation.workerCount ? `${number(allocation.workerCount)} чел. × ${number(allocation.hoursPerWorker)} ч` : "люди не назначены"}</strong></span>
+                    <span><BriefcaseBusiness size={16} /><small>Профессии из базы</small><strong>{assigned.length || !hasNamedCrew ? profession || "не определены" : "назначьте людей"}</strong></span>
+                    <span><Gauge size={16} /><small>Трудозатраты</small><strong>{number(output.laborHours)} чел.-ч</strong></span>
                   </div>
                 </div>
-              </div>
+
+                {hasNamedCrew ? (
+                  <details className="daily-closeout-crew-picker">
+                    <summary>
+                      <Users size={16} />
+                      <span>{assigned.length ? `Назначено: ${assigned.map((member) => member.name).join(", ")}` : "Назначить работников"}</span>
+                      <b>{assigned.reduce((sum, member) => sum + member.headcount, 0)}</b>
+                      <ChevronDown size={15} />
+                    </summary>
+                    <div className="daily-closeout-crew-options" role="listbox" aria-label={`Работники для: ${output.workName}`} aria-multiselectable="true">
+                      {assignableCrew.map((member) => {
+                        const selected = output.crewResourceIds?.includes(member.resourceId) ?? false;
+                        const otherIndex = assignmentByResource.get(member.resourceId);
+                        const assignedElsewhere = otherIndex !== undefined && otherIndex !== index ? outputs[otherIndex]?.workName : "";
+                        return (
+                          <button aria-selected={selected} className={selected ? "selected" : ""} key={member.resourceId} role="option" type="button" onClick={() => onChange(toggleDailyReportCrewAssignment(outputs, index, member.resourceId, crewMembers, shiftHours))}>
+                            <span className="daily-closeout-crew-check">{selected ? <Check size={14} /> : null}</span>
+                            <span><strong>{member.name}</strong><small>{member.profession || "Рабочий"}{member.headcount > 1 ? ` · ${member.headcount} чел.` : ""}{assignedElsewhere ? ` · сейчас: ${assignedElsewhere}` : ""}</small></span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <small>Выбор сотрудника на другой работе автоматически переносит его. Продолжительность по умолчанию: {number(shiftHours)} ч.</small>
+                  </details>
+                ) : (
+                  <label className="daily-closeout-manual-crew">
+                    <span>Рабочих на этой работе</span>
+                    <input aria-invalid={Boolean(issues.workerCount)} inputMode="numeric" min={1} max={Math.max(1, crewHeadcount)} required step={1} type="number" value={allocation.workerCount || ""} onChange={(event) => updateManualHeadcount(index, Number(event.target.value))} />
+                    <small>По {number(shiftHours)} ч на человека. Добавьте сотрудников в ФОТ, чтобы назначать людей поимённо.</small>
+                  </label>
+                )}
+
+                <footer>
+                  {messages.length ? <span className="daily-closeout-error" role="alert">{messages[0]}</span> : <span className="daily-closeout-ready"><Check size={14} /> Работа заполнена</span>}
+                </footer>
+              </article>
             );
           })}
         </div>
       ) : (
-        <p className="daily-report-output-empty">Необязательно. Добавьте только измеримый объём и реальные суммарные человеко-часы.</p>
+        <p className="daily-report-output-empty">Добавьте выполненную работу. Для позиций из графика единица и общий объём появятся автоматически.</p>
       )}
     </section>
   );

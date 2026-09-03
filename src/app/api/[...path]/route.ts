@@ -13,8 +13,8 @@ import {
   dailyReportSubmissionIssues,
   normalizeDailyReportFields
 } from "@/lib/daily-reports";
-import { buildDailyReportCrewMembers, dailyReportCrewCounts } from "@/lib/daily-report-crew";
-import { normalizeDailyReportWorkOutputUnit, parseDailyReportWorkOutputs } from "@/lib/daily-report-work-outputs";
+import { buildDailyReportCrewMembers, dailyReportCrewCounts, parseDailyReportCrewMembers } from "@/lib/daily-report-crew";
+import { applyDailyReportCrewAssignments, dailyReportCrewAssignmentIssues, normalizeDailyReportWorkOutputUnit, parseDailyReportWorkOutputs } from "@/lib/daily-report-work-outputs";
 import { dailyReportProgressDeltas, scheduleStatusForActual } from "@/lib/daily-report-progress";
 import { prepareScheduleRevision } from "@/lib/excel/import-commit-integrity";
 import { dailyReportWorkScopeSummary, parseDailyReportWorkScopes } from "@/lib/daily-report-work-scopes";
@@ -535,10 +535,14 @@ async function createProjectResource(projectId: string, resource: string | undef
   if (resource === "daily-reports") {
     const parsed = normalizeDailyReportFields(dailyReportSchema.parse(body));
     const workScopes = parseDailyReportWorkScopes(parsed.workScopes, parsed.workCategory);
-    const crewMembers = await resolveDailyReportCrew(projectId, parsed.crewResourceIds);
+    const crewMembers = await resolveDailyReportCrew(projectId, parsed.crewResourceIds, parsed.date);
     const counts = dailyReportCrewCounts(crewMembers);
+    const assignmentIssue = dailyReportCrewAssignmentIssues(parsed.workOutputs, crewMembers);
+    if (assignmentIssue) return json({ error: `Рапорт не сохранён: ${assignmentIssue}` }, 400);
+    const normalizedOutputs = applyDailyReportCrewAssignments(parsed.workOutputs, crewMembers, parsed.shiftHours);
     const { crewResourceIds: _crewResourceIds, ...data } = {
       ...parsed,
+      workOutputs: normalizedOutputs,
       workScopes,
       workCategory: dailyReportWorkScopeSummary(workScopes, parsed.workCategory)
     };
@@ -774,17 +778,36 @@ async function updateResource(resource: string, id: string, readBody: () => Prom
           workScopes: normalizedWorkScopes,
           workCategory: dailyReportWorkScopeSummary(normalizedWorkScopes, parsed.workCategory ?? before.workCategory)
         };
-    const crewMembers = normalizedParsed.crewResourceIds === undefined
+    const previousCrew = parseDailyReportCrewMembers(before.crewMembers);
+    const requestedCrewIds = normalizedParsed.crewResourceIds !== undefined
+      ? normalizedParsed.crewResourceIds
+      : normalizedParsed.date !== undefined && previousCrew.length
+        ? previousCrew.map((member) => member.resourceId)
+        : undefined;
+    const crewMembers = requestedCrewIds === undefined
       ? undefined
-      : await resolveDailyReportCrew(before.projectId, normalizedParsed.crewResourceIds);
+      : await resolveDailyReportCrew(before.projectId, requestedCrewIds, normalizedParsed.date ?? before.date);
     const counts = crewMembers ? dailyReportCrewCounts(crewMembers) : null;
     const { crewResourceIds: _crewResourceIds, ...parsedData } = normalizedParsed;
+    const effectiveCrew = crewMembers ?? previousCrew;
+    const previousOutputs = parseDailyReportWorkOutputs(before.workOutputs);
+    const sourceWorkOutputs = normalizedParsed.workOutputs ?? (
+      crewMembers !== undefined || normalizedParsed.shiftHours !== undefined ? previousOutputs : undefined
+    );
+    const assignmentIssue = sourceWorkOutputs === undefined
+      ? null
+      : dailyReportCrewAssignmentIssues(sourceWorkOutputs, effectiveCrew);
+    if (assignmentIssue) return json({ error: `Рапорт не обновлён: ${assignmentIssue}` }, 400);
+    const normalizedWorkOutputs = sourceWorkOutputs === undefined
+      ? undefined
+      : applyDailyReportCrewAssignments(sourceWorkOutputs, effectiveCrew, normalizedParsed.shiftHours ?? decimalNumber(before.shiftHours));
     const data = {
       ...parsedData,
-      ...(crewMembers ? {
+      ...(normalizedWorkOutputs === undefined ? {} : { workOutputs: normalizedWorkOutputs }),
+      ...(crewMembers !== undefined ? {
         crewMembers,
-        workers: counts?.workers ?? 0,
-        engineers: counts?.engineers ?? 0
+        workers: crewMembers.length ? counts?.workers ?? 0 : normalizedParsed.workers ?? 0,
+        engineers: crewMembers.length ? counts?.engineers ?? 0 : normalizedParsed.engineers ?? 0
       } : {})
     };
     if ((!Object.keys(data).length && !applyProgress) || (data.status === before.status && Object.keys(data).length === 1 && !applyProgress)) {
@@ -1091,7 +1114,7 @@ async function projectExists(projectId: string) {
   return Boolean(await prisma.project.findUnique({ where: { id: projectId }, select: { id: true } }));
 }
 
-async function resolveDailyReportCrew(projectId: string, resourceIds: string[]) {
+async function resolveDailyReportCrew(projectId: string, resourceIds: string[], reportDate: Date) {
   if (!resourceIds.length) return [];
   const uniqueIds = [...new Set(resourceIds)];
   const assignments = await prisma.projectResourceAssignment.findMany({
@@ -1099,6 +1122,8 @@ async function resolveDailyReportCrew(projectId: string, resourceIds: string[]) 
       projectId,
       resourceId: { in: uniqueIds },
       status: { not: "completed" },
+      startsAt: { lte: reportDate },
+      endsAt: { gte: reportDate },
       resource: { status: { not: "archived" }, kind: { in: ["worker", "engineer", "crew"] } }
     },
     include: { resource: true }

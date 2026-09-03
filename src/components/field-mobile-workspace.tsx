@@ -24,7 +24,7 @@ import {
   type FieldQueueItem
 } from "@/lib/field-offline-queue";
 import { DailyReportWorkOutputEditor } from "@/components/daily-report-work-output-editor";
-import { dailyReportWorkOutputsComplete } from "@/lib/daily-report-work-outputs";
+import { dailyReportCompletedWorksFromOutputs, dailyReportWorkOutputsComplete } from "@/lib/daily-report-work-outputs";
 import { fieldSyncKindLabel } from "@/lib/field-sync";
 import type { DailyReport, DailyReportWorkOutput, ProjectDocument } from "@/lib/types";
 
@@ -170,14 +170,21 @@ export function FieldMobileWorkspace({ projectId, projectName, currentUser, curr
   async function queueReport(event: React.FormEvent) {
     event.preventDefault();
     if (!dailyReportWorkOutputsComplete(report.workOutputs)) {
-      setError("Заполните профессию, работу, объём, единицу и человеко-часы во всех строках фактической выработки.");
+      setError("Заполните работу, фактический объём, единицу и распределение людей во всех строках.");
       return;
     }
     setBusy("queue-report");
     setNotice("");
     setError("");
     try {
-      await enqueueFieldOperation({ projectId, kind: "daily_report", payload: report });
+      await enqueueFieldOperation({
+        projectId,
+        kind: "daily_report",
+        payload: {
+          ...report,
+          completedWorks: dailyReportCompletedWorksFromOutputs(report.workOutputs)
+        }
+      });
       setReport(emptyReport(currentUser?.name || "Прораб"));
       setNotice("Рапорт сохранен на устройстве. Отправьте очередь, когда будете готовы.");
     } catch (queueError) {
@@ -315,7 +322,6 @@ export function FieldMobileWorkspace({ projectId, projectName, currentUser, curr
                 <label className="field"><span>Рабочих</span><input min={0} type="number" value={report.workers} onChange={(event) => setReport({ ...report, workers: Number(event.target.value) })} /></label>
                 <label className="field"><span>ИТР</span><input min={0} type="number" value={report.engineers} onChange={(event) => setReport({ ...report, engineers: Number(event.target.value) })} /></label>
                 <label className="field"><span>Техника</span><input value={report.equipment} onChange={(event) => setReport({ ...report, equipment: event.target.value })} placeholder="Кран, экскаватор" /></label>
-                <label className="field wide"><span>Выполненные работы</span><textarea required rows={3} value={report.completedWorks} onChange={(event) => setReport({ ...report, completedWorks: event.target.value })} placeholder="Что сделано и в каком объеме" /></label>
                 <label className="field wide"><span>Проблемы / отклонения</span><textarea rows={3} value={report.issues} onChange={(event) => setReport({ ...report, issues: event.target.value })} placeholder="Что мешает работам или требует решения" /></label>
                 <details className="field-mobile-details wide">
                   <summary>Материалы и простои</summary>
