@@ -2,6 +2,7 @@ import { z } from "zod";
 
 const OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses";
 const OPENAI_VISION_MODEL = "gpt-4o-mini";
+const PHOTO_QUESTION_TIMEOUT_MS = 45_000;
 
 const photoQuestionJsonSchema = {
   type: "object",
@@ -59,54 +60,68 @@ function parseJsonText(value: string) {
 
 export async function askPhotoQuestion(input: { question: string; photos: PhotoInput[] }) {
   const apiKey = process.env.OPENAI_API_KEY?.trim();
-  if (!apiKey) throw new PhotoQuestionProviderError("AI photo analysis is not configured", 503);
+  if (!apiKey) throw new PhotoQuestionProviderError("AI-анализ фотографий пока не настроен.", 503);
 
-  const response = await fetch(OPENAI_RESPONSES_URL, {
-    method: "POST",
-    headers: {
-      authorization: `Bearer ${apiKey}`,
-      "content-type": "application/json"
-    },
-    body: JSON.stringify({
-      model: OPENAI_VISION_MODEL,
-      temperature: 0.1,
-      text: {
-        format: {
-          type: "json_schema",
-          name: "daily_report_photo_analysis",
-          strict: true,
-          schema: photoQuestionJsonSchema
-        }
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), PHOTO_QUESTION_TIMEOUT_MS);
+  let response: Response;
+  try {
+    response = await fetch(OPENAI_RESPONSES_URL, {
+      method: "POST",
+      signal: controller.signal,
+      headers: {
+        authorization: `Bearer ${apiKey}`,
+        "content-type": "application/json"
       },
-      input: [
-        {
-          role: "system",
-          content: [{
-            type: "input_text",
-            text: "Ты помощник прораба и инженера ПТО. Анализируй только приложенные фотографии и вопрос. Не придумывай скрытые размеры, марки материалов, причины дефектов или соответствие нормам, если это нельзя надежно увидеть. Верни только JSON: answer, observations, risks, recommendedActions, confidence (low|medium|high), limitations. Ответ на русском языке."
-          }]
+      body: JSON.stringify({
+        model: OPENAI_VISION_MODEL,
+        store: false,
+        temperature: 0.1,
+        text: {
+          format: {
+            type: "json_schema",
+            name: "daily_report_photo_analysis",
+            strict: true,
+            schema: photoQuestionJsonSchema
+          }
         },
-        {
-          role: "user",
-          content: [
-            { type: "input_text", text: input.question },
-            ...input.photos.map((photo) => ({
-              type: "input_image",
-              image_url: `data:${photo.mimeType};base64,${photo.bytes.toString("base64")}`,
-              detail: "high"
-            }))
-          ]
-        }
-      ]
-    })
-  });
+        input: [
+          {
+            role: "system",
+            content: [{
+              type: "input_text",
+              text: "Ты помощник прораба и инженера ПТО. Анализируй только приложенные фотографии и вопрос. Не придумывай скрытые размеры, марки материалов, причины дефектов или соответствие нормам, если это нельзя надежно увидеть. Верни только JSON: answer, observations, risks, recommendedActions, confidence (low|medium|high), limitations. Ответ на русском языке."
+            }]
+          },
+          {
+            role: "user",
+            content: [
+              { type: "input_text", text: input.question },
+              ...input.photos.map((photo) => ({
+                type: "input_image",
+                image_url: `data:${photo.mimeType};base64,${photo.bytes.toString("base64")}`,
+                detail: "high"
+              }))
+            ]
+          }
+        ]
+      })
+    });
+  } catch {
+    if (controller.signal.aborted) {
+      throw new PhotoQuestionProviderError("Анализ занял слишком много времени. Выберите меньше фотографий и повторите попытку.", 504);
+    }
+    throw new PhotoQuestionProviderError("Сервис AI временно недоступен. Повторите попытку позже.", 502);
+  } finally {
+    clearTimeout(timeout);
+  }
 
   const payload = await response.json().catch(() => null);
-  if (!response.ok) throw new PhotoQuestionProviderError("AI photo analysis is temporarily unavailable", 502);
+  if (!response.ok) throw new PhotoQuestionProviderError("Сервис AI временно недоступен. Повторите попытку позже.", 502);
   try {
     return photoQuestionResultSchema.parse(parseJsonText(responseText(payload)));
   } catch {
-    throw new PhotoQuestionProviderError("AI returned an invalid photo analysis", 502);
+    throw new PhotoQuestionProviderError("AI вернул неполный результат. Повторите вопрос или выберите другие фотографии.", 502);
   }
 }
 

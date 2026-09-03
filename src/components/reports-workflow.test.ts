@@ -3,9 +3,17 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { buildScheduleWorkSuggestions, dailyReportPhotoMutationId, isProjectEvidenceCandidate, ReportsWorkflow, ScheduleWorkPicker } from "@/components/reports-workflow";
+import { dailyReportCompletedWorksFromOutputs } from "@/lib/daily-report-work-outputs";
 import type { ProjectDocument, ScheduleItem } from "@/lib/types";
 
 describe("ReportsWorkflow", () => {
+  it("builds the report summary from structured measured work instead of duplicate free text", () => {
+    expect(dailyReportCompletedWorksFromOutputs([
+      { profession: "Кровельщик", workName: "Монтаж мембраны", quantity: 120, unit: "м²", laborHours: 16 },
+      { profession: "Монтажник", workName: "Устройство примыканий", quantity: 8, unit: "м.п.", laborHours: 8 }
+    ])).toBe("Монтаж мембраны — 120 м²\nУстройство примыканий — 8 м.п.");
+  });
+
   it("builds a stable idempotency key for each report photo", () => {
     const file = { name: "фото кровли 01.jpg", size: 42_000, lastModified: 1_788_200_000_000 };
     const first = dailyReportPhotoMutationId("report/one", file as File);

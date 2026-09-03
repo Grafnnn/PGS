@@ -54,7 +54,7 @@ vi.mock("@/lib/project-delete", () => ({ deleteProjectWithConfirmation: vi.fn(),
 const user = { id: "manager-1", name: "РП", email: "rp@example.test", role: "MANAGER", authenticated: true };
 const before = {
   id: "daily-1", organizationId: "org-1", projectId: "project-1", date: new Date("2026-07-14T12:00:00Z"), author: "Прораб",
-  weather: "Ясно", workers: 7, engineers: 1, equipment: "Кран", completedWorks: "Монтаж", materialsReceived: "",
+  weather: "Ясно", workers: 8, engineers: 1, equipment: "Кран", completedWorks: "Монтаж", materialsReceived: "",
   materialsConsumed: "", downtime: "", issues: "",
   shiftHours: new Prisma.Decimal(20),
   workOutputs: [{ profession: "Монтажник", workName: "Монтаж конструкций", quantity: 12, unit: "т", laborHours: 160 }],
@@ -271,6 +271,129 @@ describe("daily reports catch-all workflow", () => {
         crewMembers: [expect.objectContaining({ resourceId: "resource-1", name: "Сотрудник 1" })]
       })
     }));
+    expect(mocks.assignmentFindMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({
+        startsAt: { lte: expect.any(Date) },
+        endsAt: { gte: expect.any(Date) }
+      })
+    }));
+  });
+
+  it("derives profession, headcount and eight-hour labor from assigned employees", async () => {
+    mocks.assignmentFindMany.mockResolvedValue([
+      { resourceId: "resource-1", resource: { name: "Сотрудник 1", profession: "Кровельщик", kind: "worker", headcount: 1 } },
+      { resourceId: "resource-2", resource: { name: "Сотрудник 2", profession: "Монтажник", kind: "worker", headcount: 1 } }
+    ]);
+    const { POST } = await import("./route");
+    const response = await POST(request({
+      ...before,
+      shiftHours: 8,
+      workers: 0,
+      engineers: 0,
+      crewResourceIds: ["resource-1", "resource-2"],
+      workOutputs: [{
+        scheduleItemId: "schedule-1",
+        crewResourceIds: ["resource-1", "resource-2"],
+        profession: "",
+        workName: "Монтаж конструкций",
+        quantity: 12,
+        unit: "т",
+        laborHours: 0
+      }]
+    }), { params: { path: ["projects", "project-1", "daily-reports"] } });
+
+    expect(response.status).toBe(201);
+    expect(mocks.reportCreate).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        workers: 2,
+        workOutputs: [expect.objectContaining({
+          crewResourceIds: ["resource-1", "resource-2"],
+          profession: "Кровельщик, Монтажник",
+          workerCount: 2,
+          hoursPerWorker: 8,
+          laborHours: 16
+        })]
+      })
+    }));
+  });
+
+  it("rejects a work assignment outside the selected shift crew", async () => {
+    mocks.assignmentFindMany.mockResolvedValue([
+      { resourceId: "resource-1", resource: { name: "Сотрудник 1", profession: "Кровельщик", kind: "worker", headcount: 1 } }
+    ]);
+    const { POST } = await import("./route");
+    const response = await POST(request({
+      ...before,
+      crewResourceIds: ["resource-1"],
+      workOutputs: [{
+        scheduleItemId: "schedule-1",
+        crewResourceIds: ["resource-outside-shift"],
+        profession: "",
+        workName: "Монтаж конструкций",
+        quantity: 12,
+        unit: "т",
+        laborHours: 0
+      }]
+    }), { params: { path: ["projects", "project-1", "daily-reports"] } });
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(body.error).toContain("не входит в рабочий состав");
+    expect(mocks.reportCreate).not.toHaveBeenCalled();
+  });
+
+  it("keeps manual crew counts when a legacy draft has no named workforce", async () => {
+    const { PATCH } = await import("./route");
+    const response = await PATCH(request({
+      crewResourceIds: [],
+      workers: 8,
+      engineers: 1,
+      workOutputs: before.workOutputs
+    }), { params: { path: ["daily-reports", "daily-1"] } });
+
+    expect(response.status).toBe(200);
+    expect(mocks.reportUpdate).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        crewMembers: [],
+        workers: 8,
+        engineers: 1
+      })
+    }));
+  });
+
+  it("revalidates the named crew when a draft report date changes", async () => {
+    mocks.reportFind.mockResolvedValue({
+      ...before,
+      crewMembers: [{ resourceId: "resource-1", name: "Сотрудник 1", profession: "Кровельщик", kind: "worker", headcount: 1 }],
+      workOutputs: [{
+        scheduleItemId: "schedule-1",
+        crewResourceIds: ["resource-1"],
+        profession: "Кровельщик",
+        workName: "Монтаж конструкций",
+        quantity: 12,
+        unit: "т",
+        laborHours: 8,
+        workerCount: 1,
+        hoursPerWorker: 8
+      }]
+    });
+    mocks.assignmentFindMany.mockResolvedValue([]);
+    const { PATCH } = await import("./route");
+    const response = await PATCH(request({ date: "2026-08-01" }), {
+      params: { path: ["daily-reports", "daily-1"] }
+    });
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(body.error).toContain("не назначены на этот проект");
+    expect(mocks.assignmentFindMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({
+        resourceId: { in: ["resource-1"] },
+        startsAt: { lte: new Date("2026-08-01T00:00:00.000Z") },
+        endsAt: { gte: new Date("2026-08-01T00:00:00.000Z") }
+      })
+    }));
+    expect(mocks.reportUpdate).not.toHaveBeenCalled();
   });
 
   it("stores multiple work scopes and keeps a compact legacy summary", async () => {

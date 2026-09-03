@@ -1,12 +1,16 @@
 import { describe, expect, it } from "vitest";
 import {
   allocateDailyReportLabor,
+  applyDailyReportCrewAssignments,
   approvedDailyReportProductivitySamples,
+  autoAssignDailyReportCrew,
+  dailyReportCrewAssignmentIssues,
   dailyReportLaborCapacity,
   dailyReportWorkOutputIssues,
   dailyReportWorkOutputNorm,
   dailyReportWorkOutputTotals,
-  parseDailyReportWorkOutputs
+  parseDailyReportWorkOutputs,
+  toggleDailyReportCrewAssignment
 } from "@/lib/daily-report-work-outputs";
 
 const output = {
@@ -84,21 +88,21 @@ describe("daily report work outputs", () => {
 
     expect(dailyReportLaborCapacity(12, 8)).toBe(96);
     expect(rows).toEqual([
-      expect.objectContaining({ workerCount: 12, hoursPerWorker: 4, laborHours: 48, laborAllocationMode: "auto" }),
-      expect.objectContaining({ workerCount: 12, hoursPerWorker: 4, laborHours: 48, laborAllocationMode: "auto" })
+      expect.objectContaining({ workerCount: 6, hoursPerWorker: 8, laborHours: 48, laborAllocationMode: "auto" }),
+      expect.objectContaining({ workerCount: 6, hoursPerWorker: 8, laborHours: 48, laborAllocationMode: "auto" })
     ]);
     expect(dailyReportWorkOutputTotals(rows).laborHours).toBe(96);
   });
 
-  it("splits a worker's shift by time when works outnumber available parallel crews", () => {
+  it("leaves excess work unassigned instead of counting one full-shift worker twice", () => {
     const rows = allocateDailyReportLabor([
       { ...output, workName: "Работа 1", laborHours: 0 },
       { ...output, workName: "Работа 2", laborHours: 0 }
     ], 1, 8);
 
     expect(rows).toEqual([
-      expect.objectContaining({ workerCount: 1, hoursPerWorker: 4, laborHours: 4 }),
-      expect.objectContaining({ workerCount: 1, hoursPerWorker: 4, laborHours: 4 })
+      expect.objectContaining({ workerCount: 1, hoursPerWorker: 8, laborHours: 8 }),
+      expect.objectContaining({ workerCount: undefined, hoursPerWorker: undefined, laborHours: 0 })
     ]);
   });
 
@@ -109,7 +113,7 @@ describe("daily report work outputs", () => {
     ], 12, 8);
 
     expect(rows[0]).toEqual(expect.objectContaining({ workerCount: 2, hoursPerWorker: 8, laborHours: 16, laborAllocationMode: "manual" }));
-    expect(rows[1]).toEqual(expect.objectContaining({ workerCount: 12, hoursPerWorker: 6.666667, laborHours: 80, laborAllocationMode: "auto" }));
+    expect(rows[1]).toEqual(expect.objectContaining({ workerCount: 10, hoursPerWorker: 8, laborHours: 80, laborAllocationMode: "auto" }));
   });
 
   it("keeps fractional allocation totals inside the exact shift capacity", () => {
@@ -131,5 +135,43 @@ describe("daily report work outputs", () => {
       hoursPerWorker: 7.5,
       laborAllocationMode: "manual"
     }])).toEqual([expect.objectContaining({ workerCount: 3, hoursPerWorker: 7.5, laborHours: 22.5 })]);
+  });
+
+  it("derives professions and eight-hour labor from the named project crew", () => {
+    const crew = [
+      { resourceId: "worker-1", name: "Иван", profession: "Кровельщик", kind: "worker" as const, headcount: 1 },
+      { resourceId: "worker-2", name: "Пётр", profession: "Монтажник", kind: "worker" as const, headcount: 1 },
+      { resourceId: "engineer-1", name: "Анна", profession: "Инженер ПТО", kind: "engineer" as const, headcount: 1 }
+    ];
+    const rows = autoAssignDailyReportCrew([
+      { ...output, profession: "", workName: "Работа 1", laborHours: 0 },
+      { ...output, profession: "", workName: "Работа 2", laborHours: 0 }
+    ], crew, 8, true);
+
+    expect(rows).toEqual([
+      expect.objectContaining({ crewResourceIds: ["worker-1"], profession: "Кровельщик", workerCount: 1, hoursPerWorker: 8, laborHours: 8 }),
+      expect.objectContaining({ crewResourceIds: ["worker-2"], profession: "Монтажник", workerCount: 1, hoursPerWorker: 8, laborHours: 8 })
+    ]);
+    expect(rows.flatMap((row) => row.crewResourceIds ?? [])).not.toContain("engineer-1");
+  });
+
+  it("moves a named worker between works and rejects foreign or duplicate assignments", () => {
+    const crew = [
+      { resourceId: "worker-1", name: "Иван", profession: "Кровельщик", kind: "worker" as const, headcount: 1 },
+      { resourceId: "worker-2", name: "Пётр", profession: "Монтажник", kind: "worker" as const, headcount: 1 }
+    ];
+    const rows = applyDailyReportCrewAssignments([
+      { ...output, crewResourceIds: ["worker-1"] },
+      { ...output, workName: "Работа 2", crewResourceIds: ["worker-2"] }
+    ], crew, 8);
+    const moved = toggleDailyReportCrewAssignment(rows, 1, "worker-1", crew, 8);
+
+    expect(moved[0].crewResourceIds).toBeUndefined();
+    expect(moved[1]).toEqual(expect.objectContaining({ crewResourceIds: ["worker-2", "worker-1"], workerCount: 2, laborHours: 16 }));
+    expect(dailyReportCrewAssignmentIssues([
+      { ...output, crewResourceIds: ["worker-1"] },
+      { ...output, workName: "Работа 2", crewResourceIds: ["worker-1"] }
+    ], crew)).toContain("две работы");
+    expect(dailyReportCrewAssignmentIssues([{ ...output, crewResourceIds: ["foreign-worker"] }], crew)).toContain("не входит");
   });
 });

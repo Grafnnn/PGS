@@ -198,6 +198,7 @@ export interface DailyReportCrewMember {
 
 export interface DailyReportWorkOutput {
   scheduleItemId?: string;
+  crewResourceIds?: string[];
   profession: string;
   workName: string;
   quantity: number;

@@ -1,5 +1,6 @@
 import type { AppRole } from "@/lib/auth/permissions";
 import {
+  dailyReportCrewAssignmentIssues,
   dailyReportWorkOutputTotals,
   dailyReportWorkOutputsComplete,
   parseDailyReportWorkOutputs
@@ -136,6 +137,8 @@ export function dailyReportDraftIssues(report: DailyReportValidationInput): Dail
       if (outputs.length !== report.workOutputs.length || !dailyReportWorkOutputsComplete(outputs)) {
         issues.push({ field: "workOutputs", message: "Заполните или удалите незавершённые строки фактической выработки." });
       }
+      const assignmentIssue = dailyReportCrewAssignmentIssues(outputs, crew);
+      if (assignmentIssue) issues.push({ field: "workOutputs", message: assignmentIssue });
     }
   }
   return issues;
@@ -147,6 +150,7 @@ export function dailyReportSubmissionIssues(report: DailyReportValidationInput):
     issues.push({ field: "phase", message: "Сначала внесите фактические результаты и закройте смену." });
   }
   const personnel = Math.max(0, report.workers) + Math.max(0, report.engineers);
+  const productionWorkers = Math.max(0, report.workers);
   const shiftHours = Number.isFinite(report.shiftHours ?? 8) ? Math.max(0, report.shiftHours ?? 8) : 0;
   const outputs = parseDailyReportWorkOutputs(report.workOutputs);
   const totals = dailyReportWorkOutputTotals(outputs);
@@ -154,16 +158,16 @@ export function dailyReportSubmissionIssues(report: DailyReportValidationInput):
   if (personnel === 0 && !report.downtime?.trim() && !report.issues?.trim()) {
     issues.push({ field: "workers", message: "Укажите людей на смене либо зафиксируйте причину отсутствия работ в простоях/замечаниях." });
   }
-  if (outputs.length && personnel === 0) {
-    issues.push({ field: "workOutputs", message: "Нельзя отправить выработку без указанного персонала смены." });
-  } else if (outputs.some((output) => output.workerCount !== undefined && output.workerCount > personnel)) {
-    issues.push({ field: "workOutputs", message: "В строке работ указано больше людей, чем выбрано в составе смены." });
+  if (outputs.length && productionWorkers === 0) {
+    issues.push({ field: "workOutputs", message: "Нельзя отправить выработку без рабочих в составе смены." });
+  } else if (outputs.some((output) => output.workerCount !== undefined && output.workerCount > productionWorkers)) {
+    issues.push({ field: "workOutputs", message: "В строке работ указано больше рабочих, чем выбрано в составе смены." });
   } else if (outputs.some((output) => output.hoursPerWorker !== undefined && output.hoursPerWorker > shiftHours)) {
     issues.push({ field: "workOutputs", message: "Часы на человека не могут превышать продолжительность смены." });
-  } else if (outputs.length && totals.laborHours > personnel * shiftHours + 0.001) {
+  } else if (outputs.length && totals.laborHours > productionWorkers * shiftHours + 0.001) {
     issues.push({
       field: "workOutputs",
-      message: `Трудозатраты ${totals.laborHours.toLocaleString("ru-RU")} чел.-ч превышают фонд смены: ${personnel} чел. × ${shiftHours.toLocaleString("ru-RU")} ч.`
+      message: `Трудозатраты ${totals.laborHours.toLocaleString("ru-RU")} чел.-ч превышают фонд рабочих смены: ${productionWorkers} чел. × ${shiftHours.toLocaleString("ru-RU")} ч.`
     });
   }
   return issues;

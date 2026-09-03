@@ -80,6 +80,23 @@ describe("daily report work scopes", () => {
     });
   });
 
+  it("refreshes a linked draft row with the current schedule unit", () => {
+    const scopes = [{ scheduleItemId: "schedule-2", workName: "Монтаж утеплителя", source: "schedule" as const }];
+    const staleDraft = [{
+      scheduleItemId: "schedule-2",
+      profession: "",
+      workName: "Монтаж утеплителя",
+      quantity: 0,
+      unit: "",
+      laborHours: 0
+    }];
+
+    expect(seedDailyReportWorkOutputs(scopes, staleDraft, new Map([["schedule-2", "м³"]]))[0]).toMatchObject({
+      scheduleItemId: "schedule-2",
+      unit: "м³"
+    });
+  });
+
   it("prefills completed work names from the day plan without overwriting entered facts", () => {
     const scopes = [
       { scheduleItemId: "schedule-1", workName: "Демонтаж рулонной гидроизоляции", source: "schedule" as const },

@@ -68,6 +68,8 @@ describe("daily report workflow", () => {
   it("validates people and person-hours against the selected crew shift", () => {
     const allocated = {
       ...report,
+      workers: 5,
+      engineers: 1,
       shiftHours: 6,
       workOutputs: [{
         ...report.workOutputs[0],
@@ -82,7 +84,7 @@ describe("daily report workflow", () => {
     expect(dailyReportSubmissionIssues({
       ...allocated,
       workOutputs: [{ ...allocated.workOutputs[0], workerCount: 6, laborHours: 36 }]
-    })).toContainEqual(expect.objectContaining({ field: "workOutputs", message: expect.stringContaining("больше людей") }));
+    })).toContainEqual(expect.objectContaining({ field: "workOutputs", message: expect.stringContaining("больше рабочих") }));
     expect(dailyReportSubmissionIssues({
       ...allocated,
       workOutputs: [{ ...allocated.workOutputs[0], hoursPerWorker: 7, laborHours: 35 }]
@@ -93,7 +95,22 @@ describe("daily report workflow", () => {
         { ...allocated.workOutputs[0], workerCount: 3, hoursPerWorker: 6, laborHours: 18 },
         { ...allocated.workOutputs[0], workName: "Работа 2", workerCount: 3, hoursPerWorker: 6, laborHours: 18 }
       ]
-    })).toContainEqual(expect.objectContaining({ field: "workOutputs", message: expect.stringContaining("фонд смены") }));
+    })).toContainEqual(expect.objectContaining({ field: "workOutputs", message: expect.stringContaining("фонд рабочих смены") }));
+  });
+
+  it("does not count engineers as production labor capacity", () => {
+    expect(dailyReportSubmissionIssues({
+      ...report,
+      workers: 1,
+      engineers: 10,
+      shiftHours: 8,
+      workOutputs: [{
+        ...report.workOutputs[0],
+        workerCount: 2,
+        hoursPerWorker: 8,
+        laborHours: 16
+      }]
+    })).toContainEqual(expect.objectContaining({ field: "workOutputs", message: expect.stringContaining("больше рабочих") }));
   });
 
   it("accepts a planned open shift but blocks submission until the fact is closed", () => {
