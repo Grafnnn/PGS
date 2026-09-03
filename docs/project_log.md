@@ -1,5 +1,31 @@
 # PGS Project Log
 
+## 2026-09-04 - Daily Report Closeout v2 online/core GO
+
+Status: Daily Report Closeout v2 from PR #211 is live on Render. Closing a shift now uses compact per-work cards with named-worker assignment, schedule quantities and automatic profession, unit and labor calculations; the photo question flow can upload newly selected evidence before the explicit AI request.
+
+- Online URL: https://pgs-frankfurt.onrender.com
+- Online commit: `36e74eef1f30e2d3f2d85ed3368bc6d97ffe5817`
+- Feature PR: #211
+- Decision: ONLINE/CORE GO
+- Git SHA source: `RENDER_GIT_COMMIT`
+
+Online verification:
+
+- `/api/health`: HTTP 200 / `ok`; DB: `ok`; migrations: `ok`, count `37`; auth required; AI configured; database storage writable;
+- `/dashboard`, `/projects`, `/projects/project-demo` and `/projects/project-smoke` returned the expected unauthenticated `307` redirect to login;
+- unauthenticated `/api/auth/me` returned 401; daily workforce and report photo-question routes returned 403 before project data or provider access;
+- deployed SHA matched the merged main commit; GitHub Actions PR CI #431 and main CI #432 passed;
+- local desktop and 390 px mobile checks found no horizontal overflow in the closeout summary or work cards.
+
+Validation and safety:
+
+- Vitest: 889/889 passed; ESLint, TypeScript, production build and `git diff --check` passed;
+- the API validates workforce availability on the report date, prevents one full-shift worker from being assigned to multiple works, and preserves legacy manual crew counts;
+- no profession input remains in the named-worker flow; engineers are excluded from measurable production allocation; the default shift is 8 hours;
+- no authenticated online report/photo mutation or live AI request was run, so full authenticated browser/live-AI GO is not claimed;
+- no Prisma schema/migration, Render environment/secret, database data or manual deploy change was made; no secret value was printed or committed.
+
 ## 2026-08-31 - Workforce Admission Requests v1 online/full workflow GO
 
 Status: Workforce Admission Requests v1 from PR #182 is live on Render. The first real personnel admission request was created from the approved roofing access list, explicitly approved and verified in both the project workforce register and the daily-plan crew picker.
