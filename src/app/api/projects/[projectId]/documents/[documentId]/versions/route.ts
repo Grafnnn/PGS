@@ -106,7 +106,7 @@ export async function POST(request: NextRequest, { params }: { params: { project
     return NextResponse.json({ item: serializeVersion(version) }, { status: 201 });
   } catch (error) {
     if (error instanceof Prisma.PrismaClientInitializationError) {
-      return NextResponse.json({ error: "Database is not available. Start PostgreSQL and run prisma migrate/seed.", detail: error.message }, { status: 503 });
+      return NextResponse.json({ error: "Database is not available" }, { status: 503 });
     }
     console.error(error);
     return NextResponse.json({ error: "Document version upload failed" }, { status: 500 });

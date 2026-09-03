@@ -106,7 +106,8 @@ export function syncDailyReportCompletedWorks(
 
 export function seedDailyReportWorkOutputs(
   scopes: DailyReportWorkScope[],
-  outputs: DailyReportWorkOutput[]
+  outputs: DailyReportWorkOutput[],
+  scheduleUnits: ReadonlyMap<string, string> = new Map()
 ) {
   const next = [...outputs];
   const linkedScheduleIds = new Set(outputs.flatMap((output) => output.scheduleItemId ? [output.scheduleItemId] : []));
@@ -122,7 +123,7 @@ export function seedDailyReportWorkOutputs(
       profession: "",
       workName: scope.workName,
       quantity: 0,
-      unit: "",
+      unit: scope.scheduleItemId ? scheduleUnits.get(scope.scheduleItemId) ?? "" : "",
       laborHours: 0
     });
     if (scope.scheduleItemId) linkedScheduleIds.add(scope.scheduleItemId);

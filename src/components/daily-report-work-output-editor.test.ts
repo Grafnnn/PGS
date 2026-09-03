@@ -62,4 +62,22 @@ describe("DailyReportWorkOutputEditor", () => {
     expect(html).toContain("Распределить");
     expect(html).toContain("распределено автоматически");
   });
+
+  it("locks the unit inherited from the current schedule", () => {
+    const html = renderToStaticMarkup(createElement(DailyReportWorkOutputEditor, {
+      scheduleUnits: new Map([["schedule-1", "м²"]]),
+      outputs: [{
+        scheduleItemId: "schedule-1",
+        profession: "Кровельщик",
+        workName: "Монтаж мембраны",
+        quantity: 10,
+        unit: "м²",
+        laborHours: 8
+      }],
+      onChange: vi.fn()
+    }));
+
+    expect(html).toContain("readonly=\"\"");
+    expect(html).toContain("Единица задана действующим графиком");
+  });
 });

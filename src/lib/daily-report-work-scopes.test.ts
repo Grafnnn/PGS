@@ -58,7 +58,7 @@ describe("daily report work scopes", () => {
       laborHours: 32
     }];
 
-    expect(seedDailyReportWorkOutputs(scopes, outputs)).toEqual([
+    expect(seedDailyReportWorkOutputs(scopes, outputs, new Map([["schedule-1", "м²"]]))).toEqual([
       outputs[0],
       {
         scheduleItemId: undefined,
@@ -69,6 +69,15 @@ describe("daily report work scopes", () => {
         laborHours: 0
       }
     ]);
+  });
+
+  it("inherits the unit from the active schedule for a newly seeded fact row", () => {
+    const scopes = [{ scheduleItemId: "schedule-2", workName: "Монтаж утеплителя", source: "schedule" as const }];
+
+    expect(seedDailyReportWorkOutputs(scopes, [], new Map([["schedule-2", "м³"]]))[0]).toMatchObject({
+      scheduleItemId: "schedule-2",
+      unit: "м³"
+    });
   });
 
   it("prefills completed work names from the day plan without overwriting entered facts", () => {

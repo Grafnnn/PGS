@@ -4,7 +4,10 @@ const mocks = vi.hoisted(() => ({
   user: vi.fn(),
   role: vi.fn(),
   projectFind: vi.fn(),
+  txProjectFind: vi.fn(),
   projectUpdate: vi.fn(),
+  baselineUpdateMany: vi.fn(),
+  queryRaw: vi.fn(),
   executeRaw: vi.fn(),
   transaction: vi.fn(),
   audit: vi.fn()
@@ -47,10 +50,18 @@ describe("project calendar shift route", () => {
     mocks.user.mockResolvedValue({ authenticated: true, id: "user-1", name: "Owner", email: "owner@example.test" });
     mocks.role.mockResolvedValue("OWNER");
     mocks.projectFind.mockResolvedValue(project);
+    mocks.txProjectFind.mockResolvedValue(project);
     mocks.projectUpdate.mockResolvedValue({});
+    mocks.baselineUpdateMany.mockResolvedValue({ count: 0 });
+    mocks.queryRaw.mockResolvedValue([{ id: "project-1" }]);
     mocks.executeRaw.mockResolvedValue(1);
     mocks.audit.mockResolvedValue({});
-    const tx = { project: { update: mocks.projectUpdate }, $executeRaw: mocks.executeRaw };
+    const tx = {
+      $queryRaw: mocks.queryRaw,
+      project: { findUnique: mocks.txProjectFind, update: mocks.projectUpdate },
+      projectControlBaseline: { updateMany: mocks.baselineUpdateMany },
+      $executeRaw: mocks.executeRaw
+    };
     mocks.transaction.mockImplementation(async (callback: (client: typeof tx) => unknown) => callback(tx));
   });
 
@@ -92,6 +103,9 @@ describe("project calendar shift route", () => {
 
     expect(response.status).toBe(200);
     expect(body.shifted).toBe(true);
+    expect(mocks.queryRaw).toHaveBeenCalledTimes(1);
+    expect(mocks.txProjectFind).toHaveBeenCalledTimes(1);
+    expect(mocks.projectFind).not.toHaveBeenCalled();
     expect(mocks.projectUpdate).toHaveBeenCalledWith(expect.objectContaining({
       data: {
         startsAt: new Date("2026-09-02T00:00:00.000Z"),
@@ -99,9 +113,29 @@ describe("project calendar shift route", () => {
       }
     }));
     expect(mocks.executeRaw).toHaveBeenCalledTimes(4);
+    expect(Array.from(mocks.executeRaw.mock.calls[0][0] as TemplateStringsArray).join("?")).toContain('"is_current" = true');
+    expect(mocks.baselineUpdateMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: { projectId: "project-1", status: "active" },
+      data: expect.objectContaining({ status: "superseded" })
+    }));
     expect(mocks.audit).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
       entity: "project_calendar",
       after: expect.objectContaining({ deltaDays: -5, scheduleItems: 1, materials: 1 })
     }));
+  });
+
+  it("rejects a repeated commit after rereading the shifted project under lock", async () => {
+    mocks.txProjectFind.mockResolvedValue({
+      ...project,
+      startsAt: new Date("2026-09-02T00:00:00.000Z"),
+      endsAt: new Date("2026-11-25T00:00:00.000Z"),
+      scheduleItems: [{ startsAt: new Date("2026-09-02T00:00:00.000Z"), endsAt: new Date("2026-11-08T00:00:00.000Z") }]
+    });
+    const { POST } = await import("./route");
+    const response = await POST(post({ targetStart: "2026-09-02", mode: "commit", confirmed: true }), context);
+
+    expect(response.status).toBe(409);
+    expect(mocks.projectUpdate).not.toHaveBeenCalled();
+    expect(mocks.executeRaw).not.toHaveBeenCalled();
   });
 });

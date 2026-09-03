@@ -9,8 +9,10 @@ const buildProjectContextMock = vi.fn();
 const localAiFallbackMock = vi.fn();
 const projectFindUniqueMock = vi.fn();
 const projectCreateMock = vi.fn();
+const auditCreateMock = vi.fn();
 const deleteProjectWithConfirmationMock = vi.fn();
 const getDemoContextMock = vi.fn();
+const getUserOrganizationContextMock = vi.fn();
 const listProjectsFromDbMock = vi.fn();
 const getProjectBundleFromDbMock = vi.fn();
 
@@ -43,12 +45,18 @@ vi.mock("@/lib/prisma", () => ({
     project: {
       findUnique: projectFindUniqueMock,
       create: projectCreateMock
-    }
+    },
+    auditLog: { create: auditCreateMock },
+    $transaction: vi.fn(async (callback: (tx: unknown) => unknown) => callback({
+      project: { create: projectCreateMock },
+      auditLog: { create: auditCreateMock }
+    }))
   }
 }));
 
 vi.mock("@/lib/project-data", () => ({
   getDemoContext: getDemoContextMock,
+  getUserOrganizationContext: getUserOrganizationContextMock,
   listProjectsFromDb: listProjectsFromDbMock,
   getProjectBundleFromDb: getProjectBundleFromDbMock
 }));
@@ -66,6 +74,14 @@ const authorizedUser: AppUser = {
   authenticated: true
 };
 
+const localDemoUser: AppUser = {
+  id: "local-user",
+  name: "Local User",
+  email: "local@pgs.dev",
+  role: "OWNER",
+  authenticated: false
+};
+
 function postRequest(body: unknown = { prompt: "Что важно?" }) {
   return new Request("https://pgs.local/api/projects/project-demo/ai/chat", {
     method: "POST",
@@ -76,6 +92,12 @@ function postRequest(body: unknown = { prompt: "Что важно?" }) {
 
 function getRequest() {
   return new Request("https://pgs.local/api/projects/project-demo/ai/summary") as never;
+}
+
+function authMeRequest(projectId?: string) {
+  const url = new URL("https://pgs.local/api/auth/me");
+  if (projectId) url.searchParams.set("projectId", projectId);
+  return { nextUrl: url } as never;
 }
 
 async function responseJson(response: Response) {
@@ -92,8 +114,10 @@ describe("catch-all AI routes", () => {
     localAiFallbackMock.mockReset();
     projectFindUniqueMock.mockReset();
     projectCreateMock.mockReset();
+    auditCreateMock.mockReset();
     deleteProjectWithConfirmationMock.mockReset();
     getDemoContextMock.mockReset();
+    getUserOrganizationContextMock.mockReset();
     listProjectsFromDbMock.mockReset();
     getProjectBundleFromDbMock.mockReset();
   });
@@ -111,6 +135,64 @@ describe("catch-all AI routes", () => {
     expect(projectCreateMock).not.toHaveBeenCalled();
   });
 
+  it("checks project access before parsing generic resource mutations", async () => {
+    const postJson = vi.fn().mockResolvedValue({ name: "Нельзя читать" });
+    const patchJson = vi.fn().mockResolvedValue({ name: "Нельзя читать" });
+    getCurrentUserMock.mockResolvedValue(authorizedUser);
+    canProjectMock.mockResolvedValue(false);
+    const { PATCH, POST } = await import("./route");
+
+    const postResponse = await POST({ json: postJson } as never, { params: { path: ["projects", "project-1", "budget"] } });
+    const patchResponse = await PATCH({ json: patchJson } as never, { params: { path: ["projects", "project-1"] } });
+
+    expect(postResponse.status).toBe(403);
+    expect(patchResponse.status).toBe(403);
+    expect(postJson).not.toHaveBeenCalled();
+    expect(patchJson).not.toHaveBeenCalled();
+  });
+
+  it("returns the effective role and organization for the requested project", async () => {
+    getCurrentUserMock.mockResolvedValue(authorizedUser);
+    getEffectiveProjectRoleMock.mockResolvedValue("VIEWER");
+    projectFindUniqueMock.mockResolvedValue({ organization: { id: "org-target", name: "Целевая организация" } });
+    const { GET } = await import("./route");
+
+    const response = await GET(authMeRequest("project-1"), { params: { path: ["auth", "me"] } });
+
+    expect(response.status).toBe(200);
+    await expect(responseJson(response)).resolves.toMatchObject({
+      user: { id: "user-1", role: "VIEWER" },
+      organization: { id: "org-target", name: "Целевая организация" }
+    });
+    expect(getEffectiveProjectRoleMock).toHaveBeenCalledWith(authorizedUser, "project-1");
+  });
+
+  it("resolves project-scoped local demo identity without querying the database", async () => {
+    getCurrentUserMock.mockResolvedValue(localDemoUser);
+    const { GET } = await import("./route");
+
+    const response = await GET(authMeRequest("project-demo"), { params: { path: ["auth", "me"] } });
+
+    expect(response.status).toBe(200);
+    await expect(responseJson(response)).resolves.toMatchObject({
+      user: { id: "local-user", role: "OWNER", authenticated: false },
+      organization: { id: "org-demo", name: "Локальная организация" }
+    });
+    expect(getUserOrganizationContextMock).not.toHaveBeenCalled();
+    expect(projectFindUniqueMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects an unknown project in local demo identity lookup", async () => {
+    getCurrentUserMock.mockResolvedValue(localDemoUser);
+    const { GET } = await import("./route");
+
+    const response = await GET(authMeRequest("missing-project"), { params: { path: ["auth", "me"] } });
+
+    expect(response.status).toBe(403);
+    await expect(responseJson(response)).resolves.toEqual({ error: "Forbidden" });
+    expect(projectFindUniqueMock).not.toHaveBeenCalled();
+  });
+
   it("returns safe validation errors for invalid project creation payload", async () => {
     getCurrentUserMock.mockResolvedValue(authorizedUser);
     const { POST } = await import("./route");
@@ -126,10 +208,10 @@ describe("catch-all AI routes", () => {
 
   it("creates a project through supported schema fields only", async () => {
     getCurrentUserMock.mockResolvedValue(authorizedUser);
-    getDemoContextMock.mockResolvedValue({ organizationId: "org-demo", userId: "user-demo" });
+    getUserOrganizationContextMock.mockResolvedValue({ organizationId: "org-1", organizationName: "Строй", userId: "user-1" });
     projectCreateMock.mockResolvedValue({
       id: "project-new",
-      organizationId: "org-demo",
+      organizationId: "org-1",
       name: "Новый объект",
       customer: "Заказчик",
       object: "Административное здание",
@@ -175,7 +257,7 @@ describe("catch-all AI routes", () => {
     expect(body.project).toMatchObject({ id: "project-new", name: "Новый объект" });
     expect(projectCreateMock).toHaveBeenCalledWith({
       data: expect.objectContaining({
-        organizationId: "org-demo",
+        organizationId: "org-1",
         name: "Новый объект",
         code: "PGS-NEW-01",
         customer: "Заказчик",
@@ -192,7 +274,9 @@ describe("catch-all AI routes", () => {
         status: "planning"
       })
     });
+    expect(projectCreateMock.mock.calls[0][0].data.members).toEqual({ create: { userId: "user-1", role: "OWNER" } });
     expect(JSON.stringify(projectCreateMock.mock.calls[0][0].data)).not.toContain("unsupportedOnboardingNote");
+    expect(auditCreateMock).toHaveBeenCalledWith({ data: expect.objectContaining({ entity: "project", entityId: "project-new", action: "create" }) });
   });
 
   it("keeps unauthenticated AI requests forbidden before project lookup", async () => {

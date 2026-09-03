@@ -1,22 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { writeAudit } from "@/lib/audit";
-import { canManageUsers } from "@/lib/auth/permissions";
 import { getCurrentUser } from "@/lib/auth/session";
 import { hashPassword } from "@/lib/auth/password";
 import { prisma } from "@/lib/prisma";
 import { generateTemporaryPassword, normalizeAdminRole, serializeAdminUser, validatePasswordCandidate } from "@/lib/admin/users";
-import { getDemoContext } from "@/lib/project-data";
-
-async function auditOrganizationId() {
-  const organization = await prisma.organization.findFirst({ select: { id: true } });
-  if (organization) return organization.id;
-  return (await getDemoContext()).organizationId;
-}
+import { appRoleToOrganizationRole, organizationRoleToAppRole } from "@/lib/auth/organization-roles";
+import { getAdminOrganizationContext } from "@/lib/admin/user-scope";
 
 function jsonError(error: unknown) {
   if (error instanceof Prisma.PrismaClientInitializationError) {
-    return NextResponse.json({ error: "Database is not available. Start PostgreSQL and run prisma migrate/seed.", detail: error.message }, { status: 503 });
+    return NextResponse.json({ error: "Database is not available" }, { status: 503 });
   }
   console.error(error);
   return NextResponse.json({ error: "Admin users request failed" }, { status: 500 });
@@ -24,11 +18,24 @@ function jsonError(error: unknown) {
 
 export async function GET() {
   const currentUser = await getCurrentUser();
-  if (!canManageUsers(currentUser)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   try {
-    const users = await prisma.user.findMany({ orderBy: [{ isActive: "desc" }, { createdAt: "asc" }] });
-    return NextResponse.json({ items: users.map(serializeAdminUser) });
+    const context = await getAdminOrganizationContext(currentUser);
+    if (!context) return NextResponse.json({ error: "Organization membership is required" }, { status: 403 });
+    const users = await prisma.user.findMany({
+      where: { memberships: { some: { organizationId: context.organizationId } } },
+      include: {
+        memberships: {
+          where: { organizationId: context.organizationId },
+          select: { role: true },
+          take: 1
+        }
+      },
+      orderBy: [{ isActive: "desc" }, { createdAt: "asc" }]
+    });
+    return NextResponse.json({
+      items: users.map((user) => serializeAdminUser(user, organizationRoleToAppRole(user.memberships[0]?.role)))
+    });
   } catch (error) {
     return jsonError(error);
   }
@@ -36,7 +43,6 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   const currentUser = await getCurrentUser();
-  if (!canManageUsers(currentUser)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   try {
     const body = await request.json().catch(() => ({}));
@@ -50,7 +56,9 @@ export async function POST(request: NextRequest) {
     if (!name) return NextResponse.json({ error: "Name is required" }, { status: 400 });
     if (passwordError) return NextResponse.json({ error: passwordError }, { status: 400 });
 
-    const organizationId = await auditOrganizationId();
+    const context = await getAdminOrganizationContext(currentUser);
+    if (!context) return NextResponse.json({ error: "Organization membership is required" }, { status: 403 });
+    const organizationId = context.organizationId;
     const created = await prisma.$transaction(async (tx) => {
       const user = await tx.user.create({
         data: {
@@ -59,7 +67,7 @@ export async function POST(request: NextRequest) {
           appRole: role,
           passwordHash: await hashPassword(temporaryPassword),
           isActive: true,
-          memberships: { create: { organizationId, role: role === "OWNER" ? "owner" : "project_manager" } }
+          memberships: { create: { organizationId, role: appRoleToOrganizationRole(role) } }
         }
       });
       await writeAudit(tx, {

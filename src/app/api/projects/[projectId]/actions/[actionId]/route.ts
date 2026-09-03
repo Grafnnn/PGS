@@ -1,36 +1,61 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { writeAudit } from "@/lib/audit";
-import { canProject } from "@/lib/auth/project-permissions";
+import {
+  getEffectiveProjectRole,
+  getEffectiveProjectRoleWithClient,
+  roleAllowsProjectAction
+} from "@/lib/auth/project-permissions";
 import { getCurrentUser } from "@/lib/auth/session";
+import { lockProject } from "@/lib/admin/user-scope";
 import { prisma } from "@/lib/prisma";
 import { projectActionUpdateSchema, serializeProjectAction } from "@/lib/project-actions";
 
 type RouteParams = { params: { projectId: string; actionId: string } };
 
+class ProjectActionError extends Error {
+  constructor(public readonly status: number, message: string) {
+    super(message);
+  }
+}
+
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
   const user = await getCurrentUser();
-  if (!(await canProject(user, params.projectId, "edit"))) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const preliminaryRole = await getEffectiveProjectRole(user, params.projectId);
+  if (!roleAllowsProjectAction(preliminaryRole, "edit")) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   try {
     const data = projectActionUpdateSchema.parse(await request.json().catch(() => ({})));
-    const before = await prisma.projectActionItem.findUnique({ where: { id: params.actionId } });
-    if (!before || before.projectId !== params.projectId) return NextResponse.json({ error: "Project action not found" }, { status: 404 });
-    const nextRequiresApproval = data.requiresApproval ?? before.requiresApproval;
-    const nextStatus = data.approve === true ? "done" : data.status ?? before.status;
-    if (data.approve === true && user?.role !== "OWNER" && user?.role !== "ADMIN") {
-      return NextResponse.json({ error: "Owner or administrator approval is required" }, { status: 403 });
-    }
-    if (data.approve === true && !nextRequiresApproval) {
-      return NextResponse.json({ error: "This action does not require approval" }, { status: 409 });
-    }
-    if (nextStatus === "done" && nextRequiresApproval && !before.approvedAt && data.approve !== true) {
-      return NextResponse.json({ error: "Approval is required before completion" }, { status: 409 });
-    }
-
-    const now = new Date();
-    const reopensApprovedAction = Boolean(data.status && data.status !== "done" && before.approvedAt);
     const item = await prisma.$transaction(async (tx) => {
+      await lockProject(tx, params.projectId);
+      const effectiveRole = await getEffectiveProjectRoleWithClient(tx, user, params.projectId);
+      if (!roleAllowsProjectAction(effectiveRole, "edit")) throw new ProjectActionError(403, "Forbidden");
+
+      const before = await tx.projectActionItem.findFirst({
+        where: { id: params.actionId, projectId: params.projectId }
+      });
+      if (!before) throw new ProjectActionError(404, "Project action not found");
+
+      const nextRequiresApproval = data.requiresApproval ?? before.requiresApproval;
+      const nextStatus = data.approve === true ? "done" : data.status ?? before.status;
+      if (data.approve === true && effectiveRole !== "OWNER" && effectiveRole !== "ADMIN") {
+        throw new ProjectActionError(403, "Owner or administrator approval is required");
+      }
+      if (data.approve === true && !nextRequiresApproval) {
+        throw new ProjectActionError(409, "This action does not require approval");
+      }
+      if (data.approve === true && before.approvedAt) {
+        throw new ProjectActionError(409, "This action is already approved");
+      }
+      if (nextStatus === "done" && nextRequiresApproval && !before.approvedAt && data.approve !== true) {
+        throw new ProjectActionError(409, "Approval is required before completion");
+      }
+      if (before.status === "done" && !before.requiresApproval && data.requiresApproval === true && data.status === undefined) {
+        throw new ProjectActionError(409, "Reopen the action before requiring approval");
+      }
+
+      const now = new Date();
+      const reopensApprovedAction = Boolean(data.status && data.status !== "done" && before.approvedAt);
       const updated = await tx.projectActionItem.update({
         where: { id: params.actionId },
         data: {
@@ -66,20 +91,28 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json({ item: serializeProjectAction(item) });
   } catch (error) {
+    if (error instanceof ProjectActionError) return NextResponse.json({ error: error.message }, { status: error.status });
     if (error instanceof Prisma.PrismaClientInitializationError) return NextResponse.json({ error: "Database is not available" }, { status: 503 });
     if (error instanceof Error && error.name === "ZodError") return NextResponse.json({ error: "Invalid project action" }, { status: 400 });
+    console.error(error);
     return NextResponse.json({ error: "Project action update failed" }, { status: 500 });
   }
 }
 
 export async function DELETE(_request: Request, { params }: RouteParams) {
   const user = await getCurrentUser();
-  if (!(await canProject(user, params.projectId, "edit"))) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const preliminaryRole = await getEffectiveProjectRole(user, params.projectId);
+  if (!roleAllowsProjectAction(preliminaryRole, "edit")) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   try {
-    const before = await prisma.projectActionItem.findUnique({ where: { id: params.actionId } });
-    if (!before || before.projectId !== params.projectId) return NextResponse.json({ error: "Project action not found" }, { status: 404 });
     await prisma.$transaction(async (tx) => {
+      await lockProject(tx, params.projectId);
+      const effectiveRole = await getEffectiveProjectRoleWithClient(tx, user, params.projectId);
+      if (!roleAllowsProjectAction(effectiveRole, "edit")) throw new ProjectActionError(403, "Forbidden");
+      const before = await tx.projectActionItem.findFirst({
+        where: { id: params.actionId, projectId: params.projectId }
+      });
+      if (!before) throw new ProjectActionError(404, "Project action not found");
       await tx.projectActionItem.delete({ where: { id: params.actionId } });
       await writeAudit(tx, {
         organizationId: before.organizationId,
@@ -96,7 +129,9 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
     });
     return NextResponse.json({ ok: true });
   } catch (error) {
+    if (error instanceof ProjectActionError) return NextResponse.json({ error: error.message }, { status: error.status });
     if (error instanceof Prisma.PrismaClientInitializationError) return NextResponse.json({ error: "Database is not available" }, { status: 503 });
+    console.error(error);
     return NextResponse.json({ error: "Project action delete failed" }, { status: 500 });
   }
 }

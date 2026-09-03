@@ -5,9 +5,19 @@ import { writeAudit } from "@/lib/audit";
 import { canProject } from "@/lib/auth/project-permissions";
 import { getCurrentUser } from "@/lib/auth/session";
 import { buildCommitPlan } from "@/lib/excel/import-parser";
+import {
+  claimImportBatch,
+  ImportBatchNotFound,
+  ImportCommitConflict,
+  lockProjectForMutation,
+  prepareBudgetReplacement,
+  prepareScheduleRevision,
+  relinkScheduleBudgetItems
+} from "@/lib/excel/import-commit-integrity";
 import { importModes, importPreviewSchema, type ImportPreview } from "@/lib/excel/import-types";
 import { prisma } from "@/lib/prisma";
 import { serializeBudgetItem, serializeMaterial, serializeScheduleItem } from "@/lib/serializers";
+import { serializeLaborDemand } from "@/lib/workforce-capacity";
 
 export const runtime = "nodejs";
 
@@ -35,22 +45,26 @@ export async function POST(request: NextRequest, { params }: { params: { project
       return NextResponse.json({ error: "Replacement import requires explicit confirmation." }, { status: 409 });
     }
 
-    const batch = await prisma.importBatch.findFirst({
-      where: {
-        id: params.importId,
-        projectId: project.id
-      }
-    });
-    if (!batch) return NextResponse.json({ error: "Import batch not found" }, { status: 404 });
-    if (batch.status === "committed") return NextResponse.json({ error: "Import batch already committed" }, { status: 409 });
-    if (batch.status !== "previewed") return NextResponse.json({ error: "Import batch is not commit-ready" }, { status: 409 });
-
-    const preview = importPreviewSchema.parse(batch.previewJson) as unknown as ImportPreview;
-    const plan = buildCommitPlan(preview, payload.mode);
-
     const result = await prisma.$transaction(async (tx) => {
+      await lockProjectForMutation(tx, project.id);
+      const batch = await tx.importBatch.findFirst({
+        where: { id: params.importId, projectId: project.id }
+      });
+      if (!batch) throw new ImportBatchNotFound("Import batch not found");
+      if (batch.status === "committed") throw new ImportCommitConflict("Import batch already committed");
+      if (batch.status !== "previewed") throw new ImportCommitConflict("Import batch is not commit-ready");
+      await claimImportBatch(tx, {
+        importBatchId: batch.id,
+        projectId: project.id,
+        expectedUpdatedAt: batch.updatedAt
+      });
+
+      const preview = importPreviewSchema.parse(batch.previewJson) as unknown as ImportPreview;
+      const plan = buildCommitPlan(preview, payload.mode);
       let removedDraftRequests = 0;
-      if (plan.mode === "replace_all" || plan.mode === "replace_budget" || plan.mode === "replace_budget_materials") {
+      const replacesBudget = plan.mode === "replace_all" || plan.mode === "replace_budget" || plan.mode === "replace_budget_materials";
+      const previousBudgetItems = await prepareBudgetReplacement(tx, { projectId: project.id, replace: replacesBudget });
+      if (replacesBudget) {
         await tx.budgetItem.deleteMany({ where: { projectId: project.id } });
         await tx.budgetSection.deleteMany({ where: { projectId: project.id } });
       }
@@ -68,8 +82,12 @@ export async function POST(request: NextRequest, { params }: { params: { project
         removedDraftRequests = removed.count;
         await tx.material.deleteMany({ where: { projectId: project.id } });
       }
-      if (plan.mode === "replace_all" || plan.mode === "replace_schedule") {
-        await tx.scheduleItem.deleteMany({ where: { projectId: project.id } });
+      const scheduleRevision = await prepareScheduleRevision(tx, {
+        projectId: project.id,
+        replace: plan.mode === "replace_all" || plan.mode === "replace_schedule"
+      });
+      if (plan.mode === "replace_all" || plan.mode === "replace_budget" || plan.mode === "replace_budget_materials") {
+        await tx.projectLaborDemand.deleteMany({ where: { projectId: project.id, importBatchId: { not: null } } });
       }
 
       const sectionNames = Array.from(new Set([...plan.sections.map((section) => section.name), ...plan.budgetItems.map((item) => item.section)]));
@@ -109,6 +127,11 @@ export async function POST(request: NextRequest, { params }: { params: { project
           })
         )
       );
+      const budgetRelink = await relinkScheduleBudgetItems(tx, {
+        projectId: project.id,
+        previous: previousBudgetItems,
+        created: budgetItems
+      });
 
       const materials = await Promise.all(
         plan.materials.map((item) =>
@@ -146,6 +169,12 @@ export async function POST(request: NextRequest, { params }: { params: { project
               endsAt: item.endsAt,
               plannedQty: new Prisma.Decimal(item.plannedQty),
               actualQty: new Prisma.Decimal(item.actualQty),
+              manualActualQty: new Prisma.Decimal(item.actualQty),
+              reportActualQty: new Prisma.Decimal(0),
+              unit: item.unit,
+              progressMode: item.progressMode ?? "quantity",
+              revision: scheduleRevision.revision,
+              isCurrent: true,
               status: item.status,
               dependency: item.dependency,
               createdBy: user.id
@@ -154,9 +183,73 @@ export async function POST(request: NextRequest, { params }: { params: { project
         )
       );
 
+      const budgetItemBySource = new Map(
+        plan.budgetItems.map((source, index) => [`${source.code}\u0000${source.name}`, budgetItems[index]])
+      );
+      if (plan.laborDemands.length) {
+        await tx.projectPayrollPolicy.upsert({
+          where: { projectId: project.id },
+          update: {},
+          create: {
+            organizationId: project.organizationId,
+            projectId: project.id,
+            createdBy: user.id
+          }
+        });
+      }
+      const laborDemands = await Promise.all(
+        plan.laborDemands.map(async (item) => {
+          const demand = await tx.projectLaborDemand.create({
+            data: {
+              organizationId: project.organizationId,
+              projectId: project.id,
+              importBatchId: batch.id,
+              category: item.category,
+              profession: item.profession,
+              function: item.function || null,
+              grossMonthlySalary: new Prisma.Decimal(item.grossMonthlySalary),
+              peakHeadcount: new Prisma.Decimal(item.peakHeadcount),
+              personMonths: new Prisma.Decimal(item.personMonths),
+              plannedHours: new Prisma.Decimal(item.plannedHours),
+              productivityNorm: new Prisma.Decimal(item.productivityNorm),
+              productivityUnit: item.productivityUnit || null,
+              startsAt: new Date(item.startsAt),
+              endsAt: new Date(item.endsAt),
+              monthlyProfile: toJson(item.monthlyProfile),
+              source: item.source,
+              sourceSheet: item.sourceSheet,
+              sourceRow: item.sourceRow,
+              confidence: new Prisma.Decimal(item.confidence),
+              notes: item.notes || null,
+              createdBy: user.id
+            }
+          });
+          const allocations = await Promise.all(item.allocations.map((allocation) => {
+            const budgetItem = budgetItemBySource.get(`${allocation.budgetCode ?? ""}\u0000${allocation.budgetName}`);
+            return tx.projectLaborAllocation.create({
+              data: {
+                organizationId: project.organizationId,
+                projectId: project.id,
+                laborDemandId: demand.id,
+                budgetItemId: budgetItem?.id ?? null,
+                workCode: allocation.budgetCode || null,
+                workName: allocation.budgetName,
+                sharePercent: new Prisma.Decimal(allocation.sharePercent),
+                personMonths: new Prisma.Decimal(allocation.personMonths),
+                plannedHours: new Prisma.Decimal(allocation.plannedHours),
+                requiredHeadcount: new Prisma.Decimal(allocation.requiredHeadcount),
+                confidence: new Prisma.Decimal(allocation.confidence),
+                reason: allocation.reason
+              }
+            });
+          }));
+          return { ...demand, allocations };
+        })
+      );
+
       const commitResult = {
         mode: plan.mode,
-        created: budgetItems.length + materials.length + scheduleItems.length,
+        created: budgetItems.length + materials.length + scheduleItems.length + laborDemands.length,
         updated: 0,
         skipped: (preview.summary.skippedRows ?? 0) + preview.summary.unknownRows,
         errors: preview.summary.errors,
@@ -164,7 +257,13 @@ export async function POST(request: NextRequest, { params }: { params: { project
         budgetItems: budgetItems.length,
         materials: materials.length,
         scheduleItems: scheduleItems.length,
-        removedDraftRequests
+        scheduleRevision: scheduleRevision.revision,
+        supersededScheduleItems: scheduleRevision.supersededCount,
+        relinkedScheduleBudgetItems: budgetRelink.relinked,
+        clearedScheduleBudgetItems: budgetRelink.cleared,
+        removedDraftRequests,
+        laborDemands: laborDemands.length,
+        laborAllocations: laborDemands.reduce((sum, item) => sum + item.allocations.length, 0)
       };
 
       await tx.importBatch.update({
@@ -186,7 +285,7 @@ export async function POST(request: NextRequest, { params }: { params: { project
         entity: "excel_import",
         entityId: batch.id,
         action: "import_commit",
-        summary: `Excel import saved: budget ${budgetItems.length}, materials ${materials.length}, schedule ${scheduleItems.length}, mode ${plan.mode}`,
+        summary: `Excel import saved: budget ${budgetItems.length}, materials ${materials.length}, schedule ${scheduleItems.length}, labor demands ${laborDemands.length}, mode ${plan.mode}`,
         after: {
           importBatchId: batch.id,
           mode: plan.mode,
@@ -197,20 +296,28 @@ export async function POST(request: NextRequest, { params }: { params: { project
       });
 
       return {
+        importBatchId: batch.id,
         budgetItems: budgetItems.map(serializeBudgetItem),
         materials: materials.map(serializeMaterial),
         scheduleItems: scheduleItems.map(serializeScheduleItem),
+        laborDemands: laborDemands.map(serializeLaborDemand),
         commitResult
       };
     }, { maxWait: 10_000, timeout: 30_000 });
 
-    return NextResponse.json({ ok: true, importBatchId: batch.id, ...result });
+    return NextResponse.json({ ok: true, ...result });
   } catch (error) {
     if (error instanceof ZodError) {
       return NextResponse.json({ error: "Validation error", issues: error.issues }, { status: 400 });
     }
+    if (error instanceof ImportCommitConflict) {
+      return NextResponse.json({ error: error.message }, { status: 409 });
+    }
+    if (error instanceof ImportBatchNotFound) {
+      return NextResponse.json({ error: error.message }, { status: 404 });
+    }
     if (error instanceof Prisma.PrismaClientInitializationError) {
-      return NextResponse.json({ error: "Database is not available. Start PostgreSQL and run prisma migrate/seed.", detail: error.message }, { status: 503 });
+      return NextResponse.json({ error: "Database is not available" }, { status: 503 });
     }
     if (error instanceof Error && error.message.startsWith("Нельзя сохранить")) {
       return NextResponse.json({ error: error.message }, { status: 422 });

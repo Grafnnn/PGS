@@ -127,6 +127,17 @@ function scheduleWorkRank(item: ScheduleItem, shiftDate: string) {
   return 6;
 }
 
+export function dailyReportPhotoMutationId(reportId: string, file: Pick<File, "name" | "size" | "lastModified">) {
+  const source = `${reportId}|${file.name}|${file.size}|${file.lastModified}`;
+  let hash = 2166136261;
+  for (let index = 0; index < source.length; index += 1) {
+    hash ^= source.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  const reportToken = reportId.replace(/[^A-Za-z0-9_-]/g, "_").slice(-48) || "report";
+  return `report_photo_${reportToken}_${(hash >>> 0).toString(36)}`;
+}
+
 export function buildScheduleWorkSuggestions(items: ScheduleItem[], shiftDate: string, query = "") {
   const normalizedQuery = query.trim().toLocaleLowerCase("ru-RU");
   return [...items]
@@ -433,6 +444,8 @@ export function ReportsWorkflow({ projectId, reports, scheduleItems, documents =
     setError("");
   }
 
+  const scheduleUnits = useMemo(() => new Map(scheduleItems.flatMap((item) => item.unit ? [[item.id, item.unit] as const] : [])), [scheduleItems]);
+
   function openEditReport(item: DailyReport, closeShift = false) {
     const workScopes = parseDailyReportWorkScopes(item.workScopes, item.workCategory);
     const phase = closeShift ? "closed" : item.phase ?? "closed";
@@ -442,7 +455,7 @@ export function ReportsWorkflow({ projectId, reports, scheduleItems, documents =
       ? item.crewMembers.reduce((sum, member) => sum + member.headcount, 0)
       : item.workers + item.engineers;
     const seededOutputs = seedFactFromPlan
-      ? seedDailyReportWorkOutputs(workScopes, item.workOutputs ?? [])
+      ? seedDailyReportWorkOutputs(workScopes, item.workOutputs ?? [], scheduleUnits)
       : item.workOutputs ?? [];
     setEditingId(item.id);
     setForm({
@@ -495,7 +508,7 @@ export function ReportsWorkflow({ projectId, reports, scheduleItems, documents =
         return !(removed && untouched);
       });
       const seededOutputs = current.phase === "closed"
-        ? seedDailyReportWorkOutputs(workScopes, retainedOutputs)
+        ? seedDailyReportWorkOutputs(workScopes, retainedOutputs, scheduleUnits)
         : retainedOutputs;
       return {
         ...current,
@@ -605,26 +618,47 @@ export function ReportsWorkflow({ projectId, reports, scheduleItems, documents =
     setError("");
     setPhotoNotice("");
     try {
-      const uploadedIds: string[] = [];
+      const queuedFiles = [...photoFiles];
       const uploadedDocuments: ProjectDocument[] = [];
-      for (const file of photoFiles) {
+      const failedFiles: File[] = [];
+      const failureMessages: string[] = [];
+      for (const file of queuedFiles) {
         const data = new FormData();
         data.set("file", file);
         data.set("category", "фотофиксация");
         data.set("dailyReportId", editingId);
-        const response = await fetch(`/api/projects/${projectId}/documents/upload`, { method: "POST", body: data });
-        if (!response.ok) throw new Error(await responseError(response, `Не удалось загрузить ${file.name}.`));
-        const body = (await response.json()) as { item: ProjectDocument };
-        uploadedIds.push(body.item.id);
-        uploadedDocuments.push(body.item);
+        data.set("clientMutationId", dailyReportPhotoMutationId(editingId, file));
+        try {
+          const response = await fetch(`/api/projects/${projectId}/documents/upload`, { method: "POST", body: data });
+          if (!response.ok) throw new Error(await responseError(response, `Не удалось загрузить ${file.name}.`));
+          const body = (await response.json()) as { item: ProjectDocument };
+          uploadedDocuments.push(body.item);
+        } catch (fileError) {
+          failedFiles.push(file);
+          failureMessages.push(fileError instanceof Error ? fileError.message : `Не удалось загрузить ${file.name}.`);
+        }
       }
-      setPhotoFiles([]);
-      setSelectedPhotoIds((current) => [...new Set([...current, ...uploadedIds])].slice(0, 4));
-      onReportsChange(reports.map((report) => report.id === editingId
-        ? { ...report, evidenceDocuments: [...(report.evidenceDocuments ?? []), ...uploadedDocuments] }
-        : report));
-      setPhotoNotice(`Прикреплено: ${uploadedDocuments.length}. Фото сохранены в рапорте и в разделе «Документы».`);
-      await loadDailyReports();
+      setPhotoFiles(failedFiles);
+      if (uploadedDocuments.length) {
+        const uploadedIds = uploadedDocuments.map((item) => item.id);
+        setSelectedPhotoIds((current) => [...new Set([...current, ...uploadedIds])].slice(0, 4));
+        onReportsChange(reports.map((report) => report.id === editingId
+          ? {
+              ...report,
+              evidenceDocuments: [...new Map([...(report.evidenceDocuments ?? []), ...uploadedDocuments].map((document) => [document.id, document])).values()]
+            }
+          : report));
+        onDocumentsChange?.([...new Map([...documents, ...uploadedDocuments].map((document) => [document.id, document])).values()]);
+        setPhotoNotice(`Прикреплено: ${uploadedDocuments.length}. Фото сохранены в рапорте и в разделе «Документы».`);
+        try {
+          await loadDailyReports();
+        } catch {
+          // The successful uploads remain visible in local state; a later refresh will reconcile the list.
+        }
+      }
+      if (failureMessages.length) {
+        setError(`${failureMessages.length} фото не загружено. Успешные файлы сохранены, повторите только оставшиеся. ${failureMessages[0]}`);
+      }
     } catch (uploadError) {
       setError(uploadError instanceof Error ? uploadError.message : "Не удалось загрузить фото смены.");
     } finally {
@@ -990,6 +1024,7 @@ export function ReportsWorkflow({ projectId, reports, scheduleItems, documents =
               <DailyReportWorkOutputEditor
                 crewHeadcount={selectedHeadcount}
                 outputs={form.workOutputs}
+                scheduleUnits={scheduleUnits}
                 shiftHours={form.shiftHours ?? 8}
                 onChange={(workOutputs) => setForm((current) => ({ ...current, workOutputs }))}
                 onShiftHoursChange={(shiftHours) => setForm((current) => ({
@@ -1101,12 +1136,14 @@ export function ReportsWorkflow({ projectId, reports, scheduleItems, documents =
             ) : null}
             {item.status === "approved" && item.workOutputs?.some((output) => output.scheduleItemId) ? (
               <div className={`daily-report-progress-impact ${item.progressImpact?.applied ? "is-applied" : "is-pending"}`}>
-                <span>{item.progressImpact?.applied
+                <span>{item.progressImpact?.historicalEntries
+                  ? "Факт учтён в предыдущей редакции графика. Верните рапорт на доработку и привяжите работы к текущему графику."
+                  : item.progressImpact?.applied
                   ? `Учтено в графике · ${item.progressImpact.scheduleItems} работ`
                   : item.progressImpact
                     ? "Факт ещё не учтён в графике"
                     : "Проверяем связь с графиком..."}</span>
-                {item.progressImpact && !item.progressImpact.applied && canApprove ? <button className="button secondary compact-button" disabled={busy === `daily-${item.id}`} type="button" onClick={() => void synchronizeReportProgress(item)}>Учесть в графике</button> : null}
+                {item.progressImpact && !item.progressImpact.applied && !item.progressImpact.historicalEntries && canApprove ? <button className="button secondary compact-button" disabled={busy === `daily-${item.id}`} type="button" onClick={() => void synchronizeReportProgress(item)}>Учесть в графике</button> : null}
               </div>
             ) : null}
             {item.issues || item.downtime ? <div className="daily-report-alert">{item.issues || item.downtime}</div> : null}

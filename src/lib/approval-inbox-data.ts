@@ -104,6 +104,15 @@ export async function loadApprovalInbox(user: AppUser, now = new Date()): Promis
       organizationId: true,
       name: true,
       code: true,
+      organization: {
+        select: {
+          users: {
+            where: { userId: user.id },
+            take: 1,
+            select: { role: true }
+          }
+        }
+      },
       members: {
         where: { userId: user.id },
         take: 1,
@@ -117,7 +126,7 @@ export async function loadApprovalInbox(user: AppUser, now = new Date()): Promis
     organizationId: project.organizationId,
     name: project.name,
     code: project.code,
-    role: resolveEffectiveProjectRole(user, project.members[0]?.role)
+    role: resolveEffectiveProjectRole(user, project.members[0]?.role, project.organization.users[0]?.role)
   }));
   const projectById = new Map(projects.map((project) => [project.id, project]));
   const projectIds = projects.map((project) => project.id);

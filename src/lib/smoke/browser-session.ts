@@ -34,7 +34,10 @@ export async function createStagingBrowserSmokeSession(input: { userAgent?: stri
         ipAddress: input.ipAddress
       }
     }),
-    prisma.user.update({ where: { id: user.id }, data: { appRole: "ADMIN" } })
+    prisma.membership.update({
+      where: { organizationId_userId: { organizationId: "org-demo", userId: user.id } },
+      data: { role: "super_admin" }
+    })
   ]);
 
   return {
@@ -55,7 +58,10 @@ export async function closeStagingBrowserSmokeSession(token?: string) {
   const user = await prisma.user.findUnique({ where: { email: STAGING_BROWSER_SMOKE_EMAIL }, select: { id: true } });
   if (user) {
     await prisma.$transaction([
-      prisma.user.update({ where: { id: user.id }, data: { appRole: "VIEWER" } }),
+      prisma.membership.update({
+        where: { organizationId_userId: { organizationId: "org-demo", userId: user.id } },
+        data: { role: "project_manager" }
+      }),
       prisma.session.updateMany({ where: { userId: user.id, revokedAt: null }, data: { revokedAt: new Date() } })
     ]);
   }

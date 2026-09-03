@@ -90,7 +90,7 @@ export async function POST(request: NextRequest, { params }: { params: { project
     return NextResponse.json(preview, { status: preview.errors.length ? 422 : 200 });
   } catch (error) {
     if (error instanceof Prisma.PrismaClientInitializationError) {
-      return NextResponse.json({ error: "Database is not available. Start PostgreSQL and run prisma migrate/seed.", detail: error.message }, { status: 503 });
+      return NextResponse.json({ error: "Database is not available" }, { status: 503 });
     }
     console.error(error);
     return NextResponse.json({ error: "Import preview failed" }, { status: 500 });

@@ -16,6 +16,7 @@ import type { DailyReportWorkOutput } from "@/lib/types";
 type Props = {
   outputs: DailyReportWorkOutput[];
   onChange: (outputs: DailyReportWorkOutput[]) => void;
+  scheduleUnits?: ReadonlyMap<string, string>;
   crewHeadcount?: number;
   shiftHours?: number;
   onShiftHoursChange?: (hours: number) => void;
@@ -34,7 +35,7 @@ function number(value: number) {
   return value.toLocaleString("ru-RU", { maximumFractionDigits: 3 });
 }
 
-export function DailyReportWorkOutputEditor({ outputs, onChange, crewHeadcount = 0, shiftHours = 8, onShiftHoursChange }: Props) {
+export function DailyReportWorkOutputEditor({ outputs, onChange, scheduleUnits = new Map(), crewHeadcount = 0, shiftHours = 8, onShiftHoursChange }: Props) {
   const totals = dailyReportWorkOutputTotals(outputs);
   const incompleteRows = outputs.filter((output) => Object.keys(dailyReportWorkOutputIssues(output)).length > 0).length;
   const capacity = dailyReportLaborCapacity(crewHeadcount, shiftHours);
@@ -98,6 +99,7 @@ export function DailyReportWorkOutputEditor({ outputs, onChange, crewHeadcount =
             const issues = dailyReportWorkOutputIssues(output);
             const messages = Object.values(issues);
             const allocation = dailyReportWorkOutputAllocation(output, shiftHours);
+            const scheduleUnit = output.scheduleItemId ? scheduleUnits.get(output.scheduleItemId) : undefined;
             return (
               <div className="daily-report-output-row" key={index}>
                 <label className="field output-profession">
@@ -114,7 +116,7 @@ export function DailyReportWorkOutputEditor({ outputs, onChange, crewHeadcount =
                 </label>
                 <label className="field output-unit">
                   <span>Ед.</span>
-                  <input aria-invalid={Boolean(issues.unit)} required maxLength={40} value={output.unit} onChange={(event) => update(index, { unit: event.target.value })} placeholder="м²" />
+                  <input aria-invalid={Boolean(issues.unit)} readOnly={Boolean(scheduleUnit)} required maxLength={40} value={scheduleUnit ?? output.unit} onChange={(event) => update(index, { unit: event.target.value })} placeholder="м²" title={scheduleUnit ? "Единица задана действующим графиком" : undefined} />
                 </label>
                 <button aria-label={`Удалить строку выработки ${index + 1}`} className="icon-button danger" type="button" title="Удалить строку фактической выработки" onClick={() => onChange(allocateDailyReportLabor(outputs.filter((_, itemIndex) => itemIndex !== index), crewHeadcount, shiftHours))}>
                   <Trash2 size={16} />

@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { UserPlus } from "lucide-react";
 import { BrandLogo } from "@/components/brand-logo";
+import { acceptedInviteMessage } from "@/lib/invite-acceptance";
 
 function readError(data: { error?: string | { message?: string } }) {
   return typeof data.error === "string" ? data.error : data.error?.message ?? "Ошибка запроса.";
@@ -31,9 +32,9 @@ export default function AcceptInvitePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token, name, password })
       });
-      const data = (await response.json()) as { ok?: boolean; error?: string | { message?: string } };
+      const data = (await response.json()) as { ok?: boolean; existingAccount?: boolean; error?: string | { message?: string } };
       if (!response.ok || !data.ok) throw new Error(readError(data));
-      setMessage("Приглашение принято. Теперь можно войти с новым паролем.");
+      setMessage(acceptedInviteMessage(Boolean(data.existingAccount)));
     } catch (acceptError) {
       setError(acceptError instanceof Error ? acceptError.message : "Не удалось принять приглашение.");
     } finally {

@@ -47,6 +47,8 @@ export const scheduleItemSchema = z.object({
   endsAt: z.coerce.date(),
   plannedQty: z.coerce.number().nonnegative(),
   actualQty: z.coerce.number().nonnegative().default(0),
+  unit: z.string().trim().min(1).max(40).optional().nullable(),
+  progressMode: z.enum(["quantity", "milestone"]).default("quantity"),
   status: z.enum(["not_started", "in_progress", "done", "delayed", "stopped"]).default("not_started"),
   dependency: z.string().optional().nullable()
 });

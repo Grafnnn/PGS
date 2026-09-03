@@ -132,6 +132,55 @@ describe("Project Controls and Earned Value", () => {
     expect(preview.lines[0]).toMatchObject({ plannedProgress: 50, earnedProgress: 30, status: "behind" });
   });
 
+  it("counts only approved progress in earned value", () => {
+    const baseline = buildProjectControlBaselinePreview({ project, budgetItems, scheduleItems });
+    const preview = buildProjectControlPeriodPreview({
+      baseline: {
+        budgetAtCompletion: baseline.summary.budgetAtCompletion,
+        plannedStart: baseline.summary.plannedStart,
+        plannedFinish: baseline.summary.plannedFinish,
+        scheduleCoveragePercent: baseline.summary.scheduleCoveragePercent
+      },
+      lines: baseline.lines.map((line) => ({ ...line, id: `line-${line.sequence}` })),
+      scheduleItems: scheduleItems.map((item) => ({ ...item, actualQty: 0 })),
+      progressEntries: [
+        { scheduleItemId: "schedule-1", date: "2026-01-04T00:00:00.000Z", qty: 2, status: "submitted" },
+        { scheduleItemId: "schedule-1", date: "2026-01-05T00:00:00.000Z", qty: 3, status: "checked" },
+        { scheduleItemId: "schedule-1", date: "2026-01-06T00:00:00.000Z", qty: 1, status: "approved" }
+      ],
+      payments: [],
+      dataDate: "2026-01-06T00:00:00.000Z"
+    });
+
+    expect(preview.summary.earnedValue).toBe(100);
+    expect(preview.coverage.progressEntryCount).toBe(1);
+    expect(preview.lines[0].earnedProgress).toBe(10);
+  });
+
+  it("does not use cumulative schedule actual as an EVM fallback", () => {
+    const baseline = buildProjectControlBaselinePreview({ project, budgetItems, scheduleItems });
+    const preview = buildProjectControlPeriodPreview({
+      baseline: {
+        budgetAtCompletion: baseline.summary.budgetAtCompletion,
+        plannedStart: baseline.summary.plannedStart,
+        plannedFinish: baseline.summary.plannedFinish,
+        scheduleCoveragePercent: baseline.summary.scheduleCoveragePercent
+      },
+      lines: baseline.lines.map((line) => ({ ...line, id: `line-${line.sequence}` })),
+      scheduleItems,
+      progressEntries: [
+        { scheduleItemId: "schedule-1", date: "2026-01-05T00:00:00.000Z", qty: 4, status: "checked" }
+      ],
+      payments: [],
+      dataDate: "2026-01-06T00:00:00.000Z"
+    });
+
+    expect(preview.summary.earnedValue).toBe(0);
+    expect(preview.coverage.earnedValueCoveragePercent).toBe(0);
+    expect(preview.coverage.scheduleActualFallbackCount).toBe(0);
+    expect(preview.limitations.join(" ")).toContain("не включен в EV без утвержденной записи");
+  });
+
   it("keeps unallocated actual cost visible instead of inventing line attribution", () => {
     const baseline = buildProjectControlBaselinePreview({ project, budgetItems, scheduleItems });
     const preview = buildProjectControlPeriodPreview({

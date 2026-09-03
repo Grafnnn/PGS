@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { budgetTotals, financeTotals, materialTotals, workTotals } from "@/lib/calculations";
+import { lockProjectForMutation, prepareScheduleRevision } from "@/lib/excel/import-commit-integrity";
 import { importPreviewSchema, type ImportPreview, type ImportPreviewRow } from "@/lib/excel/import-types";
 import { buildMaterialSupplyWorkflow, DEFAULT_SUPPLY_LEAD_DAYS } from "@/lib/material-supply-workflow";
 import { prisma } from "@/lib/prisma";
@@ -190,13 +191,15 @@ function importedMaterialRows(batch: ImportBatchSnapshot | null) {
   return (batch?.preview.previewRows ?? []).filter((row) => row.entityType === "material");
 }
 
-export async function loadPipelineData(projectId: string): Promise<PipelineData | null> {
-  const project = await prisma.project.findUnique({
+type PipelineClient = Pick<Prisma.TransactionClient, "project">;
+
+export async function loadPipelineDataWithClient(client: PipelineClient, projectId: string): Promise<PipelineData | null> {
+  const project = await client.project.findUnique({
     where: { id: projectId },
     include: {
       budgetItems: { orderBy: [{ section: "asc" }, { code: "asc" }] },
       materials: { orderBy: { neededAt: "asc" } },
-      scheduleItems: { orderBy: { startsAt: "asc" } },
+      scheduleItems: { where: { isCurrent: true }, orderBy: { startsAt: "asc" } },
       procurementRequests: { include: { items: true }, orderBy: { neededAt: "asc" } },
       payments: { orderBy: { plannedAt: "asc" } },
       cashflowPeriods: { orderBy: { periodStart: "asc" } },
@@ -245,6 +248,10 @@ export async function loadPipelineData(projectId: string): Promise<PipelineData 
     documents: project.documents.map((document) => ({ id: document.id, category: document.category, title: document.title, fileName: document.fileName })),
     importBatches
   };
+}
+
+export async function loadPipelineData(projectId: string): Promise<PipelineData | null> {
+  return loadPipelineDataWithClient(prisma, projectId);
 }
 
 export function buildDocumentChecklist(data: PipelineData): DocumentChecklistItem[] {
@@ -724,61 +731,130 @@ export async function buildPipelineOrThrow(projectId: string) {
   return data;
 }
 
+export class PipelineCommitConflict extends Error {}
+
+function priorityValue(priority: RiskPriority) {
+  return priority === "critical" ? 4 : priority === "high" ? 3 : priority === "medium" ? 2 : 1;
+}
+
+function normalizedProcurementUnit(value: string) {
+  return value.trim().toLocaleLowerCase("ru-RU").replace(/\s+/g, "");
+}
+
 export async function commitProcurementDraft(projectId: string, userId: string) {
-  const data = await buildPipelineOrThrow(projectId);
-  if (!data) return null;
-  const draft = buildProcurementDraft(data);
-  if (!draft.items.length) return { draft, created: [] };
-  const batchNumber = Date.now().toString(36).toUpperCase();
-  const created = await prisma.$transaction(
-    draft.groups.map((group, index) => {
+  return prisma.$transaction(async (tx) => {
+    await lockProjectForMutation(tx, projectId);
+    const data = await loadPipelineDataWithClient(tx, projectId);
+    if (!data) return null;
+
+    const draft = buildProcurementDraft(data);
+    if (!draft.items.length) return { draft, created: [], updated: [] };
+
+    const projectMaterials = new Map(data.materials.map((item) => [item.id, item]));
+    for (const item of draft.items) {
+      const material = projectMaterials.get(item.materialId);
+      if (!material || material.projectId !== projectId || normalizedProcurementUnit(material.unit) !== normalizedProcurementUnit(item.unit)) {
+        throw new PipelineCommitConflict(`Материал «${item.material}» больше не принадлежит проекту или изменил единицу измерения.`);
+      }
+    }
+
+    const batchNumber = Date.now().toString(36).toUpperCase();
+    const existingDrafts = data.procurementRequests.filter((item) => item.status === "draft");
+    const created: ReturnType<typeof serializeProcurementRequest>[] = [];
+    const updated: ReturnType<typeof serializeProcurementRequest>[] = [];
+
+    for (const [index, group] of draft.groups.entries()) {
       const importedNeededAt = new Date(group.neededAt);
       const neededAt = Number.isNaN(importedNeededAt.getTime()) ? new Date() : importedNeededAt;
-      return prisma.procurementRequest.create({
-        data: {
-          organizationId: data.project.organizationId,
-          projectId,
-          requestNumber: `SUP-${batchNumber}-${String(index + 1).padStart(2, "0")}`,
-          title: group.title,
-          initiator: "PGS Pipeline",
-          neededAt,
-          leadTimeDays: DEFAULT_SUPPLY_LEAD_DAYS,
-          groupKey: group.key,
-          priority: group.items.some((item) => item.status === "quote_needed") && group.priority === "medium" ? "high" : group.priority,
-          status: "draft",
-          createdBy: userId,
-          items: {
-            create: group.items.map((item) => ({
+      const existing = existingDrafts.find((item) => item.groupKey === group.key);
+
+      if (!existing) {
+        const request = await tx.procurementRequest.create({
+          data: {
+            organizationId: data.project.organizationId,
+            projectId,
+            requestNumber: `SUP-${batchNumber}-${String(index + 1).padStart(2, "0")}`,
+            title: group.title,
+            initiator: "PGS Pipeline",
+            neededAt,
+            leadTimeDays: DEFAULT_SUPPLY_LEAD_DAYS,
+            groupKey: group.key,
+            priority: group.items.some((item) => item.status === "quote_needed") && group.priority === "medium" ? "high" : group.priority,
+            status: "draft",
+            createdBy: userId,
+            items: {
+              create: group.items.map((item) => ({
                 materialId: item.materialId,
                 name: item.material,
                 qty: new Prisma.Decimal(item.deficit),
                 unit: item.unit,
                 comment: `Автозаявка за ${DEFAULT_SUPPLY_LEAD_DAYS} дней до потребности; источник ${draft.sourceImportBatchId ?? "project schedule"}`
               }))
-          }
+            }
+          },
+          include: { items: true }
+        });
+        created.push(serializeProcurementRequest(request));
+        continue;
+      }
+
+      for (const item of group.items) {
+        const line = existing.items.find((candidate) =>
+          candidate.materialId === item.materialId && normalizedProcurementUnit(candidate.unit) === normalizedProcurementUnit(item.unit)
+        );
+        if (line?.id) {
+          await tx.procurementRequestItem.update({
+            where: { id: line.id },
+            data: { qty: { increment: new Prisma.Decimal(item.deficit) } }
+          });
+        } else {
+          await tx.procurementRequestItem.create({
+            data: {
+              requestId: existing.id,
+              materialId: item.materialId,
+              name: item.material,
+              qty: new Prisma.Decimal(item.deficit),
+              unit: item.unit,
+              comment: `Автозаявка за ${DEFAULT_SUPPLY_LEAD_DAYS} дней до потребности; источник ${draft.sourceImportBatchId ?? "project schedule"}`
+            }
+          });
+        }
+      }
+
+      const request = await tx.procurementRequest.update({
+        where: { id: existing.id },
+        data: {
+          neededAt: neededAt < new Date(existing.neededAt) ? neededAt : undefined,
+          priority: priorityValue(group.priority) > priorityValue(existing.priority) ? group.priority : undefined
         },
         include: { items: true }
       });
-    })
-  );
-  return { draft, created: created.map(serializeProcurementRequest) };
+      updated.push(serializeProcurementRequest(request));
+    }
+
+    return { draft, created, updated };
+  }, { maxWait: 10_000, timeout: 30_000 });
 }
 
 export async function commitScheduleDraft(projectId: string, userId: string) {
-  const data = await buildPipelineOrThrow(projectId);
-  if (!data) return null;
-  const draft = buildScheduleDraft(data);
-  const projectStart = new Date(data.project.startsAt);
-  let cursor = Number.isNaN(projectStart.getTime()) ? new Date() : projectStart;
-  const itemsToCreate = draft.items.filter((item) => item.status !== "already_exists");
-  const created = await prisma.$transaction(
-    itemsToCreate.map((item) => {
+  return prisma.$transaction(async (tx) => {
+    await lockProjectForMutation(tx, projectId);
+    const data = await loadPipelineDataWithClient(tx, projectId);
+    if (!data) return null;
+    const draft = buildScheduleDraft(data);
+    const projectStart = new Date(data.project.startsAt);
+    let cursor = Number.isNaN(projectStart.getTime()) ? new Date() : projectStart;
+    const itemsToCreate = draft.items.filter((item) => item.status !== "already_exists");
+    if (!itemsToCreate.length) return { draft, created: [] };
+    const revision = await prepareScheduleRevision(tx, { projectId, replace: false });
+    const created: ReturnType<typeof serializeScheduleItem>[] = [];
+    for (const item of itemsToCreate) {
       const startsAt = new Date(cursor);
       const endsAt = new Date(cursor);
       endsAt.setDate(endsAt.getDate() + item.suggestedDurationDays);
       cursor = new Date(endsAt);
       cursor.setDate(cursor.getDate() + 1);
-      return prisma.scheduleItem.create({
+      const scheduleItem = await tx.scheduleItem.create({
         data: {
           organizationId: data.project.organizationId,
           projectId,
@@ -786,33 +862,42 @@ export async function commitScheduleDraft(projectId: string, userId: string) {
           owner: "ПТО",
           startsAt,
           endsAt,
-          plannedQty: new Prisma.Decimal(item.works || 1),
+          plannedQty: new Prisma.Decimal(100),
           actualQty: new Prisma.Decimal(0),
+          manualActualQty: new Prisma.Decimal(0),
+          reportActualQty: new Prisma.Decimal(0),
+          unit: "%",
+          progressMode: "milestone",
+          revision: revision.revision,
+          isCurrent: true,
           status: "not_started",
           dependency: item.dependency ?? undefined,
           createdBy: userId
         }
       });
-    })
-  );
-  return { draft, created: created.map(serializeScheduleItem) };
+      created.push(serializeScheduleItem(scheduleItem));
+    }
+    return { draft, created };
+  }, { maxWait: 10_000, timeout: 30_000 });
 }
 
 export async function commitCashflowDraft(projectId: string) {
-  const data = await buildPipelineOrThrow(projectId);
-  if (!data) return null;
-  const draft = buildCashflowDraft(data);
-  if (data.cashflowPeriods.length > 0) return { draft, created: [] };
-  const projectStart = new Date(data.project.startsAt);
-  const created = await prisma.$transaction(
-    draft.items.map((item, index) => {
+  return prisma.$transaction(async (tx) => {
+    await lockProjectForMutation(tx, projectId);
+    const data = await loadPipelineDataWithClient(tx, projectId);
+    if (!data) return null;
+    const draft = buildCashflowDraft(data);
+    if (data.cashflowPeriods.length > 0) return { draft, created: [] };
+    const projectStart = new Date(data.project.startsAt);
+    const created: Array<{ id: string; periodStart: string; periodEnd: string; outgoing: number; cashGap: number }> = [];
+    for (const [index, item] of draft.items.entries()) {
       const periodStart = new Date(projectStart);
       periodStart.setMonth(periodStart.getMonth() + index);
       periodStart.setDate(1);
       const periodEnd = new Date(periodStart);
       periodEnd.setMonth(periodEnd.getMonth() + 1);
       periodEnd.setDate(0);
-      return prisma.cashflowPeriod.create({
+      const period = await tx.cashflowPeriod.create({
         data: {
           organizationId: data.project.organizationId,
           projectId,
@@ -825,16 +910,14 @@ export async function commitCashflowDraft(projectId: string) {
           cashGap: new Prisma.Decimal(-item.amount)
         }
       });
-    })
-  );
-  return {
-    draft,
-    created: created.map((item) => ({
-      id: item.id,
-      periodStart: item.periodStart.toISOString(),
-      periodEnd: item.periodEnd.toISOString(),
-      outgoing: decimalToNumber(item.outgoing),
-      cashGap: decimalToNumber(item.cashGap)
-    }))
-  };
+      created.push({
+        id: period.id,
+        periodStart: period.periodStart.toISOString(),
+        periodEnd: period.periodEnd.toISOString(),
+        outgoing: decimalToNumber(period.outgoing),
+        cashGap: decimalToNumber(period.cashGap)
+      });
+    }
+    return { draft, created };
+  }, { maxWait: 10_000, timeout: 30_000 });
 }

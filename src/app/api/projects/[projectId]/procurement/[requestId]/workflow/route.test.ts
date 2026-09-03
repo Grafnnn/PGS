@@ -83,6 +83,7 @@ describe("procurement request workflow", () => {
 
   it("moves a draft to user confirmation", async () => {
     mocks.requestFindFirst.mockResolvedValue(requestRecord("draft"));
+    mocks.findFirstOrThrow.mockResolvedValue(requestRecord("draft"));
     mocks.findUniqueOrThrow.mockResolvedValue({ ...requestRecord("submitted"), submittedAt: now });
     const response = (await POST(post({ action: "submit" }), context))!;
     expect(response.status).toBe(200);
@@ -91,6 +92,7 @@ describe("procurement request workflow", () => {
 
   it("requires an owner or admin to approve and moves ordered quantity", async () => {
     mocks.requestFindFirst.mockResolvedValue(requestRecord("submitted"));
+    mocks.findFirstOrThrow.mockResolvedValue(requestRecord("submitted"));
     mocks.materialFindFirst.mockResolvedValue(materialRecord());
     mocks.materialUpdate.mockResolvedValue(materialRecord(0, 100));
     mocks.findUniqueOrThrow.mockResolvedValue({ ...requestRecord("expected"), expectedAt: new Date("2026-09-17T00:00:00.000Z") });
@@ -103,6 +105,19 @@ describe("procurement request workflow", () => {
     expect(forbidden.status).toBe(403);
   });
 
+  it("does not approve a request whose line is not linked to a current project material", async () => {
+    const original = requestRecord("submitted");
+    const request = { ...original, items: [{ ...original.items[0], materialId: null }] };
+    mocks.requestFindFirst.mockResolvedValue(request);
+    mocks.findFirstOrThrow.mockResolvedValue(request);
+
+    const response = (await POST(post({ action: "approve", expectedAt: "2026-09-17" }), context))!;
+
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toMatchObject({ error: expect.stringContaining("не связана") });
+    expect(mocks.updateMany).not.toHaveBeenCalled();
+  });
+
   it("records a partial receipt and increments warehouse delivery quantity", async () => {
     mocks.requestFindFirst.mockResolvedValue(requestRecord("expected"));
     mocks.findFirstOrThrow.mockResolvedValue(requestRecord("expected"));
@@ -112,8 +127,77 @@ describe("procurement request workflow", () => {
     mocks.requestUpdate.mockResolvedValue(requestRecord("partially_received", 40));
     const response = (await POST(post({ action: "receive", items: [{ itemId: "line-1", qty: 40 }] }), context))!;
     expect(response.status).toBe(200);
-    expect(mocks.queryRaw).toHaveBeenCalledOnce();
+    expect(mocks.queryRaw).toHaveBeenCalledTimes(2);
     expect(mocks.itemUpdate).toHaveBeenCalledWith(expect.objectContaining({ data: { receivedQty: { increment: expect.any(Prisma.Decimal) } } }));
     expect(mocks.requestUpdate).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ status: "partially_received" }) }));
+  });
+
+  it("rolls back receipt before changing quantities when a linked material is stale", async () => {
+    mocks.requestFindFirst.mockResolvedValue(requestRecord("expected"));
+    mocks.findFirstOrThrow.mockResolvedValue(requestRecord("expected"));
+    mocks.materialFindFirst.mockResolvedValue(null);
+
+    const response = (await POST(post({ action: "receive", items: [{ itemId: "line-1", qty: 40 }] }), context))!;
+
+    expect(response.status).toBe(409);
+    expect(mocks.itemUpdate).not.toHaveBeenCalled();
+    expect(mocks.requestUpdate).not.toHaveBeenCalled();
+  });
+
+  it("rejects receipt item ids that do not belong to the project request", async () => {
+    mocks.requestFindFirst.mockResolvedValue(requestRecord("expected"));
+    mocks.findFirstOrThrow.mockResolvedValue(requestRecord("expected"));
+
+    const response = (await POST(post({ action: "receive", items: [{ itemId: "line-from-another-request", qty: 1 }] }), context))!;
+
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toMatchObject({ error: expect.stringContaining("не принадлежит этой заявке") });
+    expect(mocks.itemUpdate).not.toHaveBeenCalled();
+    expect(mocks.materialUpdate).not.toHaveBeenCalled();
+  });
+
+  it("sums duplicate receipt entries for one request line", async () => {
+    mocks.requestFindFirst.mockResolvedValue(requestRecord("expected"));
+    mocks.findFirstOrThrow.mockResolvedValue(requestRecord("expected"));
+    mocks.materialFindFirst.mockResolvedValue(materialRecord(0, 100));
+    mocks.materialUpdate.mockResolvedValue(materialRecord(25, 100));
+    mocks.itemFindMany.mockResolvedValue(requestRecord("partially_received", 25).items);
+    mocks.requestUpdate.mockResolvedValue(requestRecord("partially_received", 25));
+
+    const response = (await POST(post({
+      action: "receive",
+      items: [{ itemId: "line-1", qty: 10 }, { itemId: "line-1", qty: 15 }]
+    }), context))!;
+
+    expect(response.status).toBe(200);
+    const increment = mocks.itemUpdate.mock.calls[0][0].data.receivedQty.increment as Prisma.Decimal;
+    expect(increment.toNumber()).toBe(25);
+  });
+
+  it("updates a shared material once with the aggregate from multiple request lines", async () => {
+    const first = requestRecord("expected");
+    const request = {
+      ...first,
+      items: [
+        { ...first.items[0], id: "line-1", qty: new Prisma.Decimal(60) },
+        { ...first.items[0], id: "line-2", qty: new Prisma.Decimal(40) }
+      ]
+    };
+    mocks.requestFindFirst.mockResolvedValue(request);
+    mocks.findFirstOrThrow.mockResolvedValue(request);
+    mocks.materialFindFirst.mockResolvedValue(materialRecord(0, 100));
+    mocks.materialUpdate.mockResolvedValue(materialRecord(100, 100));
+    mocks.itemFindMany.mockResolvedValue(request.items.map((line) => ({ ...line, receivedQty: line.qty })));
+    mocks.requestUpdate.mockResolvedValue({ ...request, status: "received", receivedAt: now });
+
+    const response = (await POST(post({ action: "receive" }), context))!;
+
+    expect(response.status).toBe(200);
+    expect(mocks.itemUpdate).toHaveBeenCalledTimes(2);
+    expect(mocks.materialFindFirst).toHaveBeenCalledOnce();
+    expect(mocks.materialUpdate).toHaveBeenCalledOnce();
+    const deliveredQty = mocks.materialUpdate.mock.calls[0][0].data.deliveredQty as Prisma.Decimal;
+    expect(deliveredQty.toNumber()).toBe(100);
+    expect(mocks.requestUpdate).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ status: "received" }) }));
   });
 });

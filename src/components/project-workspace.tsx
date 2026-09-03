@@ -49,6 +49,7 @@ import type { ImportExplanation, ImportMode, ImportPreview, ImportSheetMapping }
 import { drilldownAiScenarios, type AiInsightResponse, type AiScenario } from "@/lib/project-intelligence-drilldown";
 import { buildInitialProjectReadiness } from "@/lib/project-onboarding-intelligence";
 import type { DocumentChecklistItem, PipelineAction, PipelineReadiness } from "@/lib/project-pipeline";
+import { buildExpenseAwareForecast, type ProjectExpenseSummary } from "@/lib/project-expenses";
 import type { AuditEvent, BudgetItem, DailyReport, Material, Payment, ProcurementRequest, Project, ProjectDocument, ProjectDocumentVersion, ProjectMember, Risk, ScheduleItem } from "@/lib/types";
 
 type Bundle = {
@@ -187,6 +188,8 @@ export function ProjectWorkspace({
   const [pipelineLoading, setPipelineLoading] = useState("");
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [currentUserLoaded, setCurrentUserLoaded] = useState(false);
+  const [expenseSummary, setExpenseSummary] = useState<ProjectExpenseSummary | null>(null);
+  const [expenseDataAvailable, setExpenseDataAvailable] = useState(false);
   const [deleteProjectName, setDeleteProjectName] = useState("");
   const [deleteProjectConfirm, setDeleteProjectConfirm] = useState(false);
   const [deleteProjectDone, setDeleteProjectDone] = useState(false);
@@ -220,6 +223,16 @@ export function ProjectWorkspace({
   const works = useMemo(() => workTotals(scheduleItems), [scheduleItems]);
   const materialStats = useMemo(() => materialTotals(materials), [materials]);
   const finance = useMemo(() => financeTotals(payments), [payments]);
+  const paidIncoming = useMemo(() => payments
+    .filter((payment) => payment.direction === "incoming" && payment.status === "paid")
+    .reduce((total, payment) => total + payment.amount, 0), [payments]);
+  const expenseFinancials = useMemo(() => buildExpenseAwareForecast({
+    contractAmount: initialBundle.project.contractAmount,
+    budgetForecastCost: budget.totalForecastCost,
+    hasBudget: budgetItems.length > 0,
+    expenseSummary,
+    expenseDataAvailable
+  }), [budget.totalForecastCost, budgetItems.length, expenseDataAvailable, expenseSummary, initialBundle.project.contractAmount]);
   const allRisks = useMemo(() => [...risks, ...deriveAutoRisks(scheduleItems, materials, payments)], [risks, scheduleItems, materials, payments]);
   const activeRisks = allRisks.filter((risk) => risk.status !== "closed");
   const delayedWorks = scheduleItems.filter((item) => item.status === "delayed");
@@ -238,6 +251,7 @@ export function ProjectWorkspace({
     !materials.length &&
     !procurementRequests.length &&
     !payments.length &&
+    !(expenseSummary?.count ?? 0) &&
     !documents.length &&
     !risks.length;
   const onboardingPlan = useMemo(() => buildInitialProjectReadiness(initialBundle.project), [initialBundle.project]);
@@ -268,15 +282,15 @@ export function ProjectWorkspace({
 
   const signalCatalog: Record<ProjectSignalKey, ProjectSectionSignal> = {
     contract: { key: "contract", label: "Договор", value: compactMoney(initialBundle.project.contractAmount), tone: "neutral" },
-    profit: { key: "profit", label: "Прогноз прибыли", value: compactMoney(budget.forecastProfit), tone: budget.forecastProfit > 0 ? "good" : "bad" },
+    profit: { key: "profit", label: "Прогноз прибыли", value: expenseFinancials.forecastProfit === null ? "—" : compactMoney(expenseFinancials.forecastProfit), tone: expenseFinancials.forecastProfit === null ? "neutral" : expenseFinancials.forecastProfit > 0 ? "good" : "bad" },
     completion: {
       key: "completion",
       label: "Готовность",
-      value: percent(works.completionPercent),
-      tone: works.completionPercent >= 80 ? "good" : works.completionPercent >= 45 ? "warn" : "info"
+      value: scheduleItems.length ? percent(works.completionPercent) : "—",
+      tone: !scheduleItems.length ? "neutral" : works.completionPercent >= 80 ? "good" : works.completionPercent >= 45 ? "warn" : "info"
     },
-    cash: { key: "cash", label: "Кассовый разрыв", value: compactMoney(finance.cashGap), tone: finance.cashGap < 0 ? "bad" : "good" },
-    budgetVariance: { key: "budgetVariance", label: "Отклонение бюджета", value: compactMoney(budgetDeviation), tone: budgetDeviation > 0 ? "bad" : "good" },
+    cash: { key: "cash", label: "Кассовый разрыв", value: payments.length ? compactMoney(finance.cashGap) : "—", tone: !payments.length ? "neutral" : finance.cashGap < 0 ? "bad" : "good" },
+    budgetVariance: { key: "budgetVariance", label: "Отклонение бюджета", value: budgetItems.length ? compactMoney(budgetDeviation) : "—", tone: !budgetItems.length ? "neutral" : budgetDeviation > 0 ? "bad" : "good" },
     delayed: { key: "delayed", label: "Просрочено работ", value: String(delayedWorks.length), tone: delayedWorks.length ? "bad" : "good" },
     materialDeficit: { key: "materialDeficit", label: "Дефициты", value: String(materialStats.deficitItems.length), tone: materialStats.deficitItems.length ? "bad" : "good" },
     requests: { key: "requests", label: "Активные заявки", value: String(activeRequests.length), tone: activeRequests.length ? "warn" : "good" },
@@ -287,8 +301,8 @@ export function ProjectWorkspace({
     readiness: {
       key: "readiness",
       label: "Готовность данных",
-      value: `${readiness?.score ?? 0}%`,
-      tone: (readiness?.score ?? 0) >= 70 ? "good" : (readiness?.score ?? 0) >= 40 ? "warn" : "bad"
+      value: readiness ? `${readiness.score}%` : "—",
+      tone: !readiness ? "neutral" : readiness.score >= 70 ? "good" : readiness.score >= 40 ? "warn" : "bad"
     },
     payments: { key: "payments", label: "Платежные операции", value: String(payments.length), tone: payments.length ? "info" : "neutral" },
     audit: { key: "audit", label: "События аудита", value: String(auditEvents.length), tone: auditEvents.length ? "info" : "neutral" }
@@ -308,7 +322,7 @@ export function ProjectWorkspace({
 
   useEffect(() => {
     let active = true;
-    fetch("/api/auth/me")
+    fetch(`/api/auth/me?projectId=${encodeURIComponent(initialBundle.project.id)}`)
       .then(async (response) => {
         const data = (await response.json()) as { user?: CurrentUser | null };
         if (active) setCurrentUser(response.ok ? (data.user ?? null) : null);
@@ -322,7 +336,28 @@ export function ProjectWorkspace({
     return () => {
       active = false;
     };
+  }, [initialBundle.project.id]);
+
+  const acceptExpenseSummary = useCallback((summary: ProjectExpenseSummary) => {
+    setExpenseSummary(summary);
+    setExpenseDataAvailable(true);
   }, []);
+
+  const loadExpenseSummary = useCallback(async () => {
+    try {
+      const response = await fetch(`/api/projects/${initialBundle.project.id}/expenses`, { cache: "no-store" });
+      const data = await response.json() as { summary?: ProjectExpenseSummary };
+      if (!response.ok || !data.summary) throw new Error("Expense summary unavailable");
+      acceptExpenseSummary(data.summary);
+    } catch {
+      setExpenseSummary(null);
+      setExpenseDataAvailable(false);
+    }
+  }, [acceptExpenseSummary, initialBundle.project.id]);
+
+  useEffect(() => {
+    void loadExpenseSummary();
+  }, [loadExpenseSummary]);
 
   const loadAudit = useCallback(async () => {
     try {
@@ -856,7 +891,7 @@ export function ProjectWorkspace({
           <div className="eyebrow">{initialBundle.project.customer}</div>
           <div className="project-title-row">
             <h1>{initialBundle.project.name}</h1>
-            <StatusBadge tone="good">В работе</StatusBadge>
+            <StatusBadge tone={statusTone(initialBundle.project.status)}>{readableStatus(initialBundle.project.status)}</StatusBadge>
           </div>
           <div className="project-summary">
             <span>{initialBundle.project.object}</span>
@@ -978,7 +1013,7 @@ export function ProjectWorkspace({
               id: "summary",
               label: "Сводка",
               description: "Ключевые суммы и структура себестоимости без операционных форм.",
-              content: <BudgetAnalytics items={budgetItems} contractAmount={initialBundle.project.contractAmount} paid={finance.incomingPayments} forecastProfit={budget.forecastProfit} />
+              content: <BudgetAnalytics items={budgetItems} contractAmount={initialBundle.project.contractAmount} paid={paidIncoming} financials={expenseFinancials} />
             },
             {
               id: "register",
@@ -1171,26 +1206,10 @@ export function ProjectWorkspace({
               id: "add",
               label: "Добавить",
               description: "Создать единичную потребность вручную.",
-              content: <button
-                className="button primary"
-                onClick={async () => {
-                  const saved = await createResource<Material>("materials", {
-                    name: "Кабель",
-                    unit: "м",
-                    requiredQty: 500,
-                    orderedQty: 0,
-                    deliveredQty: 0,
-                    consumedQty: 0,
-                    plannedUnitPrice: 240,
-                    actualUnitPrice: 0,
-                    supplier: "Не выбран",
-                    neededAt: new Date().toISOString().slice(0, 10),
-                    status: "required"
-                  });
-                  setMaterials((current) => [...current, saved]);
-                }}
-                type="button"
-              ><Plus size={18} />Добавить материал</button>
+              content: <MaterialCreateForm onAdd={async (payload) => {
+                const saved = await createResource<Material>("materials", payload);
+                setMaterials((current) => [...current, saved]);
+              }} />
             }
           ]}
         />
@@ -1244,10 +1263,10 @@ export function ProjectWorkspace({
             id: "summary",
             label: "Сводка",
             description: "Прогноз завершения, маржа и текущая финансовая позиция.",
-            content: <><CostToCompleteWorkspace project={initialBundle.project} budgetItems={budgetItems} scheduleItems={scheduleItems} materials={materials} procurementRequests={procurementRequests} payments={payments} risks={risks} dailyReports={reports} onNavigate={setActiveTab} /><FinanceCommand payments={payments} contractAmount={initialBundle.project.contractAmount} forecastProfit={budget.forecastProfit} /></>
+            content: <><CostToCompleteWorkspace project={initialBundle.project} budgetItems={budgetItems} scheduleItems={scheduleItems} materials={materials} procurementRequests={procurementRequests} payments={payments} risks={risks} dailyReports={reports} onNavigate={setActiveTab} /><FinanceCommand payments={payments} contractAmount={initialBundle.project.contractAmount} financials={expenseFinancials} /></>
           },
           { id: "payments", label: "Платежи", description: "Входящие и исходящие платежи проекта.", content: <PaymentTable items={payments} /> },
-          { id: "expenses", label: "Расходы", description: "Фактические затраты, чеки и постатейный Excel-реестр.", content: <ExpenseRegisterWorkspace projectId={initialBundle.project.id} canEdit={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN" || currentUser?.role === "MANAGER"} canDelete={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN"} /> },
+          { id: "expenses", label: "Расходы", description: "Фактические затраты, чеки и постатейный Excel-реестр.", content: <ExpenseRegisterWorkspace projectId={initialBundle.project.id} canEdit={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN" || currentUser?.role === "MANAGER"} canDelete={currentUser?.role === "OWNER" || currentUser?.role === "ADMIN"} onSummaryChange={acceptExpenseSummary} /> },
           {
             id: "forecast",
             label: "Прогноз и cashflow",
@@ -1563,24 +1582,10 @@ export function ProjectWorkspace({
               onNavigate={setActiveTab}
             /> },
           { id: "matrix", label: "Матрица", description: "Приоритеты рисков и полный реестр карточек.", content: <><RiskMatrix items={allRisks} /><RiskTable items={allRisks} /></> },
-          { id: "add", label: "Добавить", description: "Создать риск вручную и назначить владельца.", content: <button
-            className="button primary"
-            onClick={async () => {
-              const saved = await createResource<Risk>("risks", {
-                title: "Новый риск",
-                reason: "Опишите причину и требуемое решение.",
-                priority: "medium",
-                owner: "РП",
-                dueAt: new Date().toISOString().slice(0, 10),
-                status: "open"
-              });
-              setRisks((current) => [...current, saved]);
-            }}
-            type="button"
-          >
-            <Plus size={18} />
-            Добавить риск
-          </button> }
+          { id: "add", label: "Добавить", description: "Создать риск вручную и назначить владельца.", content: <RiskCreateForm onAdd={async (payload) => {
+            const saved = await createResource<Risk>("risks", payload);
+            setRisks((current) => [...current, saved]);
+          }} /> }
         ]} />
       )}
 
@@ -2911,6 +2916,68 @@ function MaterialEditForm({ item, onSave, onCancel }: { item: Material; onSave: 
   );
 }
 
+function MaterialCreateForm({ onAdd }: { onAdd: (payload: Omit<Material, "id" | "projectId" | "costCodeId">) => Promise<void> }) {
+  return (
+    <form
+      className="form-grid form-surface"
+      onSubmit={(event) => {
+        event.preventDefault();
+        const form = event.currentTarget;
+        const data = new FormData(form);
+        void onAdd({
+          name: String(data.get("name") ?? "").trim(),
+          unit: String(data.get("unit") ?? "").trim(),
+          requiredQty: Number(data.get("requiredQty") ?? 0),
+          orderedQty: 0,
+          deliveredQty: 0,
+          consumedQty: 0,
+          plannedUnitPrice: Number(data.get("plannedUnitPrice") ?? 0),
+          actualUnitPrice: 0,
+          supplier: String(data.get("supplier") ?? "").trim() || "Не выбран",
+          neededAt: String(data.get("neededAt") ?? ""),
+          status: "required"
+        }).then(() => form.reset()).catch(() => undefined);
+      }}
+    >
+      <label>Материал<input name="name" minLength={2} required placeholder="Например, мембрана ПВХ" /></label>
+      <label>Ед.<input name="unit" required placeholder="м²" /></label>
+      <label>Потребность<input name="requiredQty" min="0" required step="0.001" type="number" /></label>
+      <label>Плановая цена<input name="plannedUnitPrice" min="0" required step="0.01" type="number" /></label>
+      <label>Поставщик<input name="supplier" placeholder="Можно указать позже" /></label>
+      <label>Нужно на объекте<input defaultValue={new Date().toISOString().slice(0, 10)} name="neededAt" required type="date" /></label>
+      <label>&nbsp;<button className="button primary" type="submit"><Plus size={18} />Создать потребность</button></label>
+    </form>
+  );
+}
+
+function RiskCreateForm({ onAdd }: { onAdd: (payload: Omit<Risk, "id" | "projectId">) => Promise<void> }) {
+  return (
+    <form
+      className="form-grid form-surface"
+      onSubmit={(event) => {
+        event.preventDefault();
+        const form = event.currentTarget;
+        const data = new FormData(form);
+        void onAdd({
+          title: String(data.get("title") ?? "").trim(),
+          reason: String(data.get("reason") ?? "").trim(),
+          priority: String(data.get("priority") ?? "medium") as Risk["priority"],
+          owner: String(data.get("owner") ?? "").trim(),
+          dueAt: String(data.get("dueAt") ?? ""),
+          status: "open"
+        }).then(() => form.reset()).catch(() => undefined);
+      }}
+    >
+      <label>Риск<input name="title" minLength={3} required placeholder="Что может повлиять на проект" /></label>
+      <label className="wide">Причина и влияние<textarea name="reason" minLength={3} required rows={3} placeholder="Источник риска, возможные последствия и что нужно решить" /></label>
+      <label>Приоритет<select defaultValue="medium" name="priority"><option value="low">Низкий</option><option value="medium">Средний</option><option value="high">Высокий</option><option value="critical">Критичный</option></select></label>
+      <label>Ответственный<input name="owner" minLength={2} required placeholder="ФИО или роль" /></label>
+      <label>Срок реакции<input defaultValue={new Date().toISOString().slice(0, 10)} name="dueAt" required type="date" /></label>
+      <label>&nbsp;<button className="button primary" type="submit"><Plus size={18} />Создать риск</button></label>
+    </form>
+  );
+}
+
 function RowActions({ onEdit, onDelete }: { onEdit: () => void; onDelete: () => void }) {
   return (
     <div className="row-actions">
@@ -3366,7 +3433,7 @@ function formatAiResultForCopy(result: AiInsightResponse) {
   ].join("\n");
 }
 
-function BudgetAnalytics({ items, contractAmount, paid, forecastProfit }: { items: BudgetItem[]; contractAmount: number; paid: number; forecastProfit: number }) {
+function BudgetAnalytics({ items, contractAmount, paid, financials }: { items: BudgetItem[]; contractAmount: number; paid: number; financials: ReturnType<typeof buildExpenseAwareForecast> }) {
   const sections = Object.entries(
     items.reduce<Record<string, number>>((acc, item) => {
       acc[item.section] = (acc[item.section] ?? 0) + item.qty * item.forecastUnitPrice;
@@ -3374,33 +3441,37 @@ function BudgetAnalytics({ items, contractAmount, paid, forecastProfit }: { item
     }, {})
   ).sort((left, right) => right[1] - left[1]);
   const max = Math.max(...sections.map(([, value]) => value), 1);
-  const forecastCost = sections.reduce((total, [, value]) => total + value, 0);
+  const forecastCost = financials.forecastCost;
+  const costWidth = forecastCost !== null && contractAmount > 0 ? Math.min(100, forecastCost / contractAmount * 100) : 0;
+  const profitWidth = financials.forecastProfit !== null && contractAmount > 0 ? Math.min(100, Math.abs(financials.forecastProfit) / contractAmount * 100) : 0;
 
   return (
     <div className="analytics-grid">
       <div className="metric-strip">
         <Kpi title="Договор" value={compactMoney(contractAmount)} />
-        <Kpi title="Прогноз затрат" value={compactMoney(forecastCost)} tone={forecastCost > contractAmount ? "bad" : "warn"} />
-        <Kpi title="Прогноз прибыли" value={compactMoney(forecastProfit)} tone={forecastProfit > 0 ? "good" : "bad"} />
-        <Kpi title="Оплачено" value={compactMoney(paid)} />
+        <Kpi title="Прогноз затрат" value={forecastCost === null ? "—" : compactMoney(forecastCost)} tone={forecastCost === null ? undefined : forecastCost > contractAmount ? "bad" : "warn"} />
+        <Kpi title="Фактические расходы" value={financials.actualExpenses === null ? "—" : compactMoney(financials.actualExpenses)} tone={financials.actualExpenses === null ? undefined : "warn"} />
+        <Kpi title="Прогноз прибыли" value={financials.forecastProfit === null ? "—" : compactMoney(financials.forecastProfit)} tone={financials.forecastProfit === null ? undefined : financials.forecastProfit > 0 ? "good" : "bad"} />
+        <Kpi title="Получено от заказчика" value={compactMoney(paid)} />
       </div>
       <div className="breakdown-panel">
         <h3>Структура бюджета по разделам</h3>
-        {sections.slice(0, 6).map(([section, value]) => (
+        {sections.length ? sections.slice(0, 6).map(([section, value]) => (
           <div className="breakdown-row" key={section}>
             <span>{section}</span>
             <div><i style={{ width: `${Math.max(8, (value / max) * 100)}%` }} /></div>
             <strong>{compactMoney(value)}</strong>
           </div>
-        ))}
+        )) : <p className="muted">ВОР не загружена: прогноз по разделам пока недоступен.</p>}
       </div>
       <div className="waterfall">
         <h3>Договор → затраты → прибыль</h3>
         <div className="waterfall-track">
           <span style={{ width: "100%" }}>Договор {compactMoney(contractAmount)}</span>
-          <span className="warn" style={{ width: `${Math.min(100, (forecastCost / contractAmount) * 100)}%` }}>Затраты</span>
-          <span className={forecastProfit > 0 ? "good" : "bad"} style={{ width: `${Math.min(100, (Math.abs(forecastProfit) / contractAmount) * 100)}%` }}>Прибыль</span>
+          {forecastCost !== null && <span className="warn" style={{ width: `${costWidth}%` }}>Затраты</span>}
+          {financials.forecastProfit !== null && <span className={financials.forecastProfit > 0 ? "good" : "bad"} style={{ width: `${profitWidth}%` }}>Прибыль</span>}
         </div>
+        {forecastCost === null && <p className="muted">Добавьте ВОР или фактические расходы для расчёта прогноза.</p>}
       </div>
     </div>
   );
@@ -3454,17 +3525,20 @@ function ProcurementPipeline({ items }: { items: ProcurementRequest[] }) {
   );
 }
 
-function FinanceCommand({ payments, contractAmount, forecastProfit }: { payments: Payment[]; contractAmount: number; forecastProfit: number }) {
-  const incoming = payments.filter((payment) => payment.direction === "incoming").reduce((sum, payment) => sum + payment.amount, 0);
-  const outgoing = payments.filter((payment) => payment.direction === "outgoing").reduce((sum, payment) => sum + payment.amount, 0);
+function FinanceCommand({ payments, contractAmount, financials }: { payments: Payment[]; contractAmount: number; financials: ReturnType<typeof buildExpenseAwareForecast> }) {
+  const incoming = payments.filter((payment) => payment.direction === "incoming" && payment.status === "paid").reduce((sum, payment) => sum + payment.amount, 0);
+  const outgoing = payments.filter((payment) => payment.direction === "outgoing" && payment.status === "paid").reduce((sum, payment) => sum + payment.amount, 0);
+  const outstanding = payments.filter((payment) => payment.direction === "outgoing" && payment.status !== "paid").reduce((sum, payment) => sum + payment.amount, 0);
   const overdue = payments.filter((payment) => payment.status === "overdue").reduce((sum, payment) => sum + payment.amount, 0);
 
   return (
     <div className="analytics-grid finance-grid">
       <div className="metric-strip">
         <Kpi title="Договор" value={compactMoney(contractAmount)} />
-        <Kpi title="Оплачено" value={compactMoney(incoming)} tone="good" />
-        <Kpi title="Кредиторка" value={compactMoney(outgoing)} />
+        <Kpi title="Получено" value={compactMoney(incoming)} tone="good" />
+        <Kpi title="Оплачено поставщикам" value={compactMoney(outgoing)} />
+        <Kpi title="К оплате" value={compactMoney(outstanding)} tone={outstanding ? "warn" : "good"} />
+        <Kpi title="Расходы по реестру" value={financials.actualExpenses === null ? "—" : compactMoney(financials.actualExpenses)} />
         <Kpi title="Просрочено" value={compactMoney(overdue)} tone={overdue ? "bad" : "good"} />
       </div>
       <div className="waterfall">
@@ -3480,8 +3554,10 @@ function FinanceCommand({ payments, contractAmount, forecastProfit }: { payments
       </div>
       <div className="waterfall">
         <h3>Прогноз прибыли</h3>
-        <strong className={forecastProfit > 0 ? "delta-good" : "delta-bad"}>{compactMoney(forecastProfit)}</strong>
-        <p className="muted">С учетом текущего прогноза затрат и оплат.</p>
+        {financials.forecastProfit === null
+          ? <strong>Нет данных</strong>
+          : <strong className={financials.forecastProfit > 0 ? "delta-good" : "delta-bad"}>{compactMoney(financials.forecastProfit)}</strong>}
+        <p className="muted">С учетом прогноза затрат и зарегистрированных фактических расходов.</p>
       </div>
     </div>
   );

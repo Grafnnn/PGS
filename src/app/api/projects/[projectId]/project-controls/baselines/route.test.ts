@@ -4,6 +4,11 @@ const mocks = vi.hoisted(() => ({
   user: vi.fn(),
   role: vi.fn(),
   projectFind: vi.fn(),
+  txProjectFind: vi.fn(),
+  queryRaw: vi.fn(),
+  baselineFind: vi.fn(),
+  baselineCreate: vi.fn(),
+  baselineUpdateMany: vi.fn(),
   transaction: vi.fn()
 }));
 
@@ -39,6 +44,21 @@ describe("project controls baseline route", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.user.mockResolvedValue({ authenticated: true, id: "user-1", name: "Owner" });
+    mocks.queryRaw.mockResolvedValue([{ id: "project-1" }]);
+    mocks.txProjectFind.mockResolvedValue(project);
+    mocks.baselineFind.mockResolvedValue(null);
+    mocks.baselineUpdateMany.mockResolvedValue({ count: 0 });
+    mocks.baselineCreate.mockResolvedValue({ id: "baseline-1", projectId: "project-1", sequence: 1, status: "draft" });
+    const tx = {
+      $queryRaw: mocks.queryRaw,
+      project: { findUnique: mocks.txProjectFind },
+      projectControlBaseline: {
+        findFirst: mocks.baselineFind,
+        updateMany: mocks.baselineUpdateMany,
+        create: mocks.baselineCreate
+      }
+    };
+    mocks.transaction.mockImplementation(async (callback: (client: typeof tx) => unknown) => callback(tx));
   });
 
   it("rejects before body parsing and database access when edit permission is missing", async () => {
@@ -74,5 +94,31 @@ describe("project controls baseline route", () => {
     }), { params: { projectId: "project-1" } });
     expect(response.status).toBe(403);
     expect(mocks.projectFind).not.toHaveBeenCalled();
+  });
+
+  it("locks the project and rebuilds create data from fresh current state", async () => {
+    mocks.role.mockResolvedValue("MANAGER");
+    const order: string[] = [];
+    mocks.queryRaw.mockImplementation(async () => {
+      order.push("lock");
+      return [{ id: "project-1" }];
+    });
+    mocks.txProjectFind.mockImplementation(async () => {
+      order.push("read");
+      return project;
+    });
+    const { POST } = await import("./route");
+    const response = await POST(new Request("https://pgs.local", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ mode: "create", name: "Baseline 1", dataDate: "2026-01-01", confirm: true })
+    }), { params: { projectId: "project-1" } });
+
+    expect(response.status).toBe(201);
+    expect(order).toEqual(["lock", "read"]);
+    expect(mocks.projectFind).not.toHaveBeenCalled();
+    expect(mocks.baselineCreate).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ budgetAtCompletion: 1000, scheduleItemCount: 1 })
+    }));
   });
 });

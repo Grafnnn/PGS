@@ -97,6 +97,8 @@ export interface ImportScheduleItem {
   endsAt: string;
   plannedQty: number;
   actualQty: number;
+  unit?: string;
+  progressMode?: "quantity" | "milestone";
   status: "not_started" | "in_progress" | "done" | "delayed" | "stopped";
   dependency?: string;
   sheetName: string;
@@ -318,6 +320,8 @@ export const importScheduleItemSchema = z.object({
   endsAt: z.coerce.date(),
   plannedQty: z.coerce.number().nonnegative(),
   actualQty: z.coerce.number().nonnegative(),
+  unit: z.string().trim().min(1).max(40).optional(),
+  progressMode: z.enum(["quantity", "milestone"]).default("quantity"),
   status: z.enum(["not_started", "in_progress", "done", "delayed", "stopped"]),
   dependency: z.string().optional(),
   sheetName: z.string(),

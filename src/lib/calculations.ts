@@ -5,6 +5,15 @@ export const money = (value: number) =>
   new Intl.NumberFormat("ru-RU", { style: "currency", currency: "RUB", maximumFractionDigits: 0 }).format(value);
 export const percent = (value: number) => `${Number.isFinite(value) ? value.toFixed(1) : "0.0"}%`;
 
+export function scheduleProgressPercent(items: Array<{ plannedQty: number; actualQty: number; status: string }>) {
+  const itemProgress = items.map((item) => {
+    if (item.plannedQty > 0) return Math.min(Math.max(item.actualQty / item.plannedQty, 0), 1);
+    return item.status === "done" ? 1 : 0;
+  });
+
+  return itemProgress.length ? (sum(itemProgress) / itemProgress.length) * 100 : null;
+}
+
 export function budgetTotals(contractAmount: number, items: BudgetItem[]) {
   const plannedByKind = (kind: BudgetItem["kind"]) =>
     sum(items.filter((item) => item.kind === kind).map((item) => item.qty * item.plannedUnitPrice));
@@ -16,6 +25,7 @@ export function budgetTotals(contractAmount: number, items: BudgetItem[]) {
   const totalPlannedCost = sum(items.map((item) => item.qty * item.plannedUnitPrice));
   const totalActualCost = sum(items.map((item) => item.qty * item.actualUnitPrice));
   const totalForecastCost = sum(items.map((item) => item.qty * item.forecastUnitPrice));
+  const marginPercent = (cost: number) => contractAmount > 0 ? ((contractAmount - cost) / contractAmount) * 100 : 0;
 
   return {
     plannedByKind,
@@ -28,9 +38,9 @@ export function budgetTotals(contractAmount: number, items: BudgetItem[]) {
     plannedProfit: contractAmount - totalPlannedCost,
     actualProfit: contractAmount - totalActualCost,
     forecastProfit: contractAmount - totalForecastCost,
-    plannedMarginPercent: ((contractAmount - totalPlannedCost) / contractAmount) * 100,
-    actualMarginPercent: ((contractAmount - totalActualCost) / contractAmount) * 100,
-    forecastMarginPercent: ((contractAmount - totalForecastCost) / contractAmount) * 100
+    plannedMarginPercent: marginPercent(totalPlannedCost),
+    actualMarginPercent: marginPercent(totalActualCost),
+    forecastMarginPercent: marginPercent(totalForecastCost)
   };
 }
 
@@ -43,7 +53,9 @@ export function workTotals(items: ScheduleItem[], today = new Date()) {
     plannedWorkAmount,
     completedWorkAmount,
     remainingWorkAmount: Math.max(plannedWorkAmount - completedWorkAmount, 0),
-    completionPercent: plannedWorkAmount ? (completedWorkAmount / plannedWorkAmount) * 100 : 0,
+    // A project schedule mixes m², m³, pieces and milestones. Averaging item progress
+    // avoids treating a numerically large unit as more important than every other task.
+    completionPercent: scheduleProgressPercent(items) ?? 0,
     overdueItems,
     delayDays: overdueItems.reduce((max, item) => {
       const diff = Math.ceil((today.getTime() - new Date(item.endsAt).getTime()) / 86_400_000);
@@ -59,6 +71,7 @@ export function materialTotals(items: Material[]) {
   const consumedQty = sum(items.map((item) => item.consumedQty));
   const plannedMaterialCost = sum(items.map((item) => item.requiredQty * item.plannedUnitPrice));
   const actualMaterialCost = sum(items.map((item) => item.orderedQty * item.actualUnitPrice));
+  const deliveryRatios = items.map((item) => item.requiredQty > 0 ? Math.min(Math.max(item.deliveredQty / item.requiredQty, 0), 1) : 0);
 
   return {
     requiredQty,
@@ -69,11 +82,12 @@ export function materialTotals(items: Material[]) {
     plannedMaterialCost,
     actualMaterialCost,
     materialOverrun: actualMaterialCost - plannedMaterialCost,
+    deliveryPercent: deliveryRatios.length ? (sum(deliveryRatios) / deliveryRatios.length) * 100 : 0,
     deficitItems: items.filter((item) => item.deliveredQty < item.requiredQty && item.status !== "closed")
   };
 }
 
-export function financeTotals(payments: Payment[], openingBalance = 1_500_000) {
+export function financeTotals(payments: Payment[], openingBalance = 0) {
   const incomingPayments = sum(payments.filter((payment) => payment.direction === "incoming").map((payment) => payment.amount));
   const outgoingPayments = sum(payments.filter((payment) => payment.direction === "outgoing").map((payment) => payment.amount));
   const closingBalance = openingBalance + incomingPayments - outgoingPayments;
@@ -125,10 +139,11 @@ export function deriveAutoRisks(schedule: ScheduleItem[], materials: Material[],
   }
 
   const finance = financeTotals(payments);
-  if (finance.cashGap < 0) {
+  const financeProjectId = payments[0]?.projectId;
+  if (finance.cashGap < 0 && financeProjectId) {
     risks.push({
       id: "auto-cash-gap",
-      projectId: payments[0]?.projectId ?? "project-demo",
+      projectId: financeProjectId,
       title: "Кассовый разрыв по проекту",
       reason: `Прогнозный отрицательный баланс ${money(finance.cashGap)}.`,
       priority: "critical",

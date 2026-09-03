@@ -3,8 +3,10 @@ import { localUser } from "./permissions";
 import { resolveEffectiveProjectRole, roleAllowsProjectAction } from "./project-permissions";
 
 describe("project-level permissions", () => {
-  it("lets global owner/admin win and maps project member roles", () => {
+  it("uses local roles only in local mode and scopes authenticated authority to the target organization", () => {
     expect(resolveEffectiveProjectRole(localUser("OWNER"), "VIEWER")).toBe("OWNER");
+    expect(resolveEffectiveProjectRole({ ...localUser("OWNER"), authenticated: true }, "VIEWER", "project_manager")).toBe("VIEWER");
+    expect(resolveEffectiveProjectRole({ ...localUser("VIEWER"), authenticated: true }, "VIEWER", "owner")).toBe("OWNER");
     expect(resolveEffectiveProjectRole({ ...localUser("MANAGER"), authenticated: true }, "VIEWER")).toBe("VIEWER");
     expect(resolveEffectiveProjectRole({ ...localUser("MANAGER"), authenticated: true }, "MANAGER")).toBe("MANAGER");
   });

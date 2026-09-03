@@ -31,7 +31,7 @@ export async function GET(_request: Request, { params }: { params: { projectId: 
       include: {
         budgetSections: { orderBy: { sortOrder: "asc" } },
         budgetItems: { orderBy: [{ section: "asc" }, { code: "asc" }] },
-        scheduleItems: { orderBy: { startsAt: "asc" } },
+        scheduleItems: { where: { isCurrent: true }, orderBy: { startsAt: "asc" } },
         materials: { orderBy: { neededAt: "asc" } },
         procurementRequests: { include: { items: true }, orderBy: { neededAt: "asc" } },
         payments: { orderBy: { plannedAt: "asc" } },
@@ -52,7 +52,7 @@ export async function GET(_request: Request, { params }: { params: { projectId: 
       materials: project.materials.map(serializeMaterial),
       procurementRequests: project.procurementRequests.map(serializeProcurementRequest),
       payments: project.payments.map(serializePayment),
-      dailyReports: project.dailyReports.map(serializeDailyReport),
+      dailyReports: project.dailyReports.map((item) => serializeDailyReport(item)),
       risks: project.risks.map(serializeRisk),
       documents: project.documents.map((document) => ({
         ...serializeDocument(document),
@@ -73,7 +73,7 @@ export async function GET(_request: Request, { params }: { params: { projectId: 
     });
   } catch (error) {
     if (error instanceof Prisma.PrismaClientInitializationError) {
-      return NextResponse.json({ error: "Database is not available. Start PostgreSQL and run prisma migrate/seed.", detail: error.message }, { status: 503 });
+      return NextResponse.json({ error: "Database is not available" }, { status: 503 });
     }
     console.error(error);
     return NextResponse.json({ error: "Project export failed" }, { status: 500 });

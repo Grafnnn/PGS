@@ -242,4 +242,28 @@ describe("schedule cashflow intelligence model", () => {
     expect(model.timeline[1]?.packages).toEqual(["Раздел 1. Демонтажные работы", "Раздел 2."]);
     expect(model.timeline.reduce((sum, week) => sum + week.totalAmount, 0)).toBe(3000);
   });
+
+  it("matches approved GPR stage metadata to the corresponding budget section", () => {
+    const model = buildScheduleCashflowIntelligenceModel({
+      project: { name: "Троицк", startsAt: "2026-09-01" },
+      budgetItems: [budget({ section: "Раздел 1. Демонтажные работы", qty: 10, plannedUnitPrice: 100 })],
+      scheduleItems: [{
+        id: "gpr-1",
+        projectId: "project-demo",
+        name: "G02 · Захватка 1 · Демонтаж кровли",
+        owner: "Демонтажная бригада",
+        startsAt: "2026-09-07",
+        endsAt: "2026-09-19",
+        plannedQty: 100,
+        actualQty: 0,
+        unit: "%",
+        progressMode: "milestone",
+        status: "not_started",
+        dependency: "Этап ГПР: 1. Демонтажные работы · Предшественник/допуск: G01"
+      }]
+    });
+
+    expect(model.timeline.map((week) => week.label)).toEqual(["07.09 - 13.09", "14.09 - 20.09"]);
+    expect(model.timeline.map((week) => week.workAmount)).toEqual([500, 500]);
+  });
 });

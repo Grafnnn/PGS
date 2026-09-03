@@ -13,6 +13,7 @@ import {
 } from "@/lib/risk-executive-intelligence";
 import type { AiInsightResponse } from "@/lib/project-intelligence-drilldown";
 import type { DocumentChecklistItem, PipelineAction, PipelineReadiness } from "@/lib/project-pipeline";
+import type { ProjectExpenseSummary } from "@/lib/project-expenses";
 import type { BudgetItem, DailyReport, Material, Payment, ProcurementRequest, Project, ProjectDocument, Risk, ScheduleItem } from "@/lib/types";
 
 type RiskExecutiveWorkspaceProps = {
@@ -235,11 +236,27 @@ export function RiskExecutiveWorkspace({
   aiInsight = null
 }: RiskExecutiveWorkspaceProps) {
   const [view, setView] = useState<RiskExecutiveView>("register");
+  const [expenseSummary, setExpenseSummary] = useState<ProjectExpenseSummary | null>(null);
   const workspaceRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     workspaceRef.current?.closest<HTMLElement>(".project-module-view-body")?.scrollTo({ top: 0 });
   }, [view]);
+  useEffect(() => {
+    if (!project.id) return;
+    let active = true;
+    fetch(`/api/projects/${project.id}/expenses`, { cache: "no-store" })
+      .then(async (response) => response.ok ? response.json() as Promise<{ summary?: ProjectExpenseSummary }> : null)
+      .then((body) => {
+        if (active) setExpenseSummary(body?.summary ?? null);
+      })
+      .catch(() => {
+        if (active) setExpenseSummary(null);
+      });
+    return () => {
+      active = false;
+    };
+  }, [project.id]);
   const model = buildRiskExecutiveIntelligence({
     project,
     budgetItems,
@@ -247,6 +264,7 @@ export function RiskExecutiveWorkspace({
     materials,
     procurementRequests,
     payments,
+    expenseSummary,
     dailyReports,
     risks,
     documents,

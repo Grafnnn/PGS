@@ -11,6 +11,12 @@ import { deleteDocumentFile, sanitizeFileName, makeStorageKey, saveDocumentFile,
 
 export const runtime = "nodejs";
 
+class DailyReportUploadError extends Error {
+  constructor(message: string, readonly status: number) {
+    super(message);
+  }
+}
+
 async function existingUpload(projectId: string, clientMutationId: string) {
   const receipt = await prisma.fieldSyncReceipt.findUnique({
     where: { projectId_clientMutationId: { projectId, clientMutationId } }
@@ -66,6 +72,18 @@ export async function POST(request: NextRequest, { params }: { params: { project
     await saveDocumentFile(storageKey, bytes);
 
     const document = await prisma.$transaction(async (tx) => {
+      const projectRows = await tx.$queryRaw<Array<{ id: string }>>`SELECT id FROM "projects" WHERE id = ${params.projectId} FOR UPDATE`;
+      if (!projectRows.length) throw new DailyReportUploadError("Project not found", 404);
+      if (dailyReportId) {
+        const currentReport = await tx.dailyReport.findFirst({
+          where: { id: dailyReportId, projectId: params.projectId },
+          select: { id: true, status: true }
+        });
+        if (!currentReport) throw new DailyReportUploadError("Daily report not found in project", 404);
+        if (currentReport.status !== "draft") {
+          throw new DailyReportUploadError("Photos can be attached only to a draft daily report", 409);
+        }
+      }
       const created = await tx.document.create({
         data: {
           organizationId: project.organizationId,
@@ -134,12 +152,13 @@ export async function POST(request: NextRequest, { params }: { params: { project
     return NextResponse.json({ item: serializeDocument(document), duplicate: false, clientMutationId }, { status: 201 });
   } catch (error) {
     if (orphanedStorageKey) await deleteDocumentFile(orphanedStorageKey).catch(() => undefined);
+    if (error instanceof DailyReportUploadError) return NextResponse.json({ error: error.message }, { status: error.status });
     if (clientMutationId && error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
       const previous = await existingUpload(params.projectId, clientMutationId);
       if (previous) return previous;
     }
     if (error instanceof Prisma.PrismaClientInitializationError) {
-      return NextResponse.json({ error: "Database is not available. Start PostgreSQL and run prisma migrate/seed.", detail: error.message }, { status: 503 });
+      return NextResponse.json({ error: "Database is not available" }, { status: 503 });
     }
     console.error(error);
     return NextResponse.json({ error: "Document upload failed" }, { status: 500 });

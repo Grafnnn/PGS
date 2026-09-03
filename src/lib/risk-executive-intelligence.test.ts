@@ -205,6 +205,30 @@ describe("risk executive intelligence", () => {
     expect(risks.find((risk) => risk.id === "cashflow:overdue-payments")?.evidence.join(" ")).toContain("1,2 млн");
   });
 
+  it("surfaces registered expenses without combining them with payments", () => {
+    const expenseSummary = {
+      count: 3,
+      grossAmount: 80_000,
+      taxAmount: 4_000,
+      receipts: 2,
+      withoutReceipt: 1,
+      byCategory: { materials: 80_000 }
+    };
+    const risks = buildProjectRiskRegister({ project, budgetItems: [{ ...budgetItems[0], qty: 10 }], expenseSummary });
+    const summary = buildRiskSummary(risks, { project, budgetItems: [{ ...budgetItems[0], qty: 10 }], expenseSummary });
+    const report = buildExecutiveWeeklyReport(
+      { project, budgetItems: [{ ...budgetItems[0], qty: 10 }], expenseSummary },
+      risks,
+      summary,
+      buildDecisionRegister(risks),
+      []
+    );
+
+    expect(risks.some((risk) => risk.id === "finance:registered-expenses-over-plan")).toBe(true);
+    expect(report.copyText.replace(/\s/g, " ")).toContain("Фактические расходы по реестру: 80 000 ₽");
+    expect(report.copyText).toContain("показаны раздельно");
+  });
+
   it("uses missing required documents for report readiness", () => {
     const risks = buildRiskSignalsFromDocuments({
       documentChecklist: [

@@ -542,7 +542,7 @@ export function ProductionScheduleWorkspace({
   projectEndsAt,
   contractAmount,
   budgetItems,
-  scheduleItems,
+  scheduleItems: scheduleItemInput,
   materials,
   procurementRequests,
   payments,
@@ -561,6 +561,7 @@ export function ProductionScheduleWorkspace({
   onCashflowCommit,
   onNavigate
 }: Props) {
+  const scheduleItems = useMemo(() => scheduleItemInput.filter((item) => item.isCurrent !== false), [scheduleItemInput]);
   const [filter, setFilter] = useState<Filter>("all");
   const [query, setQuery] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);

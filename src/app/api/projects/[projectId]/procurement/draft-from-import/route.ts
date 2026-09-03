@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireProjectAccess } from "@/lib/project-route-guards";
-import { buildProcurementDraft, commitProcurementDraft, draftRequestSchema, loadPipelineData } from "@/lib/project-pipeline";
+import { buildProcurementDraft, commitProcurementDraft, draftRequestSchema, loadPipelineData, PipelineCommitConflict } from "@/lib/project-pipeline";
 
 export const runtime = "nodejs";
 
@@ -16,7 +16,14 @@ export async function POST(request: Request, { params }: { params: { projectId: 
   }
 
   if (!body.confirmed) return NextResponse.json({ error: "Draft creation requires explicit confirmation." }, { status: 409 });
-  const result = await commitProcurementDraft(params.projectId, access.user.id);
-  if (!result) return NextResponse.json({ error: "Project not found" }, { status: 404 });
-  return NextResponse.json({ ok: true, mode: "commit", ...result });
+  try {
+    const result = await commitProcurementDraft(params.projectId, access.user.id);
+    if (!result) return NextResponse.json({ error: "Project not found" }, { status: 404 });
+    return NextResponse.json({ ok: true, mode: "commit", ...result });
+  } catch (error) {
+    if (error instanceof PipelineCommitConflict) {
+      return NextResponse.json({ error: error.message }, { status: 409 });
+    }
+    throw error;
+  }
 }

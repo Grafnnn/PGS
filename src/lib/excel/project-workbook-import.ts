@@ -17,7 +17,7 @@ import { enrichLaborDemandsWithAverageProductivity } from "@/lib/workforce-produ
 
 export type { ProjectWorkbookQualityGate, ProjectWorkbookQualityIssue, ProjectWorkbookQualityStatus } from "./project-workbook-quality";
 
-export const PROJECT_WORKBOOK_PARSER_VERSION = "project_workbook_v4";
+export const PROJECT_WORKBOOK_PARSER_VERSION = "project_workbook_v5";
 
 export type ProjectWorkbookSheetRole =
   | "works"
@@ -918,8 +918,10 @@ function parseSchedule(sheet: SheetData, startsAt: Date, weeklyPeriods: Map<numb
       owner: "РП",
       startsAt: itemStart.toISOString().slice(0, 10),
       endsAt: itemEnd.toISOString().slice(0, 10),
-      plannedQty: 1,
+      plannedQty: 100,
       actualQty: 0,
+      unit: "%",
+      progressMode: "milestone",
       status: "not_started",
       dependency: joinComment(textAt(row, stageCol), `Помесячная стоимость: ${allocations.map((item) => `${item.label} ${Math.round(item.value)} ₽`).join("; ")}`),
       sheetName: sheet.name,
@@ -988,13 +990,16 @@ function parseApprovedGprSchedule(sheet: SheetData, startsAt: Date, weeklyPeriod
       itemEnd = (weeklyPeriods.get(lastWeek)?.endsAt ?? addDays(startsAt, (lastWeek - 1) * 7 + 5)).toISOString().slice(0, 10);
     }
 
+    const volume = scheduleQuantity(textAt(row, volumeCol));
     scheduleItems.push({
       name: [code, front, work].filter(Boolean).join(" · "),
       owner: textAt(row, ownerCol) || "ПТО",
       startsAt: itemStart,
       endsAt: itemEnd,
-      plannedQty: 1,
+      plannedQty: volume?.quantity ?? 100,
       actualQty: 0,
+      unit: volume?.unit ?? "%",
+      progressMode: volume ? "quantity" : "milestone",
       status: "not_started",
       dependency: joinComment(
         `Этап ГПР: ${stage}`,
@@ -1074,6 +1079,8 @@ function parseWeeklySchedule(sheet: SheetData, startsAt: Date, weeklyPeriods: Ma
       endsAt: itemEnd.toISOString().slice(0, 10),
       plannedQty: qty > 0 ? qty : 1,
       actualQty: 0,
+      unit,
+      progressMode: "quantity",
       status: "not_started",
       dependency: joinComment(
         section,
@@ -1906,6 +1913,25 @@ function textAt(row: unknown[], index: number | undefined) {
 
 function numberAt(row: unknown[], index: number | undefined) {
   return index === undefined || index < 0 ? null : parseQuantity(row[index]);
+}
+
+function scheduleQuantity(value: string) {
+  const text = normalizeText(value);
+  const quantity = parseQuantity(text);
+  const unitMatch = text.match(/(?:^|\s)(м(?:\^?[23]|²|³)|м\.\s*п\.|пог\.?\s*м|шт\.?|кг|т|л|компл\.?|смена|ч(?:ел)?\.?-?ч)(?:\s|$)/iu);
+  if (!quantity || quantity <= 0 || !unitMatch) return null;
+  const aliases: Record<string, string> = {
+    "м2": "м²",
+    "м^2": "м²",
+    "м3": "м³",
+    "м^3": "м³",
+    "шт.": "шт",
+    "пог.м": "м.п.",
+    "пог. м": "м.п.",
+    "м. п.": "м.п."
+  };
+  const rawUnit = unitMatch[1].toLocaleLowerCase("ru-RU").replace(/\s+/g, " ");
+  return { quantity, unit: aliases[rawUnit] ?? rawUnit };
 }
 
 function moneyAt(row: unknown[], index: number | undefined) {

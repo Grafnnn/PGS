@@ -197,4 +197,18 @@ describe("ProductionScheduleWorkspace", () => {
     expect(html).not.toContain("OPENAI_API_KEY");
     expect(html).not.toMatch(/sk-(proj|live|test|[A-Za-z0-9]{12,})/);
   });
+
+  it("keeps superseded schedule revisions out of the current production view", () => {
+    const html = renderToStaticMarkup(createElement(ProductionScheduleWorkspace, {
+      ...workspaceProps(),
+      scheduleItems: [
+        ...scheduleItems.map((item) => ({ ...item, revision: 2, isCurrent: true })),
+        { ...scheduleItems[0], id: "schedule-old", name: "Архивная работа", revision: 1, isCurrent: false, supersededAt: "2026-08-01" }
+      ]
+    }));
+
+    expect(html).toContain("Армирование плиты");
+    expect(html).not.toContain("Архивная работа");
+    expect(html).toContain("Выполнено: 1 / 3");
+  });
 });

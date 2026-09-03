@@ -4,6 +4,7 @@ import { ZodError } from "zod";
 import { writeAudit } from "@/lib/audit";
 import { canProject } from "@/lib/auth/project-permissions";
 import { getCurrentUser } from "@/lib/auth/session";
+import { ImportBatchNotFound, ImportCommitConflict, lockProjectForMutation } from "@/lib/excel/import-commit-integrity";
 import { remapImportPreview } from "@/lib/excel/import-parser";
 import { importPreviewSchema, importRemapRequestSchema, type ImportPreview } from "@/lib/excel/import-types";
 import { prisma } from "@/lib/prisma";
@@ -25,30 +26,35 @@ export async function POST(request: NextRequest, { params }: { params: { project
     if (!project) return NextResponse.json({ error: "Project not found" }, { status: 404 });
 
     const payload = importRemapRequestSchema.parse(await request.json().catch(() => ({})));
-    const batch = await prisma.importBatch.findFirst({
-      where: {
-        id: params.importId,
-        projectId: project.id
+    const remapped = await prisma.$transaction(async (tx) => {
+      await lockProjectForMutation(tx, project.id);
+      const batch = await tx.importBatch.findFirst({
+        where: { id: params.importId, projectId: project.id }
+      });
+      if (!batch) throw new ImportBatchNotFound("Import batch not found");
+      if (batch.status === "committed" || batch.status === "committing") {
+        throw new ImportCommitConflict(batch.status === "committed" ? "Import batch already committed" : "Import batch is being committed");
       }
-    });
-    if (!batch) return NextResponse.json({ error: "Import batch not found" }, { status: 404 });
-    if (batch.status === "committed") return NextResponse.json({ error: "Import batch already committed" }, { status: 409 });
 
-    const preview = importPreviewSchema.parse(batch.previewJson) as unknown as ImportPreview;
-    const remapped = remapImportPreview(preview, payload.mapping);
-
-    await prisma.$transaction(async (tx) => {
-      await tx.importBatch.update({
-        where: { id: batch.id },
+      const preview = importPreviewSchema.parse(batch.previewJson) as unknown as ImportPreview;
+      const nextPreview = remapImportPreview(preview, payload.mapping);
+      const updated = await tx.importBatch.updateMany({
+        where: {
+          id: batch.id,
+          projectId: project.id,
+          status: batch.status,
+          updatedAt: batch.updatedAt
+        },
         data: {
-          status: remapped.errors.length ? "failed" : "previewed",
-          mapping: toJson(remapped.mapping),
-          summary: toJson(remapped.summary),
-          previewJson: toJson(remapped),
-          warnings: toJson(remapped.warnings),
-          errors: toJson(remapped.errors)
+          status: nextPreview.errors.length ? "failed" : "previewed",
+          mapping: toJson(nextPreview.mapping),
+          summary: toJson(nextPreview.summary),
+          previewJson: toJson(nextPreview),
+          warnings: toJson(nextPreview.warnings),
+          errors: toJson(nextPreview.errors)
         }
       });
+      if (updated.count !== 1) throw new ImportCommitConflict("Import batch changed while remapping. Refresh the preview and try again.");
       await writeAudit(tx, {
         organizationId: project.organizationId,
         projectId: project.id,
@@ -58,13 +64,14 @@ export async function POST(request: NextRequest, { params }: { params: { project
         entity: "excel_import",
         entityId: batch.id,
         action: "import_preview",
-        summary: `Excel import remapped: budget ${remapped.budgetItems.length}, materials ${remapped.materials.length}, errors ${remapped.errors.length}`,
+        summary: `Excel import remapped: budget ${nextPreview.budgetItems.length}, materials ${nextPreview.materials.length}, errors ${nextPreview.errors.length}`,
         after: {
           importBatchId: batch.id,
-          summary: remapped.summary,
-          mapping: remapped.mapping
+          summary: nextPreview.summary,
+          mapping: nextPreview.mapping
         }
       });
+      return nextPreview;
     });
 
     return NextResponse.json(remapped, { status: remapped.errors.length ? 422 : 200 });
@@ -72,8 +79,14 @@ export async function POST(request: NextRequest, { params }: { params: { project
     if (error instanceof ZodError) {
       return NextResponse.json({ error: "Validation error", issues: error.issues }, { status: 400 });
     }
+    if (error instanceof ImportBatchNotFound) {
+      return NextResponse.json({ error: error.message }, { status: 404 });
+    }
+    if (error instanceof ImportCommitConflict) {
+      return NextResponse.json({ error: error.message }, { status: 409 });
+    }
     if (error instanceof Prisma.PrismaClientInitializationError) {
-      return NextResponse.json({ error: "Database is not available. Start PostgreSQL and run prisma migrate/seed.", detail: error.message }, { status: 503 });
+      return NextResponse.json({ error: "Database is not available" }, { status: 503 });
     }
     if (error instanceof Error && error.message.includes("сохраненных строк Excel")) {
       return NextResponse.json({ error: error.message }, { status: 409 });

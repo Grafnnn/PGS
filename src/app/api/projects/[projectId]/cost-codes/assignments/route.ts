@@ -22,7 +22,7 @@ export async function POST(request: NextRequest, { params }: { params: { project
         const item = await tx.budgetItem.findFirst({ where: { id: data.entityId, projectId: params.projectId }, select: { costCodeId: true, name: true } });
         if (item) { before = { costCodeId: item.costCodeId, label: item.name }; await tx.budgetItem.update({ where: { id: data.entityId }, data: { costCodeId: costCode?.id ?? null } }); }
       } else if (data.entityType === "schedule_item") {
-        const item = await tx.scheduleItem.findFirst({ where: { id: data.entityId, projectId: params.projectId }, select: { costCodeId: true, name: true } });
+        const item = await tx.scheduleItem.findFirst({ where: { id: data.entityId, projectId: params.projectId, isCurrent: true }, select: { costCodeId: true, name: true } });
         if (item) { before = { costCodeId: item.costCodeId, label: item.name }; await tx.scheduleItem.update({ where: { id: data.entityId }, data: { costCodeId: costCode?.id ?? null } }); }
       } else if (data.entityType === "material") {
         const item = await tx.material.findFirst({ where: { id: data.entityId, projectId: params.projectId }, select: { costCodeId: true, name: true } });

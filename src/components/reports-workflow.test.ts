@@ -2,10 +2,20 @@ import { readFileSync } from "node:fs";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { buildScheduleWorkSuggestions, isProjectEvidenceCandidate, ReportsWorkflow, ScheduleWorkPicker } from "@/components/reports-workflow";
+import { buildScheduleWorkSuggestions, dailyReportPhotoMutationId, isProjectEvidenceCandidate, ReportsWorkflow, ScheduleWorkPicker } from "@/components/reports-workflow";
 import type { ProjectDocument, ScheduleItem } from "@/lib/types";
 
 describe("ReportsWorkflow", () => {
+  it("builds a stable idempotency key for each report photo", () => {
+    const file = { name: "фото кровли 01.jpg", size: 42_000, lastModified: 1_788_200_000_000 };
+    const first = dailyReportPhotoMutationId("report/one", file as File);
+
+    expect(dailyReportPhotoMutationId("report/one", file as File)).toBe(first);
+    expect(dailyReportPhotoMutationId("report/one", { ...file, lastModified: file.lastModified + 1 } as File)).not.toBe(first);
+    expect(first).toMatch(/^report_photo_[A-Za-z0-9_-]+$/);
+    expect(first.length).toBeLessThanOrEqual(120);
+  });
+
   it("offers only unlinked project evidence photos for reuse in a report", () => {
     const photo = {
       id: "photo-1",
@@ -146,6 +156,38 @@ describe("ReportsWorkflow", () => {
     expect(html).toContain("Факт ещё не учтён в графике");
     expect(html).toContain("Учесть в графике");
     expect(html).toContain("Исправить");
+  });
+
+  it("marks progress linked to a historical schedule revision and blocks resync", () => {
+    const html = renderToStaticMarkup(createElement(ReportsWorkflow, {
+      projectId: "project-1",
+      scheduleItems: [],
+      reports: [{
+        id: "report-historical",
+        projectId: "project-1",
+        date: "2026-09-01",
+        author: "Прораб",
+        weather: "Ясно",
+        workers: 4,
+        engineers: 0,
+        equipment: "",
+        completedWorks: "Монтаж мембраны",
+        materialsReceived: "",
+        materialsConsumed: "",
+        downtime: "",
+        issues: "",
+        workOutputs: [{ scheduleItemId: "old-schedule", profession: "Кровельщик", workName: "Монтаж мембраны", quantity: 20, unit: "м²", laborHours: 32 }],
+        progressImpact: { applied: false, entries: 1, scheduleItems: 0, historicalEntries: 1, activeEntries: 0 },
+        status: "approved"
+      }],
+      currentUser: { authenticated: true, role: "ADMIN", name: "Администратор" },
+      currentUserLoaded: true,
+      onReportsChange: () => undefined
+    }));
+
+    expect(html).toContain("предыдущей редакции графика");
+    expect(html).toContain("Верните рапорт на доработку");
+    expect(html).not.toContain("Учесть в графике");
   });
 
   it("shows an open shift as a plan that can be closed with actual facts", () => {

@@ -1,7 +1,7 @@
 import * as XLSX from "xlsx";
 import { describe, expect, it } from "vitest";
 import { buildProjectExpensesWorkbook } from "@/lib/project-expense-export";
-import { buildProjectExpenseSummary, projectExpenseCustomCategoryIds, projectExpenseInputSchema, serializeProjectExpense } from "@/lib/project-expenses";
+import { buildExpenseAwareForecast, buildProjectExpenseSummary, projectExpenseCustomCategoryIds, projectExpenseInputSchema, serializeProjectExpense } from "@/lib/project-expenses";
 
 const record = {
   id: "expense-1",
@@ -35,8 +35,12 @@ describe("project expense helpers", () => {
     });
     expect(valid.items).toHaveLength(1);
     expect(projectExpenseInputSchema.safeParse({ ...valid, taxAmount: 1300 }).success).toBe(false);
+    expect(projectExpenseInputSchema.safeParse({ ...valid, grossAmount: 0 }).success).toBe(false);
+    expect(projectExpenseInputSchema.safeParse({ ...valid, grossAmount: 1300 }).success).toBe(false);
+    expect(projectExpenseInputSchema.safeParse({ ...valid, items: [{ ...valid.items[0], taxAmount: 1300 }] }).success).toBe(false);
     expect(projectExpenseInputSchema.safeParse({ ...valid, category: "custom:category-1" }).success).toBe(true);
     expect(projectExpenseInputSchema.safeParse({ ...valid, category: "invented-category" }).success).toBe(false);
+    expect(projectExpenseInputSchema.safeParse({ ...valid, currency: "USD" }).success).toBe(false);
   });
 
   it("extracts unique custom categories and includes them in the summary", () => {
@@ -71,6 +75,34 @@ describe("project expense helpers", () => {
     expect(serialized.items[0].quantity).toBe(5);
     expect(summary).toMatchObject({ count: 1, grossAmount: 1250.5, taxAmount: 208.42, receipts: 1, withoutReceipt: 0 });
     expect(summary.byCategory.materials).toBe(1250.5);
+  });
+
+  it("keeps RUB totals correct when legacy records contain another currency", () => {
+    const summary = buildProjectExpenseSummary([
+      record,
+      { ...record, id: "expense-usd", currency: "USD", grossAmount: 10_000, taxAmount: 0, receiptDocument: null }
+    ]);
+
+    expect(summary).toMatchObject({ count: 1, grossAmount: 1250.5, receipts: 1, withoutReceipt: 0, excludedNonRub: 1 });
+    expect(Object.values(summary.byCategory).reduce((sum, value) => sum + value, 0)).toBe(1250.5);
+  });
+
+  it("uses actual expenses as a lower bound and leaves an unavailable forecast blank", () => {
+    expect(buildExpenseAwareForecast({
+      contractAmount: 10_000,
+      budgetForecastCost: 7_000,
+      hasBudget: true,
+      expenseSummary: { count: 2, grossAmount: 8_000 },
+      expenseDataAvailable: true
+    })).toMatchObject({ actualExpenses: 8_000, forecastCost: 8_000, forecastProfit: 2_000, forecastMarginPercent: 20 });
+
+    expect(buildExpenseAwareForecast({
+      contractAmount: 10_000,
+      budgetForecastCost: 0,
+      hasBudget: false,
+      expenseSummary: { count: 1, grossAmount: 1_000 },
+      expenseDataAvailable: true
+    })).toMatchObject({ actualExpenses: 1_000, forecastAvailable: false, forecastCost: null, forecastProfit: null, forecastMarginPercent: null });
   });
 
   it("exports itemized rows and a category summary to XLSX", () => {

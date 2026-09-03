@@ -4,7 +4,7 @@ import { ZodError } from "zod";
 import { askProjectAssistant, buildProjectContext, localAiFallback } from "@/lib/ai";
 import { writeAudit } from "@/lib/audit";
 import { getCurrentUser } from "@/lib/auth/session";
-import { canDeleteDocument, canDeleteProject, canEditProject, canViewAudit, canViewProject, type AppUser } from "@/lib/auth/permissions";
+import { canEditProject, canViewAudit, canViewProject, type AppUser } from "@/lib/auth/permissions";
 import { canProject, getEffectiveProjectRole, type ProjectAction } from "@/lib/auth/project-permissions";
 import { budgetTotals, deriveAutoRisks, financeTotals, materialTotals, workTotals } from "@/lib/calculations";
 import {
@@ -14,12 +14,15 @@ import {
   normalizeDailyReportFields
 } from "@/lib/daily-reports";
 import { buildDailyReportCrewMembers, dailyReportCrewCounts } from "@/lib/daily-report-crew";
+import { normalizeDailyReportWorkOutputUnit, parseDailyReportWorkOutputs } from "@/lib/daily-report-work-outputs";
 import { dailyReportProgressDeltas, scheduleStatusForActual } from "@/lib/daily-report-progress";
+import { prepareScheduleRevision } from "@/lib/excel/import-commit-integrity";
 import { dailyReportWorkScopeSummary, parseDailyReportWorkScopes } from "@/lib/daily-report-work-scopes";
 import { demoState } from "@/lib/demo-data";
-import { getDemoContext, getProjectBundleFromDb, listProjectsFromDb } from "@/lib/project-data";
+import { getDemoContext, getProjectBundleFromDb, getUserOrganizationContext, listProjectsFromDb } from "@/lib/project-data";
 import { deleteProjectWithConfirmation, ProjectDeleteError } from "@/lib/project-delete";
 import { prisma } from "@/lib/prisma";
+import { deleteDocumentFile } from "@/lib/storage/documents";
 import {
   serializeBudgetItem,
   serializeAuditLog,
@@ -55,7 +58,25 @@ export async function GET(request: NextRequest, { params }: { params: { path?: s
     if (path.join("/") === "auth/me") {
       const user = await getCurrentUser();
       if (!user) return json({ user: null, organization: null }, 401);
-      return json({ user, organization: { id: "org-demo", name: "Демо Строй" } });
+      const projectId = request.nextUrl.searchParams.get("projectId");
+      if (projectId) {
+        if (!user.authenticated) {
+          const project = demoState.projects.find((item) => item.id === projectId);
+          if (!project) return json({ error: "Forbidden" }, 403);
+          return json({ user, organization: { id: project.organizationId, name: "Локальная организация" } });
+        }
+        const [role, project] = await Promise.all([
+          getEffectiveProjectRole(user, projectId),
+          prisma.project.findUnique({
+            where: { id: projectId },
+            select: { organization: { select: { id: true, name: true } } }
+          })
+        ]);
+        if (!role || !project) return json({ error: "Forbidden" }, 403);
+        return json({ user: { ...user, role }, organization: project.organization });
+      }
+      const context = await getUserOrganizationContext(user);
+      return json({ user, organization: context ? { id: context.organizationId, name: context.organizationName } : null });
     }
 
     if (path[0] === "projects" && path.length === 1) {
@@ -89,7 +110,7 @@ export async function GET(request: NextRequest, { params }: { params: { path?: s
         return json({ items: items.map(serializeBudgetItem) });
       }
       if (resource === "schedule") {
-        const items = await prisma.scheduleItem.findMany({ where: { projectId }, orderBy: { startsAt: "asc" } });
+        const items = await prisma.scheduleItem.findMany({ where: { projectId, isCurrent: true }, orderBy: { startsAt: "asc" } });
         return json({ items: items.map(serializeScheduleItem) });
       }
       if (resource === "materials") {
@@ -110,15 +131,19 @@ export async function GET(request: NextRequest, { params }: { params: { path?: s
         return json({ items: items.map(serializeDocument) });
       }
       if (resource === "daily-reports") {
-        const items = await prisma.dailyReport.findMany({
-          where: { projectId },
-          include: {
-            evidenceDocuments: { orderBy: { uploadedAt: "asc" } },
-            progressEntries: { orderBy: { createdAt: "asc" } }
-          },
-          orderBy: [{ date: "desc" }, { createdAt: "desc" }]
-        });
-        return json({ items: items.map(serializeDailyReport) });
+        const [items, currentSchedule] = await Promise.all([
+          prisma.dailyReport.findMany({
+            where: { projectId },
+            include: {
+              evidenceDocuments: { orderBy: { uploadedAt: "asc" } },
+              progressEntries: { orderBy: { createdAt: "asc" } }
+            },
+            orderBy: [{ date: "desc" }, { createdAt: "desc" }]
+          }),
+          prisma.scheduleItem.findMany({ where: { projectId, isCurrent: true }, select: { id: true } })
+        ]);
+        const currentScheduleIds = new Set(currentSchedule.map((item) => item.id));
+        return json({ items: items.map((item) => serializeDailyReport(item, currentScheduleIds)) });
       }
       if (resource === "risks") {
         const bundle = await getProjectBundleFromDb(projectId);
@@ -189,16 +214,31 @@ export async function POST(request: NextRequest, { params }: { params: { path?: 
       if (!canEditProject(user)) return json({ error: "Forbidden" }, 403);
       const body = await readBody();
       const data = projectSchema.parse(body);
-      const { organizationId } = await getDemoContext();
+      const context = await getUserOrganizationContext(user);
+      if (!context) return json({ error: "Пользователь не состоит ни в одной организации." }, 403);
       const { contractAmount, vatPercent, selectedModules, ...projectData } = data;
-      const project = await prisma.project.create({
-        data: {
-          organizationId,
-          ...projectData,
-          contractAmount: new Prisma.Decimal(contractAmount),
-          vatPercent: vatPercent === undefined || vatPercent === null ? null : new Prisma.Decimal(vatPercent),
-          selectedModules: selectedModules ?? undefined
-        }
+      const project = await prisma.$transaction(async (tx) => {
+        const created = await tx.project.create({
+          data: {
+            organizationId: context.organizationId,
+            ...projectData,
+            contractAmount: new Prisma.Decimal(contractAmount),
+            vatPercent: vatPercent === undefined || vatPercent === null ? null : new Prisma.Decimal(vatPercent),
+            selectedModules: selectedModules ?? undefined,
+            members: user?.authenticated ? { create: { userId: user.id, role: user.role } } : undefined
+          }
+        });
+        await writeAudit(tx, {
+          organizationId: context.organizationId,
+          projectId: created.id,
+          ...auditActor(user),
+          entity: "project",
+          entityId: created.id,
+          action: "create",
+          summary: `Создан проект: ${created.name}`,
+          after: serializeProject(created)
+        });
+        return created;
       });
       return json({ project: serializeProject(project) }, 201);
     }
@@ -230,7 +270,7 @@ export async function POST(request: NextRequest, { params }: { params: { path?: 
         });
       }
 
-      return await createProjectResource(projectId, resource, await readBody());
+      return await createProjectResource(projectId, resource, readBody);
     }
 
     return json({ error: "Endpoint not found", path }, 404);
@@ -241,31 +281,50 @@ export async function POST(request: NextRequest, { params }: { params: { path?: 
 
 export async function PATCH(request: NextRequest, { params }: { params: { path?: string[] } }) {
   const path = pathOf(params);
-  const body = await request.json().catch(() => ({}));
+  let parsedBody: unknown;
+  const readBody = async () => {
+    if (parsedBody === undefined) parsedBody = await request.json().catch(() => ({}));
+    return parsedBody;
+  };
 
   try {
     if (path[0] === "projects" && path[1] && path.length === 2) {
       const user = await getCurrentUser();
       if (!(await canProject(user, path[1], "edit"))) return json({ error: "Forbidden" }, 403);
-      const data = partial(projectSchema).parse(body);
+      const data = partial(projectSchema).parse(await readBody());
       const { contractAmount, vatPercent, selectedModules, ...projectData } = data;
-      const project = await prisma.project.update({
-        where: { id: path[1] },
-        data: {
-          ...projectData,
-          contractAmount: contractAmount === undefined ? undefined : new Prisma.Decimal(contractAmount),
-          vatPercent: vatPercent === undefined ? undefined : vatPercent === null ? null : new Prisma.Decimal(vatPercent),
-          selectedModules: selectedModules === undefined ? undefined : selectedModules === null ? Prisma.JsonNull : selectedModules
-        }
+      const project = await prisma.$transaction(async (tx) => {
+        const before = await tx.project.findUniqueOrThrow({ where: { id: path[1] } });
+        const updated = await tx.project.update({
+          where: { id: path[1] },
+          data: {
+            ...projectData,
+            contractAmount: contractAmount === undefined ? undefined : new Prisma.Decimal(contractAmount),
+            vatPercent: vatPercent === undefined ? undefined : vatPercent === null ? null : new Prisma.Decimal(vatPercent),
+            selectedModules: selectedModules === undefined ? undefined : selectedModules === null ? Prisma.JsonNull : selectedModules
+          }
+        });
+        await writeAudit(tx, {
+          organizationId: updated.organizationId,
+          projectId: updated.id,
+          ...auditActor(user),
+          entity: "project",
+          entityId: updated.id,
+          action: "update",
+          summary: `Обновлён проект: ${updated.name}`,
+          before: serializeProject(before),
+          after: serializeProject(updated)
+        });
+        return updated;
       });
       return json({ project: serializeProject(project) });
     }
 
     const direct = directResource(path);
-    if (direct) return await updateResource(direct.resource, direct.id, body);
+    if (direct) return await updateResource(direct.resource, direct.id, readBody);
 
     if (path[0] === "projects" && path[1] && path[2] && path[3]) {
-      return await updateResource(path[2], path[3], body, path[1]);
+      return await updateResource(path[2], path[3], readBody, path[1]);
     }
 
     return json({ error: "Endpoint not found", path }, 404);
@@ -299,14 +358,14 @@ export async function DELETE(request: NextRequest, { params }: { params: { path?
   }
 }
 
-async function createProjectResource(projectId: string, resource: string | undefined, body: unknown) {
+async function createProjectResource(projectId: string, resource: string | undefined, readBody: () => Promise<unknown>) {
   const user = await getCurrentUser();
   const action: ProjectAction = resource === "documents" ? "upload_document" : "edit";
   if (!(await canProject(user, projectId, action))) return json({ error: "Forbidden" }, 403);
   const project = await prisma.project.findUnique({ where: { id: projectId }, select: { organizationId: true } });
   if (!project) return json({ error: "Project not found" }, 404);
-  const { userId: demoUserId } = await getDemoContext();
-  const userId = user?.authenticated ? user.id : demoUserId;
+  const body = await readBody();
+  const userId = user?.authenticated ? user.id : (await getDemoContext()).userId;
   const actor = auditActor(user);
 
   if (resource === "budget") {
@@ -342,6 +401,7 @@ async function createProjectResource(projectId: string, resource: string | undef
   if (resource === "schedule") {
     const data = scheduleItemSchema.parse(body);
     const item = await prisma.$transaction(async (tx) => {
+      const scheduleRevision = await prepareScheduleRevision(tx, { projectId, replace: false });
       const created = await tx.scheduleItem.create({
         data: {
           ...data,
@@ -349,7 +409,11 @@ async function createProjectResource(projectId: string, resource: string | undef
           projectId,
           createdBy: userId,
           plannedQty: new Prisma.Decimal(data.plannedQty),
-          actualQty: new Prisma.Decimal(data.actualQty)
+          actualQty: new Prisma.Decimal(data.actualQty),
+          manualActualQty: new Prisma.Decimal(data.actualQty),
+          reportActualQty: new Prisma.Decimal(0),
+          isCurrent: true,
+          revision: scheduleRevision.revision
         }
       });
       await writeAudit(tx, {
@@ -390,27 +454,53 @@ async function createProjectResource(projectId: string, resource: string | undef
 
   if (resource === "procurement") {
     const data = procurementRequestSchema.parse(body);
-    const item = await prisma.procurementRequest.create({
-      data: {
+    const linkedMaterialIds = [...new Set(data.items.flatMap((requestItem) => requestItem.materialId ? [requestItem.materialId] : []))];
+    const linkedMaterials = linkedMaterialIds.length
+      ? await prisma.material.findMany({ where: { projectId, id: { in: linkedMaterialIds } }, select: { id: true, unit: true } })
+      : [];
+    const linkedMaterialMap = new Map(linkedMaterials.map((material) => [material.id, material]));
+    const invalidLine = data.items.find((requestItem) => {
+      if (!requestItem.materialId) return false;
+      const material = linkedMaterialMap.get(requestItem.materialId);
+      return !material || material.unit.trim().toLocaleLowerCase("ru-RU") !== requestItem.unit.trim().toLocaleLowerCase("ru-RU");
+    });
+    if (invalidLine) {
+      return json({ error: "Позиция заявки должна быть связана с материалом этого проекта в той же единице измерения." }, 409);
+    }
+    const item = await prisma.$transaction(async (tx) => {
+      const created = await tx.procurementRequest.create({
+        data: {
+          organizationId: project.organizationId,
+          projectId,
+          title: data.title,
+          initiator: data.initiator,
+          neededAt: data.neededAt,
+          priority: data.priority,
+          status: "draft",
+          createdBy: userId,
+          items: {
+            create: data.items.map((requestItem) => ({
+              materialId: requestItem.materialId,
+              name: requestItem.name,
+              qty: new Prisma.Decimal(requestItem.qty),
+              unit: requestItem.unit,
+              comment: requestItem.comment
+            }))
+          }
+        },
+        include: { items: true }
+      });
+      await writeAudit(tx, {
         organizationId: project.organizationId,
         projectId,
-        title: data.title,
-        initiator: data.initiator,
-        neededAt: data.neededAt,
-        priority: data.priority,
-        status: data.status,
-        createdBy: userId,
-        items: {
-          create: data.items.map((requestItem) => ({
-            materialId: requestItem.materialId,
-            name: requestItem.name,
-            qty: new Prisma.Decimal(requestItem.qty),
-            unit: requestItem.unit,
-            comment: requestItem.comment
-          }))
-        }
-      },
-      include: { items: true }
+        ...actor,
+        entity: "procurement_request",
+        entityId: created.id,
+        action: "create",
+        summary: `Создан черновик заявки: ${created.requestNumber ?? created.title}`,
+        after: serializeProcurementRequest(created)
+      });
+      return created;
     });
     return json({ item: serializeProcurementRequest(item) }, 201);
   }
@@ -519,8 +609,21 @@ async function createProjectResource(projectId: string, resource: string | undef
 
   if (resource === "documents") {
     const data = documentSchema.parse(body);
-    const item = await prisma.document.create({
-      data: { ...data, organizationId: project.organizationId, projectId, createdBy: userId }
+    const item = await prisma.$transaction(async (tx) => {
+      const created = await tx.document.create({
+        data: { ...data, organizationId: project.organizationId, projectId, createdBy: userId }
+      });
+      await writeAudit(tx, {
+        organizationId: project.organizationId,
+        projectId,
+        ...actor,
+        entity: "document",
+        entityId: created.id,
+        action: "create",
+        summary: `Добавлен документ: ${created.fileName ?? created.title}`,
+        after: serializeDocument(created)
+      });
+      return created;
     });
     return json({ item: serializeDocument(item) }, 201);
   }
@@ -528,13 +631,14 @@ async function createProjectResource(projectId: string, resource: string | undef
   return json({ error: "Endpoint not found", resource }, 404);
 }
 
-async function updateResource(resource: string, id: string, body: unknown, expectedProjectId?: string) {
+async function updateResource(resource: string, id: string, readBody: () => Promise<unknown>, expectedProjectId?: string) {
   const user = await getCurrentUser();
   const scopedProjectId = await projectIdForResource(resource, id);
-  if (resource === "daily-reports" && (!scopedProjectId || (expectedProjectId && scopedProjectId !== expectedProjectId))) {
-    return json({ error: "Daily report not found in project" }, 404);
+  if (!scopedProjectId || (expectedProjectId && scopedProjectId !== expectedProjectId)) {
+    return json({ error: "Record not found in project" }, 404);
   }
-  if (scopedProjectId ? !(await canProject(user, scopedProjectId, "edit")) : !canEditProject(user)) return json({ error: "Forbidden" }, 403);
+  if (!(await canProject(user, scopedProjectId, "edit"))) return json({ error: "Forbidden" }, 403);
+  const body = await readBody();
   if (resource === "budget") {
     const data = partial(budgetItemSchema).parse(body);
     const item = await prisma.$transaction(async (tx) => {
@@ -558,8 +662,22 @@ async function updateResource(resource: string, id: string, body: unknown, expec
   if (resource === "schedule") {
     const data = partial(scheduleItemSchema).parse(body);
     const item = await prisma.$transaction(async (tx) => {
+      await lockDailyReportProject(tx, scopedProjectId);
       const before = await tx.scheduleItem.findUniqueOrThrow({ where: { id } });
-      const updated = await tx.scheduleItem.update({ where: { id }, data: scheduleUpdateData(data) });
+      if (before.projectId !== scopedProjectId) throw new ResourceConflictError("Работа больше не принадлежит выбранному проекту.");
+      if (!before.isCurrent) throw new DailyReportProgressError("Историческую версию графика нельзя редактировать.");
+      if (data.actualQty !== undefined && data.actualQty + 0.0001 < decimalNumber(before.reportActualQty)) {
+        throw new DailyReportProgressError("Общий факт не может быть меньше объёма, уже учтённого утверждёнными рапортами.");
+      }
+      const updated = await tx.scheduleItem.update({
+        where: { id },
+        data: {
+          ...scheduleUpdateData(data),
+          ...(data.actualQty === undefined
+            ? {}
+            : { manualActualQty: new Prisma.Decimal(Math.max(0, data.actualQty - decimalNumber(before.reportActualQty))) })
+        }
+      });
       await writeAudit(tx, {
         organizationId: updated.organizationId,
         projectId: updated.projectId,
@@ -596,8 +714,26 @@ async function updateResource(resource: string, id: string, body: unknown, expec
     return json({ item: serializeMaterial(item) });
   }
   if (resource === "procurement") {
-    const data = partial(procurementRequestSchema.omit({ items: true })).parse(body);
-    const item = await prisma.procurementRequest.update({ where: { id }, data, include: { items: true } });
+    const data = partial(procurementRequestSchema.omit({ items: true, status: true })).parse(body);
+    const item = await prisma.$transaction(async (tx) => {
+      const before = await tx.procurementRequest.findUniqueOrThrow({ where: { id }, include: { items: true } });
+      if (before.status !== "draft") {
+        throw new ResourceConflictError("Редактировать можно только черновик заявки. Используйте действия согласования и приёмки.");
+      }
+      const updated = await tx.procurementRequest.update({ where: { id }, data, include: { items: true } });
+      await writeAudit(tx, {
+        organizationId: updated.organizationId,
+        projectId: updated.projectId,
+        ...auditActor(user),
+        entity: "procurement_request",
+        entityId: id,
+        action: "update",
+        summary: `Обновлён черновик заявки: ${updated.requestNumber ?? updated.title}`,
+        before: serializeProcurementRequest(before),
+        after: serializeProcurementRequest(updated)
+      });
+      return updated;
+    });
     return json({ item: serializeProcurementRequest(item) });
   }
   if (resource === "finance" || resource === "payments") {
@@ -685,13 +821,18 @@ async function updateResource(resource: string, id: string, body: unknown, expec
       return json({ error: `Рапорт ${action}: ${issues[0].message}`, issues }, data.status ? 409 : 400);
     }
     const result = await prisma.$transaction(async (tx) => {
+      await lockDailyReportProject(tx, before.projectId);
+      const current = await tx.dailyReport.findUniqueOrThrow({ where: { id } });
+      if (current.projectId !== before.projectId || dailyReportChangedSinceRead(before, current)) {
+        throw new ResourceConflictError("Рапорт уже изменён другим пользователем. Обновите страницу и повторите действие.");
+      }
       const progress = applyProgress
-        ? await applyDailyReportProgress(tx, before, user)
+        ? await applyDailyReportProgress(tx, current, user)
         : reopeningApproved
-          ? await rollbackDailyReportProgress(tx, before)
+          ? await rollbackDailyReportProgress(tx, current)
           : { mode: "none" as const, entries: 0, scheduleItems: [] as DbScheduleItem[] };
       const { crewMembers: updatedCrew, workOutputs: updatedOutputs, workScopes: updatedScopes, ...scalarData } = data;
-      const updated = applyProgress ? before : await tx.dailyReport.update({
+      const updated = applyProgress ? current : await tx.dailyReport.update({
           where: { id },
           data: {
             ...scalarData,
@@ -706,12 +847,12 @@ async function updateResource(resource: string, id: string, body: unknown, expec
               : {})
           }
         });
-      const approvalProgress = before.status === "checked" && data.status === "approved"
-        ? await applyDailyReportProgress(tx, before, user)
+      const approvalProgress = current.status === "checked" && data.status === "approved"
+        ? await applyDailyReportProgress(tx, current, user)
         : progress;
       await writeAudit(tx, {
-        organizationId: before.organizationId,
-        projectId: before.projectId,
+        organizationId: current.organizationId,
+        projectId: current.projectId,
         ...auditActor(user),
         entity: "daily_report",
         entityId: id,
@@ -721,9 +862,9 @@ async function updateResource(resource: string, id: string, body: unknown, expec
           : reopeningApproved
             ? `Рапорт возвращен на доработку: ${correctionReason}`
             : data.status
-              ? `Статус рапорта изменен: ${before.status} → ${data.status}`
+              ? `Статус рапорта изменен: ${current.status} → ${data.status}`
               : `Обновлен ежедневный рапорт: ${updated.date.toISOString().slice(0, 10)}`,
-        before: serializeDailyReport(before),
+        before: serializeDailyReport(current),
         after: {
           ...serializeDailyReport(updated),
           ...(correctionReason ? { correctionReason } : {}),
@@ -767,7 +908,22 @@ async function updateResource(resource: string, id: string, body: unknown, expec
   }
   if (resource === "documents") {
     const data = partial(documentSchema).parse(body);
-    const item = await prisma.document.update({ where: { id }, data });
+    const item = await prisma.$transaction(async (tx) => {
+      const before = await tx.document.findUniqueOrThrow({ where: { id } });
+      const updated = await tx.document.update({ where: { id }, data });
+      await writeAudit(tx, {
+        organizationId: updated.organizationId,
+        projectId: updated.projectId,
+        ...auditActor(user),
+        entity: "document",
+        entityId: id,
+        action: "update",
+        summary: `Обновлён документ: ${updated.fileName ?? updated.title}`,
+        before: serializeDocument(before),
+        after: serializeDocument(updated)
+      });
+      return updated;
+    });
     return json({ item: serializeDocument(item) });
   }
   return json({ error: "Endpoint not found", resource }, 404);
@@ -776,23 +932,39 @@ async function updateResource(resource: string, id: string, body: unknown, expec
 async function deleteResource(resource: string, id: string, expectedProjectId?: string) {
   const user = await getCurrentUser();
   const scopedProjectId = await projectIdForResource(resource, id);
-  if (resource === "daily-reports" && (!scopedProjectId || (expectedProjectId && scopedProjectId !== expectedProjectId))) {
-    return json({ error: "Daily report not found in project" }, 404);
-  }
+  if (!scopedProjectId || (expectedProjectId && scopedProjectId !== expectedProjectId)) return json({ error: "Record not found in project" }, 404);
   const deleteAction: ProjectAction = resource === "documents" ? "delete_document" : "delete";
-  if (scopedProjectId ? !(await canProject(user, scopedProjectId, deleteAction)) : resource === "documents" ? !canDeleteDocument(user) : !canDeleteProject(user)) {
+  if (!(await canProject(user, scopedProjectId, deleteAction))) {
     return json({ error: "Forbidden" }, 403);
   }
   const actor = auditActor(user);
   if (resource === "budget") await deleteWithAudit("budget_item", id, "budgetItem", serializeBudgetItem, actor);
-  else if (resource === "schedule") await deleteWithAudit("schedule_item", id, "scheduleItem", serializeScheduleItem, actor);
+  else if (resource === "schedule") await archiveScheduleWithAudit(id, scopedProjectId, actor);
   else if (resource === "materials") await deleteWithAudit("material", id, "material", serializeMaterial, actor);
-  else if (resource === "procurement") await prisma.procurementRequest.delete({ where: { id } });
+  else if (resource === "procurement") {
+    await prisma.$transaction(async (tx) => {
+      const before = await tx.procurementRequest.findUniqueOrThrow({ where: { id }, include: { items: true } });
+      if (before.status !== "draft") throw new ResourceConflictError("Удалить можно только черновик заявки.");
+      await tx.procurementRequest.delete({ where: { id } });
+      await writeAudit(tx, {
+        organizationId: before.organizationId,
+        projectId: before.projectId,
+        ...actor,
+        entity: "procurement_request",
+        entityId: id,
+        action: "delete",
+        summary: `Удалён черновик заявки: ${before.requestNumber ?? before.title}`,
+        before: serializeProcurementRequest(before)
+      });
+    });
+  }
   else if (resource === "finance" || resource === "payments") await deleteWithAudit("payment", id, "payment", serializePayment, actor);
   else if (resource === "daily-reports") {
-    const before = await prisma.dailyReport.findUniqueOrThrow({ where: { id } });
-    if (before.status !== "draft") return json({ error: "Only draft reports can be deleted" }, 409);
     await prisma.$transaction(async (tx) => {
+      await lockDailyReportProject(tx, scopedProjectId);
+      const before = await tx.dailyReport.findUniqueOrThrow({ where: { id } });
+      if (before.projectId !== scopedProjectId) throw new ResourceConflictError("Рапорт больше не принадлежит выбранному проекту.");
+      if (before.status !== "draft") throw new ResourceConflictError("Удалить можно только черновик рапорта.");
       await tx.dailyReport.delete({ where: { id } });
       await writeAudit(tx, {
         organizationId: before.organizationId,
@@ -807,7 +979,10 @@ async function deleteResource(resource: string, id: string, expectedProjectId?: 
     });
   }
   else if (resource === "risks") await deleteWithAudit("risk", id, "risk", serializeRisk, actor);
-  else if (resource === "documents") await prisma.document.delete({ where: { id } });
+  else if (resource === "documents") {
+    const storageKeys = await deleteDocumentWithAudit(id, actor);
+    for (const storageKey of storageKeys) await deleteDocumentFile(storageKey);
+  }
   else return json({ error: "Endpoint not found", resource }, 404);
   return json({ ok: true, deletedId: id });
 }
@@ -836,6 +1011,51 @@ async function deleteWithAudit<T extends { organizationId: string; projectId: st
       summary: `Удалено: ${entity}`,
       before: serializer(before)
     });
+  });
+}
+
+async function archiveScheduleWithAudit(id: string, projectId: string, actor: ReturnType<typeof auditActor>) {
+  await prisma.$transaction(async (tx) => {
+    await lockDailyReportProject(tx, projectId);
+    const before = await tx.scheduleItem.findUniqueOrThrow({ where: { id } });
+    if (before.projectId !== projectId) throw new ResourceConflictError("Работа больше не принадлежит выбранному проекту.");
+    if (!before.isCurrent) throw new DailyReportProgressError("Работа уже находится в истории графика.");
+    const archived = await tx.scheduleItem.update({
+      where: { id },
+      data: { isCurrent: false, supersededAt: new Date() }
+    });
+    await writeAudit(tx, {
+      organizationId: before.organizationId,
+      projectId: before.projectId,
+      ...actor,
+      entity: "schedule_item",
+      entityId: id,
+      action: "update",
+      summary: `Работа перенесена в историю графика: ${before.name}`,
+      before: serializeScheduleItem(before),
+      after: serializeScheduleItem(archived)
+    });
+  });
+}
+
+async function deleteDocumentWithAudit(id: string, actor: ReturnType<typeof auditActor>) {
+  return prisma.$transaction(async (tx) => {
+    const before = await tx.document.findUniqueOrThrow({
+      where: { id },
+      include: { versions: { select: { storageKey: true } } }
+    });
+    await tx.document.delete({ where: { id } });
+    await writeAudit(tx, {
+      organizationId: before.organizationId,
+      projectId: before.projectId,
+      ...actor,
+      entity: "document",
+      entityId: id,
+      action: "delete",
+      summary: `Удалён документ: ${before.fileName ?? before.title}`,
+      before: serializeDocument(before)
+    });
+    return [...new Set([before.storageKey, ...before.versions.map((version) => version.storageKey)].filter((key): key is string => Boolean(key)))];
   });
 }
 
@@ -893,14 +1113,26 @@ class DailyReportCrewError extends Error {}
 
 class DailyReportProgressError extends Error {}
 
+class ResourceConflictError extends Error {}
+
+async function lockDailyReportProject(tx: Prisma.TransactionClient, projectId: string) {
+  const rows = await tx.$queryRaw<Array<{ id: string }>>`SELECT id FROM "projects" WHERE id = ${projectId} FOR UPDATE`;
+  if (!rows.length) throw new ResourceConflictError("Проект больше не существует.");
+}
+
+function dailyReportChangedSinceRead(expected: DbDailyReport, current: DbDailyReport) {
+  return expected.status !== current.status || expected.updatedAt.getTime() !== current.updatedAt.getTime();
+}
+
 type DailyReportProgressResult = {
   mode: "applied" | "already_applied" | "rolled_back" | "none";
   entries: number;
   scheduleItems: DbScheduleItem[];
 };
 
-function decimalNumber(value: Prisma.Decimal | number) {
-  return typeof value === "number" ? value : value.toNumber();
+function decimalNumber(value: Prisma.Decimal | number | null | undefined) {
+  if (typeof value === "number") return value;
+  return value?.toNumber() ?? 0;
 }
 
 async function applyDailyReportProgress(
@@ -914,22 +1146,31 @@ async function applyDailyReportProgress(
   const existing = await tx.workProgressEntry.findMany({ where: { dailyReportId: report.id } });
   if (existing.length) {
     const scheduleItems = await tx.scheduleItem.findMany({
-      where: { projectId: report.projectId, id: { in: existing.map((entry) => entry.scheduleItemId).filter((id): id is string => Boolean(id)) } }
+      where: { projectId: report.projectId, isCurrent: true, id: { in: existing.map((entry) => entry.scheduleItemId).filter((id): id is string => Boolean(id)) } }
     });
+    if (scheduleItems.length !== existing.filter((entry) => entry.scheduleItemId).length) {
+      throw new DailyReportProgressError("Факт этого рапорта относится к прежней версии графика. Верните рапорт на доработку и привяжите работы к актуальному графику.");
+    }
     return { mode: "already_applied", entries: existing.length, scheduleItems };
   }
 
   const scheduleItems = await tx.scheduleItem.findMany({
-    where: { projectId: report.projectId, id: { in: deltas.map((delta) => delta.scheduleItemId) } }
+    where: { projectId: report.projectId, isCurrent: true, id: { in: deltas.map((delta) => delta.scheduleItemId) } }
   });
   if (scheduleItems.length !== deltas.length) {
     throw new DailyReportProgressError("Одна или несколько работ рапорта больше не существуют в графике проекта.");
   }
 
   const byId = new Map(scheduleItems.map((item) => [item.id, item]));
+  const reportOutputs = parseDailyReportWorkOutputs(report.workOutputs);
   const updatedScheduleItems: DbScheduleItem[] = [];
   for (const delta of deltas) {
     const scheduleItem = byId.get(delta.scheduleItemId)!;
+    const outputUnits = new Set(reportOutputs.filter((output) => output.scheduleItemId === scheduleItem.id).map((output) => output.unit));
+    const scheduleUnit = scheduleItem.unit ? normalizeDailyReportWorkOutputUnit(scheduleItem.unit) : null;
+    if (scheduleUnit && (outputUnits.size !== 1 || !outputUnits.has(scheduleUnit))) {
+      throw new DailyReportProgressError(`Единица факта для «${scheduleItem.name}» должна быть «${scheduleItem.unit}».`);
+    }
     await tx.workProgressEntry.create({
       data: {
         organizationId: report.organizationId,
@@ -946,7 +1187,10 @@ async function applyDailyReportProgress(
     });
     const incremented = await tx.scheduleItem.update({
       where: { id: scheduleItem.id },
-      data: { actualQty: { increment: new Prisma.Decimal(delta.quantity) } }
+      data: {
+        actualQty: { increment: new Prisma.Decimal(delta.quantity) },
+        reportActualQty: { increment: new Prisma.Decimal(delta.quantity) }
+      }
     });
     const nextStatus = scheduleStatusForActual(
       incremented.status as Parameters<typeof scheduleStatusForActual>[0],
@@ -981,18 +1225,22 @@ async function rollbackDailyReportProgress(
     const quantity = grouped.get(scheduleItem.id) ?? 0;
     const decremented = await tx.scheduleItem.update({
       where: { id: scheduleItem.id },
-      data: { actualQty: { decrement: new Prisma.Decimal(quantity) } }
+      data: {
+        actualQty: { decrement: new Prisma.Decimal(quantity) },
+        reportActualQty: { decrement: new Prisma.Decimal(quantity) }
+      }
     });
-    const actualQty = Math.max(0, decimalNumber(decremented.actualQty));
+    const reportActualQty = Math.max(0, decimalNumber(decremented.reportActualQty));
+    const actualQty = Math.max(0, decimalNumber(decremented.manualActualQty)) + reportActualQty;
     const nextStatus = scheduleStatusForActual(
       decremented.status as Parameters<typeof scheduleStatusForActual>[0],
       decimalNumber(decremented.plannedQty),
       actualQty
     );
-    const updated = actualQty !== decimalNumber(decremented.actualQty) || nextStatus !== decremented.status
+    const updated = actualQty !== decimalNumber(decremented.actualQty) || reportActualQty !== decimalNumber(decremented.reportActualQty) || nextStatus !== decremented.status
       ? await tx.scheduleItem.update({
           where: { id: scheduleItem.id },
-          data: { actualQty: new Prisma.Decimal(actualQty), status: nextStatus }
+          data: { actualQty: new Prisma.Decimal(actualQty), reportActualQty: new Prisma.Decimal(reportActualQty), status: nextStatus }
         })
       : decremented;
     updatedScheduleItems.push(updated);
@@ -1066,6 +1314,9 @@ function handleError(error: unknown) {
   if (error instanceof DailyReportProgressError) {
     return json({ error: error.message }, 409);
   }
+  if (error instanceof ResourceConflictError) {
+    return json({ error: error.message }, 409);
+  }
   if (error instanceof ProjectDeleteError) {
     return json({ error: error.message }, error.status);
   }
@@ -1076,7 +1327,7 @@ function handleError(error: unknown) {
     return json({ error: "Record not found" }, 404);
   }
   if (error instanceof Prisma.PrismaClientInitializationError) {
-    return json({ error: "Database is not available. Start PostgreSQL and run prisma migrate/seed.", detail: error.message }, 503);
+    return json({ error: "Database is not available" }, 503);
   }
   console.error(error);
   return json({ error: "Internal server error" }, 500);

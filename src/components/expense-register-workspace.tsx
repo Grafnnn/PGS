@@ -43,6 +43,7 @@ type Summary = {
   taxAmount: number;
   receipts: number;
   withoutReceipt: number;
+  excludedNonRub?: number;
   byCategory: Record<string, number>;
 };
 
@@ -79,8 +80,12 @@ function emptyForm(mode: FormMode): ExpenseForm {
   };
 }
 
-function money(value: number) {
-  return `${Math.round(value).toLocaleString("ru-RU")} ₽`;
+function money(value: number, currency = "RUB") {
+  try {
+    return new Intl.NumberFormat("ru-RU", { style: "currency", currency, maximumFractionDigits: 0 }).format(value);
+  } catch {
+    return `${Math.round(value).toLocaleString("ru-RU")} ${currency}`;
+  }
 }
 
 function numberInput(value: string) {
@@ -167,7 +172,7 @@ function ExpenseCategoryInsights({ data, total, selected, onSelect }: { data: Ex
   </section>;
 }
 
-export function ExpenseRegisterWorkspace({ projectId, canEdit, canDelete }: { projectId: string; canEdit: boolean; canDelete: boolean }) {
+export function ExpenseRegisterWorkspace({ projectId, canEdit, canDelete, onSummaryChange }: { projectId: string; canEdit: boolean; canDelete: boolean; onSummaryChange?: (summary: Summary) => void }) {
   const [items, setItems] = useState<Expense[]>([]);
   const [costCodes, setCostCodes] = useState<CostCode[]>([]);
   const [categories, setCategories] = useState<ExpenseCategoryOption[]>(builtInExpenseCategoryOptions);
@@ -198,13 +203,14 @@ export function ExpenseRegisterWorkspace({ projectId, canEdit, canDelete }: { pr
       setCostCodes(data.costCodes ?? []);
       setCategories(data.categories?.length ? data.categories : builtInExpenseCategoryOptions);
       setSummary(data.summary);
+      if (data.summary) onSummaryChange?.(data.summary);
       setError("");
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Не удалось загрузить реестр расходов.");
     } finally {
       setLoading(false);
     }
-  }, [projectId]);
+  }, [onSummaryChange, projectId]);
 
   useEffect(() => { void load(); }, [load]);
 
@@ -228,6 +234,7 @@ export function ExpenseRegisterWorkspace({ projectId, canEdit, canDelete }: { pr
   }, [categories, categoryLabels, summary]);
 
   const lineTotal = useMemo(() => form.items.reduce((sum, line) => sum + line.amount, 0), [form.items]);
+  const lineVariance = form.items.length ? Math.abs(lineTotal - numberInput(form.grossAmount)) : 0;
 
   function openNew(mode: FormMode) {
     const nextForm = emptyForm(mode);
@@ -321,6 +328,9 @@ export function ExpenseRegisterWorkspace({ projectId, canEdit, canDelete }: { pr
       const data = await response.json() as { preview?: ReceiptRecognitionResult; error?: string };
       if (!response.ok || !data.preview) throw new Error(data.error || "Не удалось распознать чек.");
       const preview = data.preview;
+      if (preview.currency.toUpperCase() !== "RUB") {
+        throw new Error("Реестр проекта учитывает расходы только в RUB. Пересчитайте чек в рубли до сохранения.");
+      }
       setForm({
         expenseDate: preview.expenseDate ?? dateInput(), merchant: preview.merchant ?? "Не определено", documentNumber: preview.documentNumber ?? "",
         category: preview.category, paymentMethod: preview.paymentMethod, currency: preview.currency, grossAmount: preview.grossAmount?.toString() ?? "",
@@ -337,6 +347,10 @@ export function ExpenseRegisterWorkspace({ projectId, canEdit, canDelete }: { pr
   }
 
   function editExpense(item: Expense) {
+    if (item.currency.toUpperCase() !== "RUB") {
+      setError("Запись в другой валюте нельзя изменить как рублёвую. Экспортируйте её для сверки и создайте корректный расход в RUB.");
+      return;
+    }
     setEditingId(item.id);
     setFormMode(item.source);
     setReceiptFile(null);
@@ -354,7 +368,7 @@ export function ExpenseRegisterWorkspace({ projectId, canEdit, canDelete }: { pr
   function payload() {
     return {
       expenseDate: form.expenseDate, merchant: form.merchant, documentNumber: form.documentNumber || null, category: form.category,
-      paymentMethod: form.paymentMethod, currency: form.currency.toUpperCase(), grossAmount: numberInput(form.grossAmount), taxAmount: numberInput(form.taxAmount),
+      paymentMethod: form.paymentMethod, currency: "RUB", grossAmount: numberInput(form.grossAmount), taxAmount: numberInput(form.taxAmount),
       costCodeId: form.costCodeId || null, notes: form.notes || null, source: formMode ?? "manual", recognitionStatus: form.recognitionStatus,
       recognitionConfidence: form.recognitionConfidence, items: form.items.map(({ id: _id, ...line }) => line)
     };
@@ -362,7 +376,8 @@ export function ExpenseRegisterWorkspace({ projectId, canEdit, canDelete }: { pr
 
   async function save() {
     if (!form.merchant.trim()) return setError("Укажите поставщика или назначение расхода.");
-    if (!form.grossAmount || numberInput(form.grossAmount) < 0) return setError("Укажите сумму расхода.");
+    if (!form.grossAmount || numberInput(form.grossAmount) <= 0) return setError("Укажите сумму расхода больше нуля.");
+    if (lineVariance > 0.01) return setError("Сумма позиций должна совпадать с общей суммой расхода.");
     if (formMode === "receipt" && !editingId && !receiptFile) return setError("Выберите чек и выполните распознавание.");
     setSaving(true);
     setError("");
@@ -422,6 +437,8 @@ export function ExpenseRegisterWorkspace({ projectId, canEdit, canDelete }: { pr
 
     <ExpenseCategoryInsights data={chartData} onSelect={setCategoryFilter} selected={categoryFilter} total={summary?.grossAmount ?? 0} />
 
+    {(summary?.excludedNonRub ?? 0) > 0 && <div className="expense-notice error"><AlertTriangle size={17} /><span>{summary?.excludedNonRub} записей в другой валюте не включены в рублёвые итоги.</span></div>}
+
     {(error || notice) && <div className={`expense-notice ${error ? "error" : "success"}`}>{error ? <AlertTriangle size={17} /> : <FileCheck2 size={17} />}<span>{error || notice}</span></div>}
 
     {formMode && <div className="expense-form">
@@ -454,7 +471,7 @@ export function ExpenseRegisterWorkspace({ projectId, canEdit, canDelete }: { pr
         <label className="field"><span>Код затрат</span><select value={form.costCodeId} onChange={(event) => updateForm("costCodeId", event.target.value)}><option value="">Не привязан</option>{costCodes.map((code) => <option key={code.id} value={code.id}>{code.code} · {code.name}</option>)}</select></label>
         <label className="field"><span>Сумма *</span><input inputMode="decimal" placeholder="0,00" value={form.grossAmount} onChange={(event) => updateForm("grossAmount", event.target.value)} /></label>
         <label className="field"><span>В том числе НДС</span><input inputMode="decimal" value={form.taxAmount} onChange={(event) => updateForm("taxAmount", event.target.value)} /></label>
-        <label className="field"><span>Валюта</span><input maxLength={3} value={form.currency} onChange={(event) => updateForm("currency", event.target.value.toUpperCase())} /></label>
+        <label className="field"><span>Валюта</span><input aria-label="Валюта расходов" readOnly value="RUB" /><small>Реестр и аналитика проекта ведутся в рублях.</small></label>
         <label className="field field-wide"><span>Примечание</span><textarea placeholder="Объект, получатель, причина расхода" value={form.notes} onChange={(event) => updateForm("notes", event.target.value)} /></label>
       </div>
 
@@ -469,10 +486,10 @@ export function ExpenseRegisterWorkspace({ projectId, canEdit, canDelete }: { pr
           <input aria-label="Сумма позиции" inputMode="decimal" min="0" type="number" value={line.amount} onChange={(event) => updateLine(index, { amount: Number(event.target.value) })} />
           <button aria-label="Удалить позицию" className="icon-button" onClick={() => setForm((current) => markEdited({ ...current, items: current.items.filter((_, lineIndex) => lineIndex !== index) }))} title="Удалить позицию" type="button"><Trash2 size={16} /></button>
         </div>)}
-        {form.items.length > 0 && <div className={`expense-line-total ${Math.abs(lineTotal - numberInput(form.grossAmount)) > 0.01 ? "variance" : ""}`}><span>Сумма позиций</span><strong>{money(lineTotal)}</strong><small>{Math.abs(lineTotal - numberInput(form.grossAmount)) > 0.01 ? `Отклонение ${money(lineTotal - numberInput(form.grossAmount))}` : "Совпадает с итогом"}</small></div>}
+        {form.items.length > 0 && <div className={`expense-line-total ${lineVariance > 0.01 ? "variance" : ""}`}><span>Сумма позиций</span><strong>{money(lineTotal)}</strong><small>{lineVariance > 0.01 ? `Отклонение ${money(lineTotal - numberInput(form.grossAmount))}. Исправьте перед сохранением.` : "Совпадает с итогом"}</small></div>}
       </div>
 
-      <footer><span>Сохранение чека создаст связанный документ проекта.</span><div><button className="button secondary" onClick={closeForm} type="button">Отмена</button><button className="button" disabled={saving || analyzing} onClick={() => void save()} type="button">{saving ? <RefreshCw className="spin" size={16} /> : <FileCheck2 size={16} />}{saving ? "Сохраняем" : "Сохранить расход"}</button></div></footer>
+      <footer><span>{lineVariance > 0.01 ? "Сверьте итог и детализацию расхода." : "Сохранение чека создаст связанный документ проекта."}</span><div><button className="button secondary" onClick={closeForm} type="button">Отмена</button><button className="button" disabled={saving || analyzing || lineVariance > 0.01} onClick={() => void save()} type="button">{saving ? <RefreshCw className="spin" size={16} /> : <FileCheck2 size={16} />}{saving ? "Сохраняем" : "Сохранить расход"}</button></div></footer>
     </div>}
 
     <div className="expense-toolbar">
@@ -492,12 +509,12 @@ export function ExpenseRegisterWorkspace({ projectId, canEdit, canDelete }: { pr
           <span className="expense-row-main"><strong>{item.merchant}</strong><small>{new Date(item.expenseDate).toLocaleDateString("ru-RU")} · {categoryLabels[item.category] ?? "Статья не найдена"}</small></span>
           <span className="expense-row-code">{item.costCode ? `${item.costCode.code} · ${item.costCode.name}` : "Без кода затрат"}</span>
           <span className="expense-row-source">{item.receiptDocument ? <><ReceiptText size={14} /> Чек</> : "Без чека"}</span>
-          <strong className="expense-row-amount">{money(item.grossAmount)}</strong>
+          <strong className="expense-row-amount">{money(item.grossAmount, item.currency)}</strong>
           <ChevronDown className="expense-row-chevron" size={17} />
         </summary>
         <div className="expense-row-details">
-          <div className="expense-row-meta"><span><small>Документ</small><strong>{item.documentNumber || "Не указан"}</strong></span><span><small>Оплата</small><strong>{expensePaymentMethodLabels[item.paymentMethod]}</strong></span><span><small>НДС</small><strong>{money(item.taxAmount)}</strong></span><span><small>Источник</small><strong>{item.source === "receipt" ? confidenceLabel(item.recognitionConfidence) : "Ручная запись"}</strong></span></div>
-          {item.items.length > 0 && <div className="expense-row-lines">{item.items.map((line, index) => <div key={line.id ?? index}><span>{line.name}</span><small>{line.quantity.toLocaleString("ru-RU")} {line.unit} × {money(line.unitPrice)}</small><strong>{money(line.amount)}</strong></div>)}</div>}
+          <div className="expense-row-meta"><span><small>Документ</small><strong>{item.documentNumber || "Не указан"}</strong></span><span><small>Оплата</small><strong>{expensePaymentMethodLabels[item.paymentMethod]}</strong></span><span><small>НДС</small><strong>{money(item.taxAmount, item.currency)}</strong></span><span><small>Источник</small><strong>{item.source === "receipt" ? confidenceLabel(item.recognitionConfidence) : "Ручная запись"}</strong></span></div>
+          {item.items.length > 0 && <div className="expense-row-lines">{item.items.map((line, index) => <div key={line.id ?? index}><span>{line.name}</span><small>{line.quantity.toLocaleString("ru-RU")} {line.unit} × {money(line.unitPrice, item.currency)}</small><strong>{money(line.amount, item.currency)}</strong></div>)}</div>}
           <footer>
             <span>{item.notes || "Без примечания"}</span>
             <div>{item.receiptDocument && <a className="button secondary compact-button" href={`/api/projects/${projectId}/documents/${item.receiptDocument.id}/download`}><Download size={15} /> {item.receiptDocument.fileName ?? "Чек"}</a>}{canEdit && <button className="icon-button" onClick={() => editExpense(item)} title="Редактировать" type="button"><Pencil size={16} /></button>}{canDelete && <button className="icon-button danger" onClick={() => void remove(item)} title="Удалить расход" type="button"><Trash2 size={16} /></button>}</div>
