@@ -7,6 +7,7 @@ vi.mock("./project-data", () => ({
 
 const originalOpenAiKey = process.env.OPENAI_API_KEY;
 const originalOpenAiMode = process.env.OPENAI_CONNECTOR_MODE;
+const originalDatabaseUrl = process.env.DATABASE_URL;
 
 function chatResponse(content = "Готово: риск сроков, риск материалов, риск кассового разрыва.") {
   return new Response(JSON.stringify({ choices: [{ message: { content } }] }), {
@@ -20,6 +21,7 @@ describe("AI provider resilience", () => {
   let warnMock: MockInstance<typeof console.warn>;
 
   beforeEach(() => {
+    delete process.env.DATABASE_URL;
     process.env.OPENAI_CONNECTOR_MODE = "read_only";
     fetchMock = vi.spyOn(globalThis, "fetch");
     warnMock = vi.spyOn(console, "warn").mockImplementation(() => undefined);
@@ -30,6 +32,8 @@ describe("AI provider resilience", () => {
     else delete process.env.OPENAI_API_KEY;
     if (originalOpenAiMode) process.env.OPENAI_CONNECTOR_MODE = originalOpenAiMode;
     else delete process.env.OPENAI_CONNECTOR_MODE;
+    if (originalDatabaseUrl) process.env.DATABASE_URL = originalDatabaseUrl;
+    else delete process.env.DATABASE_URL;
     fetchMock.mockRestore();
     warnMock.mockRestore();
   });
