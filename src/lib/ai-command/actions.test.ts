@@ -19,6 +19,7 @@ afterEach(() => {
 describe("AI command layer", () => {
   beforeEach(() => {
     delete process.env.DATABASE_URL;
+    process.env.OPENAI_CONNECTOR_MODE = "read_only";
   });
 
   it("builds bounded project context with management signals", async () => {

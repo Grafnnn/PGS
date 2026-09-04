@@ -49,6 +49,7 @@ vi.mock("@/lib/prisma", () => ({
 }));
 
 const originalDatabaseUrl = process.env.DATABASE_URL;
+const originalOpenAiMode = process.env.OPENAI_CONNECTOR_MODE;
 
 function request(body: unknown = {}) {
   return new NextRequest("https://pgs.local/api/projects/project-demo/ai/summary", {
@@ -62,6 +63,7 @@ describe("AI scenario endpoint", () => {
   beforeEach(() => {
     delete process.env.OPENAI_API_KEY;
     delete process.env.DATABASE_URL;
+    process.env.OPENAI_CONNECTOR_MODE = "read_only";
     vi.clearAllMocks();
     vi.mocked(getCurrentUser).mockResolvedValue({ id: "user-demo", name: "Demo", email: "demo@pgs.local", role: "OWNER", authenticated: false });
     vi.mocked(canProject).mockResolvedValue(true);
@@ -72,6 +74,8 @@ describe("AI scenario endpoint", () => {
   afterEach(() => {
     if (originalDatabaseUrl) process.env.DATABASE_URL = originalDatabaseUrl;
     else delete process.env.DATABASE_URL;
+    if (originalOpenAiMode) process.env.OPENAI_CONNECTOR_MODE = originalOpenAiMode;
+    else delete process.env.OPENAI_CONNECTOR_MODE;
   });
 
   it("rejects unknown scenarios", async () => {

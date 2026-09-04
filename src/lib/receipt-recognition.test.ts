@@ -1,8 +1,12 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { recognizeReceipt, ReceiptRecognitionProviderError } from "@/lib/receipt-recognition";
 
 const previousKey = process.env.OPENAI_API_KEY;
 const previousMode = process.env.OPENAI_CONNECTOR_MODE;
+
+beforeEach(() => {
+  process.env.OPENAI_CONNECTOR_MODE = "read_only";
+});
 
 afterEach(() => {
   vi.unstubAllGlobals();

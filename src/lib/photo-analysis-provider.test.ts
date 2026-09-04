@@ -7,6 +7,7 @@ const originalMode = process.env.OPENAI_CONNECTOR_MODE;
 describe("structured photo analysis provider", () => {
   beforeEach(() => {
     process.env.OPENAI_API_KEY = "test-key";
+    process.env.OPENAI_CONNECTOR_MODE = "read_only";
   });
 
   afterEach(() => {

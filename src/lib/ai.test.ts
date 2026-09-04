@@ -20,6 +20,7 @@ describe("AI provider resilience", () => {
   let warnMock: MockInstance<typeof console.warn>;
 
   beforeEach(() => {
+    process.env.OPENAI_CONNECTOR_MODE = "read_only";
     fetchMock = vi.spyOn(globalThis, "fetch");
     warnMock = vi.spyOn(console, "warn").mockImplementation(() => undefined);
   });
