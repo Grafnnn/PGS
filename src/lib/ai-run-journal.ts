@@ -2,9 +2,10 @@ import type { Prisma } from "@prisma/client";
 import { z } from "zod";
 import type { AppUser } from "@/lib/auth/permissions";
 import type { AiInsightResponse, AiRunInput, AiScenario } from "@/lib/ai-command/types";
+import { aiScenarioById } from "@/lib/ai-command/catalog";
 import { prisma } from "@/lib/prisma";
 
-export const AI_COMMAND_PROMPT_VERSION = "ai-command-v1";
+export const AI_COMMAND_PROMPT_VERSION = "ai-lifecycle-copilot-v2";
 
 export const aiRunFeedbackSchema = z.object({
   feedback: z.enum(["helpful", "needs_review"]).nullable(),
@@ -181,18 +182,5 @@ export function serializeAiRun(run: AiRunRecord) {
 }
 
 export function aiRunTargetTab(scenario: AiScenario) {
-  const tabs: Record<AiScenario, string> = {
-    summary: "Действия",
-    "budget-review": "Бюджет / ВОР",
-    "schedule-review": "График",
-    "procurement-review": "Заявки",
-    "finance-review": "Финансы",
-    "contract-review": "Договор / Тендер",
-    "risk-review": "Риски",
-    "document-review": "Документы",
-    "daily-report-summary": "Рапорты",
-    "executive-report": "Рапорты",
-    "draft-text": "Документы"
-  };
-  return tabs[scenario];
+  return aiScenarioById[scenario].target;
 }

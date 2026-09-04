@@ -1,8 +1,10 @@
 import type { ImportExplanation, ImportPreview } from "./import-types";
 import { importExplanationSchema } from "./import-types";
+import { getOpenAiRuntimeConfig } from "@/lib/env";
 
 const OPENAI_CHAT_COMPLETIONS_URL = "https://api.openai.com/v1/chat/completions";
 const OPENAI_MODEL = "gpt-4o-mini";
+const OPENAI_TIMEOUT_MS = process.env.NODE_ENV === "test" ? 2_000 : 45_000;
 const REDACTED = "[REDACTED]";
 
 export function buildDeterministicImportExplanation(preview: ImportPreview): ImportExplanation {
@@ -82,14 +84,17 @@ export function sanitizeImportContext(preview: ImportPreview) {
 
 export async function explainImportPreview(preview: ImportPreview): Promise<ImportExplanation> {
   const fallback = buildDeterministicImportExplanation(preview);
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) return fallback;
+  const runtime = getOpenAiRuntimeConfig();
+  if (!runtime.enabled || !runtime.apiKey) return fallback;
 
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), OPENAI_TIMEOUT_MS);
   try {
     const response = await fetch(OPENAI_CHAT_COMPLETIONS_URL, {
       method: "POST",
+      signal: controller.signal,
       headers: {
-        authorization: `Bearer ${apiKey}`,
+        authorization: `Bearer ${runtime.apiKey}`,
         "content-type": "application/json"
       },
       body: JSON.stringify({
@@ -121,6 +126,8 @@ export async function explainImportPreview(preview: ImportPreview): Promise<Impo
       status: "degraded",
       managementNote: "AI-объяснение временно недоступно, показано расчетное объяснение."
     };
+  } finally {
+    clearTimeout(timeout);
   }
 }
 

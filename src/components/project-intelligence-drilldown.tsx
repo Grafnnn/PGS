@@ -114,6 +114,8 @@ export function ProjectIntelligenceDrilldown({
 }: ProjectIntelligenceDrilldownProps) {
   const model = buildProjectIntelligenceDrilldownModel(input);
   const aiHasResult = Object.keys(aiResults).length > 0;
+  const latestAiResult = aiResults.summary ?? aiResults["executive-report"] ?? Object.values(aiResults).find(Boolean);
+  const aiHasError = Object.values(aiErrors).some(Boolean);
 
   return (
     <section className="project-intelligence-drilldown" aria-label="Детальная аналитика проекта">
@@ -588,8 +590,11 @@ export function ProjectIntelligenceDrilldown({
 
       <article className="panel intelligence-panel ai-recommendations-panel" id="ai-recommendations">
         <SectionHeader id="ai-recommendations-title" icon={<Bot size={18} />} title="AI-рекомендации по проекту" tone={model.ai.tone}>
+          <button className="button primary compact-button" disabled={aiLoading === "summary"} type="button" onClick={() => onRunAiScenario("summary")}>
+            {aiLoading === "summary" ? "Проверяю..." : aiResults.summary ? "Обновить сводку" : "Проверить проект"}
+          </button>
           <button className="button secondary compact-button" type="button" onClick={() => onNavigate("AI-помощник")}>
-            Открыть AI-помощник
+            Открыть Copilot
           </button>
         </SectionHeader>
         <div className="ai-recommendation-meta">
@@ -606,45 +611,20 @@ export function ProjectIntelligenceDrilldown({
             <span>{aiHasResult ? "Есть результаты сценариев для просмотра." : "Запустите сценарий вручную."}</span>
           </div>
         </div>
-        <div className="ai-drilldown-grid">
-          {model.ai.scenarios.map((scenario) => {
-            const result = aiResults[scenario.scenario];
-            const error = aiErrors[scenario.scenario];
-            const loading = aiLoading === scenario.scenario;
-            return (
-              <div className={`ai-drilldown-card ${error ? "has-error" : result ? "has-result" : ""}`} key={scenario.scenario}>
-                <div>
-                  <strong>{scenario.title}</strong>
-                  <p>{scenario.description}</p>
-                </div>
-                <div className="ai-card-tags">
-                  {scenario.data.slice(0, 3).map((item) => (
-                    <span className="badge gray" key={`${scenario.scenario}-${item}`}>
-                      {item}
-                    </span>
-                  ))}
-                </div>
-                {result && (
-                  <div className="ai-result-preview">
-                    <span className={`badge ${result.provider === "openai" ? "blue" : result.provider === "degraded" ? "yellow" : "gray"}`}>{result.provider}</span>
-                    <strong>{result.subject ?? result.title}</strong>
-                    <p>{result.summary}</p>
-                    {result.recommendedAttachments?.length ? <small>Рекомендуемые приложения: {result.recommendedAttachments.join(", ")}</small> : null}
-                  </div>
-                )}
-                {error && <div className="ai-error-preview">AI-сценарий сейчас недоступен. Проверьте подключение и повторите запуск позже.</div>}
-                <div className="row-actions">
-                  <button className="button primary compact-button" disabled={loading} type="button" onClick={() => onRunAiScenario(scenario.scenario)}>
-                    {loading ? "Запуск..." : result ? "Обновить" : "Запустить"}
-                  </button>
-                  <button className="button secondary compact-button" type="button" onClick={() => onNavigate(scenario.target)}>
-                    {scenario.target}
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+        {latestAiResult ? (
+          <div className="ai-result-preview" aria-live="polite">
+            <span className={`badge ${latestAiResult.provider === "openai" ? "blue" : latestAiResult.provider === "degraded" ? "yellow" : "gray"}`}>{latestAiResult.provider}</span>
+            <strong>{latestAiResult.title}</strong>
+            <p>{latestAiResult.summary}</p>
+            <small>Подробные сигналы, источники, ограничения и сценарии по этапам доступны в PGS Copilot.</small>
+          </div>
+        ) : (
+          <div className="executive-action-note">
+            <Sparkles size={16} />
+            <span>AI не запускается автоматически. Сначала изучите расчетные сигналы выше, затем запросите объяснение проекта.</span>
+          </div>
+        )}
+        {aiHasError && <div className="ai-error-preview" role="alert">AI-сценарий сейчас недоступен. Повторите запуск в PGS Copilot.</div>}
       </article>
     </section>
   );

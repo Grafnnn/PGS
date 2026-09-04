@@ -85,4 +85,15 @@ describe("AI-assisted import explanation", () => {
     expect(explanation.warningsToReview).toContain("Неизвестная строка");
     expect(explanation.recommendedNextSteps.some((step) => step.includes("неизвестные строки"))).toBe(true);
   });
+
+  it("does not send import context when the connector is disabled", async () => {
+    vi.stubEnv("OPENAI_API_KEY", "test-key");
+    vi.stubEnv("OPENAI_CONNECTOR_MODE", "disabled");
+    const fetchMock = vi.spyOn(globalThis, "fetch");
+
+    const explanation = await explainImportPreview(previewWithSecretLikeText());
+
+    expect(explanation.status).toBe("deterministic");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
 });

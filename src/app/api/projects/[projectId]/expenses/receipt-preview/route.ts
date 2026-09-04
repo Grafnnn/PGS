@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { canProject } from "@/lib/auth/project-permissions";
 import { getCurrentUser } from "@/lib/auth/session";
 import { recognizeReceipt, ReceiptRecognitionProviderError } from "@/lib/receipt-recognition";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { sanitizeFileName, validateDocumentUpload } from "@/lib/storage/documents";
 
 export const runtime = "nodejs";
@@ -11,7 +12,14 @@ const MAX_RECEIPT_BYTES = 10 * 1024 * 1024;
 
 export async function POST(request: NextRequest, { params }: { params: { projectId: string } }) {
   const user = await getCurrentUser();
-  if (!(await canProject(user, params.projectId, "edit"))) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!user || !(await canProject(user, params.projectId, "edit"))) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const rateLimit = checkRateLimit({ key: `ai-receipt:${user.id}:${params.projectId}`, limit: 12, windowMs: 5 * 60_000 });
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { error: "Слишком много запросов на распознавание чеков. Повторите позже." },
+      { status: 429, headers: { "Retry-After": String(rateLimit.retryAfterSeconds) } }
+    );
+  }
   try {
     const form = await request.formData();
     const file = form.get("file");

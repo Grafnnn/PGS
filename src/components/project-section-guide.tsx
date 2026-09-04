@@ -1,8 +1,10 @@
 "use client";
 
 import React from "react";
-import { ArrowRight, ChevronDown, ListChecks } from "lucide-react";
+import { ArrowRight, Bot, ChevronDown, ListChecks } from "lucide-react";
 import type { ProjectTab } from "@/components/project-module-menu";
+import { aiScenarioById, aiScenarioForProjectTab } from "@/lib/ai-command/catalog";
+import type { AiInsightResponse, AiScenario } from "@/lib/ai-command/types";
 
 export type ProjectSignalTone = "good" | "warn" | "bad" | "info" | "neutral";
 
@@ -195,15 +197,25 @@ export function ProjectSectionGuide({
   signals,
   priorities,
   lastEvent,
+  aiLoading,
+  aiResult,
+  aiError,
+  onRunAi,
   onNavigate
 }: {
   activeTab: ProjectTab;
   signals: ProjectSectionSignal[];
   priorities: string[];
   lastEvent: string;
+  aiLoading?: boolean;
+  aiResult?: AiInsightResponse | null;
+  aiError?: string;
+  onRunAi?: (scenario: AiScenario) => void;
   onNavigate: (tab: ProjectTab) => void;
 }) {
   const guide = projectSectionGuides[activeTab];
+  const contextualScenario = aiScenarioForProjectTab[activeTab];
+  const aiConfig = contextualScenario ? aiScenarioById[contextualScenario] : null;
 
   return (
     <section className="project-section-guide" aria-label={`Контекст раздела ${activeTab}`}>
@@ -222,6 +234,24 @@ export function ProjectSectionGuide({
           ))}
         </div>
       </div>
+      {aiConfig && onRunAi && (
+        <div className="project-section-ai" aria-live="polite">
+          <div>
+            <Bot size={17} aria-hidden="true" />
+            <span><strong>{aiConfig.shortTitle}</strong> · {aiResult?.summary ?? aiConfig.outcome}</span>
+          </div>
+          {aiError && <span className="error-text" role="alert">{aiError}</span>}
+          <button className="button secondary compact-button" disabled={aiLoading} type="button" onClick={() => onRunAi(contextualScenario!)}>
+            <Bot size={15} />
+            {aiLoading ? "Проверяю..." : aiResult ? "Обновить AI-анализ" : "Проверить с AI"}
+          </button>
+          {aiResult && (
+            <button className="project-section-link" type="button" onClick={() => onNavigate("AI-помощник")}>
+              Подробно <ArrowRight size={14} />
+            </button>
+          )}
+        </div>
+      )}
       <details className="project-section-context">
         <summary>
           <span><ListChecks size={17} aria-hidden="true" />Контекст и следующие действия</span>

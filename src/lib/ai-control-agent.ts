@@ -235,7 +235,7 @@ export function buildAiControlAgentPreview(input: AiControlAgentInput, generated
     status,
     summary: proposals.length
       ? `Подготовлено ${proposals.length} действий: ${critical} критичных, ${high} высокого приоритета.`
-      : "Новых действий по текущим сигналам не требуется.",
+      : "По доступным проверяемым сигналам новых действий не сформировано. Проверьте ограничения и актуальность исходных данных.",
     proposals,
     skippedExisting,
     dataUsed: ["ВОР", "график", "материалы", "платежи", "рапорты", "риски", "документы", "ресурсный план", "реестр действий"],

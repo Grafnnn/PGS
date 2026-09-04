@@ -71,4 +71,27 @@ describe("photo volume estimation", () => {
       needsManualMeasurement: true
     }));
   });
+
+  it("never exposes a low-confidence numeric estimate for automatic application", () => {
+    const raw = parseRawPhotoVolumeResult({
+      summary: "На фото нет надежного масштаба.",
+      suggestions: [{
+        scheduleItemId: "schedule-1",
+        suggestedQuantity: 15,
+        confidence: "low",
+        basis: "Приблизительная визуальная оценка.",
+        needsManualMeasurement: true
+      }],
+      limitations: []
+    });
+
+    const result = normalizePhotoVolumeResult(raw, works);
+
+    expect(result.suggestions[0]).toMatchObject({
+      suggestedQuantity: null,
+      confidence: "low",
+      needsManualMeasurement: true
+    });
+    expect(result.limitations.join(" ")).toContain("не подставлена");
+  });
 });

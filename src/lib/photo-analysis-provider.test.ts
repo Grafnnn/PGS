@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PhotoAnalysisProviderError, runStructuredPhotoAnalysis } from "./photo-analysis-provider";
 
 const originalKey = process.env.OPENAI_API_KEY;
+const originalMode = process.env.OPENAI_CONNECTOR_MODE;
 
 describe("structured photo analysis provider", () => {
   beforeEach(() => {
@@ -10,6 +11,8 @@ describe("structured photo analysis provider", () => {
 
   afterEach(() => {
     process.env.OPENAI_API_KEY = originalKey;
+    if (originalMode === undefined) delete process.env.OPENAI_CONNECTOR_MODE;
+    else process.env.OPENAI_CONNECTOR_MODE = originalMode;
     vi.restoreAllMocks();
   });
 
@@ -48,5 +51,22 @@ describe("structured photo analysis provider", () => {
       timeoutMessage: "timeout",
       invalidResultMessage: "invalid"
     })).rejects.toEqual(expect.objectContaining<Partial<PhotoAnalysisProviderError>>({ status: 503 }));
+  });
+
+  it("does not send photos when the connector is disabled", async () => {
+    process.env.OPENAI_CONNECTOR_MODE = "disabled";
+    const fetchMock = vi.spyOn(globalThis, "fetch");
+
+    await expect(runStructuredPhotoAnalysis({
+      schemaName: "test",
+      jsonSchema: {},
+      systemPrompt: "system",
+      userPrompt: "user",
+      photos: [{ mimeType: "image/jpeg", bytes: Buffer.from("image") }],
+      parseResult: (value) => value,
+      timeoutMessage: "timeout",
+      invalidResultMessage: "invalid"
+    })).rejects.toEqual(expect.objectContaining<Partial<PhotoAnalysisProviderError>>({ status: 503 }));
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });

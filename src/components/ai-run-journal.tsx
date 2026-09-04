@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Check, CircleAlert, Clock3, Flag, History, ListPlus, RefreshCw, ShieldCheck, ThumbsUp } from "lucide-react";
+import { aiScenarioCatalog } from "@/lib/ai-command/catalog";
 import type { AiInsightResponse, AiScenario } from "@/lib/ai-command/types";
 
 type AiRunJournalItem = {
@@ -31,19 +32,7 @@ type JournalSummary = {
   needsReview: number;
 };
 
-const scenarioLabels: Record<AiScenario, string> = {
-  summary: "Сводка проекта",
-  "budget-review": "Проверка ВОР",
-  "schedule-review": "Проверка графика",
-  "procurement-review": "Проверка снабжения",
-  "finance-review": "Финансовая проверка",
-  "contract-review": "Проверка договора",
-  "risk-review": "Проверка рисков",
-  "document-review": "Проверка документов",
-  "daily-report-summary": "Сводка рапортов",
-  "executive-report": "Отчет руководителю",
-  "draft-text": "Подготовка текста"
-};
+const scenarioLabels = Object.fromEntries(aiScenarioCatalog.map((item) => [item.scenario, item.title])) as Record<AiScenario, string>;
 
 function statusLabel(status: AiRunJournalItem["status"]) {
   if (status === "succeeded") return "Готово";
@@ -169,7 +158,7 @@ export function AiRunJournal({
             <History size={18} />
             Журнал AI-решений
           </h3>
-          <p className="muted">Каждый запуск сохраняет сценарий, версию инструкции, источник результата, ограничения и длительность.</p>
+          <p className="muted">Успешно записанные запуски сохраняют сценарий, версию инструкции, источник результата, ограничения и длительность.</p>
         </div>
         <button className="button secondary compact-button" type="button" disabled={loading} onClick={() => void loadRuns()} title="Обновить журнал">
           <RefreshCw size={16} />

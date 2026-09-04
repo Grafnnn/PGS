@@ -11,6 +11,7 @@ import {
   type PhotoVolumeWorkContext
 } from "@/lib/photo-volume-estimation";
 import { prisma } from "@/lib/prisma";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { readDocumentFile } from "@/lib/storage/documents";
 
 export const runtime = "nodejs";
@@ -30,7 +31,14 @@ function decimal(value: unknown) {
 
 export async function POST(request: NextRequest, { params }: { params: { projectId: string; reportId: string } }) {
   const user = await getCurrentUser();
-  if (!(await canProject(user, params.projectId, "edit"))) return json({ error: "Forbidden" }, 403);
+  if (!user || !(await canProject(user, params.projectId, "edit"))) return json({ error: "Forbidden" }, 403);
+  const rateLimit = checkRateLimit({ key: `ai-photo-volume:${user.id}:${params.projectId}`, limit: 12, windowMs: 5 * 60_000 });
+  if (!rateLimit.allowed) {
+    return new NextResponse(JSON.stringify({ error: "Слишком много AI-запросов по фото. Повторите позже." }), {
+      status: 429,
+      headers: { "content-type": "application/json", "Retry-After": String(rateLimit.retryAfterSeconds) }
+    });
+  }
 
   const report = await prisma.dailyReport.findFirst({
     where: { id: params.reportId, projectId: params.projectId },

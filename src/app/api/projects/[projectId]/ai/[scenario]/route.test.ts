@@ -23,7 +23,7 @@ vi.mock("@/lib/prisma", () => ({
         projectId: "project-demo",
         userId: null,
         scenario: "summary",
-        promptVersion: "ai-command-v1",
+        promptVersion: data.promptVersion,
         inputJson: data.inputJson,
         outputJson: data.outputJson,
         status: data.status,
@@ -95,7 +95,7 @@ describe("AI scenario endpoint", () => {
     expect(data.insight.provider).toBe("deterministic");
     expect(data.insight.findings.length).toBeGreaterThan(0);
     expect(data.journaled).toBe(true);
-    expect(data.run.promptVersion).toBe("ai-command-v1");
+    expect(data.run.promptVersion).toBe("ai-lifecycle-copilot-v2");
   });
 
   it("rejects unauthenticated users before project access checks", async () => {
@@ -128,7 +128,23 @@ describe("AI scenario endpoint", () => {
     expect(canProject).toHaveBeenCalledWith(expect.objectContaining({ id: "user-demo" }), "project-demo", "view");
   });
 
-  it.each(["budget-review", "schedule-review", "procurement-review", "finance-review", "contract-review", "risk-review", "executive-report"] as const)("supports scenario route %s", async (scenario) => {
+  it.each([
+    "budget-review",
+    "schedule-review",
+    "procurement-review",
+    "finance-review",
+    "contract-review",
+    "risk-review",
+    "executive-report",
+    "onboarding-review",
+    "workforce-review",
+    "field-review",
+    "quality-review",
+    "rfi-review",
+    "claims-review",
+    "acceptance-review",
+    "closeout-review"
+  ] as const)("supports scenario route %s", async (scenario) => {
     const { POST } = await import("./route");
 
     const response = await POST(request(), { params: { projectId: "project-demo", scenario } });

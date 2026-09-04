@@ -2,7 +2,27 @@ import { z } from "zod";
 
 export const aiInsightResponseSchema = z.object({
   title: z.string(),
-  scenario: z.enum(["summary", "budget-review", "schedule-review", "procurement-review", "finance-review", "contract-review", "risk-review", "document-review", "daily-report-summary", "executive-report", "draft-text"]),
+  scenario: z.enum([
+    "summary",
+    "budget-review",
+    "schedule-review",
+    "procurement-review",
+    "finance-review",
+    "contract-review",
+    "risk-review",
+    "document-review",
+    "daily-report-summary",
+    "executive-report",
+    "onboarding-review",
+    "workforce-review",
+    "field-review",
+    "quality-review",
+    "rfi-review",
+    "claims-review",
+    "acceptance-review",
+    "closeout-review",
+    "draft-text"
+  ]),
   overallStatus: z.enum(["on_track", "attention", "critical", "unknown"]).optional(),
   summary: z.string(),
   findings: z.array(

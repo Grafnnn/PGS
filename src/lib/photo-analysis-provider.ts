@@ -1,3 +1,5 @@
+import { getOpenAiRuntimeConfig } from "@/lib/env";
+
 const OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses";
 const OPENAI_VISION_MODEL = "gpt-4o-mini";
 const PHOTO_ANALYSIS_TIMEOUT_MS = 45_000;
@@ -39,8 +41,8 @@ function parseJsonText(value: string) {
 }
 
 export async function runStructuredPhotoAnalysis<T>(input: StructuredPhotoAnalysisInput<T>) {
-  const apiKey = process.env.OPENAI_API_KEY?.trim();
-  if (!apiKey) throw new PhotoAnalysisProviderError("AI-анализ фотографий пока не настроен.", 503);
+  const runtime = getOpenAiRuntimeConfig();
+  if (!runtime.enabled || !runtime.apiKey) throw new PhotoAnalysisProviderError("AI-анализ фотографий пока не настроен.", 503);
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), PHOTO_ANALYSIS_TIMEOUT_MS);
@@ -50,7 +52,7 @@ export async function runStructuredPhotoAnalysis<T>(input: StructuredPhotoAnalys
       method: "POST",
       signal: controller.signal,
       headers: {
-        authorization: `Bearer ${apiKey}`,
+        authorization: `Bearer ${runtime.apiKey}`,
         "content-type": "application/json"
       },
       body: JSON.stringify({

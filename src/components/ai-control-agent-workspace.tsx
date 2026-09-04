@@ -58,7 +58,7 @@ export function AiControlAgentWorkspace({
       const body = (await response.json()) as { preview: AiControlPreview; aiNarrative?: AiNarrative | null };
       setPreview(body.preview);
       setNarrative(body.aiNarrative ?? null);
-      setSelected(body.preview.proposals.map((item) => item.id));
+      setSelected([]);
     } catch (previewError) {
       setError(previewError instanceof Error ? previewError.message : "Не удалось собрать план управления.");
     } finally {

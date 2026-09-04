@@ -933,7 +933,9 @@ export function ReportsWorkflow({ projectId, reports, scheduleItems, budgetItems
   function applyPhotoVolumeSuggestions() {
     if (!photoVolumeResult) return;
     const quantityByScheduleId = new Map(photoVolumeResult.suggestions.flatMap((item) => (
-      item.suggestedQuantity !== null ? [[item.scheduleItemId, item.suggestedQuantity] as const] : []
+      item.suggestedQuantity !== null && item.confidence !== "low" && !item.needsManualMeasurement
+        ? [[item.scheduleItemId, item.suggestedQuantity] as const]
+        : []
     )));
     if (!quantityByScheduleId.size) {
       setPhotoNotice("На фото недостаточно масштаба для автоматической подстановки. Укажите объёмы вручную.");
@@ -1367,7 +1369,7 @@ export function ReportsWorkflow({ projectId, reports, scheduleItems, budgetItems
                           ))}
                         </div>
                         {photoVolumeResult.limitations.length ? <small>Ограничения: {photoVolumeResult.limitations.join(" ")}</small> : null}
-                        <button className="button secondary" disabled={!photoVolumeResult.suggestions.some((item) => item.suggestedQuantity !== null)} type="button" onClick={applyPhotoVolumeSuggestions}><Check size={16} /> Подставить предложенные объёмы</button>
+                        <button className="button secondary" disabled={!photoVolumeResult.suggestions.some((item) => item.suggestedQuantity !== null && item.confidence !== "low" && !item.needsManualMeasurement)} type="button" onClick={applyPhotoVolumeSuggestions}><Check size={16} /> Подставить проверяемые объёмы</button>
                       </div>
                     ) : null}
                   </section>

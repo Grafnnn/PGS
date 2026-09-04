@@ -499,6 +499,27 @@ body.design-v6 .project-workspace-content {
   padding: 18px clamp(20px, 2.4vw, 40px) 0;
 }
 
+body.design-v6 .project-section-guide:has(.project-section-ai) {
+  background: transparent;
+  border: 0;
+  display: block;
+  margin-bottom: 12px;
+}
+
+body.design-v6 .project-section-guide > :is(.project-section-guide-main, .project-section-context) {
+  display: none;
+}
+
+body.design-v6 .project-section-guide .project-section-ai {
+  background: color-mix(in srgb, var(--surface) 88%, var(--accent-soft));
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  min-height: 46px;
+  padding: 7px 10px;
+}
+
 body.design-v6 .project-module-workspace-header {
   align-items: center;
   min-height: 50px;
