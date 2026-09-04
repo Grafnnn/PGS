@@ -10506,6 +10506,73 @@ input[type="checkbox"] {
   opacity: 0;
 }
 
+.daily-photo-upload-queue {
+  display: grid;
+  gap: 6px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.daily-photo-upload-queue > article {
+  align-items: center;
+  background: var(--panel-muted);
+  border: 1px solid var(--line);
+  display: grid;
+  gap: 9px;
+  grid-template-columns: 64px minmax(0, 1fr) 34px;
+  min-height: 64px;
+  padding: 6px;
+}
+
+.daily-photo-upload-queue > article.state-failed,
+.daily-photo-upload-queue > article.state-rejected {
+  border-color: var(--red);
+}
+
+.daily-photo-upload-queue img,
+.daily-photo-placeholder {
+  aspect-ratio: 4 / 3;
+  background: var(--line);
+  height: 48px;
+  object-fit: cover;
+  width: 64px;
+}
+
+.daily-photo-placeholder {
+  align-items: center;
+  color: var(--muted);
+  display: flex;
+  justify-content: center;
+}
+
+.daily-photo-upload-queue > article > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.daily-photo-upload-queue strong,
+.daily-photo-upload-queue small {
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.daily-photo-upload-queue strong {
+  font-size: 12px;
+}
+
+.daily-photo-upload-queue small {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.daily-photo-upload-queue progress {
+  accent-color: var(--accent);
+  height: 4px;
+  width: 100%;
+}
+
 .daily-existing-photo-picker {
   border: 1px solid var(--line);
   background: var(--panel-muted);
@@ -10638,6 +10705,108 @@ input[type="checkbox"] {
 .daily-photo-answer section {
   display: grid;
   gap: 4px;
+}
+
+.daily-photo-volume-tool {
+  align-items: start;
+  background: var(--panel-muted);
+  border: 1px solid var(--line);
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: 12px;
+}
+
+.daily-photo-volume-tool > div:first-child,
+.daily-photo-volume-tool > div:first-child > span {
+  display: grid;
+  gap: 5px;
+}
+
+.daily-photo-volume-tool > div:first-child > span {
+  align-items: center;
+  grid-template-columns: auto auto 1fr;
+}
+
+.daily-photo-volume-tool > div:first-child svg,
+.daily-photo-ai-title svg {
+  color: var(--accent);
+}
+
+.daily-photo-volume-tool > div:first-child b {
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 10px;
+  justify-self: start;
+  padding: 3px 6px;
+  text-transform: uppercase;
+}
+
+.daily-photo-volume-tool > div:first-child p,
+.daily-photo-volume-result > p {
+  color: var(--muted);
+  font-size: 12px;
+  margin: 0;
+}
+
+.daily-photo-volume-result {
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 8px;
+  grid-column: 1 / -1;
+  padding-top: 10px;
+}
+
+.daily-photo-volume-result > div {
+  display: grid;
+  gap: 5px;
+}
+
+.daily-photo-volume-result article {
+  align-items: start;
+  background: var(--panel);
+  border-left: 3px solid var(--green);
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(0, 1fr) minmax(130px, auto);
+  padding: 8px 10px;
+}
+
+.daily-photo-volume-result article.needs-measurement {
+  border-left-color: var(--yellow);
+}
+
+.daily-photo-volume-result article > span {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.daily-photo-volume-result article > span:last-child {
+  text-align: right;
+}
+
+.daily-photo-volume-result article strong,
+.daily-photo-volume-result article b {
+  font-size: 12px;
+}
+
+.daily-photo-volume-result article small,
+.daily-photo-volume-result > small {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.daily-photo-volume-result > .button {
+  justify-self: start;
+}
+
+.daily-photo-ai-title {
+  align-items: center;
+  display: flex;
+  gap: 7px;
+  font-size: 13px;
 }
 
 .daily-photo-ai-workspace {
@@ -12180,6 +12349,23 @@ input[type="checkbox"] {
 
   .daily-photo-ai-presets .button {
     flex: 1 1 100%;
+  }
+
+  .daily-photo-upload-queue,
+  .daily-photo-volume-tool {
+    grid-template-columns: 1fr;
+  }
+
+  .daily-photo-volume-tool > .button {
+    width: 100%;
+  }
+
+  .daily-photo-volume-result article {
+    grid-template-columns: 1fr;
+  }
+
+  .daily-photo-volume-result article > span:last-child {
+    text-align: left;
   }
 
   .daily-report-output-row > .output-profession,
