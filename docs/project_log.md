@@ -1,5 +1,40 @@
 # PGS Project Log
 
+## 2026-09-04 - Full service audit and Schedule-to-KP integrity GO
+
+Status: The Troitsk estimate and approved production schedule were reconciled end to end. PR #215 added deterministic schedule-to-estimate linkage, preserves those links during future full-workbook imports, and added an explicit working-project selector to the dashboard.
+
+- Online URL: https://pgs-frankfurt.onrender.com
+- Online commit: `926a741b15a5c1657a4bbfeb129f27be8fe171a6`
+- Feature PR: #215
+- Decision: ONLINE/CORE AND DATA INTEGRITY GO
+- Git SHA source: `RENDER_GIT_COMMIT`
+
+Estimate and schedule audit:
+
+- the approved KP contains 93 work rows; PGS contains 93 budget work rows and 93 current detailed schedule rows;
+- all 93 names and quantities match the KP source; missing work rows: 0; name/quantity mismatches: 0;
+- KP work value excluding VAT is `15,274,035.05 RUB`; the PGS work budget is `15,274,035.05 RUB`; difference: `0.00 RUB`;
+- the approved short GPR contains 25 aggregate profiles covering all 93 detailed work rows; zero-value organizational/technology profiles are not missing KP work;
+- the project contract remains `16,037,736.80 RUB` including 5% VAT.
+
+Correction and online verification:
+
+- the audit found that all 93 current schedule rows lacked a direct `budgetItemId`, weakening downstream KS, margin, plan/fact and document-readiness calculations;
+- 91 exact links were resolved automatically; the two duplicate primer rows were linked explicitly to KP codes `1.2` and `5.1` using their source-row identity;
+- one protected confirmed transaction applied all 93 links and restored the schedule unit from KP on all 93 rows;
+- after reload, the production schedule shows `93 / 93` linked and `100%` of estimate value; the correction persisted with no missing or ambiguous row;
+- the dashboard working-project selector was verified by switching between Troitsk and `project-smoke`; quick links follow the selected project;
+- schedule, daily reports, procurement, finance, documents and KS pages loaded without an application error; desktop and 390 px mobile QA found no horizontal overflow.
+
+Validation and safety:
+
+- GitHub Actions CI #439 passed; Vitest: 918/918 passed; ESLint, TypeScript, Prisma validate/generate, production build and `git diff --check` passed;
+- future full Excel imports now use exact KP source-row metadata first and deterministic name/section/unit/quantity matching second;
+- production data changes were limited to current schedule `budgetItemId` links, missing-unit backfill and the audit record;
+- no Prisma schema/migration, Render environment/secret, auth/session/provider/deploy configuration or contract amount was changed;
+- no live AI, file upload, project creation/deletion or unrelated online mutation was run; no secret value was printed or committed.
+
 ## 2026-09-04 - Daily Report Closeout v2 online/core GO
 
 Status: Daily Report Closeout v2 from PR #211 is live on Render. Closing a shift now uses compact per-work cards with named-worker assignment, schedule quantities and automatic profession, unit and labor calculations; the photo question flow can upload newly selected evidence before the explicit AI request.
