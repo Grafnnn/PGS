@@ -1,40 +1,15 @@
 import type { AiActionPriority, AiFinding, AiInsightResponse, AiProjectContext, AiRecommendedAction, AiRunInput, AiScenario, AiSeverity, AiStatus } from "./types";
 import { buildAiProjectContext } from "./context";
 import { aiInsightResponseSchema } from "./schemas";
+import { aiScenarioById } from "./catalog";
+import { getOpenAiRuntimeConfig } from "@/lib/env";
 
-const OPENAI_CHAT_COMPLETIONS_URL = "https://api.openai.com/v1/chat/completions";
+const OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses";
 const OPENAI_MODEL = "gpt-4o-mini";
-const MAX_PROVIDER_CONTEXT_CHARS = 12_000;
+const PROVIDER_TIMEOUT_MS = process.env.NODE_ENV === "test" ? 2_000 : 45_000;
+const MAX_PROVIDER_CONTEXT_CHARS = 32_000;
 const MAX_FINDINGS = 12;
 const MAX_ACTIONS = 8;
-
-const scenarioTitles: Record<AiScenario, string> = {
-  summary: "Сводка по проекту",
-  "budget-review": "Проверка ВОР / сметы",
-  "schedule-review": "Анализ графика",
-  "procurement-review": "Материалы и снабжение",
-  "finance-review": "Финансовый анализ",
-  "contract-review": "Проверка договора / тендера",
-  "risk-review": "Риск-анализ",
-  "document-review": "Анализ документов",
-  "daily-report-summary": "Сводка по рапортам",
-  "executive-report": "Управленческий отчет",
-  "draft-text": "Подготовка текста"
-};
-
-const scenarioDataUsed: Record<AiScenario, string[]> = {
-  summary: ["project", "budget", "schedule", "materials", "procurement", "finance", "risks", "dailyReports"],
-  "budget-review": ["project", "budget"],
-  "schedule-review": ["project", "schedule", "risks", "dailyReports"],
-  "procurement-review": ["project", "materials", "procurement", "schedule"],
-  "finance-review": ["project", "budget", "finance", "risks"],
-  "contract-review": ["project", "documents", "budget", "finance", "risks"],
-  "risk-review": ["project", "budget", "schedule", "materials", "procurement", "finance", "risks", "documents"],
-  "document-review": ["project", "documents"],
-  "daily-report-summary": ["project", "dailyReports", "schedule", "risks"],
-  "executive-report": ["project", "budget", "schedule", "materials", "procurement", "finance", "risks", "dailyReports"],
-  "draft-text": ["project", "budget", "schedule", "materials", "finance", "risks"]
-};
 
 export const aiScenarioAliases: Record<string, AiScenario> = {
   summary: "summary",
@@ -47,19 +22,106 @@ export const aiScenarioAliases: Record<string, AiScenario> = {
   "document-review": "document-review",
   "daily-report-summary": "daily-report-summary",
   "executive-report": "executive-report",
+  "onboarding-review": "onboarding-review",
+  "workforce-review": "workforce-review",
+  "field-review": "field-review",
+  "quality-review": "quality-review",
+  "rfi-review": "rfi-review",
+  "claims-review": "claims-review",
+  "acceptance-review": "acceptance-review",
+  "closeout-review": "closeout-review",
   "draft-text": "draft-text",
   "analyze-budget": "budget-review",
   "analyze-contract": "contract-review",
   "procurement-suggestion": "procurement-review"
 };
 
-type ProviderPayload = Partial<Omit<AiInsightResponse, "scenario" | "generatedAt" | "provider">>;
+type ProviderPayload = Record<string, unknown>;
+
+const providerInsightJsonSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["title", "overallStatus", "summary", "findings", "recommendedActions", "subject", "draftText", "recommendedAttachments", "dataLimitations"],
+  properties: {
+    title: { type: "string", maxLength: 120 },
+    overallStatus: { type: "string", enum: ["on_track", "attention", "critical", "unknown"] },
+    summary: { type: "string", maxLength: 1800 },
+    findings: {
+      type: "array",
+      maxItems: MAX_FINDINGS,
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["severity", "title", "description", "source", "recommendation"],
+        properties: {
+          severity: { type: "string", enum: ["low", "medium", "high", "critical"] },
+          title: { type: "string", maxLength: 180 },
+          description: { type: "string", maxLength: 1200 },
+          source: { type: "string", maxLength: 120 },
+          recommendation: { type: "string", maxLength: 1000 }
+        }
+      }
+    },
+    recommendedActions: {
+      type: "array",
+      maxItems: MAX_ACTIONS,
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["priority", "title", "description"],
+        properties: {
+          priority: { type: "string", enum: ["low", "medium", "high"] },
+          title: { type: "string", maxLength: 180 },
+          description: { type: "string", maxLength: 1000 }
+        }
+      }
+    },
+    subject: { anyOf: [{ type: "string", maxLength: 180 }, { type: "null" }] },
+    draftText: { anyOf: [{ type: "string", maxLength: 6000 }, { type: "null" }] },
+    recommendedAttachments: { type: "array", maxItems: 8, items: { type: "string", maxLength: 180 } },
+    dataLimitations: { type: "array", maxItems: 8, items: { type: "string", maxLength: 600 } }
+  }
+} as const;
 
 function statusFromFindings(findings: AiFinding[]): AiStatus {
   if (findings.some((findingItem) => findingItem.severity === "critical")) return "critical";
   if (findings.some((findingItem) => findingItem.severity === "high" || findingItem.severity === "medium")) return "attention";
   if (findings.length) return "attention";
   return "on_track";
+}
+
+const findingSeverityRank: Record<AiSeverity, number> = { critical: 0, high: 1, medium: 2, low: 3 };
+
+function rankFindings(findings: AiFinding[]) {
+  return findings
+    .map((item, index) => ({ item, index }))
+    .sort((left, right) => findingSeverityRank[left.item.severity] - findingSeverityRank[right.item.severity] || left.index - right.index)
+    .map(({ item }) => item);
+}
+
+function statusForScenario(input: AiRunInput, context: AiProjectContext, findings: AiFinding[]) {
+  const status = statusFromFindings(findings);
+  if (status !== "on_track") return status;
+  const hasEvidence: Partial<Record<AiScenario, boolean>> = {
+    "budget-review": context.budget.itemCount > 0,
+    "schedule-review": context.schedule.itemCount > 0,
+    "procurement-review": context.materials.itemCount + context.procurement.active.length > 0,
+    "finance-review": context.finance.paymentCount + context.expenses.count > 0,
+    "contract-review": context.documents.length > 0,
+    "document-review": context.documents.length > 0,
+    "daily-report-summary": context.dailyReports.length > 0,
+    "workforce-review": context.workforce.demandCount + context.workforce.assignmentCount > 0,
+    "field-review": context.field.reportCount > 0,
+    "quality-review": context.quality.inspectionCount + context.quality.openIssueCount > 0,
+    "rfi-review": context.collaboration.openRfis + context.collaboration.openSubmittals > 0,
+    "claims-review": context.commercial.changeOrderCount > 0,
+    "acceptance-review": context.acceptance.applicationCount > 0,
+    "closeout-review": context.closeout.packageCount > 0
+  };
+  if (input.scenario in hasEvidence && !hasEvidence[input.scenario]) return "unknown";
+  const broadEvidence = context.budget.itemCount + context.schedule.itemCount + context.materials.itemCount + context.finance.paymentCount + context.dailyReports.length + context.documents.length;
+  if (["summary", "executive-report", "risk-review", "draft-text"].includes(input.scenario) && broadEvidence === 0) return "unknown";
+  return status;
 }
 
 function finding(severity: AiSeverity, title: string, description: string, source?: string, recommendation?: string): AiFinding {
@@ -80,12 +142,24 @@ function percent(value: number) {
 
 function scenarioLimitations(input: AiRunInput, context: AiProjectContext, provider?: AiInsightResponse["provider"], extra: string[] = []) {
   const limitations = [...context.dataLimitations];
-  if (provider === "deterministic") limitations.push("AI provider key не настроен: показан deterministic management analysis без live provider call.");
+  if (provider === "deterministic") {
+    const runtime = getOpenAiRuntimeConfig();
+    limitations.push(runtime.mode === "disabled"
+      ? "OpenAI connector отключен: показаны только детерминированные проверки PGS."
+      : "AI provider key не настроен: показаны только детерминированные проверки PGS.");
+  }
   if (input.scenario === "finance-review" && context.finance.paymentCount === 0) limitations.push("Финансовый анализ ограничен: платежи по проекту не найдены.");
   if (input.scenario === "daily-report-summary" && context.dailyReports.length === 0) limitations.push("Рапорты по проекту не найдены: сводка ограничена графиком и рисками.");
   if (input.scenario === "document-review" && context.documents.length === 0) limitations.push("Документы по проекту не найдены.");
   if (input.scenario === "contract-review") limitations.push("Проверка договора ограничена метаданными документов и проектными данными: OCR/полный текст договора не передается автоматически.");
   if (input.scenario === "budget-review" && context.budget.itemCount === 0) limitations.push("ВОР/бюджет по проекту пустой.");
+  if (input.scenario === "workforce-review" && context.workforce.demandCount === 0) limitations.push("Потребность ФОТ не сформирована: вывод ограничен назначениями и рапортами.");
+  if (input.scenario === "field-review" && context.field.reportCount === 0) limitations.push("Полевые рапорты отсутствуют: факт выполнения и фото не подтверждены.");
+  if (input.scenario === "quality-review" && context.quality.inspectionCount + context.quality.openIssueCount === 0) limitations.push("Контур качества пуст: отсутствие записей не считается подтверждением качества.");
+  if (input.scenario === "rfi-review" && context.collaboration.openRfis + context.collaboration.openSubmittals === 0) limitations.push("RFI и согласования не зарегистрированы: отсутствие записей не подтверждает отсутствие вопросов.");
+  if (input.scenario === "claims-review" && context.commercial.changeOrderCount === 0) limitations.push("Изменения/претензии не зарегистрированы: договорные основания по текстам документов не анализировались.");
+  if (input.scenario === "acceptance-review" && context.acceptance.applicationCount === 0) limitations.push("Платежные приложения/КС не зарегистрированы.");
+  if (input.scenario === "closeout-review" && context.closeout.packageCount === 0) limitations.push("Пакеты сдачи не созданы: отсутствие записей не означает готовность к закрытию.");
   return Array.from(new Set([...limitations, ...extra]));
 }
 
@@ -100,14 +174,14 @@ function base(
   extraLimitations: string[] = []
 ): AiInsightResponse {
   return aiInsightResponseSchema.parse({
-    title: scenarioTitles[input.scenario],
+    title: aiScenarioById[input.scenario].title,
     scenario: input.scenario,
-    overallStatus: statusFromFindings(findings),
+    overallStatus: statusForScenario(input, context, findings),
     summary,
-    findings: findings.slice(0, MAX_FINDINGS),
+    findings: rankFindings(findings).slice(0, MAX_FINDINGS),
     recommendedActions: recommendedActions.slice(0, MAX_ACTIONS),
     ...options,
-    dataUsed: scenarioDataUsed[input.scenario],
+    dataUsed: aiScenarioById[input.scenario].dataKeys,
     dataLimitations: scenarioLimitations(input, context, provider, extraLimitations),
     generatedAt: new Date().toISOString(),
     provider
@@ -203,6 +277,84 @@ function collectDailyReportFindings(context: AiProjectContext) {
   return findings;
 }
 
+function collectOnboardingFindings(context: AiProjectContext) {
+  const findings: AiFinding[] = [];
+  if (!context.project.customer?.trim()) findings.push(finding("high", "Не указан заказчик", "Карточка проекта не содержит заказчика.", "project", "Заполнить заказчика до договорных и платежных решений."));
+  if (!context.project.contractAmount || context.project.contractAmount <= 0) findings.push(finding("critical", "Не задана сумма договора", "Экономика и маржа проекта не могут быть рассчитаны.", "project", "Указать подтвержденную договорную сумму и режим НДС."));
+  if (!context.project.startsAt || !context.project.endsAt) findings.push(finding("high", "Не задан период проекта", "Нет полной пары дат начала и окончания.", "project", "Подтвердить календарные границы проекта."));
+  if (!context.budget.itemCount) findings.push(finding("critical", "ВОР не загружена", "Нет объемов и расценок для планирования проекта.", "budget", "Импортировать и проверить ВОР/смету."));
+  if (!context.schedule.itemCount) findings.push(finding("critical", "График не сформирован", "Нет производственной последовательности и контрольных дат.", "schedule", "Сформировать базовый график и назначить ответственных."));
+  if (!context.documents.length) findings.push(finding("high", "Стартовые документы не загружены", "Договор, ТЗ и исходные документы отсутствуют в реестре.", "documents", "Загрузить стартовый пакет и проверить категории."));
+  if (!context.workforce.demandCount) findings.push(finding("medium", "Ресурсная потребность не рассчитана", "ФОТ и потребность в людях не связаны с графиком.", "workforce", "Сформировать трудовую потребность по видам работ."));
+  return findings;
+}
+
+function collectWorkforceFindings(context: AiProjectContext) {
+  const findings: AiFinding[] = [];
+  const gap = Math.max(0, Math.ceil(context.workforce.peakHeadcount - context.workforce.assignedHeadcount));
+  if (gap > 0) findings.push(finding("high", "Дефицит рабочей силы", `Пиковая потребность ${Math.ceil(context.workforce.peakHeadcount)} чел., назначено ${context.workforce.assignedHeadcount}; дефицит ${gap} чел.`, "workforce", "Уточнить календарную потребность и назначить ресурсы до начала фронта."));
+  if (context.workforce.missingProductivityNorms) findings.push(finding("medium", "Не заполнены нормы выработки", `${context.workforce.missingProductivityNorms} позиций потребности не имеют нормы выработки.`, "workforce", "Подтвердить нормы ПТО до расчета численности."));
+  if (context.workforce.missingSalaryRates) findings.push(finding("medium", "Не заполнены ставки ФОТ", `${context.workforce.missingSalaryRates} позиций не имеют месячной ставки.`, "workforce", "Заполнить зарплату и налоговую нагрузку для прогноза себестоимости."));
+  if (context.workforce.pendingAdmissions) findings.push(finding("high", "Есть неподтвержденные допуски", `${context.workforce.pendingAdmissions} заявок на допуск ожидают решения.`, "workforce", "Проверить документы и подтвердить допуск до выхода на площадку."));
+  return findings;
+}
+
+function collectFieldFindings(context: AiProjectContext) {
+  const findings = collectDailyReportFindings(context);
+  if (!context.field.reportCount) findings.push(finding("high", "Нет подтвержденного факта площадки", "Рапорты и фото отсутствуют, поэтому прогресс нельзя считать подтвержденным.", "dailyReports", "Открыть смену, зафиксировать объемы и приложить фото."));
+  if (context.field.drafts) findings.push(finding("medium", "Есть незакрытые смены", `${context.field.drafts} рапортов остаются в черновике или открытой фазе.`, "dailyReports", "Завершить факт, проверить фото и отправить рапорт на согласование."));
+  if (context.field.reportsWithoutPhotos) findings.push(finding("medium", "Факт без фотоподтверждения", `${context.field.reportsWithoutPhotos} рапортов не имеют прикрепленных фото.`, "dailyReports", "Приложить фото к соответствующему рапорту до утверждения факта."));
+  if (context.field.reportsWithoutProgress) findings.push(finding("high", "Рапорт не применен к графику", `${context.field.reportsWithoutProgress} рапортов не имеют примененной записи прогресса.`, "schedule", "Проверить объемы и связь работ рапорта с текущей версией графика."));
+  return findings;
+}
+
+function collectQualityFindings(context: AiProjectContext) {
+  const findings: AiFinding[] = [];
+  if (context.quality.acceptanceBlockers) findings.push(finding("critical", "Есть блокеры приемки", `${context.quality.acceptanceBlockers} замечаний блокируют приемку/КС.`, "quality", "Закрыть корректирующие действия и приложить подтверждение устранения."));
+  if (context.quality.criticalOrHighIssues) findings.push(finding("high", "Критичные замечания качества", `${context.quality.criticalOrHighIssues} открытых замечаний имеют высокий или критичный уровень.`, "quality", "Назначить владельцев и срок устранения."));
+  if (context.quality.overdueIssues) findings.push(finding("high", "Просрочены замечания качества", `${context.quality.overdueIssues} замечаний просрочены.`, "quality", "Эскалировать просроченные замечания и обновить план закрытия."));
+  if (context.quality.inspectionsDue) findings.push(finding("medium", "Просрочены инспекции", `${context.quality.inspectionsDue} проверок не закрыты к плановой дате.`, "quality", "Провести проверку или документировать перенос."));
+  if (context.quality.missingOwners) findings.push(finding("medium", "Замечания без ответственного", `${context.quality.missingOwners} замечаний не имеют владельца.`, "quality", "Назначить ответственную сторону."));
+  if (context.quality.missingCorrectiveActions) findings.push(finding("medium", "Нет корректирующих мер", `${context.quality.missingCorrectiveActions} замечаний не содержат плана устранения.`, "quality", "Зафиксировать проверяемую корректирующую меру."));
+  for (const issue of context.quality.topIssues.slice(0, 3)) findings.push(finding(issue.acceptanceBlocker ? "critical" : issue.severity === "high" ? "high" : "medium", issue.title, `Статус ${issue.status}; ответственный ${issue.responsibleParty || "не назначен"}; срок ${issue.dueAt || "не задан"}.`, "quality", "Открыть карточку замечания и подтвердить evidence закрытия."));
+  return findings;
+}
+
+function collectRfiFindings(context: AiProjectContext) {
+  const findings: AiFinding[] = [];
+  if (context.collaboration.overdueRfis) findings.push(finding("high", "Просрочены RFI", `${context.collaboration.overdueRfis} запросов превысили срок ответа.`, "rfi", "Эскалировать вопросы, влияющие на ближайшие работы."));
+  if (context.collaboration.unansweredRfis) findings.push(finding("medium", "RFI без ответа", `${context.collaboration.unansweredRfis} открытых запросов не имеют ответа.`, "rfi", "Назначить ответственного и дату ответа."));
+  if (context.collaboration.overdueSubmittals) findings.push(finding("high", "Просрочены согласования", `${context.collaboration.overdueSubmittals} материалов/документов не согласованы в срок.`, "submittals", "Проверить влияние на закупку и график."));
+  return findings;
+}
+
+function collectClaimsFindings(context: AiProjectContext) {
+  const findings: AiFinding[] = [];
+  if (context.commercial.unpricedChangeOrders) findings.push(finding("high", "Изменения без оценки", `${context.commercial.unpricedChangeOrders} изменений не имеют денежной оценки.`, "commercial", "Оценить объем, цену и договорное основание до выполнения."));
+  if (context.commercial.pendingChangeOrders) findings.push(finding("medium", "Изменения ожидают решения", `${context.commercial.pendingChangeOrders} изменений находятся в незавершенном статусе; экспозиция ${money(context.commercial.changeOrderExposure)}.`, "commercial", "Проверить сроки уведомления и пакет подтверждения."));
+  if (context.commercial.scheduleImpactDays > 0) findings.push(finding("high", "Изменения влияют на срок", `Совокупное заявленное влияние: ${context.commercial.scheduleImpactDays} дн.`, "commercial", "Связать изменение с графиком и направить уведомление в договорный срок."));
+  if (context.commercial.unmatchedInvoices) findings.push(finding("medium", "Счета не сопоставлены", `${context.commercial.unmatchedInvoices} счетов не связаны с обязательством/КС/платежом.`, "finance", "Провести трехстороннюю сверку и назначить код затрат."));
+  return findings;
+}
+
+function collectAcceptanceFindings(context: AiProjectContext) {
+  const findings: AiFinding[] = [];
+  if (context.quality.acceptanceBlockers) findings.push(finding("critical", "КС блокируют замечания", `${context.quality.acceptanceBlockers} замечаний качества помечены как блокеры приемки.`, "quality", "Закрыть замечания и приложить подтверждающие документы."));
+  if (!context.acceptance.applicationCount && context.schedule.completionPercent > 0) findings.push(finding("high", "Факт есть, КС не подготовлена", `Готовность графика ${percent(context.schedule.completionPercent)}, платежные приложения отсутствуют.`, "acceptance", "Сопоставить подтвержденные объемы с договорными расценками и собрать пакет КС."));
+  if (context.acceptance.draftApplications) findings.push(finding("medium", "КС остается в черновике", `${context.acceptance.draftApplications} платежных приложений не отправлены на согласование.`, "acceptance", "Проверить объемы, удержания и документы перед отправкой."));
+  if (context.acceptance.submittedApplications) findings.push(finding("medium", "КС ожидает решения", `${context.acceptance.submittedApplications} приложений находятся на согласовании.`, "acceptance", "Проверить срок ответа и замечания заказчика."));
+  return findings;
+}
+
+function collectCloseoutFindings(context: AiProjectContext) {
+  const findings: AiFinding[] = [];
+  if (!context.closeout.packageCount) findings.push(finding("high", "Пакет сдачи не сформирован", "В проекте нет пакетов закрытия.", "closeout", "Создать пакет сдачи и обязательный чек-лист документов."));
+  if (context.closeout.overduePackages) findings.push(finding("high", "Просрочены пакеты сдачи", `${context.closeout.overduePackages} пакетов не закрыты в срок.`, "closeout", "Назначить владельца и обновить дату передачи."));
+  if (context.closeout.incompleteChecklistItems) findings.push(finding("high", "Чек-лист сдачи неполный", `${context.closeout.incompleteChecklistItems} обязательных пунктов не завершены.`, "closeout", "Закрыть обязательные документы и подтверждения."));
+  if (context.closeout.warrantiesMissingDates) findings.push(finding("medium", "Гарантия без дат", `${context.closeout.warrantiesMissingDates} гарантийных обязательств не имеют полного периода.`, "closeout", "Указать начало, окончание и срок уведомления."));
+  return findings;
+}
+
 function collectFindings(input: AiRunInput, context: AiProjectContext) {
   if (input.scenario === "budget-review") return collectBudgetFindings(context);
   if (input.scenario === "schedule-review") return collectScheduleFindings(context);
@@ -212,7 +364,26 @@ function collectFindings(input: AiRunInput, context: AiProjectContext) {
   if (input.scenario === "risk-review") return [...collectRiskFindings(context), ...collectScheduleFindings(context).slice(0, 3), ...collectProcurementFindings(context).slice(0, 3), ...collectFinanceFindings(context).slice(0, 3)];
   if (input.scenario === "document-review") return collectDocumentFindings(context);
   if (input.scenario === "daily-report-summary") return collectDailyReportFindings(context);
-  return [...collectBudgetFindings(context), ...collectScheduleFindings(context), ...collectProcurementFindings(context), ...collectFinanceFindings(context), ...collectRiskFindings(context)];
+  if (input.scenario === "onboarding-review") return collectOnboardingFindings(context);
+  if (input.scenario === "workforce-review") return collectWorkforceFindings(context);
+  if (input.scenario === "field-review") return collectFieldFindings(context);
+  if (input.scenario === "quality-review") return collectQualityFindings(context);
+  if (input.scenario === "rfi-review") return collectRfiFindings(context);
+  if (input.scenario === "claims-review") return collectClaimsFindings(context);
+  if (input.scenario === "acceptance-review") return collectAcceptanceFindings(context);
+  if (input.scenario === "closeout-review") return collectCloseoutFindings(context);
+  return [
+    ...collectBudgetFindings(context),
+    ...collectScheduleFindings(context),
+    ...collectProcurementFindings(context),
+    ...collectFinanceFindings(context),
+    ...collectRiskFindings(context),
+    ...collectWorkforceFindings(context),
+    ...collectFieldFindings(context),
+    ...collectQualityFindings(context),
+    ...collectClaimsFindings(context),
+    ...collectAcceptanceFindings(context)
+  ];
 }
 
 function buildActions(input: AiRunInput, context: AiProjectContext, findings: AiFinding[]) {
@@ -224,8 +395,16 @@ function buildActions(input: AiRunInput, context: AiProjectContext, findings: Ai
   if (input.scenario === "contract-review") actions.push(action("high", "Проверить договорные условия до GO", "Сверить оплату, аванс, приемку, штрафы, изменение объемов и состав приложений."));
   if (input.scenario === "document-review") actions.push(action("medium", "Запустить OCR/text extraction как отдельный шаг", "Без извлеченного текста AI не должен делать вид, что прочитал документы."));
   if (input.scenario === "daily-report-summary") actions.push(action("medium", "Сверить рапорты с графиком", "Проверить, какие фактические работы не отражены в графике/объемах."));
+  if (input.scenario === "onboarding-review") actions.push(action("high", "Закрыть стартовые пробелы", "Подтвердить карточку, договор, ВОР, график, документы и ресурсную базу до запуска проекта."));
+  if (input.scenario === "workforce-review") actions.push(action("high", "Сверить бригады с графиком", "Закрыть дефицит людей, норм, ставок и допусков по ближайшим фронтам."));
+  if (input.scenario === "field-review") actions.push(action("high", "Подтвердить факт смены", "Закрыть рапорт, приложить фото и применить проверенные объемы к актуальному графику."));
+  if (input.scenario === "quality-review") actions.push(action("high", "Закрыть блокеры качества", "Приоритизировать приемочные блокеры, назначить владельцев и evidence устранения."));
+  if (input.scenario === "rfi-review") actions.push(action("high", "Эскалировать просроченные согласования", "Связать RFI/submittals с ближайшими работами и подтвердить срок ответа."));
+  if (input.scenario === "claims-review") actions.push(action("high", "Собрать evidence по изменениям", "Подтвердить основание, объем, стоимость, влияние на срок и дату уведомления."));
+  if (input.scenario === "acceptance-review") actions.push(action("high", "Подготовить пакет КС", "Сопоставить утвержденный факт, расценки, качество и комплект подтверждающих документов."));
+  if (input.scenario === "closeout-review") actions.push(action("high", "Собрать план сдачи", "Закрыть обязательный чек-лист, пакеты передачи и гарантийные даты."));
   actions.push(action("medium", "Подготовить управленческую сводку", "Собрать короткий отчет: сроки, деньги, снабжение, риски, решения."));
-  return actions;
+  return Array.from(new Map(actions.map((item) => [`${item.priority}:${item.title}`, item])).values()).slice(0, MAX_ACTIONS);
 }
 
 function buildSummary(input: AiRunInput, context: AiProjectContext, findings: AiFinding[]) {
@@ -250,13 +429,30 @@ function buildSummary(input: AiRunInput, context: AiProjectContext, findings: Ai
   if (input.scenario === "daily-report-summary") {
     return `Проверены последние рапорты: ${context.dailyReports.length}. Проблемных записей: ${context.dailyReports.filter((report) => report.issues).length}.`;
   }
+  if (input.scenario === "onboarding-review") return `Старт проекта: ВОР ${context.budget.itemCount} поз., график ${context.schedule.itemCount} работ, документов ${context.documents.length}, ресурсных потребностей ${context.workforce.demandCount}.`;
+  if (input.scenario === "workforce-review") return `Ресурсный план: потребность ${Math.ceil(context.workforce.peakHeadcount)} чел. и ${Math.round(context.workforce.plannedHours)} ч; назначено ${context.workforce.assignedHeadcount} чел.; допуски в ожидании ${context.workforce.pendingAdmissions}.`;
+  if (input.scenario === "field-review") return `Площадка: ${context.field.reportCount} рапортов, открытых/черновых ${context.field.drafts}, без фото ${context.field.reportsWithoutPhotos}, без примененного прогресса ${context.field.reportsWithoutProgress}.`;
+  if (input.scenario === "quality-review") return `Качество: ${context.quality.inspectionCount} проверок, ${context.quality.openIssueCount} открытых замечаний, блокеров приемки ${context.quality.acceptanceBlockers}.`;
+  if (input.scenario === "rfi-review") return `Согласования: открытых RFI ${context.collaboration.openRfis}, просроченных ${context.collaboration.overdueRfis}; открытых submittals ${context.collaboration.openSubmittals}.`;
+  if (input.scenario === "claims-review") return `Изменения: ${context.commercial.changeOrderCount}, ожидают решения ${context.commercial.pendingChangeOrders}, текущая экспозиция ${money(context.commercial.changeOrderExposure)}.`;
+  if (input.scenario === "acceptance-review") return `Приемка и оплата: ${context.acceptance.applicationCount} платежных приложений на ${money(context.acceptance.netAmount)}, блокеров качества ${context.quality.acceptanceBlockers}.`;
+  if (input.scenario === "closeout-review") return `Сдача: ${context.closeout.packageCount} пакетов, открытых ${context.closeout.openPackages}, обязательных незакрытых пунктов ${context.closeout.incompleteChecklistItems}.`;
+  if (statusForScenario(input, context, findings) === "unknown") {
+    return "Недостаточно проверяемых данных для вывода. Заполните указанные в ограничениях источники и повторите анализ.";
+  }
+  const ranked = rankFindings(findings);
+  const signalWord = findings.length % 10 === 1 && findings.length % 100 !== 11
+    ? "сигнал"
+    : [2, 3, 4].includes(findings.length % 10) && ![12, 13, 14].includes(findings.length % 100)
+      ? "сигнала"
+      : "сигналов";
   return findings.length > 0
-    ? `Найдено ${findings.length} управленческих сигналов. Фокус: ${findings.slice(0, 3).map((item) => item.title).join(", ")}.`
+    ? `Найдено ${findings.length} управленческих ${signalWord}. Фокус: ${ranked.slice(0, 3).map((item) => item.title).join(", ")}.${findings.length > MAX_FINDINGS ? ` Показано ${MAX_FINDINGS} приоритетных сигналов.` : ""}`
     : "Критичных отклонений по доступным данным не найдено. Продолжайте контроль сроков, ВОР и снабжения.";
 }
 
 function buildDraftText(input: AiRunInput, context: AiProjectContext, findings: AiFinding[]) {
-  const subject = `${input.topic || scenarioTitles[input.scenario]} — ${context.project.name}`;
+  const subject = `${input.topic || aiScenarioById[input.scenario].title} — ${context.project.name}`;
   return {
     subject,
     recommendedAttachments: ["Актуальный график", "ВОР/бюджет", "Реестр рисков", "Платежный календарь"].slice(0, input.scenario === "draft-text" ? 4 : 3),
@@ -297,10 +493,13 @@ function buildScenarioOptions(input: AiRunInput, context: AiProjectContext, find
   if (input.scenario === "procurement-review") return buildProcurementDraft(context);
   if (input.scenario === "contract-review") return { recommendedAttachments: ["Договор / проект договора", "ТЗ", "ВОР/смета", "График оплат", "Календарный график", "КС/акты"] };
   if (input.scenario === "document-review") return { recommendedAttachments: ["Договор", "ВОР/смета", "КС", "Исполнительная документация"] };
+  if (input.scenario === "claims-review") return { recommendedAttachments: ["Договор и условия уведомления", "Рапорты/переписка", "Актуальный график", "Расчет стоимости изменения"] };
+  if (input.scenario === "acceptance-review") return { recommendedAttachments: ["Подтвержденный факт", "Исполнительная документация", "Акты качества", "Расчет КС"] };
+  if (input.scenario === "closeout-review") return { recommendedAttachments: ["Исполнительный комплект", "Акты приемки", "Паспорта и сертификаты", "Гарантийные обязательства"] };
   return {};
 }
 
-function deterministicInsight(input: AiRunInput, context: AiProjectContext, provider: AiInsightResponse["provider"] = process.env.OPENAI_API_KEY ? "openai" : "deterministic", extraLimitations: string[] = []): AiInsightResponse {
+function deterministicInsight(input: AiRunInput, context: AiProjectContext, provider: AiInsightResponse["provider"] = "deterministic", extraLimitations: string[] = []): AiInsightResponse {
   const findings = collectFindings(input, context);
   const actions = buildActions(input, context, findings);
   return base(input, context, findings, actions, buildSummary(input, context, findings), provider, buildScenarioOptions(input, context, findings), extraLimitations);
@@ -321,80 +520,195 @@ function parseProviderJson(content: string): ProviderPayload | null {
   }
 }
 
-function sanitizeProviderItems<T>(items: T[] | undefined, fallback: T[], max: number) {
-  return Array.isArray(items) ? items.slice(0, max) : fallback.slice(0, max);
+function safeText(value: unknown, max: number) {
+  return typeof value === "string" ? value.trim().slice(0, max) : "";
+}
+
+function sanitizedProviderFindings(value: unknown) {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((item): AiFinding[] => {
+    if (!item || typeof item !== "object") return [];
+    const record = item as Record<string, unknown>;
+    const severity = ["low", "medium", "high", "critical"].includes(String(record.severity)) ? record.severity as AiSeverity : "medium";
+    const title = safeText(record.title, 180);
+    const description = safeText(record.description, 1200);
+    if (!title || !description) return [];
+    const source = safeText(record.source, 120);
+    const recommendation = safeText(record.recommendation, 1000);
+    return [{ severity, title, description, ...(source ? { source } : {}), ...(recommendation ? { recommendation } : {}) }];
+  }).slice(0, MAX_FINDINGS);
+}
+
+function sanitizedProviderActions(value: unknown) {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((item): AiRecommendedAction[] => {
+    if (!item || typeof item !== "object") return [];
+    const record = item as Record<string, unknown>;
+    const priority = ["low", "medium", "high"].includes(String(record.priority)) ? record.priority as AiActionPriority : "medium";
+    const title = safeText(record.title, 180);
+    const description = safeText(record.description, 1000);
+    return title && description ? [{ priority, title, description }] : [];
+  }).slice(0, MAX_ACTIONS);
+}
+
+function sanitizedStringArray(value: unknown, maxItems: number, maxLength: number) {
+  if (!Array.isArray(value)) return [];
+  return value.map((item) => safeText(item, maxLength)).filter(Boolean).slice(0, maxItems);
+}
+
+function uniqueByTitle<T extends { title: string }>(primary: T[], secondary: T[], max: number) {
+  const result: T[] = [];
+  const seen = new Set<string>();
+  for (const item of [...primary, ...secondary]) {
+    const key = item.title.trim().toLocaleLowerCase("ru-RU").replace(/\s+/g, " ");
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    result.push(item);
+    if (result.length >= max) break;
+  }
+  return result;
+}
+
+function uniqueFindings(primary: AiFinding[], secondary: AiFinding[], max: number) {
+  const result: AiFinding[] = [];
+  const seen = new Set<string>();
+  for (const item of [...primary, ...secondary]) {
+    const key = `${item.title}:${item.description}:${item.source ?? ""}`.trim().toLocaleLowerCase("ru-RU").replace(/\s+/g, " ");
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    result.push(item);
+  }
+  return rankFindings(result).slice(0, max);
 }
 
 function mergeProviderInsight(input: AiRunInput, context: AiProjectContext, deterministic: AiInsightResponse, payload: ProviderPayload) {
+  const findings = uniqueFindings(deterministic.findings, sanitizedProviderFindings(payload.findings), MAX_FINDINGS);
+  const recommendedActions = uniqueByTitle(deterministic.recommendedActions, sanitizedProviderActions(payload.recommendedActions), MAX_ACTIONS);
+  const providerSummary = safeText(payload.summary, 1800);
+  const summary = providerSummary && deterministic.overallStatus === "on_track"
+    ? providerSummary
+    : providerSummary
+      ? `${deterministic.summary} AI-комментарий: ${providerSummary}`.slice(0, 1800)
+      : deterministic.summary;
+  const providerLimitations = sanitizedStringArray(payload.dataLimitations, 8, 600);
+  const recommendedAttachments = uniqueStrings(
+    deterministic.recommendedAttachments ?? [],
+    sanitizedStringArray(payload.recommendedAttachments, 8, 180),
+    8
+  );
   return aiInsightResponseSchema.parse({
     ...deterministic,
-    title: typeof payload.title === "string" ? payload.title.slice(0, 120) : deterministic.title,
+    title: deterministic.title,
     scenario: input.scenario,
-    overallStatus: payload.overallStatus ?? deterministic.overallStatus,
-    summary: typeof payload.summary === "string" ? payload.summary.slice(0, 1800) : deterministic.summary,
-    findings: sanitizeProviderItems(payload.findings, deterministic.findings, MAX_FINDINGS),
-    recommendedActions: sanitizeProviderItems(payload.recommendedActions, deterministic.recommendedActions, MAX_ACTIONS),
-    subject: typeof payload.subject === "string" ? payload.subject.slice(0, 180) : deterministic.subject,
-    draftText: typeof payload.draftText === "string" ? payload.draftText.slice(0, 6000) : deterministic.draftText,
-    recommendedAttachments: sanitizeProviderItems(payload.recommendedAttachments, deterministic.recommendedAttachments ?? [], 8),
-    dataUsed: sanitizeProviderItems(payload.dataUsed, deterministic.dataUsed, 12),
-    dataLimitations: Array.from(new Set([...deterministic.dataLimitations.filter((item) => !item.includes("AI provider key")), ...(payload.dataLimitations ?? [])])).slice(0, 16),
+    overallStatus: statusForScenario(input, context, findings),
+    summary,
+    findings,
+    recommendedActions,
+    subject: safeText(payload.subject, 180) || deterministic.subject,
+    draftText: safeText(payload.draftText, 6000) || deterministic.draftText,
+    recommendedAttachments,
+    dataUsed: deterministic.dataUsed,
+    dataLimitations: Array.from(new Set([...deterministic.dataLimitations.filter((item) => !item.includes("AI provider key")), ...providerLimitations])).slice(0, 16),
     generatedAt: new Date().toISOString(),
     provider: "openai"
   });
 }
 
-async function requestStructuredProvider(input: AiRunInput, context: AiProjectContext) {
-  if (!process.env.OPENAI_API_KEY) return null;
-  const response = await fetch(OPENAI_CHAT_COMPLETIONS_URL, {
-    method: "POST",
-    headers: {
-      authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-      "content-type": "application/json"
-    },
-    body: JSON.stringify({
-      model: OPENAI_MODEL,
-      response_format: { type: "json_object" },
-      temperature: 0.2,
-      messages: [
-        {
-          role: "system",
-          content:
-            "Ты - управленческий AI-помощник строительного проекта. Отвечай только валидным JSON. Анализируй строго предоставленный контекст PGS. Не выдумывай факты, рыночные цены, оплаты или документы. AI не изменяет данные, только дает рекомендации."
-        },
-        {
-          role: "user",
-          content: JSON.stringify({
-            scenario: input.scenario,
-            outputContract: {
-              title: "string",
-              overallStatus: "on_track | attention | critical | unknown",
-              summary: "string",
-              findings: [{ severity: "low | medium | high | critical", title: "string", description: "string", source: "string", recommendation: "string" }],
-              recommendedActions: [{ priority: "low | medium | high", title: "string", description: "string" }],
-              subject: "optional string",
-              draftText: "optional string",
-              recommendedAttachments: ["optional strings"],
-              dataUsed: ["strings"],
-              dataLimitations: ["strings"]
-            },
-            draftRequest: input.scenario === "draft-text" ? { textType: input.textType, topic: input.topic, instructions: input.instructions } : undefined,
-            context
-          }).slice(0, MAX_PROVIDER_CONTEXT_CHARS)
-        }
-      ]
-    })
-  });
+function uniqueStrings(primary: string[], secondary: string[], max: number) {
+  return Array.from(new Set([...primary, ...secondary].map((item) => item.trim()).filter(Boolean))).slice(0, max);
+}
 
-  const payload = (await response.json().catch(() => null)) as { choices?: Array<{ message?: { content?: string | null } }> } | null;
-  if (!response.ok) throw new Error("OpenAI provider returned a non-success status");
-  return parseProviderJson(payload?.choices?.[0]?.message?.content ?? "");
+function compactProviderValue(value: unknown, depth = 0): unknown {
+  if (depth > 6) return "[TRUNCATED]";
+  if (typeof value === "string") return value.slice(0, 900);
+  if (Array.isArray(value)) return value.slice(0, depth < 2 ? 6 : 4).map((item) => compactProviderValue(item, depth + 1));
+  if (value && typeof value === "object") {
+    return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, compactProviderValue(item, depth + 1)]));
+  }
+  return value;
+}
+
+function scenarioProviderContext(input: AiRunInput, context: AiProjectContext) {
+  const dataKeys = aiScenarioById[input.scenario].dataKeys;
+  const selected = Object.fromEntries(dataKeys.flatMap((key) => key in context ? [[key, context[key as keyof AiProjectContext]]] : []));
+  const payload = { ...selected, dataLimitations: context.dataLimitations };
+  const serialized = JSON.stringify(payload);
+  return serialized.length <= MAX_PROVIDER_CONTEXT_CHARS ? payload : compactProviderValue(payload);
+}
+
+function responseText(payload: unknown) {
+  if (!payload || typeof payload !== "object") return "";
+  const record = payload as { output_text?: unknown; output?: Array<{ content?: Array<{ type?: string; text?: string }> }> };
+  if (typeof record.output_text === "string") return record.output_text;
+  return (record.output ?? [])
+    .flatMap((item) => item.content ?? [])
+    .filter((item) => item.type === "output_text" && typeof item.text === "string")
+    .map((item) => item.text)
+    .join("\n");
+}
+
+async function requestStructuredProvider(input: AiRunInput, context: AiProjectContext) {
+  const runtime = getOpenAiRuntimeConfig();
+  if (!runtime.enabled || !runtime.apiKey) return null;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), PROVIDER_TIMEOUT_MS);
+  try {
+    const response = await fetch(OPENAI_RESPONSES_URL, {
+      method: "POST",
+      signal: controller.signal,
+      headers: {
+        authorization: `Bearer ${runtime.apiKey}`,
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({
+        model: OPENAI_MODEL,
+        store: false,
+        temperature: 0.2,
+        text: {
+          format: {
+            type: "json_schema",
+            name: "pgs_project_lifecycle_insight",
+            strict: true,
+            schema: providerInsightJsonSchema
+          }
+        },
+        input: [
+          {
+            role: "system",
+            content: [{
+              type: "input_text",
+              text: "Ты - Project Lifecycle Copilot строительного проекта. Анализируй только предоставленный контекст PGS. Не выдумывай людей, документы, цены, оплаты, даты или выполненные объемы. Детерминированные расчеты PGS являются источником истины. Добавляй объяснение и приоритеты, но не объявляй безопасность, качество, приемку или оплату подтвержденными без evidence. Не изменяй данные и не обещай выполненных действий."
+            }]
+          },
+          {
+            role: "user",
+            content: [{
+              type: "input_text",
+              text: JSON.stringify({
+                scenario: input.scenario,
+                objective: aiScenarioById[input.scenario].outcome,
+                instructions: safeText(input.instructions, 1200),
+                topic: safeText(input.topic, 240),
+                context: scenarioProviderContext(input, context)
+              })
+            }]
+          }
+        ]
+      })
+    });
+    const payload = await response.json().catch(() => null);
+    if (!response.ok) throw new Error("OpenAI provider returned a non-success status");
+    return parseProviderJson(responseText(payload));
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 export async function runAiScenario(input: AiRunInput): Promise<AiInsightResponse> {
   const context = await buildAiProjectContext(input.projectId);
-  const deterministic = deterministicInsight(input, context, process.env.OPENAI_API_KEY ? "degraded" : "deterministic");
-  if (!process.env.OPENAI_API_KEY) return deterministic;
+  const runtime = getOpenAiRuntimeConfig();
+  const deterministic = deterministicInsight(input, context, runtime.enabled ? "degraded" : "deterministic");
+  if (!runtime.enabled) return deterministicInsight(input, context, "deterministic");
 
   try {
     const providerPayload = await requestStructuredProvider(input, context);

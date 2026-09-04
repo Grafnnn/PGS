@@ -1,12 +1,19 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { recognizeReceipt, ReceiptRecognitionProviderError } from "@/lib/receipt-recognition";
 
 const previousKey = process.env.OPENAI_API_KEY;
+const previousMode = process.env.OPENAI_CONNECTOR_MODE;
+
+beforeEach(() => {
+  process.env.OPENAI_CONNECTOR_MODE = "read_only";
+});
 
 afterEach(() => {
   vi.unstubAllGlobals();
   if (previousKey === undefined) delete process.env.OPENAI_API_KEY;
   else process.env.OPENAI_API_KEY = previousKey;
+  if (previousMode === undefined) delete process.env.OPENAI_CONNECTOR_MODE;
+  else process.env.OPENAI_CONNECTOR_MODE = previousMode;
 });
 
 describe("receipt recognition", () => {
@@ -34,5 +41,15 @@ describe("receipt recognition", () => {
     process.env.OPENAI_API_KEY = "test-key";
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ output_text: "{}" }), { status: 200 })));
     await expect(recognizeReceipt({ fileName: "receipt.pdf", mimeType: "application/pdf", bytes: Buffer.from("pdf") })).rejects.toBeInstanceOf(ReceiptRecognitionProviderError);
+  });
+
+  it("does not send a receipt when the connector is disabled", async () => {
+    process.env.OPENAI_API_KEY = "test-key";
+    process.env.OPENAI_CONNECTOR_MODE = "disabled";
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(recognizeReceipt({ fileName: "receipt.jpg", mimeType: "image/jpeg", bytes: Buffer.from("image") })).rejects.toMatchObject({ status: 503 });
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });

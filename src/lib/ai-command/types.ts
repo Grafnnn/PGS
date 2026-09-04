@@ -9,6 +9,14 @@ export type AiScenario =
   | "document-review"
   | "daily-report-summary"
   | "executive-report"
+  | "onboarding-review"
+  | "workforce-review"
+  | "field-review"
+  | "quality-review"
+  | "rfi-review"
+  | "claims-review"
+  | "acceptance-review"
+  | "closeout-review"
   | "draft-text";
 
 export type AiStatus = "on_track" | "attention" | "critical" | "unknown";
@@ -117,5 +125,93 @@ export type AiProjectContext = {
   risks: Array<{ id: string; title: string; priority: string; status: string; owner: string; dueAt: string; reason: string }>;
   documents: Array<{ id: string; title: string; category: string; mimeType?: string | null; uploadedAt?: string | null; previewAvailable?: boolean }>;
   dailyReports: Array<{ id: string; date: string; author: string; completedWorks: string; issues: string; status: string; workers: number; engineers: number }>;
+  expenses: {
+    count: number;
+    total: number;
+    unclassified: number;
+    recognitionPending: number;
+    topCategories: Array<{ category: string; amount: number; count: number }>;
+  };
+  workforce: {
+    demandCount: number;
+    plannedHours: number;
+    peakHeadcount: number;
+    missingProductivityNorms: number;
+    missingSalaryRates: number;
+    assignmentCount: number;
+    assignedHeadcount: number;
+    pendingAdmissions: number;
+  };
+  field: {
+    reportCount: number;
+    drafts: number;
+    reportsWithIssues: number;
+    reportsWithoutPhotos: number;
+    reportsWithoutProgress: number;
+  };
+  quality: {
+    inspectionCount: number;
+    inspectionsDue: number;
+    openIssueCount: number;
+    criticalOrHighIssues: number;
+    acceptanceBlockers: number;
+    overdueIssues: number;
+    missingOwners: number;
+    missingCorrectiveActions: number;
+    topIssues: Array<{
+      id: string;
+      title: string;
+      severity: string;
+      status: string;
+      dueAt: string;
+      responsibleParty: string;
+      acceptanceBlocker: boolean;
+    }>;
+  };
+  collaboration: {
+    openRfis: number;
+    overdueRfis: number;
+    unansweredRfis: number;
+    openSubmittals: number;
+    overdueSubmittals: number;
+  };
+  commercial: {
+    changeOrderCount: number;
+    pendingChangeOrders: number;
+    changeOrderExposure: number;
+    unpricedChangeOrders: number;
+    scheduleImpactDays: number;
+    commitmentCount: number;
+    activeCommitmentValue: number;
+    unmatchedInvoices: number;
+    overdueInvoices: number;
+  };
+  acceptance: {
+    applicationCount: number;
+    draftApplications: number;
+    submittedApplications: number;
+    approvedApplications: number;
+    netAmount: number;
+  };
+  controls: {
+    periodAvailable: boolean;
+    dataDate: string;
+    earnedValue: number;
+    actualCost: number;
+    costPerformanceIndex: number | null;
+    schedulePerformanceIndex: number | null;
+    estimateAtCompletion: number | null;
+    varianceAtCompletion: number | null;
+    scheduleVarianceDays: number | null;
+  };
+  closeout: {
+    packageCount: number;
+    openPackages: number;
+    overduePackages: number;
+    requiredChecklistItems: number;
+    incompleteChecklistItems: number;
+    warrantyCount: number;
+    warrantiesMissingDates: number;
+  };
   dataLimitations: string[];
 };

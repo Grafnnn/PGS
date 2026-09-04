@@ -4,6 +4,7 @@ import { askPhotoQuestion, PhotoQuestionProviderError } from "./photo-question";
 describe("photo question provider", () => {
   beforeEach(() => {
     vi.stubEnv("OPENAI_API_KEY", "openai-token-redacted");
+    vi.stubEnv("OPENAI_CONNECTOR_MODE", "read_only");
   });
 
   afterEach(() => {

@@ -18,7 +18,7 @@ const envSchema = z.object({
   GOOGLE_CALENDAR_CONNECTOR_MODE: z.enum(["disabled", "read_only", "enabled"]).default("disabled"),
   RENDER_CONNECTOR_MODE: z.enum(["disabled", "read_only", "enabled"]).default("disabled"),
   VERCEL_CONNECTOR_MODE: z.enum(["disabled", "read_only", "enabled"]).default("disabled"),
-  OPENAI_CONNECTOR_MODE: z.enum(["disabled", "read_only", "enabled"]).default("disabled"),
+  OPENAI_CONNECTOR_MODE: z.enum(["disabled", "read_only", "enabled"]).default("read_only"),
   LOGIN_RATE_LIMIT_WINDOW_MS: z.coerce.number().positive().default(60_000),
   LOGIN_RATE_LIMIT_MAX: z.coerce.number().positive().default(8),
   RESET_RATE_LIMIT_WINDOW_MS: z.coerce.number().positive().default(15 * 60_000),
@@ -91,7 +91,7 @@ export function getEnvStatus() {
     production,
     authRequired: env.AUTH_REQUIRED === "true" || production,
     authMode: env.AUTH_REQUIRED === "true" || production ? "db-session" : "dev-fallback",
-    aiConfigured: Boolean(env.OPENAI_API_KEY),
+    aiConfigured: Boolean(env.OPENAI_API_KEY) && env.OPENAI_CONNECTOR_MODE !== "disabled",
     appUrl: env.APP_URL,
     emailProvider: env.EMAIL_PROVIDER,
     uploadProvider: env.UPLOAD_STORAGE_PROVIDER,
@@ -100,5 +100,15 @@ export function getEnvStatus() {
     gitSha: deployVersion.gitSha,
     gitShaSource: deployVersion.gitShaSource,
     missing
+  };
+}
+
+export function getOpenAiRuntimeConfig() {
+  const env = getEnv();
+  const apiKey = cleanEnvValue(env.OPENAI_API_KEY);
+  return {
+    apiKey,
+    mode: env.OPENAI_CONNECTOR_MODE,
+    enabled: Boolean(apiKey) && env.OPENAI_CONNECTOR_MODE !== "disabled"
   };
 }

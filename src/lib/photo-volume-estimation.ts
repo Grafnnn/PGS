@@ -98,6 +98,13 @@ export function normalizePhotoVolumeResult(
       limitations.push(`Для «${work.workName}» отклонена оценка, превышающая остаток по графику.`);
     }
 
+    if (suggestedQuantity !== null && (confidence === "low" || needsManualMeasurement)) {
+      suggestedQuantity = null;
+      needsManualMeasurement = true;
+      confidence = "low";
+      limitations.push(`Для «${work.workName}» числовая оценка не подставлена: AI указал низкую уверенность или необходимость ручного замера.`);
+    }
+
     if (!Number.isFinite(suggestedQuantity ?? 0) || (suggestedQuantity ?? 0) <= 0) {
       suggestedQuantity = null;
       needsManualMeasurement = true;

@@ -106,7 +106,8 @@ describe("AI recommendation action endpoint", () => {
       data: expect.objectContaining({
         title: "Обновить график",
         sourceModule: "ai-decision-journal",
-        targetTab: "График"
+        targetTab: "График",
+        requiresApproval: true
       })
     }));
     expect(mocks.createLink).toHaveBeenCalledWith(expect.objectContaining({

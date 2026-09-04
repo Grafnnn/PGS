@@ -1,5 +1,7 @@
 import { budgetTotals, deriveAutoRisks, financeTotals, materialTotals, workTotals } from "@/lib/calculations";
 import { buildAcceptanceBillingIntelligence } from "@/lib/acceptance-billing-intelligence";
+import { aiScenarioCatalog } from "@/lib/ai-command/catalog";
+import type { AiInsightResponse, AiScenario } from "@/lib/ai-command/types";
 import { buildCommercialProposalIntelligence } from "@/lib/commercial-proposal-intelligence";
 import { buildContractTenderIntelligence } from "@/lib/contract-tender-intelligence";
 import { buildDocumentComplianceIntelligence } from "@/lib/document-compliance-intelligence";
@@ -18,48 +20,9 @@ import type { BudgetItem, DailyReport, Material, Payment, ProcurementRequest, Pr
 
 export type DrilldownTone = "good" | "warn" | "bad" | "info" | "neutral";
 
-export type AiScenario =
-  | "summary"
-  | "budget-review"
-  | "schedule-review"
-  | "procurement-review"
-  | "finance-review"
-  | "contract-review"
-  | "risk-review"
-  | "document-review"
-  | "daily-report-summary"
-  | "executive-report"
-  | "draft-text";
+export type { AiInsightResponse, AiScenario };
 
-export type AiInsightResponse = {
-  title: string;
-  scenario: AiScenario;
-  overallStatus?: "on_track" | "attention" | "critical" | "unknown";
-  summary: string;
-  findings: Array<{ severity: "low" | "medium" | "high" | "critical"; title: string; description: string; source?: string; recommendation?: string }>;
-  recommendedActions: Array<{ priority: "low" | "medium" | "high"; title: string; description: string }>;
-  subject?: string;
-  draftText?: string;
-  recommendedAttachments?: string[];
-  dataUsed: string[];
-  dataLimitations: string[];
-  generatedAt: string;
-  provider: "deterministic" | "openai" | "degraded";
-};
-
-export const drilldownAiScenarios: Array<{ scenario: AiScenario; title: string; description: string; data: string[]; target: string }> = [
-  { scenario: "summary", title: "Сводка по проекту", description: "Общий статус, отклонения, риски и действия на 7 дней.", data: ["Проект", "ВОР", "График", "Финансы", "Риски"], target: "AI-помощник" },
-  { scenario: "budget-review", title: "Проверить ВОР", description: "Нулевые цены, дубли, подозрительные объемы и недооценка.", data: ["ВОР", "Разделы", "План/факт"], target: "Бюджет / ВОР" },
-  { scenario: "schedule-review", title: "Проверить график", description: "Просрочки, владельцы, ближайшие контрольные точки.", data: ["График", "Зависимости", "Факт"], target: "График" },
-  { scenario: "procurement-review", title: "Проверить снабжение", description: "Дефицит, поставщики, сроки потребности и draft заявки.", data: ["Материалы", "Заявки", "Поставщики"], target: "Материалы" },
-  { scenario: "finance-review", title: "Финансовый анализ", description: "Cash gap, оплаты, просрочки, маржа и проблемные статьи.", data: ["Платежи", "Бюджет", "Договор"], target: "Финансы" },
-  { scenario: "contract-review", title: "Проверить договор", description: "Оплата, аванс, приемка, штрафы, изменение объемов и приложения.", data: ["Договор", "ТЗ", "ВОР", "Финансы", "Документы"], target: "Договор / Тендер" },
-  { scenario: "risk-review", title: "Собрать риски", description: "Top рисков, владельцы, меры и источники.", data: ["Риски", "График", "Финансы", "Материалы"], target: "Риски" },
-  { scenario: "document-review", title: "Документы", description: "Метаданные документов и ограничения без OCR.", data: ["Документы", "Категории", "Версии"], target: "Документы" },
-  { scenario: "daily-report-summary", title: "Рапорты", description: "Проблемы площадки, люди, техника и текст отчета.", data: ["Рапорты", "График"], target: "Рапорты" },
-  { scenario: "executive-report", title: "Отчет руководителю", description: "Короткая деловая записка по объекту.", data: ["Все разделы"], target: "AI-помощник" },
-  { scenario: "draft-text", title: "Подготовить письмо", description: "Draft письма/пояснительной записки по данным проекта.", data: ["Контекст проекта", "Отклонения"], target: "AI-помощник" }
-];
+export const drilldownAiScenarios = aiScenarioCatalog;
 
 export type ProjectIntelligenceInput = {
   project?: Partial<Project> | null;

@@ -23,6 +23,7 @@ import { demoState } from "@/lib/demo-data";
 import { getDemoContext, getProjectBundleFromDb, getUserOrganizationContext, listProjectsFromDb } from "@/lib/project-data";
 import { deleteProjectWithConfirmation, ProjectDeleteError } from "@/lib/project-delete";
 import { prisma } from "@/lib/prisma";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { deleteDocumentFile } from "@/lib/storage/documents";
 import {
   serializeBudgetItem,
@@ -253,8 +254,15 @@ export async function POST(request: NextRequest, { params }: { params: { path?: 
         if (!user) return json({ error: "Forbidden" }, 403);
         if (!(await projectExists(projectId))) return json({ error: "Project not found" }, 404);
         if (!(await canProject(user, projectId, "view"))) return json({ error: "Forbidden" }, 403);
+        const rateLimit = checkRateLimit({ key: `ai-legacy:${user.id}:${projectId}`, limit: 30, windowMs: 5 * 60_000 });
+        if (!rateLimit.allowed) {
+          return NextResponse.json(
+            { error: "Слишком много AI-запросов. Повторите позже." },
+            { status: 429, headers: { "Retry-After": String(rateLimit.retryAfterSeconds) } }
+          );
+        }
         const body = await readBody() as Record<string, unknown>;
-        const prompt = String(body.prompt ?? body.question ?? promptByAiEndpoint(path[3]));
+        const prompt = String(body.prompt ?? body.question ?? promptByAiEndpoint(path[3])).trim().slice(0, 2_000);
         const result = path[3] === "chat" ? await askProjectAssistant(projectId, prompt) : { ok: true, status: 200, response: localAiFallback(prompt, projectId) };
         return json({ response: result.response, ok: result.ok, error: "error" in result ? result.error : undefined }, result.status);
       }

@@ -1,8 +1,10 @@
 import { z } from "zod";
+import { getOpenAiRuntimeConfig } from "@/lib/env";
 import { expenseCategories, expensePaymentMethods } from "@/lib/project-expense-config";
 
 const OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses";
 const OPENAI_RECEIPT_MODEL = "gpt-4o-mini";
+const RECEIPT_TIMEOUT_MS = process.env.NODE_ENV === "test" ? 2_000 : 45_000;
 
 const nullableString = { anyOf: [{ type: "string" }, { type: "null" }] } as const;
 const nullableNumber = { anyOf: [{ type: "number" }, { type: "null" }] } as const;
@@ -78,24 +80,36 @@ function parseJsonText(value: string) {
 }
 
 export async function recognizeReceipt(input: { fileName: string; mimeType: "image/jpeg" | "image/png" | "image/webp" | "application/pdf"; bytes: Buffer }) {
-  const apiKey = process.env.OPENAI_API_KEY?.trim();
-  if (!apiKey) throw new ReceiptRecognitionProviderError("Распознавание чеков не настроено", 503);
+  const runtime = getOpenAiRuntimeConfig();
+  if (!runtime.enabled || !runtime.apiKey) throw new ReceiptRecognitionProviderError("Распознавание чеков не настроено", 503);
   const fileContent = input.mimeType === "application/pdf"
     ? { type: "input_file", filename: input.fileName, file_data: `data:application/pdf;base64,${input.bytes.toString("base64")}` }
     : { type: "input_image", image_url: `data:${input.mimeType};base64,${input.bytes.toString("base64")}`, detail: "high" };
-  const response = await fetch(OPENAI_RESPONSES_URL, {
-    method: "POST",
-    headers: { authorization: `Bearer ${apiKey}`, "content-type": "application/json" },
-    body: JSON.stringify({
-      model: OPENAI_RECEIPT_MODEL,
-      temperature: 0.1,
-      text: { format: { type: "json_schema", name: "project_expense_receipt", strict: true, schema: receiptJsonSchema } },
-      input: [
-        { role: "system", content: [{ type: "input_text", text: "Ты бухгалтер строительного проекта. Извлеки только явно видимые данные чека или кассового документа. Не придумывай поставщика, дату, номер, НДС, позиции или суммы. Для неизвестных значений используй null, unknown или warning. Дату верни YYYY-MM-DD, валюту ISO-кодом, категории только из заданного списка. Сумма позиции должна соответствовать данным документа, а не расчётной догадке. Ответ только на русском языке в заданной JSON-схеме." }] },
-        { role: "user", content: [{ type: "input_text", text: `Распознай расходный документ ${input.fileName}. Разнеси видимые позиции постатейно.` }, fileContent] }
-      ]
-    })
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), RECEIPT_TIMEOUT_MS);
+  let response: Response;
+  try {
+    response = await fetch(OPENAI_RESPONSES_URL, {
+      method: "POST",
+      signal: controller.signal,
+      headers: { authorization: `Bearer ${runtime.apiKey}`, "content-type": "application/json" },
+      body: JSON.stringify({
+        model: OPENAI_RECEIPT_MODEL,
+        store: false,
+        temperature: 0.1,
+        text: { format: { type: "json_schema", name: "project_expense_receipt", strict: true, schema: receiptJsonSchema } },
+        input: [
+          { role: "system", content: [{ type: "input_text", text: "Ты бухгалтер строительного проекта. Извлеки только явно видимые данные чека или кассового документа. Не придумывай поставщика, дату, номер, НДС, позиции или суммы. Для неизвестных значений используй null, unknown или warning. Дату верни YYYY-MM-DD, валюту ISO-кодом, категории только из заданного списка. Сумма позиции должна соответствовать данным документа, а не расчётной догадке. Ответ только на русском языке в заданной JSON-схеме." }] },
+          { role: "user", content: [{ type: "input_text", text: `Распознай расходный документ ${input.fileName}. Разнеси видимые позиции постатейно.` }, fileContent] }
+        ]
+      })
+    });
+  } catch {
+    if (controller.signal.aborted) throw new ReceiptRecognitionProviderError("Распознавание чека заняло слишком много времени", 504);
+    throw new ReceiptRecognitionProviderError("Сервис распознавания чеков временно недоступен", 502);
+  } finally {
+    clearTimeout(timeout);
+  }
   const payload = await response.json().catch(() => null);
   if (!response.ok) throw new ReceiptRecognitionProviderError("Сервис распознавания чеков временно недоступен", 502);
   try {

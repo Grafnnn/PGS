@@ -49,7 +49,7 @@ export async function POST(request: NextRequest, { params }: { params: { project
           sourceModule: "ai-decision-journal",
           targetTab: aiRunTargetTab(parsedInsight.data.scenario),
           priority: recommendation.priority,
-          requiresApproval: false
+          requiresApproval: true
         }
       });
       await tx.aiRunAction.create({

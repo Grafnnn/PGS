@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { AlertTriangle, BadgeCheck, BarChart3, Bot, ClipboardList, DatabaseZap, FileText, HardHat, Landmark, Package, Pencil, Plus, ReceiptText, Search, Send, Settings2, Table2, TimerReset, Trash2, Truck, Users } from "lucide-react";
 import { AcceptanceBillingWorkspace } from "@/components/acceptance-billing-workspace";
 import { AiControlAgentWorkspace } from "@/components/ai-control-agent-workspace";
+import { AiLifecycleCopilot } from "@/components/ai-lifecycle-copilot";
 import { AiRunJournal } from "@/components/ai-run-journal";
 import { AccountingBridgeWorkspace } from "@/components/accounting-bridge-workspace";
 import { CommercialProposalWorkspace } from "@/components/commercial-proposal-workspace";
@@ -45,8 +46,9 @@ import { ScheduleCashflowWorkspace } from "@/components/schedule-cashflow-worksp
 import { SubcontractorExecutionWorkspace } from "@/components/subcontractor-execution-workspace";
 import { WorkflowDesignerWorkspace } from "@/components/workflow-designer-workspace";
 import { budgetTotals, deriveAutoRisks, financeTotals, materialTotals, money, percent, workTotals } from "@/lib/calculations";
+import { aiScenarioForProjectTab } from "@/lib/ai-command/catalog";
 import type { ImportExplanation, ImportMode, ImportPreview, ImportSheetMapping } from "@/lib/excel/import-types";
-import { drilldownAiScenarios, type AiInsightResponse, type AiScenario } from "@/lib/project-intelligence-drilldown";
+import type { AiInsightResponse, AiScenario } from "@/lib/project-intelligence-drilldown";
 import { buildInitialProjectReadiness } from "@/lib/project-onboarding-intelligence";
 import type { DocumentChecklistItem, PipelineAction, PipelineReadiness } from "@/lib/project-pipeline";
 import { buildExpenseAwareForecast, type ProjectExpenseSummary } from "@/lib/project-expenses";
@@ -152,8 +154,6 @@ export function ProjectWorkspace({
   const [reports, setReports] = useState(initialBundle.dailyReports);
   const [risks, setRisks] = useState(initialBundle.risks);
   const [aiPrompt, setAiPrompt] = useState("Что сейчас самое важное по проекту?");
-  const [aiAnswer, setAiAnswer] = useState("");
-  const [aiLoading, setAiLoading] = useState(false);
   const [aiScenarioLoading, setAiScenarioLoading] = useState<AiScenario | null>(null);
   const [aiResults, setAiResults] = useState<Partial<Record<AiScenario, AiInsightResponse>>>({});
   const [aiErrors, setAiErrors] = useState<Partial<Record<AiScenario, string>>>({});
@@ -241,8 +241,6 @@ export function ProjectWorkspace({
   const urgentMaterial = materialStats.deficitItems[0];
   const latestReport = reports[0];
   const latestAudit = auditEvents[0];
-  const aiAnswerTone = aiLoading ? "loading" : aiAnswer ? (/OPENAI_API_KEY|not configured|failed|ошибка|error|Project not found/i.test(aiAnswer) ? "error" : "ready") : "empty";
-  const aiDisplay = aiAnswerTone === "error" ? "AI-помощник сейчас недоступен. Проверьте подключение AI и повторите анализ позже." : aiAnswer;
   const canDeleteCurrentProject = currentUser?.role === "OWNER" || currentUser?.role === "ADMIN";
   const canEditCurrentProject = currentUser?.role === "OWNER" || currentUser?.role === "ADMIN" || currentUser?.role === "MANAGER";
   const emptyOperationalBaseline =
@@ -308,6 +306,7 @@ export function ProjectWorkspace({
     audit: { key: "audit", label: "События аудита", value: String(auditEvents.length), tone: auditEvents.length ? "info" : "neutral" }
   };
   const activeProjectTab = activeTab as ProjectTab;
+  const contextualAiScenario = aiScenarioForProjectTab[activeProjectTab];
   const sectionSignals = projectSectionGuides[activeProjectTab].signalKeys.map((key) => signalCatalog[key]);
   const sectionPriorities = [
     delayedWorks[0]?.name ? `Вернуть в план: ${delayedWorks[0].name}` : "Подтвердить отсутствие новых просрочек по графику",
@@ -459,24 +458,6 @@ export function ProjectWorkspace({
   useEffect(() => {
     void loadPipeline();
   }, [loadPipeline]);
-
-  async function askAi(prompt = aiPrompt) {
-    setAiLoading(true);
-    setAiPrompt(prompt);
-    try {
-      const response = await fetch(`/api/projects/${initialBundle.project.id}/ai/chat`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt })
-      });
-      const data = (await response.json()) as { response?: string; error?: string };
-      setAiAnswer(data.response ?? data.error ?? "Нет ответа.");
-    } catch (error) {
-      setAiAnswer(error instanceof Error ? error.message : "Ошибка AI-запроса.");
-    } finally {
-      setAiLoading(false);
-    }
-  }
 
   async function runAiCommandScenario(scenario: AiScenario) {
     setAiScenarioLoading(scenario);
@@ -848,7 +829,6 @@ export function ProjectWorkspace({
       setImportConfirmed(false);
       setImportResult(data.commitResult ?? data);
       setError("");
-      setAiAnswer(`Импорт сохранен: ВОР ${data.budgetItems?.length ?? 0}, материалы ${data.materials?.length ?? 0}, график ${data.scheduleItems?.length ?? 0}.`);
       void loadImportHistory();
       void loadPipeline();
     } catch (commitError) {
@@ -941,6 +921,10 @@ export function ProjectWorkspace({
               signals={sectionSignals}
               priorities={sectionPriorities}
               lastEvent={lastProjectEvent}
+              aiLoading={Boolean(contextualAiScenario && aiScenarioLoading === contextualAiScenario)}
+              aiResult={contextualAiScenario ? aiResults[contextualAiScenario] ?? null : null}
+              aiError={contextualAiScenario ? aiErrors[contextualAiScenario] : undefined}
+              onRunAi={(scenario) => void runAiCommandScenario(scenario)}
               onNavigate={navigateProjectTab}
             />
           )}
@@ -1799,31 +1783,15 @@ export function ProjectWorkspace({
 
       {activeTab === "AI-помощник" && (
         <ProjectModuleWorkspace moduleKey="ai" title="AI-помощник проекта" icon={<Bot size={18} />} className="ai-panel" views={[
-          { id: "scenarios", label: "Сценарии", description: "AI запускается только по явной команде пользователя.", content: <><div className="ai-source-row">
-            <StatusBadge tone="info">Источник: ВОР</StatusBadge>
-            <StatusBadge tone="info">График</StatusBadge>
-            <StatusBadge tone="info">Материалы</StatusBadge>
-            <StatusBadge tone="info">Финансы</StatusBadge>
-            <StatusBadge tone="info">Рапорты и риски</StatusBadge>
-          </div>
-          <div className="ai-composer">
-            <label>
-              Дополнительные указания для сценариев
-              <textarea value={aiPrompt} onChange={(event) => setAiPrompt(event.target.value)} />
-            </label>
-          </div>
-          <div className="ai-scenario-grid">
-            {drilldownAiScenarios.map((scenario) => (
-              <AiScenarioCard
-                key={scenario.scenario}
-                config={scenario}
-                error={aiErrors[scenario.scenario]}
-                loading={aiScenarioLoading === scenario.scenario}
-                result={aiResults[scenario.scenario]}
-                onRun={() => void runAiCommandScenario(scenario.scenario)}
-              />
-            ))}
-          </div></> },
+          { id: "scenarios", label: "Copilot", description: "Контекстные проверки по этапам проекта. AI запускается только по явной команде.", content: <AiLifecycleCopilot
+              prompt={aiPrompt}
+              loading={aiScenarioLoading}
+              results={aiResults}
+              errors={aiErrors}
+              onPromptChange={setAiPrompt}
+              onRun={(scenario) => void runAiCommandScenario(scenario)}
+              onNavigate={navigateProjectTab}
+            /> },
           { id: "history", label: "История", description: "Предыдущие анализы, результаты и созданные действия.", content: <AiRunJournal
               projectId={initialBundle.project.id}
               refreshToken={aiRunHistoryRefresh}
@@ -3311,134 +3279,6 @@ function ProjectMembersTable({
       ])}
     />
   );
-}
-
-function AiScenarioCard({
-  config,
-  loading,
-  result,
-  error,
-  onRun
-}: {
-  config: { scenario: AiScenario; title: string; description: string; data: string[] };
-  loading: boolean;
-  result?: AiInsightResponse;
-  error?: string;
-  onRun: () => void;
-}) {
-  return (
-    <article className="ai-scenario-card">
-      <div className="ai-scenario-head">
-        <div>
-          <h3>{config.title}</h3>
-          <p className="muted">{config.description}</p>
-        </div>
-        {result?.overallStatus && <StatusBadge tone={result.overallStatus === "critical" ? "bad" : result.overallStatus === "attention" ? "warn" : result.overallStatus === "on_track" ? "good" : "neutral"}>{readableStatus(result.overallStatus)}</StatusBadge>}
-      </div>
-      <div className="ai-data-used">
-        {config.data.map((item) => (
-          <span key={item}>{item}</span>
-        ))}
-      </div>
-      <div className="row-actions">
-        <button className="button primary" disabled={loading} type="button" onClick={onRun}>
-          <Bot size={16} />
-          {loading ? "Анализ..." : result ? "Повторить" : "Запустить"}
-        </button>
-        {result && (
-          <button className="button secondary" type="button" onClick={() => void navigator.clipboard?.writeText(formatAiResultForCopy(result))}>
-            Копировать
-          </button>
-        )}
-      </div>
-      {error && <p className="error-text">{error}</p>}
-      {result && <AiScenarioResult result={result} />}
-    </article>
-  );
-}
-
-function AiScenarioResult({ result }: { result: AiInsightResponse }) {
-  return (
-    <div className="ai-result">
-      <div className="ai-result-summary">
-        <strong>{result.title}</strong>
-        <span className="muted">{new Date(result.generatedAt).toLocaleString("ru-RU")} · {result.provider}</span>
-        {result.subject && <span className="muted">Тема: {result.subject}</span>}
-        <p>{result.summary}</p>
-      </div>
-      {!!result.findings.length && (
-        <details open>
-          <summary>Найденные проблемы</summary>
-          <div className="ai-result-list">
-            {result.findings.map((finding, index) => (
-              <div className="ai-result-item" key={`${finding.title}-${index}`}>
-                <StatusBadge tone={finding.severity === "critical" ? "bad" : finding.severity === "high" || finding.severity === "medium" ? "warn" : "info"}>{readableStatus(finding.severity)}</StatusBadge>
-                <strong>{finding.title}</strong>
-                <p>{finding.description}</p>
-                {finding.recommendation && <span>{finding.recommendation}</span>}
-              </div>
-            ))}
-          </div>
-        </details>
-      )}
-      {!!result.recommendedActions.length && (
-        <details open>
-          <summary>Рекомендованные действия</summary>
-          <div className="ai-result-list">
-            {result.recommendedActions.map((actionItem, index) => (
-              <div className="ai-result-item" key={`${actionItem.title}-${index}`}>
-                <StatusBadge tone={actionItem.priority === "high" ? "warn" : "info"}>{readableStatus(actionItem.priority)}</StatusBadge>
-                <strong>{actionItem.title}</strong>
-                <p>{actionItem.description}</p>
-              </div>
-            ))}
-          </div>
-        </details>
-      )}
-      {result.draftText && (
-        <details open>
-          <summary>Черновик текста</summary>
-          <pre className="ai-draft-text">{result.draftText}</pre>
-        </details>
-      )}
-      {!!result.recommendedAttachments?.length && (
-        <details>
-          <summary>Рекомендуемые приложения</summary>
-          <ul className="action-list">
-            {result.recommendedAttachments.map((item) => (
-              <li key={item}>{item}</li>
-            ))}
-          </ul>
-        </details>
-      )}
-      {!!result.dataLimitations.length && (
-        <details>
-          <summary>Ограничения данных</summary>
-          <ul className="action-list">
-            {result.dataLimitations.map((item) => (
-              <li key={item}>{item}</li>
-            ))}
-          </ul>
-        </details>
-      )}
-    </div>
-  );
-}
-
-function formatAiResultForCopy(result: AiInsightResponse) {
-  return [
-    result.title,
-    result.summary,
-    "",
-    "Проблемы:",
-    ...result.findings.map((item) => `- [${item.severity}] ${item.title}: ${item.description}${item.recommendation ? ` Рекомендация: ${item.recommendation}` : ""}`),
-    "",
-    "Действия:",
-    ...result.recommendedActions.map((item) => `- [${item.priority}] ${item.title}: ${item.description}`),
-    result.recommendedAttachments?.length ? `\nПриложения:\n${result.recommendedAttachments.map((item) => `- ${item}`).join("\n")}` : "",
-    result.draftText ? `\nDraft:\n${result.draftText}` : "",
-    result.dataLimitations.length ? `\nОграничения:\n${result.dataLimitations.map((item) => `- ${item}`).join("\n")}` : ""
-  ].join("\n");
 }
 
 function BudgetAnalytics({ items, contractAmount, paid, financials }: { items: BudgetItem[]; contractAmount: number; paid: number; financials: ReturnType<typeof buildExpenseAwareForecast> }) {

@@ -1,10 +1,12 @@
 import { budgetTotals, financeTotals, materialTotals, money, percent, workTotals } from "./calculations";
 import { getProjectBundle } from "./demo-data";
+import { getOpenAiRuntimeConfig } from "./env";
 import { getProjectBundleFromDb } from "./project-data";
 
 const OPENAI_CHAT_COMPLETIONS_URL = "https://api.openai.com/v1/chat/completions";
 const OPENAI_MODEL = "gpt-4o-mini";
 const OPENAI_RETRY_DELAY_MS = process.env.NODE_ENV === "test" ? 0 : 300;
+const OPENAI_TIMEOUT_MS = process.env.NODE_ENV === "test" ? 2_000 : 45_000;
 
 const transientProviderErrorPatterns = [
   "premature close",
@@ -41,7 +43,10 @@ type AskProjectAssistantResult =
     };
 
 export async function buildProjectContext(projectId: string) {
-  const bundle = (await getProjectBundleFromDb(projectId).catch(() => null)) ?? getProjectBundle(projectId);
+  const bundle = process.env.DATABASE_URL
+    ? await getProjectBundleFromDb(projectId)
+    : getProjectBundle(projectId);
+  if (!bundle) throw new Error("Project context is unavailable");
   const budget = budgetTotals(bundle.project.contractAmount, bundle.budgetItems);
   const works = workTotals(bundle.scheduleItems);
   const materials = materialTotals(bundle.materials);
@@ -72,6 +77,13 @@ export function localAiFallback(
   projectId: string,
   intro = "Вывод: ключ OpenAI не настроен для live-ответа, поэтому сформирован локальный управленческий ответ по данным проекта."
 ) {
+  if (process.env.DATABASE_URL) {
+    return [
+      intro,
+      "Локальный ответ отключен для production-проектов, чтобы не подменять данные демонстрационным контекстом.",
+      "Используйте сценарий PGS Copilot или повторите запрос после восстановления AI-провайдера."
+    ].join("\n\n");
+  }
   const bundle = getProjectBundle(projectId);
   const budget = budgetTotals(bundle.project.contractAmount, bundle.budgetItems);
   const works = workTotals(bundle.scheduleItems);
@@ -156,14 +168,22 @@ async function delay(ms: number) {
 }
 
 async function requestOpenAiChatCompletion(apiKey: string, body: unknown): Promise<OpenAiChatCompletion> {
-  const response = await fetch(OPENAI_CHAT_COMPLETIONS_URL, {
-    method: "POST",
-    headers: {
-      authorization: `Bearer ${apiKey}`,
-      "content-type": "application/json"
-    },
-    body: JSON.stringify(body)
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), OPENAI_TIMEOUT_MS);
+  let response: Response;
+  try {
+    response = await fetch(OPENAI_CHAT_COMPLETIONS_URL, {
+      method: "POST",
+      signal: controller.signal,
+      headers: {
+        authorization: `Bearer ${apiKey}`,
+        "content-type": "application/json"
+      },
+      body: JSON.stringify(body)
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
 
   const payload = await response.json().catch(() => null);
   if (!response.ok) {
@@ -180,12 +200,13 @@ async function requestOpenAiChatCompletion(apiKey: string, body: unknown): Promi
 }
 
 export async function askProjectAssistant(projectId: string, prompt: string): Promise<AskProjectAssistantResult> {
-  if (!process.env.OPENAI_API_KEY) {
+  const runtime = getOpenAiRuntimeConfig();
+  if (!runtime.enabled || !runtime.apiKey) {
     return {
       ok: false,
       status: 503,
       response: localAiFallback(prompt, projectId),
-      error: "OPENAI_API_KEY is not configured"
+      error: "AI connector is disabled or not configured"
     };
   }
 
@@ -208,7 +229,7 @@ export async function askProjectAssistant(projectId: string, prompt: string): Pr
 
   let completion: OpenAiChatCompletion;
   try {
-    completion = await requestOpenAiChatCompletion(process.env.OPENAI_API_KEY, requestBody);
+    completion = await requestOpenAiChatCompletion(runtime.apiKey, requestBody);
   } catch (error) {
     if (!isTransientOpenAiProviderError(error)) {
       console.warn("AI provider request failed", sanitizeProviderError(error));
@@ -219,7 +240,7 @@ export async function askProjectAssistant(projectId: string, prompt: string): Pr
     await delay(OPENAI_RETRY_DELAY_MS);
 
     try {
-      completion = await requestOpenAiChatCompletion(process.env.OPENAI_API_KEY, requestBody);
+      completion = await requestOpenAiChatCompletion(runtime.apiKey, requestBody);
     } catch (retryError) {
       console.warn("AI provider retry failed", sanitizeProviderError(retryError));
       return providerFailureResponse(prompt, projectId);

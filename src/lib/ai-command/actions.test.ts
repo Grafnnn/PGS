@@ -3,12 +3,15 @@ import { buildAiProjectContext, runAiScenario } from "./index";
 
 const originalOpenAiKey = process.env.OPENAI_API_KEY;
 const originalDatabaseUrl = process.env.DATABASE_URL;
+const originalOpenAiMode = process.env.OPENAI_CONNECTOR_MODE;
 
 afterEach(() => {
   if (originalOpenAiKey) process.env.OPENAI_API_KEY = originalOpenAiKey;
   else delete process.env.OPENAI_API_KEY;
   if (originalDatabaseUrl) process.env.DATABASE_URL = originalDatabaseUrl;
   else delete process.env.DATABASE_URL;
+  if (originalOpenAiMode) process.env.OPENAI_CONNECTOR_MODE = originalOpenAiMode;
+  else delete process.env.OPENAI_CONNECTOR_MODE;
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
 });
@@ -16,6 +19,7 @@ afterEach(() => {
 describe("AI command layer", () => {
   beforeEach(() => {
     delete process.env.DATABASE_URL;
+    process.env.OPENAI_CONNECTOR_MODE = "read_only";
   });
 
   it("builds bounded project context with management signals", async () => {
@@ -66,6 +70,14 @@ describe("AI command layer", () => {
     "executive-report",
     "document-review",
     "daily-report-summary",
+    "onboarding-review",
+    "workforce-review",
+    "field-review",
+    "quality-review",
+    "rfi-review",
+    "claims-review",
+    "acceptance-review",
+    "closeout-review",
     "draft-text"
   ] as const)("returns a structured deterministic response for %s", async (scenario) => {
     delete process.env.OPENAI_API_KEY;
@@ -86,7 +98,7 @@ describe("AI command layer", () => {
       "fetch",
       vi.fn(async () => ({
         ok: true,
-        json: async () => ({ choices: [{ message: { content: "not-json" } }] })
+        json: async () => ({ output_text: "not-json" })
       }))
     );
 
@@ -104,21 +116,17 @@ describe("AI command layer", () => {
       vi.fn(async () => ({
         ok: true,
         json: async () => ({
-          choices: [
-            {
-              message: {
-                content: JSON.stringify({
-                  title: "Live summary",
-                  overallStatus: "attention",
-                  summary: "Live structured output",
-                  findings: [{ severity: "high", title: "Live finding", description: "Provider finding", source: "budget", recommendation: "Check it" }],
-                  recommendedActions: [{ priority: "high", title: "Live action", description: "Do it" }],
-                  dataUsed: ["project", "budget"],
-                  dataLimitations: ["Provider limitation"]
-                })
-              }
-            }
-          ]
+          output_text: JSON.stringify({
+            title: "Live summary",
+            overallStatus: "attention",
+            summary: "Live structured output",
+            findings: [{ severity: "high", title: "Live finding", description: "Provider finding", source: "budget", recommendation: "Check it" }],
+            recommendedActions: [{ priority: "high", title: "Live action", description: "Do it" }],
+            subject: null,
+            draftText: null,
+            recommendedAttachments: [],
+            dataLimitations: ["Provider limitation"]
+          })
         })
       }))
     );
@@ -126,9 +134,74 @@ describe("AI command layer", () => {
     const insight = await runAiScenario({ projectId: "project-demo", scenario: "summary" });
 
     expect(insight.provider).toBe("openai");
-    expect(insight.summary).toBe("Live structured output");
-    expect(insight.findings[0]?.title).toBe("Live finding");
+    expect(insight.summary).toContain("Live structured output");
+    expect(insight.findings.some((item) => item.title === "Live finding")).toBe(true);
+    expect(insight.dataUsed).toContain("project");
     expect(JSON.stringify(insight)).not.toContain("openai-token-redacted");
+  });
+
+  it("does not call the provider when the OpenAI connector is disabled", async () => {
+    process.env.OPENAI_API_KEY = "openai-token-redacted";
+    process.env.OPENAI_CONNECTOR_MODE = "disabled";
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    const insight = await runAiScenario({ projectId: "project-demo", scenario: "summary" });
+
+    expect(insight.provider).toBe("deterministic");
+    expect(insight.dataLimitations.join(" ")).toContain("connector отключен");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("keeps deterministic evidence and prevents a provider status downgrade", async () => {
+    process.env.OPENAI_API_KEY = "openai-token-redacted";
+    process.env.OPENAI_CONNECTOR_MODE = "read_only";
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        output_text: JSON.stringify({
+          title: "Everything is fine",
+          overallStatus: "on_track",
+          summary: "No issues",
+          findings: [],
+          recommendedActions: [],
+          subject: null,
+          draftText: null,
+          recommendedAttachments: [],
+          dataLimitations: []
+        })
+      })
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const insight = await runAiScenario({ projectId: "project-demo", scenario: "schedule-review" });
+
+    expect(insight.provider).toBe("openai");
+    expect(insight.overallStatus).not.toBe("on_track");
+    expect(insight.findings.some((item) => item.source === "schedule")).toBe(true);
+    const fetchCall = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    const request = JSON.parse(String(fetchCall[1].body)) as {
+      store: boolean;
+      text: { format: { strict: boolean; type: string } };
+      input: Array<{ content: Array<{ text: string }> }>;
+    };
+    expect(request.store).toBe(false);
+    expect(request.text.format).toMatchObject({ type: "json_schema", strict: true });
+    const userPayload = JSON.parse(request.input[1].content[0].text) as { context: Record<string, unknown> };
+    expect(userPayload.context).toHaveProperty("schedule");
+    expect(userPayload.context).not.toHaveProperty("commercial");
+  });
+
+  it("prioritizes severe deterministic findings without collapsing separate evidence", async () => {
+    delete process.env.OPENAI_API_KEY;
+
+    const insight = await runAiScenario({ projectId: "project-demo", scenario: "summary" });
+    const severityRank = { critical: 0, high: 1, medium: 2, low: 3 } as const;
+    const ranks = insight.findings.map((item) => severityRank[item.severity]);
+
+    expect(ranks).toEqual([...ranks].sort((left, right) => left - right));
+    expect(insight.findings.filter((item) => item.title === "Дефицит материала").length).toBeGreaterThan(1);
+    expect(new Set(insight.findings.map((item) => `${item.title}:${item.description}:${item.source ?? ""}`)).size).toBe(insight.findings.length);
   });
 
   it("returns degraded fallback on provider failure without raw error details", async () => {

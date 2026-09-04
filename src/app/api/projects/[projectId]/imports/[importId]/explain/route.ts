@@ -6,6 +6,7 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { explainImportPreview } from "@/lib/excel/ai-import-summary";
 import { importPreviewSchema, type ImportPreview } from "@/lib/excel/import-types";
 import { prisma } from "@/lib/prisma";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
@@ -13,8 +14,15 @@ export async function POST(_request: Request, { params }: { params: { projectId:
   try {
     const user = await getCurrentUser();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    if (!(await canProject(user, params.projectId, "view"))) {
+    if (!(await canProject(user, params.projectId, "edit"))) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+    const rateLimit = checkRateLimit({ key: `ai-import:${user.id}:${params.projectId}`, limit: 12, windowMs: 5 * 60_000 });
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        { error: "Слишком много AI-запросов. Повторите позже." },
+        { status: 429, headers: { "Retry-After": String(rateLimit.retryAfterSeconds) } }
+      );
     }
 
     const project = await prisma.project.findUnique({

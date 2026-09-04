@@ -6,6 +6,8 @@ vi.mock("./project-data", () => ({
 }));
 
 const originalOpenAiKey = process.env.OPENAI_API_KEY;
+const originalOpenAiMode = process.env.OPENAI_CONNECTOR_MODE;
+const originalDatabaseUrl = process.env.DATABASE_URL;
 
 function chatResponse(content = "Готово: риск сроков, риск материалов, риск кассового разрыва.") {
   return new Response(JSON.stringify({ choices: [{ message: { content } }] }), {
@@ -19,6 +21,8 @@ describe("AI provider resilience", () => {
   let warnMock: MockInstance<typeof console.warn>;
 
   beforeEach(() => {
+    delete process.env.DATABASE_URL;
+    process.env.OPENAI_CONNECTOR_MODE = "read_only";
     fetchMock = vi.spyOn(globalThis, "fetch");
     warnMock = vi.spyOn(console, "warn").mockImplementation(() => undefined);
   });
@@ -26,6 +30,10 @@ describe("AI provider resilience", () => {
   afterEach(() => {
     if (originalOpenAiKey) process.env.OPENAI_API_KEY = originalOpenAiKey;
     else delete process.env.OPENAI_API_KEY;
+    if (originalOpenAiMode) process.env.OPENAI_CONNECTOR_MODE = originalOpenAiMode;
+    else delete process.env.OPENAI_CONNECTOR_MODE;
+    if (originalDatabaseUrl) process.env.DATABASE_URL = originalDatabaseUrl;
+    else delete process.env.DATABASE_URL;
     fetchMock.mockRestore();
     warnMock.mockRestore();
   });
@@ -38,7 +46,7 @@ describe("AI provider resilience", () => {
     expect(result.status).toBe(503);
     expect(result.ok).toBe(false);
     if (result.ok) throw new Error("Expected missing OpenAI key to return a failure result");
-    expect(result.error).toBe("OPENAI_API_KEY is not configured");
+    expect(result.error).toBe("AI connector is disabled or not configured");
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
@@ -94,5 +102,15 @@ describe("AI provider resilience", () => {
     expect(result.error).toBe("AI provider request failed");
     expect(serialized).not.toContain("sensitive-token-should-not-leak");
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not call the legacy assistant provider when the connector is disabled", async () => {
+    process.env.OPENAI_API_KEY = "openai-token-redacted";
+    process.env.OPENAI_CONNECTOR_MODE = "disabled";
+
+    const result = await askProjectAssistant("project-demo", "Что важно?");
+
+    expect(result).toMatchObject({ ok: false, status: 503, error: "AI connector is disabled or not configured" });
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });
