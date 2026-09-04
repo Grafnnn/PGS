@@ -153,7 +153,7 @@ export function DailyPhotoAiWorkspace({ projectId, reports, currentUser, current
                 const disabled = !selected && selectedPhotoIds.length >= 4;
                 return (
                   <button aria-pressed={selected} className={selected ? "selected" : ""} disabled={disabled} key={document.id} type="button" onClick={() => togglePhoto(document.id)}>
-                    <Image alt={document.title || document.fileName || "Фото рапорта"} height={240} src={`/api/projects/${projectId}/documents/${document.id}/download`} unoptimized width={320} />
+                    <Image alt={document.title || document.fileName || "Фото рапорта"} height={240} loading="lazy" src={`/api/projects/${projectId}/documents/${document.id}/download?inline=1&v=${document.version}`} unoptimized width={320} />
                     <span>{document.title || document.fileName || "Фото рапорта"}</span>
                     {selected ? <i aria-hidden="true"><Check size={14} /></i> : null}
                   </button>

@@ -19,6 +19,7 @@ import {
   Search,
   Send,
   ShieldCheck,
+  Sparkles,
   Users,
   Trash2,
   X
@@ -49,6 +50,15 @@ import { buildDailyReportScheduleUnits, syncDailyReportWorkOutputUnits } from "@
 import { dailyReportStatusLabel } from "@/lib/daily-reports";
 import type { SerializedExecutiveReport } from "@/lib/executive-reports";
 import type { PhotoQuestionResult } from "@/lib/photo-question";
+import type { PhotoVolumeResult } from "@/lib/photo-volume-estimation";
+import {
+  formatReportPhotoBytes,
+  mapWithConcurrency,
+  prepareReportPhoto,
+  REPORT_PHOTO_MAX_FILES,
+  reportPhotoFileKey,
+  uploadReportPhoto
+} from "@/lib/report-photo-client";
 import type { BudgetItem, DailyReport, DailyReportWorkOutput, DailyReportWorkScope, ProjectDocument, ScheduleItem, WorkStatus } from "@/lib/types";
 
 type UserContext = {
@@ -94,6 +104,23 @@ type WorkforceItem = {
   profession: string;
   kind: "worker" | "engineer" | "crew";
   headcount: number;
+};
+
+type PendingReportPhoto = {
+  id: string;
+  file: File;
+  originalSize: number;
+  previewUrl?: string;
+  optimized: boolean;
+  status: "preparing" | "ready" | "uploading" | "failed" | "rejected";
+  progress: number;
+  error?: string;
+};
+
+type EvidenceUploadResult = {
+  uploadedDocuments: ProjectDocument[];
+  uploadedPhotoIds: string[];
+  failureMessages: string[];
 };
 
 const emptyProjectDocuments: ProjectDocument[] = [];
@@ -291,7 +318,7 @@ function ReportEvidenceGallery({ documents, projectId }: { documents: ProjectDoc
         <div className="daily-report-evidence-gallery">
           {images.slice(0, 6).map((document) => (
             <a aria-label={`Открыть фото: ${document.title}`} href={`/api/projects/${projectId}/documents/${document.id}/download`} key={document.id} rel="noreferrer" target="_blank">
-              <Image alt={document.title} height={180} src={`/api/projects/${projectId}/documents/${document.id}/download`} unoptimized width={240} />
+              <Image alt={document.title} height={180} loading="lazy" src={`/api/projects/${projectId}/documents/${document.id}/download?inline=1&v=${document.version}`} unoptimized width={240} />
               <span>{document.title}</span>
               <ArrowUpRight aria-hidden="true" size={13} />
             </a>
@@ -330,14 +357,17 @@ export function ReportsWorkflow({ projectId, reports, scheduleItems, budgetItems
   const [workforceLoaded, setWorkforceLoaded] = useState(false);
   const [crewSearch, setCrewSearch] = useState("");
   const [workDraft, setWorkDraft] = useState("");
-  const [photoFiles, setPhotoFiles] = useState<File[]>([]);
+  const [pendingPhotos, setPendingPhotos] = useState<PendingReportPhoto[]>([]);
   const [selectedPhotoIds, setSelectedPhotoIds] = useState<string[]>([]);
   const [photoQuestion, setPhotoQuestion] = useState("");
   const [photoAnswer, setPhotoAnswer] = useState<PhotoQuestionResult | null>(null);
+  const [photoVolumeResult, setPhotoVolumeResult] = useState<PhotoVolumeResult | null>(null);
   const [photoNotice, setPhotoNotice] = useState("");
   const [selectedExistingPhotoIds, setSelectedExistingPhotoIds] = useState<string[]>([]);
   const [correctionReportId, setCorrectionReportId] = useState<string | null>(null);
   const [correctionReason, setCorrectionReason] = useState("");
+  const photoObjectUrls = useRef(new Set<string>());
+  const photoPreparationVersion = useRef(0);
 
   const role = currentUser?.role;
   const canEdit = role === "OWNER" || role === "ADMIN" || role === "MANAGER";
@@ -346,7 +376,18 @@ export function ReportsWorkflow({ projectId, reports, scheduleItems, budgetItems
   const sortedReports = useMemo(() => [...reports].sort((a, b) => b.date.localeCompare(a.date)), [reports]);
   const activeReport = editingId ? reports.find((item) => item.id === editingId) ?? null : null;
   const evidence = activeReport?.evidenceDocuments?.filter((item) => (item.mimeType ?? "").startsWith("image/")) ?? [];
-  const availableProjectPhotos = useMemo(() => documents.filter(isProjectEvidenceCandidate), [documents]);
+  const availableProjectPhotos = useMemo(
+    () => documents
+      .filter(isProjectEvidenceCandidate)
+      .sort((left, right) => (right.uploadedAt ?? right.createdAt).localeCompare(left.uploadedAt ?? left.createdAt)),
+    [documents]
+  );
+  const visibleProjectPhotos = availableProjectPhotos.slice(0, 24);
+  const uploadablePhotos = pendingPhotos.filter((item) => item.status === "ready" || item.status === "failed");
+  const photosPreparing = pendingPhotos.some((item) => item.status === "preparing");
+  const photosRejected = pendingPhotos.some((item) => item.status === "rejected");
+  const photoOperationBusy = busy === "photo-upload" || busy === "photo-ai" || busy === "photo-volume";
+  const photoControlsBusy = photoOperationBusy || busy === "daily-save";
   const selectedCrew = workforce.filter((item) => form.crewResourceIds.includes(item.resourceId));
   const selectedHeadcount = selectedCrew.length
     ? selectedCrew.reduce((sum, item) => sum + item.headcount, 0)
@@ -439,14 +480,33 @@ export function ReportsWorkflow({ projectId, reports, scheduleItems, budgetItems
     void loadWorkforce();
   }, [loadWorkforce]);
 
+  useEffect(() => () => {
+    photoPreparationVersion.current += 1;
+    photoObjectUrls.current.forEach((url) => URL.revokeObjectURL(url));
+    photoObjectUrls.current.clear();
+  }, []);
+
+  function clearPendingPhotos() {
+    photoPreparationVersion.current += 1;
+    photoObjectUrls.current.forEach((url) => URL.revokeObjectURL(url));
+    photoObjectUrls.current.clear();
+    setPendingPhotos([]);
+  }
+
+  function closeReportForm() {
+    clearPendingPhotos();
+    setFormOpen(false);
+  }
+
   function openNewReport() {
     setEditingId(null);
     setForm(emptyReport(currentUser?.name || "Прораб", "open"));
     setFormOpen(true);
-    setPhotoFiles([]);
+    clearPendingPhotos();
     setSelectedPhotoIds([]);
     setPhotoQuestion("");
     setPhotoAnswer(null);
+    setPhotoVolumeResult(null);
     setPhotoNotice("");
     setSelectedExistingPhotoIds([]);
     setCrewSearch("");
@@ -499,10 +559,11 @@ export function ReportsWorkflow({ projectId, reports, scheduleItems, budgetItems
       crewResourceIds: (item.crewMembers ?? []).map((member) => member.resourceId),
       workOutputs: preparedOutputs
     });
-    setPhotoFiles([]);
+    clearPendingPhotos();
     setSelectedPhotoIds(item.evidenceDocuments?.filter((document) => (document.mimeType ?? "").startsWith("image/")).map((document) => document.id).slice(0, 4) ?? []);
     setPhotoQuestion("");
     setPhotoAnswer(null);
+    setPhotoVolumeResult(null);
     setPhotoNotice("");
     setSelectedExistingPhotoIds([]);
     setCrewSearch("");
@@ -512,6 +573,7 @@ export function ReportsWorkflow({ projectId, reports, scheduleItems, budgetItems
   }
 
   function replaceWorkScopes(nextScopes: DailyReportWorkScope[]) {
+    setPhotoVolumeResult(null);
     setForm((current) => {
       const workScopes = parseDailyReportWorkScopes(nextScopes);
       const nextKeys = new Set(workScopes.map(dailyReportWorkScopeKey));
@@ -627,41 +689,119 @@ export function ReportsWorkflow({ projectId, reports, scheduleItems, budgetItems
   }
 
   function togglePhoto(documentId: string) {
+    setPhotoAnswer(null);
+    setPhotoVolumeResult(null);
     setSelectedPhotoIds((current) => {
       if (current.includes(documentId)) return current.filter((id) => id !== documentId);
       return current.length < 4 ? [...current, documentId] : current;
     });
   }
 
-  async function persistEvidence(files: File[]) {
-    if (!editingId) return { uploadedDocuments: [] as ProjectDocument[], failedFiles: files, failureMessages: ["Сначала сохраните рапорт."] };
-    const uploadedDocuments: ProjectDocument[] = [];
-    const failedFiles: File[] = [];
-    const failureMessages: string[] = [];
-    for (const file of files) {
-      const data = new FormData();
-      data.set("file", file);
-      data.set("category", "фотофиксация");
-      data.set("dailyReportId", editingId);
-      data.set("clientMutationId", dailyReportPhotoMutationId(editingId, file));
-      try {
-        const response = await fetch(`/api/projects/${projectId}/documents/upload`, { method: "POST", body: data });
-        if (!response.ok) throw new Error(await responseError(response, `Не удалось загрузить ${file.name}.`));
-        const body = (await response.json()) as { item: ProjectDocument };
-        uploadedDocuments.push(body.item);
-      } catch (fileError) {
-        failedFiles.push(file);
-        failureMessages.push(fileError instanceof Error ? fileError.message : `Не удалось загрузить ${file.name}.`);
-      }
-    }
-    return { uploadedDocuments, failedFiles, failureMessages };
+  function updatePendingPhoto(id: string, patch: Partial<PendingReportPhoto>) {
+    setPendingPhotos((current) => current.map((item) => item.id === id ? { ...item, ...patch } : item));
   }
 
-  function reflectEvidenceUpload(result: { uploadedDocuments: ProjectDocument[]; failedFiles: File[]; failureMessages: string[] }) {
-    setPhotoFiles(result.failedFiles);
+  function removePendingPhoto(id: string) {
+    const target = pendingPhotos.find((item) => item.id === id);
+    if (target?.previewUrl) {
+      URL.revokeObjectURL(target.previewUrl);
+      photoObjectUrls.current.delete(target.previewUrl);
+    }
+    setPendingPhotos((current) => current.filter((item) => item.id !== id));
+  }
+
+  async function selectPhotoFiles(files: File[]) {
+    const availableSlots = Math.max(0, REPORT_PHOTO_MAX_FILES - pendingPhotos.length);
+    const selected = files.slice(0, availableSlots);
+    if (!selected.length) {
+      if (files.length) setError(`К одной загрузке можно добавить до ${REPORT_PHOTO_MAX_FILES} фото.`);
+      return;
+    }
+    if (files.length > selected.length) setError(`Добавлены первые ${selected.length} фото из ${files.length}. Лимит очереди: ${REPORT_PHOTO_MAX_FILES}.`);
+    else setError("");
+    setPhotoAnswer(null);
+    setPhotoVolumeResult(null);
+    setPhotoNotice("");
+    const version = photoPreparationVersion.current;
+    const batchToken = Date.now().toString(36);
+    const initial: PendingReportPhoto[] = selected.map((file, index) => ({
+      id: `${reportPhotoFileKey(file, index)}:${batchToken}`,
+      file,
+      originalSize: file.size,
+      optimized: false,
+      status: "preparing",
+      progress: 0
+    }));
+    setPendingPhotos((current) => [...current, ...initial]);
+
+    for (const item of initial) {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      try {
+        const prepared = await prepareReportPhoto(item.file);
+        if (version !== photoPreparationVersion.current) return;
+        const previewUrl = URL.createObjectURL(prepared.file);
+        photoObjectUrls.current.add(previewUrl);
+        updatePendingPhoto(item.id, {
+          file: prepared.file,
+          originalSize: prepared.originalSize,
+          previewUrl,
+          optimized: prepared.optimized,
+          status: "ready"
+        });
+      } catch (prepareError) {
+        if (version !== photoPreparationVersion.current) return;
+        updatePendingPhoto(item.id, {
+          status: "rejected",
+          error: prepareError instanceof Error ? prepareError.message : "Не удалось подготовить фото."
+        });
+      }
+    }
+  }
+
+  async function persistEvidence(photos: PendingReportPhoto[]): Promise<EvidenceUploadResult> {
+    if (!editingId) return { uploadedDocuments: [], uploadedPhotoIds: [], failureMessages: ["Сначала сохраните рапорт."] };
+    const outcomes = await mapWithConcurrency(photos, 2, async (photo) => {
+      updatePendingPhoto(photo.id, { status: "uploading", progress: 0, error: undefined });
+      try {
+        let lastRenderedProgress = -10;
+        const document = await uploadReportPhoto({
+          projectId,
+          reportId: editingId,
+          file: photo.file,
+          clientMutationId: dailyReportPhotoMutationId(editingId, photo.file),
+          onProgress: (progress) => {
+            if (progress !== 100 && progress - lastRenderedProgress < 10) return;
+            lastRenderedProgress = progress;
+            React.startTransition(() => updatePendingPhoto(photo.id, { progress }));
+          }
+        });
+        return { photoId: photo.id, document };
+      } catch (fileError) {
+        const message = fileError instanceof Error ? fileError.message : `Не удалось загрузить ${photo.file.name}.`;
+        updatePendingPhoto(photo.id, { status: "failed", error: message, progress: 0 });
+        return { photoId: photo.id, error: message };
+      }
+    });
+    return {
+      uploadedDocuments: outcomes.flatMap((item) => item.document ? [item.document] : []),
+      uploadedPhotoIds: outcomes.flatMap((item) => item.document ? [item.photoId] : []),
+      failureMessages: outcomes.flatMap((item) => item.error ? [item.error] : [])
+    };
+  }
+
+  function reflectEvidenceUpload(result: EvidenceUploadResult) {
+    const uploadedIds = new Set(result.uploadedPhotoIds);
+    pendingPhotos.forEach((item) => {
+      if (!uploadedIds.has(item.id)) return;
+      if (item.previewUrl) {
+        URL.revokeObjectURL(item.previewUrl);
+        photoObjectUrls.current.delete(item.previewUrl);
+      }
+    });
+    setPendingPhotos((current) => current.filter((item) => !uploadedIds.has(item.id)));
     if (result.uploadedDocuments.length) {
-      const uploadedIds = result.uploadedDocuments.map((item) => item.id);
-      setSelectedPhotoIds((current) => [...new Set([...current, ...uploadedIds])].slice(0, 4));
+      const uploadedDocumentIds = result.uploadedDocuments.map((item) => item.id);
+      setSelectedPhotoIds((current) => [...new Set([...current, ...uploadedDocumentIds])].slice(0, 4));
       onReportsChange(reports.map((report) => report.id === editingId
         ? {
             ...report,
@@ -677,20 +817,13 @@ export function ReportsWorkflow({ projectId, reports, scheduleItems, budgetItems
   }
 
   async function uploadEvidence() {
-    if (!editingId || !photoFiles.length) return;
+    if (!editingId || !uploadablePhotos.length) return;
     setBusy("photo-upload");
     setError("");
     setPhotoNotice("");
     try {
-      const result = await persistEvidence([...photoFiles]);
+      const result = await persistEvidence(uploadablePhotos);
       reflectEvidenceUpload(result);
-      if (result.uploadedDocuments.length) {
-        try {
-          await loadDailyReports();
-        } catch {
-          // Successful uploads remain visible locally; a later refresh reconciles the list.
-        }
-      }
     } catch (uploadError) {
       setError(uploadError instanceof Error ? uploadError.message : "Не удалось загрузить фото смены.");
     } finally {
@@ -725,9 +858,10 @@ export function ReportsWorkflow({ projectId, reports, scheduleItems, budgetItems
           }
         : report));
       setSelectedPhotoIds((current) => [...new Set([...current, ...body.items.map((item) => item.id)])].slice(0, 4));
+      setPhotoAnswer(null);
+      setPhotoVolumeResult(null);
       setSelectedExistingPhotoIds([]);
       setPhotoNotice(`Из документов прикреплено: ${body.linked}. Фото теперь видны в карточке рапорта.`);
-      await loadDailyReports();
     } catch (linkError) {
       setError(linkError instanceof Error ? linkError.message : "Не удалось прикрепить фото из документов.");
     } finally {
@@ -735,18 +869,23 @@ export function ReportsWorkflow({ projectId, reports, scheduleItems, budgetItems
     }
   }
 
+  async function uploadedPhotoIdsForAnalysis() {
+    let documentIds = selectedPhotoIds;
+    if (uploadablePhotos.length) {
+      const result = await persistEvidence(uploadablePhotos);
+      reflectEvidenceUpload(result);
+      documentIds = [...new Set([...documentIds, ...result.uploadedDocuments.map((item) => item.id)])].slice(0, 4);
+    }
+    return documentIds;
+  }
+
   async function askAboutPhotos() {
-    if (!editingId || (!selectedPhotoIds.length && !photoFiles.length) || photoQuestion.trim().length < 3) return;
+    if (!editingId || (!selectedPhotoIds.length && !uploadablePhotos.length) || photoQuestion.trim().length < 3) return;
     setBusy("photo-ai");
     setError("");
     setPhotoAnswer(null);
     try {
-      let documentIds = selectedPhotoIds;
-      if (photoFiles.length) {
-        const result = await persistEvidence([...photoFiles]);
-        reflectEvidenceUpload(result);
-        documentIds = [...new Set([...documentIds, ...result.uploadedDocuments.map((item) => item.id)])].slice(0, 4);
-      }
+      const documentIds = await uploadedPhotoIdsForAnalysis();
       if (!documentIds.length) throw new Error("Добавьте хотя бы одно фото для анализа.");
       const response = await fetch(`/api/projects/${projectId}/daily-reports/${editingId}/photo-question`, {
         method: "POST",
@@ -763,10 +902,63 @@ export function ReportsWorkflow({ projectId, reports, scheduleItems, budgetItems
     }
   }
 
+  async function estimateVolumesFromPhotos() {
+    if (!editingId || (!selectedPhotoIds.length && !uploadablePhotos.length)) return;
+    const scheduleItemIds = [...new Set(form.workOutputs.flatMap((output) => output.scheduleItemId ? [output.scheduleItemId] : []))];
+    if (!scheduleItemIds.length) {
+      setError("Для AI-оценки выберите измеримые работы из графика проекта.");
+      return;
+    }
+    setBusy("photo-volume");
+    setError("");
+    setPhotoVolumeResult(null);
+    try {
+      const documentIds = await uploadedPhotoIdsForAnalysis();
+      if (!documentIds.length) throw new Error("Добавьте хотя бы одно фото для оценки объёмов.");
+      const response = await fetch(`/api/projects/${projectId}/daily-reports/${editingId}/photo-volume`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ documentIds, scheduleItemIds })
+      });
+      if (!response.ok) throw new Error(await responseError(response, "Не удалось оценить объёмы по фотографиям."));
+      const body = (await response.json()) as { result: PhotoVolumeResult };
+      setPhotoVolumeResult(body.result);
+    } catch (analysisError) {
+      setError(analysisError instanceof Error ? analysisError.message : "Не удалось оценить объёмы по фотографиям.");
+    } finally {
+      setBusy("");
+    }
+  }
+
+  function applyPhotoVolumeSuggestions() {
+    if (!photoVolumeResult) return;
+    const quantityByScheduleId = new Map(photoVolumeResult.suggestions.flatMap((item) => (
+      item.suggestedQuantity !== null ? [[item.scheduleItemId, item.suggestedQuantity] as const] : []
+    )));
+    if (!quantityByScheduleId.size) {
+      setPhotoNotice("На фото недостаточно масштаба для автоматической подстановки. Укажите объёмы вручную.");
+      return;
+    }
+    setForm((current) => ({
+      ...current,
+      workOutputs: current.workOutputs.map((output) => output.scheduleItemId && quantityByScheduleId.has(output.scheduleItemId)
+        ? { ...output, quantity: quantityByScheduleId.get(output.scheduleItemId)! }
+        : output)
+    }));
+    setPhotoNotice(`AI-черновик подставлен в ${quantityByScheduleId.size} ${quantityByScheduleId.size === 1 ? "работу" : "работы"}. Проверьте объёмы перед сохранением факта.`);
+  }
+
   async function saveReport() {
     setBusy("daily-save");
     setError("");
     try {
+      if (photosPreparing) throw new Error("Дождитесь завершения подготовки фотографий.");
+      if (photosRejected) throw new Error("Удалите неподдерживаемые фото из очереди перед сохранением факта.");
+      if (editingId && uploadablePhotos.length) {
+        const uploadResult = await persistEvidence(uploadablePhotos);
+        reflectEvidenceUpload(uploadResult);
+        if (uploadResult.failureMessages.length) throw new Error("Не все фото прикреплены. Повторите загрузку или удалите проблемные файлы из очереди.");
+      }
       const workOutputs = selectedCrew.length
         ? applyDailyReportCrewAssignments(form.workOutputs, selectedCrew, form.shiftHours ?? 8)
         : form.workOutputs;
@@ -781,6 +973,7 @@ export function ReportsWorkflow({ projectId, reports, scheduleItems, budgetItems
       if (!response.ok) throw new Error(await responseError(response, "Не удалось сохранить рапорт."));
       await response.json();
       await loadDailyReports();
+      clearPendingPhotos();
       setFormOpen(false);
       setEditingId(null);
     } catch (saveError) {
@@ -967,7 +1160,7 @@ export function ReportsWorkflow({ projectId, reports, scheduleItems, budgetItems
               <strong>{editingId ? form.phase === "closed" ? "Фактическое закрытие смены" : "Заявка на смену" : "Новая заявка на смену"}</strong>
               <span>{form.phase === "open" ? "План, несколько видов работ и персональный состав." : "Отдельный объём по каждой работе, события и фотофиксация."}</span>
             </div>
-            <button className="icon-button" type="button" title="Закрыть" onClick={() => setFormOpen(false)}><X size={18} /></button>
+            <button aria-label="Закрыть форму рапорта" className="icon-button" type="button" title="Закрыть" onClick={closeReportForm}><X size={18} /></button>
           </div>
           <div className="daily-shift-steps" aria-label="Этап смены">
             <span className="active"><strong>1</strong> План и люди</span>
@@ -1086,29 +1279,57 @@ export function ReportsWorkflow({ projectId, reports, scheduleItems, budgetItems
               </details>
               {editingId ? (
                 <section className="daily-photo-workspace" aria-label="Фото смены и AI-анализ">
-                  <div className="daily-crew-heading"><span><Camera size={18} /><strong>Фото смены</strong></span><small>JPEG, PNG или WebP</small></div>
+                  <div className="daily-crew-heading"><span><Camera size={18} /><strong>Фото факта</strong></span><small>Оптимизация перед загрузкой · до {REPORT_PHOTO_MAX_FILES} фото</small></div>
                   <div className="daily-photo-upload">
-                    <label className="button secondary"><Images size={16} /> Выбрать фото<input accept="image/jpeg,image/png,image/webp" multiple type="file" onChange={(event) => setPhotoFiles(Array.from(event.target.files ?? []))} /></label>
-                    <span>{photoFiles.length ? `Выбрано: ${photoFiles.length}` : "Фото ещё не выбраны"}</span>
-                    <button className="button secondary" disabled={!photoFiles.length || busy === "photo-upload"} type="button" onClick={() => void uploadEvidence()}>{busy === "photo-upload" ? "Загружаю..." : "Прикрепить"}</button>
+                    <label className={`button secondary${photoControlsBusy || photosPreparing ? " disabled" : ""}`}><Images size={16} /> Добавить фото<input accept="image/jpeg,image/png,image/webp" disabled={photoControlsBusy || photosPreparing} multiple type="file" onChange={(event) => {
+                      const files = Array.from(event.target.files ?? []);
+                      event.currentTarget.value = "";
+                      void selectPhotoFiles(files);
+                    }} /></label>
+                    <span>{pendingPhotos.length ? `В очереди: ${pendingPhotos.length}` : "Крупные снимки будут автоматически облегчены"}</span>
+                    <button className="button secondary" disabled={!uploadablePhotos.length || photosPreparing || photoControlsBusy} type="button" onClick={() => void uploadEvidence()}>{busy === "photo-upload" ? "Загружаю..." : `Прикрепить${uploadablePhotos.length ? ` · ${uploadablePhotos.length}` : ""}`}</button>
                   </div>
+                  {pendingPhotos.length ? (
+                    <div className="daily-photo-upload-queue" aria-label="Очередь загрузки фото" aria-live="polite">
+                      {pendingPhotos.map((photo) => (
+                        <article className={`state-${photo.status}`} key={photo.id}>
+                          {photo.previewUrl ? <Image alt="" height={72} loading="lazy" src={photo.previewUrl} unoptimized width={96} /> : <span className="daily-photo-placeholder"><Camera size={18} /></span>}
+                          <div>
+                            <strong>{photo.file.name}</strong>
+                            <small>{photo.status === "preparing"
+                              ? "Подготавливаю без блокировки формы..."
+                              : photo.status === "uploading"
+                                ? `Загрузка: ${photo.progress}%`
+                                : photo.status === "failed" || photo.status === "rejected"
+                                  ? photo.error
+                                  : photo.optimized
+                                    ? `${formatReportPhotoBytes(photo.originalSize)} → ${formatReportPhotoBytes(photo.file.size)}`
+                                    : formatReportPhotoBytes(photo.file.size)}</small>
+                            {photo.status === "uploading" ? <progress max={100} value={photo.progress}>{photo.progress}%</progress> : null}
+                          </div>
+                          <button aria-label={`Убрать ${photo.file.name} из очереди`} className="icon-button" disabled={photo.status === "uploading"} title="Убрать из очереди" type="button" onClick={() => removePendingPhoto(photo.id)}><X size={15} /></button>
+                        </article>
+                      ))}
+                    </div>
+                  ) : null}
                   {availableProjectPhotos.length ? (
                     <details className="daily-existing-photo-picker">
                       <summary><Images size={16} /><span>Прикрепить из документов</span><b>{availableProjectPhotos.length}</b><ChevronDown size={15} /></summary>
                       <div className="daily-existing-photo-panel">
                         <p>Здесь показаны ещё не связанные с рапортами фото проекта. Выберите нужные, повторно загружать файлы не придётся.</p>
                         <div className="daily-photo-grid daily-existing-photo-grid">
-                          {availableProjectPhotos.map((document) => {
+                          {visibleProjectPhotos.map((document) => {
                             const selected = selectedExistingPhotoIds.includes(document.id);
                             return (
                               <label className={selected ? "selected" : ""} key={document.id}>
                                 <input checked={selected} type="checkbox" onChange={() => setSelectedExistingPhotoIds((current) => current.includes(document.id) ? current.filter((id) => id !== document.id) : [...current, document.id])} />
-                                <Image alt={document.title} height={150} src={`/api/projects/${projectId}/documents/${document.id}/download`} unoptimized width={200} />
+                                <Image alt={document.title} height={150} loading="lazy" src={`/api/projects/${projectId}/documents/${document.id}/download?inline=1&v=${document.version}`} unoptimized width={200} />
                                 <span>{document.title}</span>
                               </label>
                             );
                           })}
                         </div>
+                        {availableProjectPhotos.length > visibleProjectPhotos.length ? <p className="form-hint">Показаны последние {visibleProjectPhotos.length} фото. Остальные доступны в разделе «Документы».</p> : null}
                         <div className="form-actions">
                           <span className="muted">Выбрано: {selectedExistingPhotoIds.length}</span>
                           <button className="button secondary compact-button" disabled={!selectedExistingPhotoIds.length || busy === "photo-link"} type="button" onClick={() => void attachExistingEvidence()}>{busy === "photo-link" ? "Прикрепляю..." : "Добавить в рапорт"}</button>
@@ -1122,25 +1343,48 @@ export function ReportsWorkflow({ projectId, reports, scheduleItems, budgetItems
                       {evidence.map((document) => (
                         <label className={selectedPhotoIds.includes(document.id) ? "selected" : ""} key={document.id}>
                           <input checked={selectedPhotoIds.includes(document.id)} disabled={!selectedPhotoIds.includes(document.id) && selectedPhotoIds.length >= 4} type="checkbox" onChange={() => togglePhoto(document.id)} />
-                          <Image alt={document.title} height={240} src={`/api/projects/${projectId}/documents/${document.id}/download`} unoptimized width={320} />
+                          <Image alt={document.title} height={240} loading="lazy" src={`/api/projects/${projectId}/documents/${document.id}/download?inline=1&v=${document.version}`} unoptimized width={320} />
                           <span>{document.title}</span>
                         </label>
                       ))}
                     </div>
-                  ) : <p className="muted">Прикрепите фото, чтобы сохранить доказательства и задать вопрос AI.</p>}
+                  ) : <p className="muted">Прикрепите фото: они останутся доказательством факта и станут доступны для AI-анализа.</p>}
+                  <section className="daily-photo-volume-tool" aria-label="AI-оценка объёмов по фото">
+                    <div>
+                      <span><Sparkles size={17} /><strong>Определить объёмы по фото</strong><b>AI-черновик</b></span>
+                      <p>AI сопоставит выбранные фото с работами из графика. Результат не изменит рапорт, пока вы явно не подставите и не сохраните его.</p>
+                    </div>
+                    <button className="button primary" disabled={(!selectedPhotoIds.length && !uploadablePhotos.length) || photosPreparing || photoControlsBusy || !form.workOutputs.some((output) => output.scheduleItemId)} type="button" onClick={() => void estimateVolumesFromPhotos()}><Sparkles size={16} /> {busy === "photo-volume" ? "Оцениваю объёмы..." : uploadablePhotos.length ? "Загрузить и оценить" : "Оценить объёмы"}</button>
+                    {photoVolumeResult ? (
+                      <div className="daily-photo-volume-result" role="status">
+                        <p>{photoVolumeResult.summary}</p>
+                        <div>
+                          {photoVolumeResult.suggestions.map((suggestion) => (
+                            <article className={suggestion.suggestedQuantity === null ? "needs-measurement" : "has-suggestion"} key={suggestion.scheduleItemId}>
+                              <span><strong>{suggestion.workName}</strong><small>{suggestion.basis}</small></span>
+                              <span><b>{suggestion.suggestedQuantity === null ? "Нужен замер" : `${suggestion.suggestedQuantity.toLocaleString("ru-RU", { maximumFractionDigits: 3 })} ${suggestion.unit}`}</b><small>Уверенность: {suggestion.confidence === "high" ? "высокая" : suggestion.confidence === "medium" ? "средняя" : "низкая"}</small></span>
+                            </article>
+                          ))}
+                        </div>
+                        {photoVolumeResult.limitations.length ? <small>Ограничения: {photoVolumeResult.limitations.join(" ")}</small> : null}
+                        <button className="button secondary" disabled={!photoVolumeResult.suggestions.some((item) => item.suggestedQuantity !== null)} type="button" onClick={applyPhotoVolumeSuggestions}><Check size={16} /> Подставить предложенные объёмы</button>
+                      </div>
+                    ) : null}
+                  </section>
                   <div className="daily-photo-ai-prompt">
+                    <strong className="daily-photo-ai-title"><Bot size={17} /> Отдельный вопрос по фото</strong>
                     <div className="daily-photo-ai-presets" aria-label="Быстрые вопросы по фото">
                       {["Есть ли видимые дефекты?", "Что проверить перед приёмкой?", "Есть ли риски по качеству?"].map((question) => <button className="button secondary compact-button" key={question} type="button" onClick={() => setPhotoQuestion(question)}>{question}</button>)}
                     </div>
                     <div className="daily-photo-question">
                       <label>Вопрос по фото<textarea rows={2} value={photoQuestion} onChange={(event) => setPhotoQuestion(event.target.value)} placeholder="Что нужно проверить на этих фотографиях?" /></label>
-                      <button className="button primary" disabled={(!selectedPhotoIds.length && !photoFiles.length) || photoQuestion.trim().length < 3 || busy === "photo-ai"} type="button" onClick={() => void askAboutPhotos()}><Bot size={17} /> {busy === "photo-ai" ? "Загружаю и анализирую..." : photoFiles.length ? "Загрузить и спросить AI" : "Спросить AI"}</button>
+                      <button className="button primary" disabled={(!selectedPhotoIds.length && !uploadablePhotos.length) || photosPreparing || photoQuestion.trim().length < 3 || photoControlsBusy} type="button" onClick={() => void askAboutPhotos()}><Bot size={17} /> {busy === "photo-ai" ? "Анализирую..." : uploadablePhotos.length ? "Загрузить и спросить AI" : "Спросить AI"}</button>
                     </div>
-                    <p className="form-hint" role="status">{!selectedPhotoIds.length && !photoFiles.length
+                    <p className="form-hint" role="status">{!selectedPhotoIds.length && !uploadablePhotos.length
                       ? "Добавьте хотя бы одно фото."
                       : photoQuestion.trim().length < 3
                         ? "Выберите быстрый вопрос или напишите свой."
-                        : `К анализу готово фото: ${Math.min(4, selectedPhotoIds.length + photoFiles.length)}.`}</p>
+                        : `К анализу готово фото: ${Math.min(4, selectedPhotoIds.length + uploadablePhotos.length)}.`}</p>
                   </div>
                   {photoAnswer ? (
                     <div className="daily-photo-answer" role="status">
@@ -1158,10 +1402,10 @@ export function ReportsWorkflow({ projectId, reports, scheduleItems, budgetItems
           ) : null}
           {missingRequiredFields.length ? <p className="form-hint" role="status">Для сохранения заполните: {missingRequiredFields.join(", ")}.</p> : null}
           <div className="form-actions">
-            <button className="button primary" disabled={busy === "daily-save" || missingRequiredFields.length > 0} type="button" onClick={() => void saveReport()}>
+            <button className="button primary" disabled={busy === "daily-save" || photoOperationBusy || photosPreparing || photosRejected || missingRequiredFields.length > 0} type="button" onClick={() => void saveReport()}>
               <Save size={17} /> {busy === "daily-save" ? "Сохраняю..." : form.phase === "open" ? "Открыть смену" : "Сохранить факт"}
             </button>
-            <button className="button secondary" type="button" onClick={() => setFormOpen(false)}>Отмена</button>
+            <button className="button secondary" type="button" onClick={closeReportForm}>Отмена</button>
           </div>
         </div>
       ) : null}
