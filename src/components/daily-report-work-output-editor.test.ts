@@ -118,4 +118,28 @@ describe("DailyReportWorkOutputEditor", () => {
     expect(html).toContain("<b>м²</b>");
     expect(html).not.toContain("aria-label=\"Единица работы 1\"");
   });
+
+  it("shows the resolved estimate unit when the schedule still contains a generic unit", () => {
+    const html = renderToStaticMarkup(createElement(DailyReportWorkOutputEditor, {
+      crewMembers: crew,
+      scheduleItems: [{ ...scheduleItem, unit: "ед." }],
+      scheduleUnits: new Map([["schedule-1", "м²"]]),
+      outputs: [{
+        scheduleItemId: "schedule-1",
+        crewResourceIds: ["worker-1"],
+        profession: "Кровельщик",
+        workName: scheduleItem.name,
+        quantity: 10,
+        unit: "м²",
+        workerCount: 1,
+        hoursPerWorker: 8,
+        laborHours: 8
+      }],
+      onChange: vi.fn()
+    }));
+
+    expect(html).toContain("Всего: 120 м² · выполнено ранее: 40 · осталось: 80");
+    expect(html).toContain("<b>м²</b>");
+    expect(html).not.toContain("Всего: 120 ед.");
+  });
 });

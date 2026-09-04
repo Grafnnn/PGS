@@ -45,10 +45,11 @@ import {
   seedDailyReportWorkOutputs,
   syncDailyReportCompletedWorks
 } from "@/lib/daily-report-work-scopes";
+import { buildDailyReportScheduleUnits, syncDailyReportWorkOutputUnits } from "@/lib/daily-report-work-units";
 import { dailyReportStatusLabel } from "@/lib/daily-reports";
 import type { SerializedExecutiveReport } from "@/lib/executive-reports";
 import type { PhotoQuestionResult } from "@/lib/photo-question";
-import type { DailyReport, DailyReportWorkOutput, DailyReportWorkScope, ProjectDocument, ScheduleItem, WorkStatus } from "@/lib/types";
+import type { BudgetItem, DailyReport, DailyReportWorkOutput, DailyReportWorkScope, ProjectDocument, ScheduleItem, WorkStatus } from "@/lib/types";
 
 type UserContext = {
   role?: "OWNER" | "ADMIN" | "MANAGER" | "VIEWER";
@@ -60,6 +61,7 @@ type Props = {
   projectId: string;
   reports: DailyReport[];
   scheduleItems: ScheduleItem[];
+  budgetItems?: BudgetItem[];
   documents?: ProjectDocument[];
   currentUser: UserContext | null;
   currentUserLoaded: boolean;
@@ -95,6 +97,7 @@ type WorkforceItem = {
 };
 
 const emptyProjectDocuments: ProjectDocument[] = [];
+const emptyBudgetItems: BudgetItem[] = [];
 
 const workCategories = ["Кровельные работы", "Фасадные работы", "Монолит", "Кладка", "Отделка", "Инженерные сети", "Благоустройство", "Подготовительные работы", "Другое"];
 
@@ -310,7 +313,7 @@ async function responseError(response: Response, fallback: string) {
   return body.error ?? fallback;
 }
 
-export function ReportsWorkflow({ projectId, reports, scheduleItems, documents = emptyProjectDocuments, currentUser, currentUserLoaded, onReportsChange, onScheduleItemsChange, onDocumentsChange }: Props) {
+export function ReportsWorkflow({ projectId, reports, scheduleItems, budgetItems = emptyBudgetItems, documents = emptyProjectDocuments, currentUser, currentUserLoaded, onReportsChange, onScheduleItemsChange, onDocumentsChange }: Props) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [form, setForm] = useState<ReportForm>(() => emptyReport(currentUser?.name));
@@ -451,7 +454,10 @@ export function ReportsWorkflow({ projectId, reports, scheduleItems, documents =
     setError("");
   }
 
-  const scheduleUnits = useMemo(() => new Map(scheduleItems.flatMap((item) => item.unit ? [[item.id, item.unit] as const] : [])), [scheduleItems]);
+  const scheduleUnits = useMemo(
+    () => buildDailyReportScheduleUnits(scheduleItems, budgetItems),
+    [budgetItems, scheduleItems]
+  );
 
   function openEditReport(item: DailyReport, closeShift = false) {
     const workScopes = parseDailyReportWorkScopes(item.workScopes, item.workCategory);
@@ -462,9 +468,10 @@ export function ReportsWorkflow({ projectId, reports, scheduleItems, documents =
     const reportWorkerHeadcount = reportCrew.length
       ? dailyReportAssignableCrew(reportCrew).reduce((sum, member) => sum + member.headcount, 0)
       : item.workers;
+    const currentOutputs = syncDailyReportWorkOutputUnits(item.workOutputs ?? [], scheduleUnits);
     const seededOutputs = seedFactFromPlan
-      ? seedDailyReportWorkOutputs(workScopes, item.workOutputs ?? [], scheduleUnits)
-      : item.workOutputs ?? [];
+      ? seedDailyReportWorkOutputs(workScopes, currentOutputs, scheduleUnits)
+      : currentOutputs;
     const hasNamedAssignments = seededOutputs.some((output) => output.crewResourceIds?.length);
     const preparedOutputs = reportCrew.length
       ? autoAssignDailyReportCrew(seededOutputs, reportCrew, shiftHours, !hasNamedAssignments)

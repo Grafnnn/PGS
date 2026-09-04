@@ -16,6 +16,7 @@ import {
 import { buildDailyReportCrewMembers, dailyReportCrewCounts, parseDailyReportCrewMembers } from "@/lib/daily-report-crew";
 import { applyDailyReportCrewAssignments, dailyReportCrewAssignmentIssues, normalizeDailyReportWorkOutputUnit, parseDailyReportWorkOutputs } from "@/lib/daily-report-work-outputs";
 import { dailyReportProgressDeltas, scheduleStatusForActual } from "@/lib/daily-report-progress";
+import { buildDailyReportScheduleUnits } from "@/lib/daily-report-work-units";
 import { prepareScheduleRevision } from "@/lib/excel/import-commit-integrity";
 import { dailyReportWorkScopeSummary, parseDailyReportWorkScopes } from "@/lib/daily-report-work-scopes";
 import { demoState } from "@/lib/demo-data";
@@ -1179,22 +1180,30 @@ async function applyDailyReportProgress(
     return { mode: "already_applied", entries: existing.length, scheduleItems };
   }
 
-  const scheduleItems = await tx.scheduleItem.findMany({
-    where: { projectId: report.projectId, isCurrent: true, id: { in: deltas.map((delta) => delta.scheduleItemId) } }
-  });
+  const [scheduleItems, budgetItems] = await Promise.all([
+    tx.scheduleItem.findMany({
+      where: { projectId: report.projectId, isCurrent: true, id: { in: deltas.map((delta) => delta.scheduleItemId) } }
+    }),
+    tx.budgetItem.findMany({ where: { projectId: report.projectId } })
+  ]);
   if (scheduleItems.length !== deltas.length) {
     throw new DailyReportProgressError("Одна или несколько работ рапорта больше не существуют в графике проекта.");
   }
 
   const byId = new Map(scheduleItems.map((item) => [item.id, item]));
+  const scheduleUnits = buildDailyReportScheduleUnits(
+    scheduleItems.map(serializeScheduleItem),
+    budgetItems.map(serializeBudgetItem)
+  );
   const reportOutputs = parseDailyReportWorkOutputs(report.workOutputs);
   const updatedScheduleItems: DbScheduleItem[] = [];
   for (const delta of deltas) {
     const scheduleItem = byId.get(delta.scheduleItemId)!;
     const outputUnits = new Set(reportOutputs.filter((output) => output.scheduleItemId === scheduleItem.id).map((output) => output.unit));
-    const scheduleUnit = scheduleItem.unit ? normalizeDailyReportWorkOutputUnit(scheduleItem.unit) : null;
+    const scheduleUnit = scheduleUnits.get(scheduleItem.id)
+      ?? (scheduleItem.unit ? normalizeDailyReportWorkOutputUnit(scheduleItem.unit) : null);
     if (scheduleUnit && (outputUnits.size !== 1 || !outputUnits.has(scheduleUnit))) {
-      throw new DailyReportProgressError(`Единица факта для «${scheduleItem.name}» должна быть «${scheduleItem.unit}».`);
+      throw new DailyReportProgressError(`Единица факта для «${scheduleItem.name}» должна быть «${scheduleUnit}».`);
     }
     await tx.workProgressEntry.create({
       data: {
