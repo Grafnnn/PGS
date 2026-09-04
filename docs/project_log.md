@@ -1,5 +1,35 @@
 # PGS Project Log
 
+## 2026-09-05 - AI Project Lifecycle Copilot v1 online/live AI GO
+
+Status: PR #217 shipped a unified, explicit-click AI Copilot across the project lifecycle. PGS calculations and stored project facts remain authoritative; AI explains deviations, ranks evidence and prepares drafts or proposed actions that require separate confirmation.
+
+- Online URL: https://pgs-frankfurt.onrender.com
+- Online commit: `450c3afed34e19f1ae502dbfaab809f0d6011b8e`
+- Feature PR: #217
+- Decision: ONLINE/LIVE AI GO
+- Git SHA source: `RENDER_GIT_COMMIT`
+
+Online verification:
+
+- `/api/health`: HTTP 200 / `ok`; DB: `ok`; migrations: `ok`, count `37`; auth required; AI configured; database storage writable;
+- the authenticated dashboard, project register and `project-smoke` loaded; `project-demo` remained 404;
+- Copilot exposed 19 scenarios grouped into summary, start, planning, execution, commercial and closeout stages;
+- the schedule workspace exposed its compact contextual `Проверить с AI` action without duplicating the full Copilot;
+- one explicit summary run on `project-smoke` completed through OpenAI in about 4 seconds and was saved in the AI journal as `ai-lifecycle-copilot-v2`;
+- deterministic evidence remained present and correctly reported the missing confirmed site fact as requiring attention; the provider did not create a false green or replace authoritative `dataUsed`;
+- unauthenticated `/api/auth/me` returned 401 and the AI summary route returned 403 before provider access;
+- the 708 px browser viewport had no horizontal overflow and retained normal vertical scrolling.
+
+Validation and safety:
+
+- GitHub Actions CI #445 passed; Vitest: 942/942 passed; ESLint, TypeScript, Prisma validate/generate, production build and `git diff --check` passed;
+- provider calls occur only after an explicit user command and use strict structured output, bounded context, `store: false`, timeouts and per-user/project rate limits;
+- database mode no longer falls back to demo project data when real context is unavailable; missing evidence is surfaced as a limitation rather than a positive conclusion;
+- AI-created actions require approval, Control Agent proposals are not preselected and low-confidence photo estimates cannot auto-fill reported quantities;
+- no action conversion, project fact mutation, file/photo upload, live photo or receipt analysis, manual deploy, Render environment/secret, database schema/migration or auth/session change was made during the online gate;
+- remaining limitations: document analysis is metadata-only until OCR/full-text extraction is added, provider conclusions remain advisory and the large project-page bundle remains a performance follow-up.
+
 ## 2026-09-04 - Full service audit and Schedule-to-KP integrity GO
 
 Status: The Troitsk estimate and approved production schedule were reconciled end to end. PR #215 added deterministic schedule-to-estimate linkage, preserves those links during future full-workbook imports, and added an explicit working-project selector to the dashboard.
