@@ -36,7 +36,7 @@ describe("server-rendered page access", () => {
 
   it("redirects an anonymous dashboard request before loading portfolio data", async () => {
     const { default: DashboardPage } = await import("./dashboard/page");
-    await expect(DashboardPage()).rejects.toThrow("REDIRECT:/login");
+    await expect(DashboardPage({})).rejects.toThrow("REDIRECT:/login");
     expect(loadDashboardData).not.toHaveBeenCalled();
   });
 

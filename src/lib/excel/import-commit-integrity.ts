@@ -1,4 +1,6 @@
 import type { Prisma } from "@prisma/client";
+import type { ImportBudgetItem, ImportScheduleItem } from "@/lib/excel/import-types";
+import { buildScheduleBudgetReconciliation, resolveScheduleBudgetOverrides } from "@/lib/schedule-budget-reconciliation";
 
 export class ImportCommitConflict extends Error {}
 
@@ -114,4 +116,82 @@ export async function relinkScheduleBudgetItems(
     else cleared += result.count;
   }
   return { relinked, cleared };
+}
+
+type AvailableBudgetItem = BudgetLink & {
+  section: string;
+  unit: string;
+  qty: Prisma.Decimal | number;
+  plannedUnitPrice: Prisma.Decimal | number;
+  kind: string;
+};
+
+function normalized(value: unknown) {
+  return String(value ?? "").normalize("NFKC").toLocaleLowerCase("ru-RU").replace(/ё/g, "е").replace(/\s+/g, " ").trim();
+}
+
+function sameNumber(left: unknown, right: unknown) {
+  const a = Number(left);
+  const b = Number(right);
+  return Number.isFinite(a) && Number.isFinite(b) && Math.abs(a - b) <= Math.max(0.011, Math.max(Math.abs(a), Math.abs(b)) * 0.00001);
+}
+
+function sameBudget(source: ImportBudgetItem, target: AvailableBudgetItem) {
+  return normalized(source.section) === normalized(target.section)
+    && normalized(source.code) === normalized(target.code)
+    && normalized(source.name) === normalized(target.name)
+    && normalized(source.unit) === normalized(target.unit)
+    && sameNumber(source.qty, target.qty);
+}
+
+export function resolveImportedScheduleBudgetLinks(input: {
+  scheduleItems: ImportScheduleItem[];
+  sourceBudgetItems: ImportBudgetItem[];
+  availableBudgetItems: AvailableBudgetItem[];
+}) {
+  const directBudgetBySchedule = new Map<number, string>();
+  const reserved = new Set<string>();
+
+  input.scheduleItems.forEach((schedule, index) => {
+    if (!schedule.budgetRowNumber) return;
+    let sourceCandidates = input.sourceBudgetItems.filter((item) => item.rowNumber === schedule.budgetRowNumber);
+    if (schedule.budgetName) sourceCandidates = sourceCandidates.filter((item) => normalized(item.name) === normalized(schedule.budgetName));
+    if (schedule.budgetSection) sourceCandidates = sourceCandidates.filter((item) => normalized(item.section) === normalized(schedule.budgetSection));
+    if (schedule.unit) sourceCandidates = sourceCandidates.filter((item) => normalized(item.unit) === normalized(schedule.unit));
+    sourceCandidates = sourceCandidates.filter((item) => sameNumber(item.qty, schedule.plannedQty));
+    if (sourceCandidates.length !== 1) return;
+    const targets = input.availableBudgetItems.filter((item) => sameBudget(sourceCandidates[0], item) && !reserved.has(item.id));
+    if (targets.length !== 1) return;
+    directBudgetBySchedule.set(index, targets[0].id);
+    reserved.add(targets[0].id);
+  });
+
+  const reconciliation = buildScheduleBudgetReconciliation(
+    input.scheduleItems.map((item, index) => ({
+      id: String(index),
+      budgetItemId: directBudgetBySchedule.get(index),
+      name: item.name,
+      unit: item.unit,
+      plannedQty: item.plannedQty,
+      dependency: item.dependency
+    })),
+    input.availableBudgetItems.map((item) => ({
+      id: item.id,
+      section: item.section,
+      code: item.code,
+      name: item.name,
+      unit: item.unit,
+      qty: Number(item.qty),
+      plannedUnitPrice: Number(item.plannedUnitPrice),
+      kind: item.kind as "work"
+    }))
+  );
+  const resolved = resolveScheduleBudgetOverrides(reconciliation, []);
+  const result = input.scheduleItems.map((_item, index) => directBudgetBySchedule.get(index) ?? null);
+  for (const link of resolved) result[Number(link.scheduleItemId)] = link.budgetItemId;
+  return {
+    budgetItemIds: result,
+    linked: result.filter(Boolean).length,
+    unresolved: result.filter((item) => !item).length
+  };
 }

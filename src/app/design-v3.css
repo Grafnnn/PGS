@@ -550,6 +550,103 @@ body[data-design="v3"] .dashboard-project-row {
   padding: 11px 4px;
 }
 
+body[data-design="v3"] .dashboard-project-switcher {
+  align-items: center;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--blue);
+  border-radius: 6px;
+  display: grid;
+  gap: 18px;
+  grid-template-columns: minmax(260px, 1fr) minmax(340px, 0.9fr) auto;
+  padding: 13px 16px;
+}
+
+body[data-design="v3"] .dashboard-project-switcher-copy {
+  align-items: center;
+  display: flex;
+  gap: 11px;
+  min-width: 0;
+}
+
+body[data-design="v3"] .dashboard-project-switcher-copy > span {
+  align-items: center;
+  background: var(--blue-soft);
+  border-radius: 5px;
+  color: var(--blue);
+  display: inline-flex;
+  height: 36px;
+  justify-content: center;
+  width: 36px;
+}
+
+body[data-design="v3"] .dashboard-project-switcher-copy div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+body[data-design="v3"] .dashboard-project-switcher-copy small,
+body[data-design="v3"] .dashboard-project-switcher-form label {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+body[data-design="v3"] .dashboard-project-switcher-copy strong,
+body[data-design="v3"] .dashboard-project-switcher-copy p {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body[data-design="v3"] .dashboard-project-switcher-copy p {
+  color: var(--muted);
+  font-size: 11px;
+  margin: 0;
+}
+
+body[data-design="v3"] .dashboard-project-switcher-form {
+  align-items: end;
+  display: grid;
+  gap: 7px;
+  grid-template-columns: minmax(180px, 1fr) auto;
+}
+
+body[data-design="v3"] .dashboard-project-switcher-form label {
+  grid-column: 1 / -1;
+}
+
+body[data-design="v3"] .dashboard-project-switcher-form select,
+body[data-design="v3"] .dashboard-project-switcher-form .button {
+  min-height: 38px;
+}
+
+body[data-design="v3"] .dashboard-project-switcher-actions {
+  align-items: center;
+  display: flex;
+  gap: 5px;
+}
+
+body[data-design="v3"] .dashboard-project-switcher-actions a {
+  align-items: center;
+  border-radius: 4px;
+  color: var(--ink-soft);
+  display: inline-flex;
+  font-size: 11px;
+  font-weight: 700;
+  gap: 5px;
+  min-height: 34px;
+  padding: 0 8px;
+  text-decoration: none;
+}
+
+body[data-design="v3"] .dashboard-project-switcher-actions a:hover {
+  background: var(--panel-muted);
+  color: var(--blue);
+}
+
 body[data-design="v3"] .compact-details {
   overflow: hidden;
 }
@@ -1814,6 +1911,121 @@ body[data-design="v3"] .production-schedule-metrics article.tone-good strong {
   color: var(--green);
 }
 
+body[data-design="v3"] .schedule-budget-integrity {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--yellow);
+  border-radius: 6px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+body[data-design="v3"] .schedule-budget-integrity.is-complete {
+  border-left-color: var(--green);
+}
+
+body[data-design="v3"] .schedule-budget-integrity-main {
+  align-items: center;
+  display: grid;
+  gap: 11px;
+  grid-template-columns: 32px minmax(190px, auto) minmax(120px, 1fr) 44px auto;
+  min-height: 58px;
+  padding: 9px 12px;
+}
+
+body[data-design="v3"] .schedule-budget-integrity-icon {
+  align-items: center;
+  background: var(--panel-muted);
+  border-radius: 4px;
+  color: var(--blue);
+  display: inline-flex;
+  height: 32px;
+  justify-content: center;
+  width: 32px;
+}
+
+body[data-design="v3"] .schedule-budget-integrity-copy {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+body[data-design="v3"] .schedule-budget-integrity-copy small,
+body[data-design="v3"] .schedule-budget-integrity-note,
+body[data-design="v3"] .schedule-budget-ambiguous label small {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+body[data-design="v3"] .schedule-budget-integrity-progress {
+  background: var(--panel-muted);
+  border-radius: 3px;
+  display: block;
+  height: 6px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+body[data-design="v3"] .schedule-budget-integrity-progress i {
+  background: var(--green);
+  display: block;
+  height: 100%;
+}
+
+body[data-design="v3"] .schedule-budget-integrity.needs-attention .schedule-budget-integrity-progress i {
+  background: var(--yellow);
+}
+
+body[data-design="v3"] .schedule-budget-integrity-value {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  text-align: right;
+}
+
+body[data-design="v3"] .schedule-budget-integrity-note,
+body[data-design="v3"] .schedule-budget-integrity-message {
+  border-top: 1px solid var(--line);
+  margin: 0;
+  padding: 8px 12px;
+}
+
+body[data-design="v3"] .schedule-budget-integrity-message.is-success { color: var(--green); }
+body[data-design="v3"] .schedule-budget-integrity-message.is-error { color: var(--red); }
+
+body[data-design="v3"] .schedule-budget-ambiguous {
+  border-top: 1px solid var(--line);
+}
+
+body[data-design="v3"] .schedule-budget-ambiguous > summary {
+  color: var(--ink-soft);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 9px 12px;
+}
+
+body[data-design="v3"] .schedule-budget-ambiguous > div {
+  border-top: 1px solid var(--line);
+  display: grid;
+}
+
+body[data-design="v3"] .schedule-budget-ambiguous label {
+  align-items: center;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(220px, 1fr) minmax(260px, 0.8fr);
+  padding: 10px 12px;
+}
+
+body[data-design="v3"] .schedule-budget-ambiguous label + label {
+  border-top: 1px solid var(--line);
+}
+
+body[data-design="v3"] .schedule-budget-ambiguous label > span {
+  display: grid;
+  gap: 2px;
+}
+
 body[data-design="v3"] .production-schedule-toolbar {
   align-items: center;
   display: flex;
@@ -2556,6 +2768,14 @@ body[data-design="v3"] .production-draft-rows span {
 }
 
 @media (max-width: 980px) {
+  body[data-design="v3"] .dashboard-project-switcher {
+    grid-template-columns: minmax(240px, 1fr) minmax(320px, 1fr);
+  }
+
+  body[data-design="v3"] .dashboard-project-switcher-actions {
+    grid-column: 1 / -1;
+  }
+
   body[data-design="v3"] .production-schedule-metrics {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -2599,6 +2819,38 @@ body[data-design="v3"] .production-draft-rows span {
 }
 
 @media (max-width: 720px) {
+  body[data-design="v3"] .dashboard-project-switcher,
+  body[data-design="v3"] .dashboard-project-switcher-form {
+    grid-template-columns: 1fr;
+  }
+
+  body[data-design="v3"] .dashboard-project-switcher-actions {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  body[data-design="v3"] .dashboard-project-switcher-actions a {
+    justify-content: center;
+  }
+
+  body[data-design="v3"] .schedule-budget-integrity-main {
+    grid-template-columns: 32px minmax(0, 1fr) 42px;
+  }
+
+  body[data-design="v3"] .schedule-budget-integrity-progress {
+    grid-column: 1 / -1;
+  }
+
+  body[data-design="v3"] .schedule-budget-integrity-main .button {
+    grid-column: 1 / -1;
+    justify-content: center;
+  }
+
+  body[data-design="v3"] .schedule-budget-ambiguous label {
+    align-items: stretch;
+    grid-template-columns: 1fr;
+  }
+
   body[data-design="v3"] .production-schedule-header,
   body[data-design="v3"] .production-schedule-toolbar {
     align-items: stretch;

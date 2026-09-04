@@ -7,6 +7,7 @@ import {
   ChevronDown,
   ClipboardList,
   LocateFixed,
+  Link2,
   Maximize2,
   Minus,
   Landmark,
@@ -23,6 +24,7 @@ import {
   type ScheduleCashflowTone
 } from "@/lib/schedule-cashflow-intelligence";
 import type { BudgetItem, Material, Payment, ProcurementRequest, ScheduleItem } from "@/lib/types";
+import { buildScheduleBudgetReconciliation } from "@/lib/schedule-budget-reconciliation";
 import { ProjectCalendarShiftControl } from "./project-calendar-shift-control";
 
 type ScheduleDraftState = {
@@ -66,6 +68,7 @@ type Props = {
   onCreate: (item: ScheduleCreateInput) => Promise<void>;
   onUpdate: (item: ScheduleItem, payload: ScheduleUpdateInput) => Promise<void>;
   onDelete: (item: ScheduleItem) => Promise<void>;
+  onBudgetLinksApplied?: (links: Array<{ scheduleItemId: string; budgetItemId: string; unit: string }>) => void;
   onSchedulePreview: () => void;
   onScheduleCommit: () => void;
   onCashflowPreview: () => void;
@@ -535,6 +538,101 @@ function DraftRows({ draft, kind }: { draft: ScheduleDraftState; kind: "schedule
   );
 }
 
+function ScheduleBudgetCoverage({
+  projectId,
+  budgetItems,
+  scheduleItems,
+  canEdit,
+  onApplied
+}: {
+  projectId?: string;
+  budgetItems: BudgetItem[];
+  scheduleItems: ScheduleItem[];
+  canEdit: boolean;
+  onApplied?: Props["onBudgetLinksApplied"];
+}) {
+  const reconciliation = useMemo(() => buildScheduleBudgetReconciliation(scheduleItems, budgetItems), [budgetItems, scheduleItems]);
+  const [overrides, setOverrides] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const ambiguous = reconciliation.rows.filter((row) => row.status === "ambiguous");
+  const selectedOverrides = ambiguous.flatMap((row) => overrides[row.scheduleItemId]
+    ? [{ scheduleItemId: row.scheduleItemId, budgetItemId: overrides[row.scheduleItemId] }]
+    : []);
+  const applyCount = reconciliation.summary.automaticMatches + selectedOverrides.length;
+  const linked = reconciliation.summary.currentLinkedScheduleItems;
+  const total = reconciliation.summary.scheduleItems;
+  const complete = total > 0 && linked === total && reconciliation.summary.currentCoveragePercent >= 99.99;
+
+  async function applyLinks() {
+    if (!projectId || !applyCount || saving) return;
+    setSaving(true);
+    setError("");
+    setSuccess("");
+    try {
+      const response = await fetch(`/api/projects/${projectId}/schedule/budget-reconciliation`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ confirm: true, overrides: selectedOverrides })
+      });
+      const payload = await response.json().catch(() => ({})) as {
+        error?: { message?: string };
+        applied?: { count?: number; unitBackfilled?: number };
+        links?: Array<{ scheduleItemId: string; budgetItemId: string; unit: string }>;
+      };
+      if (!response.ok) throw new Error(payload.error?.message || "Не удалось связать график со сметой.");
+      onApplied?.(payload.links ?? []);
+      setSuccess(`Связано строк: ${payload.applied?.count ?? 0}. Единицы восстановлены: ${payload.applied?.unitBackfilled ?? 0}.`);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Не удалось связать график со сметой.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (!total || !reconciliation.summary.workBudgetItems) return null;
+  return (
+    <section className={`schedule-budget-integrity ${complete ? "is-complete" : "needs-attention"}`} aria-label="Связность графика со сметой">
+      <div className="schedule-budget-integrity-main">
+        <span className="schedule-budget-integrity-icon"><Link2 size={17} /></span>
+        <span className="schedule-budget-integrity-copy">
+          <strong>График ↔ КП</strong>
+          <small>{linked} из {total} работ связаны · {reconciliation.summary.currentCoveragePercent.toLocaleString("ru-RU", { maximumFractionDigits: 1 })}% стоимости сметы</small>
+        </span>
+        <span className="schedule-budget-integrity-progress" aria-label={`Покрытие сметы ${Math.round(reconciliation.summary.currentCoveragePercent)}%`}>
+          <i style={{ width: `${reconciliation.summary.currentCoveragePercent}%` }} />
+        </span>
+        <strong className="schedule-budget-integrity-value">{Math.round(reconciliation.summary.currentCoveragePercent)}%</strong>
+        {projectId && canEdit && applyCount > 0 ? (
+          <button className="button secondary compact-button" disabled={saving} onClick={() => void applyLinks()} type="button">
+            <Link2 size={15} />{saving ? "Связываю..." : `Связать ${applyCount}`}
+          </button>
+        ) : null}
+      </div>
+      {!complete && reconciliation.summary.automaticMatches > 0 ? <p className="schedule-budget-integrity-note">Точных автоматических совпадений: {reconciliation.summary.automaticMatches}. После связи КС, маржа и план-факт будут использовать строки КП напрямую.</p> : null}
+      {ambiguous.length ? (
+        <details className="schedule-budget-ambiguous">
+          <summary>Требуют выбора: {ambiguous.length}</summary>
+          <div>
+            {ambiguous.map((row) => (
+              <label key={row.scheduleItemId}>
+                <span><strong>{row.scheduleName}</strong><small>{row.scheduleSection || "Раздел не определён"} · {formatQty(row.plannedQty)} {row.scheduleUnit || "ед."}</small></span>
+                <select aria-label={`Строка сметы для ${row.scheduleName}`} onChange={(event) => setOverrides((current) => ({ ...current, [row.scheduleItemId]: event.target.value }))} value={overrides[row.scheduleItemId] ?? ""}>
+                  <option value="">Выберите строку КП</option>
+                  {row.candidates.map((item) => <option key={item.budgetItemId} value={item.budgetItemId}>{item.section} · {item.code} · {formatQty(item.qty)} {item.unit}</option>)}
+                </select>
+              </label>
+            ))}
+          </div>
+        </details>
+      ) : null}
+      {success ? <p className="schedule-budget-integrity-message is-success" role="status">{success}</p> : null}
+      {error ? <p className="schedule-budget-integrity-message is-error" role="alert">{error}</p> : null}
+    </section>
+  );
+}
+
 export function ProductionScheduleWorkspace({
   projectId,
   projectName,
@@ -555,6 +653,7 @@ export function ProductionScheduleWorkspace({
   onCreate,
   onUpdate,
   onDelete,
+  onBudgetLinksApplied,
   onSchedulePreview,
   onScheduleCommit,
   onCashflowPreview,
@@ -645,6 +744,14 @@ export function ProductionScheduleWorkspace({
         <article className={delayedCount ? "tone-bad" : "tone-good"}><small>Отклонения</small><strong>{delayedCount}</strong><span>{delayedCount ? "нужен разбор" : "критичных нет"}</span></article>
         <article><small>Ближайший срок</small><strong>{nextItem ? formatShortDate(nextItem.endsAt) : "—"}</strong><span>{nextItem?.name ?? "активных работ нет"}</span></article>
       </div>
+
+      <ScheduleBudgetCoverage
+        budgetItems={budgetItems}
+        canEdit={canEdit}
+        onApplied={onBudgetLinksApplied}
+        projectId={projectId}
+        scheduleItems={scheduleItems}
+      />
 
       <nav className="production-schedule-view-tabs" aria-label="Представления графика">
         {([

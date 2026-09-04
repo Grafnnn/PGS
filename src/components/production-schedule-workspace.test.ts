@@ -143,6 +143,8 @@ describe("ProductionScheduleWorkspace", () => {
     const html = renderToStaticMarkup(createElement(ProductionScheduleWorkspace, props));
 
     expect(html).toContain("График производства работ");
+    expect(html).toContain("График ↔ КП");
+    expect(html).toContain("2 из 3 работ связаны");
     expect(html).toContain("Монолитные работы");
     expect(html).toContain("Без этапа");
     expect(html).toContain("2 работы");

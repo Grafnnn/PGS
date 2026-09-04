@@ -101,6 +101,10 @@ export interface ImportScheduleItem {
   progressMode?: "quantity" | "milestone";
   status: "not_started" | "in_progress" | "done" | "delayed" | "stopped";
   dependency?: string;
+  budgetRowNumber?: number;
+  budgetCode?: string;
+  budgetName?: string;
+  budgetSection?: string;
   sheetName: string;
   rowNumber: number;
 }
@@ -324,6 +328,10 @@ export const importScheduleItemSchema = z.object({
   progressMode: z.enum(["quantity", "milestone"]).default("quantity"),
   status: z.enum(["not_started", "in_progress", "done", "delayed", "stopped"]),
   dependency: z.string().optional(),
+  budgetRowNumber: z.coerce.number().int().positive().optional(),
+  budgetCode: z.string().trim().min(1).max(120).optional(),
+  budgetName: z.string().trim().min(2).optional(),
+  budgetSection: z.string().trim().min(2).optional(),
   sheetName: z.string(),
   rowNumber: z.coerce.number().int().positive()
 });

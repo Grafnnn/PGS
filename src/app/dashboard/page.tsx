@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { Route } from "next";
 import { redirect } from "next/navigation";
-import { AlertTriangle, Banknote, CalendarClock, FolderKanban, Layers3, PackageCheck, Sparkles } from "lucide-react";
+import { AlertTriangle, ArrowRight, Banknote, CalendarClock, ClipboardList, FolderKanban, Layers3, PackageCheck, Sparkles, TimerReset, Truck } from "lucide-react";
 import { InteractiveChart } from "@/components/charts/interactive-chart";
 import { money, percent } from "@/lib/calculations";
 import { loadDashboardData } from "@/lib/project-page-data";
@@ -19,15 +19,22 @@ function compactMoney(value: number) {
   return money(value);
 }
 
-export default async function DashboardPage() {
+function projectHref(projectId: string | undefined, tab?: string) {
+  if (!projectId) return "/projects" as Route;
+  return (`/projects/${projectId}${tab ? `?tab=${encodeURIComponent(tab)}` : ""}`) as Route;
+}
+
+export default async function DashboardPage(props: { searchParams?: { project?: string } }) {
+  const searchParams = props?.searchParams;
   const user = await getCurrentUser();
   if (!user) redirect("/login");
-  const { primaryProjectHref } = await loadDashboardData({
+  const { projects, primaryProjectHref } = await loadDashboardData({
     loadProjects: () => listProjectsFromDb(user)
   });
   const portfolioSources = await loadPortfolioProjectsForPage(user);
   const portfolio = buildPortfolioControlModel(portfolioSources);
-  const primaryProjectRoute = primaryProjectHref as Route;
+  const selectedProject = projects.find((project) => project.id === searchParams?.project) ?? projects[0] ?? null;
+  const selectedProjectRoute = selectedProject ? projectHref(selectedProject.id) : primaryProjectHref as Route;
   const portfolioBudgetProjects = portfolioSources.filter((project) => project.budgetItems.length > 0).length;
   const portfolioBudgetDeviation = portfolio.projects.reduce((total, project) => total + project.budgetDeviation, 0);
   const portfolioProgressValues = portfolio.projects.flatMap((project) => project.progressPercent === null ? [] : [project.progressPercent]);
@@ -71,16 +78,40 @@ export default async function DashboardPage() {
             <Layers3 size={18} />
             Весь портфель
           </Link>
-          <Link className="button secondary" href={primaryProjectRoute}>
+          <Link className="button secondary" href={projectHref(selectedProject?.id, "Бюджет / ВОР")}>
             <PackageCheck size={18} />
             Импорт ВОР
           </Link>
-          <Link className="button primary" href={primaryProjectRoute}>
+          <Link className="button primary" href={selectedProjectRoute}>
             <FolderKanban size={18} />
             Открыть объект
           </Link>
         </div>
       </div>
+
+      <section className="dashboard-project-switcher" aria-label="Выбор рабочего проекта">
+        <div className="dashboard-project-switcher-copy">
+          <span><FolderKanban size={18} /></span>
+          <div>
+            <small>Рабочий проект</small>
+            <strong>{selectedProject?.name ?? "Проект не выбран"}</strong>
+            <p>{selectedProject ? `${selectedProject.customer} · ${selectedProject.manager}` : "Создайте проект или проверьте права доступа."}</p>
+          </div>
+        </div>
+        <form action="/dashboard" className="dashboard-project-switcher-form" method="get">
+          <label htmlFor="dashboard-project">Выбрать проект</label>
+          <select defaultValue={selectedProject?.id ?? ""} disabled={!projects.length} id="dashboard-project" name="project">
+            {!projects.length ? <option value="">Нет доступных проектов</option> : null}
+            {projects.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}
+          </select>
+          <button className="button secondary" disabled={!projects.length} type="submit" title="Сделать проект рабочим"><ArrowRight size={17} />Выбрать</button>
+        </form>
+        <nav className="dashboard-project-switcher-actions" aria-label="Быстрые действия выбранного проекта">
+          <Link href={projectHref(selectedProject?.id, "График")}><TimerReset size={15} />График</Link>
+          <Link href={projectHref(selectedProject?.id, "Рапорты")}><ClipboardList size={15} />Рапорты</Link>
+          <Link href={projectHref(selectedProject?.id, "Заявки")}><Truck size={15} />Снабжение</Link>
+        </nav>
+      </section>
 
       <section className="grid grid-4 dashboard-primary-kpis">
         <Kpi title="Активные проекты" value={String(portfolio.summary.activeProjects)} hint={compactMoney(portfolio.summary.contractAmount)} icon={<FolderKanban size={18} />} />
@@ -104,10 +135,10 @@ export default async function DashboardPage() {
             ))}
           </div>
           <div className="quick-actions">
-            <Link className="button secondary" href={primaryProjectRoute}>Сформировать отчет</Link>
-            <Link className="button secondary" href={primaryProjectRoute}>Проверить риски</Link>
-            <Link className="button secondary" href={primaryProjectRoute}>Собрать заявку</Link>
-            <Link className="button secondary" href={primaryProjectRoute}>Подготовить письмо</Link>
+            <Link className="button secondary" href={projectHref(selectedProject?.id, "Рапорты")}>Сформировать отчет</Link>
+            <Link className="button secondary" href={projectHref(selectedProject?.id, "Риски")}>Проверить риски</Link>
+            <Link className="button secondary" href={projectHref(selectedProject?.id, "Заявки")}>Собрать заявку</Link>
+            <Link className="button secondary" href={projectHref(selectedProject?.id, "Документы")}>Подготовить письмо</Link>
           </div>
         </div>
       </section>

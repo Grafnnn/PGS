@@ -4,7 +4,8 @@ import {
   ImportCommitConflict,
   prepareBudgetReplacement,
   prepareScheduleRevision,
-  relinkScheduleBudgetItems
+  relinkScheduleBudgetItems,
+  resolveImportedScheduleBudgetLinks
 } from "@/lib/excel/import-commit-integrity";
 
 describe("import commit integrity", () => {
@@ -104,5 +105,22 @@ describe("import commit integrity", () => {
       where: { projectId: "project-1", id: { in: ["schedule-3"] } },
       data: { budgetItemId: null }
     });
+  });
+
+  it("links detailed imported schedule rows through their source KP row, including duplicate names", () => {
+    const sourceBudgetItems = [
+      { section: "Раздел 5.1", code: "1.2", name: "Огрунтовка", unit: "м2", qty: 1631.03, plannedUnitPrice: 133, actualUnitPrice: 0, forecastUnitPrice: 133, kind: "work", source: "КП", sheetName: "КП", rowNumber: 46 },
+      { section: "Раздел 5.1", code: "5.1", name: "Огрунтовка", unit: "м2", qty: 1631.03, plannedUnitPrice: 133, actualUnitPrice: 0, forecastUnitPrice: 133, kind: "work", source: "КП", sheetName: "КП", rowNumber: 51 }
+    ] as const;
+    const result = resolveImportedScheduleBudgetLinks({
+      scheduleItems: [
+        { name: "46 Огрунтовка", owner: "ПТО", startsAt: "2026-09-01", endsAt: "2026-09-10", plannedQty: 1631.03, actualQty: 0, unit: "м2", status: "not_started", dependency: "Раздел 5.1", budgetRowNumber: 46, budgetName: "Огрунтовка", budgetSection: "Раздел 5.1", sheetName: "График", rowNumber: 2 },
+        { name: "51 Огрунтовка", owner: "ПТО", startsAt: "2026-09-11", endsAt: "2026-09-20", plannedQty: 1631.03, actualQty: 0, unit: "м2", status: "not_started", dependency: "Раздел 5.1", budgetRowNumber: 51, budgetName: "Огрунтовка", budgetSection: "Раздел 5.1", sheetName: "График", rowNumber: 3 }
+      ],
+      sourceBudgetItems: sourceBudgetItems as never,
+      availableBudgetItems: sourceBudgetItems.map((item, index) => ({ ...item, id: `budget-${index + 1}` })) as never
+    });
+
+    expect(result).toEqual({ budgetItemIds: ["budget-1", "budget-2"], linked: 2, unresolved: 0 });
   });
 });
