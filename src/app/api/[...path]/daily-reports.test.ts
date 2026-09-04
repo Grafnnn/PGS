@@ -15,6 +15,7 @@ const mocks = vi.hoisted(() => ({
   scheduleFindOne: vi.fn(),
   scheduleFindMany: vi.fn(),
   scheduleUpdate: vi.fn(),
+  budgetFindMany: vi.fn(),
   progressFindMany: vi.fn(),
   progressCreate: vi.fn(),
   progressDeleteMany: vi.fn(),
@@ -36,6 +37,7 @@ vi.mock("@/lib/prisma", () => ({
     project: { findUnique: mocks.projectFind },
     dailyReport: { findMany: mocks.reportFindMany, findUnique: mocks.reportFind, findUniqueOrThrow: mocks.reportFind, create: mocks.reportCreate, update: mocks.reportUpdate, delete: mocks.reportDelete },
     scheduleItem: { findUnique: mocks.scheduleFindScope, findMany: mocks.scheduleFindMany, update: mocks.scheduleUpdate },
+    budgetItem: { findMany: mocks.budgetFindMany },
     workProgressEntry: { findMany: mocks.progressFindMany, create: mocks.progressCreate, deleteMany: mocks.progressDeleteMany },
     projectResourceAssignment: { findMany: mocks.assignmentFindMany },
     auditLog: { create: mocks.audit },
@@ -43,6 +45,7 @@ vi.mock("@/lib/prisma", () => ({
       $queryRaw: mocks.projectLock,
       dailyReport: { findUniqueOrThrow: mocks.reportFind, create: mocks.reportCreate, update: mocks.reportUpdate, delete: mocks.reportDelete },
       scheduleItem: { findUniqueOrThrow: mocks.scheduleFindOne, findMany: mocks.scheduleFindMany, update: mocks.scheduleUpdate },
+      budgetItem: { findMany: mocks.budgetFindMany },
       workProgressEntry: { findMany: mocks.progressFindMany, create: mocks.progressCreate, deleteMany: mocks.progressDeleteMany },
       auditLog: { create: mocks.audit }
     }))
@@ -109,6 +112,7 @@ describe("daily reports catch-all workflow", () => {
     mocks.reportUpdate.mockImplementation(async ({ data }: { data: Record<string, unknown> }) => ({ ...before, ...data }));
     mocks.reportDelete.mockResolvedValue(before);
     mocks.scheduleFindScope.mockResolvedValue({ projectId: "project-1" });
+    mocks.budgetFindMany.mockResolvedValue([]);
     mocks.assignmentFindMany.mockResolvedValue([]);
     mocks.projectLock.mockResolvedValue([{ id: "project-1" }]);
     mocks.progressFindMany.mockResolvedValue([]);
@@ -573,6 +577,47 @@ describe("daily reports catch-all workflow", () => {
     expect(scheduleActual).toBe(100);
     expect(scheduleStatus).toBe("done");
     expect(body.progress).toEqual(expect.objectContaining({ mode: "applied", entries: 1 }));
+  });
+
+  it("accepts the estimate unit when a legacy schedule row still uses a generic unit", async () => {
+    mocks.effectiveRole.mockResolvedValue("OWNER");
+    mocks.reportFind.mockResolvedValue({
+      ...before,
+      status: "checked",
+      workOutputs: [{ ...before.workOutputs[0], scheduleItemId: "schedule-1", workName: "10 Демонтаж рулонной гидроизоляции", quantity: 10, unit: "м²" }]
+    });
+    mocks.scheduleFindMany.mockResolvedValue([{
+      ...schedule,
+      name: "10 Демонтаж рулонной гидроизоляции",
+      unit: "ед."
+    }]);
+    mocks.budgetFindMany.mockResolvedValue([{
+      id: "budget-1",
+      organizationId: "org-1",
+      projectId: "project-1",
+      costCodeId: null,
+      section: "Демонтаж",
+      subsection: null,
+      code: "1",
+      name: "Демонтаж рулонной гидроизоляции",
+      unit: "м2",
+      qty: new Prisma.Decimal(1765.81),
+      plannedUnitPrice: new Prisma.Decimal(190),
+      actualUnitPrice: new Prisma.Decimal(0),
+      forecastUnitPrice: new Prisma.Decimal(190),
+      kind: "work",
+      source: "КП",
+      comment: null,
+      createdBy: "manager-1",
+      createdAt: new Date(),
+      updatedAt: new Date()
+    }]);
+
+    const { PATCH } = await import("./route");
+    const response = await PATCH(request({ status: "approved" }), { params: { path: ["daily-reports", "daily-1"] } });
+
+    expect(response.status).toBe(200);
+    expect(mocks.progressCreate).toHaveBeenCalled();
   });
 
   it("returns an approved report to draft and rolls back only its linked progress", async () => {

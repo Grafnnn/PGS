@@ -144,7 +144,7 @@ export function DailyReportWorkOutputEditor({
             const messages = Object.values(issues);
             const allocation = dailyReportWorkOutputAllocation(output, shiftHours);
             const scheduleItem = output.scheduleItemId ? scheduleById.get(output.scheduleItemId) : undefined;
-            const scheduleUnit = scheduleItem?.unit ?? (output.scheduleItemId ? scheduleUnits.get(output.scheduleItemId) : undefined);
+            const scheduleUnit = (output.scheduleItemId ? scheduleUnits.get(output.scheduleItemId) : undefined) ?? scheduleItem?.unit;
             const plannedQty = scheduleItem?.plannedQty ?? 0;
             const actualQty = scheduleItem?.actualQty ?? 0;
             const remainingQty = Math.max(0, plannedQty - actualQty);

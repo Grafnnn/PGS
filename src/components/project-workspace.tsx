@@ -1458,6 +1458,7 @@ export function ProjectWorkspace({
             currentUserLoaded={currentUserLoaded}
             projectId={initialBundle.project.id}
             reports={reports}
+            budgetItems={budgetItems}
             scheduleItems={scheduleItems}
             documents={documents}
             onReportsChange={setReports}
