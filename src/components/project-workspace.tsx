@@ -1145,6 +1145,13 @@ export function ProjectWorkspace({
             await deleteResource("schedule", item.id);
             setScheduleItems((current) => current.filter((candidate) => candidate.id !== item.id));
           }}
+          onBudgetLinksApplied={(links) => {
+            const bySchedule = new Map(links.map((link) => [link.scheduleItemId, link]));
+            setScheduleItems((current) => current.map((item) => {
+              const link = bySchedule.get(item.id);
+              return link ? { ...item, budgetItemId: link.budgetItemId, unit: item.unit || link.unit } : item;
+            }));
+          }}
           onNavigate={setActiveTab}
           onScheduleCommit={() => void runPipelineDraft("schedule", true)}
           onSchedulePreview={() => void runPipelineDraft("schedule")}

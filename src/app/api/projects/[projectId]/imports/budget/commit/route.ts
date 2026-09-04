@@ -12,7 +12,8 @@ import {
   lockProjectForMutation,
   prepareBudgetReplacement,
   prepareScheduleRevision,
-  relinkScheduleBudgetItems
+  relinkScheduleBudgetItems,
+  resolveImportedScheduleBudgetLinks
 } from "@/lib/excel/import-commit-integrity";
 import { importCommitRequestSchema, importPreviewSchema, type ImportPreview } from "@/lib/excel/import-types";
 import { prisma } from "@/lib/prisma";
@@ -130,6 +131,17 @@ export async function POST(request: NextRequest, { params }: { params: { project
         previous: previousBudgetItems,
         created: budgetItems
       });
+      const availableBudgetItems = plan.scheduleItems.length
+        ? await tx.budgetItem.findMany({
+            where: { projectId: project.id },
+            select: { id: true, section: true, code: true, name: true, unit: true, qty: true, plannedUnitPrice: true, kind: true }
+          })
+        : [];
+      const importedScheduleLinks = resolveImportedScheduleBudgetLinks({
+        scheduleItems: plan.scheduleItems,
+        sourceBudgetItems: preview.budgetItems,
+        availableBudgetItems
+      });
 
       const materials = await Promise.all(
         plan.materials.map((item) =>
@@ -156,11 +168,12 @@ export async function POST(request: NextRequest, { params }: { params: { project
       );
 
       const scheduleItems = await Promise.all(
-        plan.scheduleItems.map((item) =>
+        plan.scheduleItems.map((item, index) =>
           tx.scheduleItem.create({
             data: {
               organizationId: project.organizationId,
               projectId: project.id,
+              budgetItemId: importedScheduleLinks.budgetItemIds[index],
               name: item.name,
               owner: item.owner,
               startsAt: item.startsAt,
@@ -269,6 +282,8 @@ export async function POST(request: NextRequest, { params }: { params: { project
               supersededScheduleItems: scheduleRevision.supersededCount,
               relinkedScheduleBudgetItems: budgetRelink.relinked,
               clearedScheduleBudgetItems: budgetRelink.cleared,
+              linkedImportedScheduleItems: importedScheduleLinks.linked,
+              unresolvedImportedScheduleItems: importedScheduleLinks.unresolved,
               removedDraftRequests,
               laborDemands: laborDemands.length,
               laborAllocations: laborDemands.reduce((sum, item) => sum + item.allocations.length, 0)
@@ -300,6 +315,8 @@ export async function POST(request: NextRequest, { params }: { params: { project
           supersededScheduleItems: scheduleRevision.supersededCount,
           relinkedScheduleBudgetItems: budgetRelink.relinked,
           clearedScheduleBudgetItems: budgetRelink.cleared,
+          linkedImportedScheduleItems: importedScheduleLinks.linked,
+          unresolvedImportedScheduleItems: importedScheduleLinks.unresolved,
           removedDraftRequests,
           laborDemands: laborDemands.length,
           laborAllocations: laborDemands.reduce((sum, item) => sum + item.allocations.length, 0)

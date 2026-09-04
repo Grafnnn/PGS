@@ -430,8 +430,8 @@ describe("project workbook import", () => {
     ]);
     expect(preview.materials.some((item) => item.name.includes("Арматура"))).toBe(false);
     expect(preview.scheduleItems).toEqual([
-      expect.objectContaining({ startsAt: "2026-09-07", endsAt: "2026-09-19", plannedQty: 10 }),
-      expect.objectContaining({ startsAt: "2026-09-14", endsAt: "2026-09-26", plannedQty: 20 })
+      expect.objectContaining({ startsAt: "2026-09-07", endsAt: "2026-09-19", plannedQty: 10, budgetRowNumber: 8, budgetName: "Демонтаж покрытия", budgetSection: "Раздел 1. Демонтажные работы" }),
+      expect.objectContaining({ startsAt: "2026-09-14", endsAt: "2026-09-26", plannedQty: 20, budgetRowNumber: 10, budgetName: "Устройство мембраны", budgetSection: "Раздел 2. Новая кровля" })
     ]);
     expect(preview.previewRows?.find((row) => row.name?.includes("Крепеж"))).toMatchObject({
       status: "warning",

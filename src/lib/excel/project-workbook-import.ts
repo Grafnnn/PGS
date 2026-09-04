@@ -1088,6 +1088,9 @@ function parseWeeklySchedule(sheet: SheetData, startsAt: Date, weeklyPeriods: Ma
         unit ? `Единица/объем КП: ${qty} ${unit}` : "",
         `Недельный план КС: ${allocations.map((item) => `${item.label} ${Math.round(item.value)} ₽`).join("; ")}`
       ),
+      budgetRowNumber: Number(code),
+      budgetName: name,
+      budgetSection: section,
       sheetName: sheet.name,
       rowNumber: index + 1
     });
