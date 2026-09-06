@@ -14,7 +14,7 @@ import { answerTechnicalQuestion, TechnicalQuestionProviderError } from "@/lib/t
 export const runtime = "nodejs";
 
 const SCENARIO = "technical-documentation-qa-v1";
-const PROMPT_VERSION = "technical-documentation-qa-v2";
+const PROMPT_VERSION = "technical-documentation-qa-v3";
 const requestSchema = z.object({ question: z.string().trim().min(3).max(1_000) });
 
 function asRecord(value: Prisma.JsonValue | null) {
