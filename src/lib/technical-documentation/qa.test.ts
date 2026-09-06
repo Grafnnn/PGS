@@ -48,4 +48,49 @@ describe("technical documentation answer provider", () => {
       .rejects.toBeInstanceOf(TechnicalQuestionProviderError);
     expect(fetchMock).not.toHaveBeenCalled();
   });
+
+  it("does not turn an amount without VAT into a zero VAT rate", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => ({
+      ok: true,
+      json: async () => ({ output_text: JSON.stringify({
+        answer: "Сумма составляет 15 274 035,05 ₽, ставка НДС 0%, операция не облагается НДС.",
+        confidence: "high",
+        notFound: false,
+        citationIds: ["S1"],
+        followUps: []
+      }) })
+    })));
+
+    const result = await answerTechnicalQuestion({
+      projectName: "Тестовый проект",
+      question: "Какая сумма договора и ставка НДС?",
+      sources: [{ sourceId: "S1", title: "КП", locator: "Строка 4", text: "Утверждённое КП, ₽ без НДС | 15 274 035,05" }]
+    });
+
+    expect(result).toMatchObject({ confidence: "low", notFound: true });
+    expect(result.answer).toContain("ставка НДС");
+    expect(result.answer).not.toContain("0%");
+    expect(result.answer).not.toContain("не облагается НДС");
+  });
+
+  it("keeps a VAT rate that is explicit in the cited evidence", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => ({
+      ok: true,
+      json: async () => ({ output_text: JSON.stringify({
+        answer: "Ставка НДС по договору составляет 5%.",
+        confidence: "high",
+        notFound: false,
+        citationIds: ["S1"],
+        followUps: []
+      }) })
+    })));
+
+    const result = await answerTechnicalQuestion({
+      projectName: "Тестовый проект",
+      question: "Какая ставка НДС?",
+      sources: [{ sourceId: "S1", title: "Договор", locator: "Пункт 3.1", text: "Цена договора включает НДС по ставке 5%." }]
+    });
+
+    expect(result).toMatchObject({ answer: "Ставка НДС по договору составляет 5%.", confidence: "high", notFound: false });
+  });
 });

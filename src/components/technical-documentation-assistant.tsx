@@ -267,7 +267,11 @@ export function TechnicalDocumentationAssistant({ projectId }: { projectId: stri
             {(status?.documents ?? []).length ? status?.documents.map((document) => (
               <div key={document.id}>
                 <FileSearch size={15} />
-                <span><strong>{document.title}</strong><small>{document.sourceKind === "google_drive" ? "Google Drive" : "Документы PGS"} · {document.chunkCount} фрагм.</small></span>
+                <span>
+                  <strong>{document.title}</strong>
+                  <small>{document.sourceKind === "google_drive" ? "Google Drive" : "Документы PGS"} · {document.chunkCount} фрагм.</small>
+                  {document.error ? <small className="technical-source-error">{document.error}</small> : null}
+                </span>
                 <span className={`badge ${document.status === "ready" ? "green" : document.status === "unsupported" ? "gray" : "yellow"}`}>{document.status === "ready" ? "Готов" : document.status === "unsupported" ? "Без текста" : "Ошибка"}</span>
               </div>
             )) : <div className="empty-state">Индекс пока пуст. Документы загружаются во вкладке «Документы».</div>}

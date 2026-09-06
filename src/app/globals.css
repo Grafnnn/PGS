@@ -18080,6 +18080,11 @@ input[type="checkbox"] {
   color: var(--muted);
 }
 
+.technical-indexed-files .technical-source-error {
+  color: var(--yellow-strong, #8c5d00);
+  line-height: 1.35;
+}
+
 .technical-drive-form {
   background: var(--panel-muted);
   border: 1px solid var(--line);
