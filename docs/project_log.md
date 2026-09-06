@@ -1,5 +1,38 @@
 # PGS Project Log
 
+## 2026-09-07 - Google Drive Project Knowledge v1 online/core UI GO
+
+Status: PR #225 makes the project Google Drive folder the primary knowledge base for `Ресурсы -> Техпомощник`. PGS documents remain a clearly labelled supplemental source rather than replacing the Drive folder.
+
+- Online URL: https://pgs-frankfurt.onrender.com
+- Online commit: `285231e22420ee9870725c94a72539b7561b95fb`
+- Feature PR: #225
+- Decision: ONLINE/CORE UI GO; live Google Drive synchronization remains pending connector and folder activation
+- Git SHA source: `RENDER_GIT_COMMIT`
+
+Online verification:
+
+- `/api/health`: HTTP 200 / `ok`; migrations: `ok`, count `38`; auth required; AI configured;
+- the authenticated `project-smoke` workspace exposed the Google Drive-first setup, sync status, question flow and source-labelled citations;
+- desktop and 390 px mobile layouts had no horizontal overflow, and no browser console or hydration error was observed;
+- unauthenticated auth, knowledge status/configuration, indexing and question routes returned 401/403 before project data, Drive access or provider execution.
+
+Implementation and cost controls:
+
+- connecting a folder starts the first read-only synchronization; subsequent questions check index freshness no more than once every 15 minutes;
+- Drive metadata is listed recursively, including nested folders and shortcuts, while file content is downloaded only for new or changed versions and up to three changed files are processed concurrently;
+- PDF, DOCX, XLS/XLSX, CSV and TXT are indexed locally in PostgreSQL; unsupported images and archives are rejected before download, and image-only scans explicitly require OCR;
+- retrieval prioritizes Google Drive when evidence is equally relevant, sends no more than six short fragments to `gpt-4o-mini`, reuses cached answers and does not call AI when no evidence is found;
+- every answer identifies Google Drive or PGS and retains an exact file/page/sheet/row citation; a stale or unavailable Drive index is shown as a warning rather than hidden.
+
+Validation and limits:
+
+- GitHub Actions CI #461 passed; Vitest: 970/970 passed; TypeScript, ESLint, production build and `git diff --check` passed;
+- no Prisma schema/migration, auth/session, provider behavior, project data, manual deploy or Render environment/secret was changed; no credential value was printed or committed;
+- Render currently has no active Google Drive credential and `project-smoke` has no Drive folder configured, so live folder sync and a grounded Drive answer were not claimed.
+
+Remaining activation gate: configure a read-only Google Drive service account or API key on Render, share the selected project folder with that identity, connect its URL in PGS, synchronize it and verify one cited answer against the source file.
+
 ## 2026-09-06 - Technical Documentation Assistant v1 online/core GO
 
 Status: PR #219 shipped `Ресурсы -> Техпомощник`, a project-scoped assistant that answers technical questions only from indexed project documentation. Follow-up PRs #220-#223 tightened tax grounding, source excerpts and cached citation refresh without adding automatic provider calls.
