@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { listGoogleDriveFolder, parseGoogleDriveFolderId } from "./google-drive";
+import { downloadGoogleDriveFile, listGoogleDriveFolder, parseGoogleDriveFolderId } from "./google-drive";
 
 const previousConnectorMode = process.env.GOOGLE_DRIVE_CONNECTOR_MODE;
 const previousApiKey = process.env.GOOGLE_DRIVE_API_KEY;
@@ -57,5 +57,26 @@ describe("Google Drive technical documentation source", () => {
       modifiedTime: "2026-09-07T10:00:00.000Z"
     })]);
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("accepts a 55 MiB project PDF and keeps a bounded 64 MiB limit", async () => {
+    process.env.GOOGLE_DRIVE_CONNECTOR_MODE = "read_only";
+    process.env.GOOGLE_DRIVE_API_KEY = "test-key";
+    const fetchMock = vi.fn(async () => new Response(new Uint8Array([1, 2, 3]), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(downloadGoogleDriveFile({
+      id: "large-project-pdf",
+      name: "project.pdf",
+      mimeType: "application/pdf",
+      size: String(55 * 1024 * 1024)
+    })).resolves.toMatchObject({ fileName: "project.pdf", mimeType: "application/pdf" });
+    await expect(downloadGoogleDriveFile({
+      id: "too-large-project-pdf",
+      name: "too-large.pdf",
+      mimeType: "application/pdf",
+      size: String(65 * 1024 * 1024)
+    })).rejects.toThrow("64 МБ");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });
