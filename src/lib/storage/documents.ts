@@ -4,8 +4,8 @@ import { getEnv } from "@/lib/env";
 import { getStorageProvider } from "./index";
 import { resolveLocalStoragePath } from "./local";
 
-const allowedExtensions = new Set([".pdf", ".doc", ".docx", ".xls", ".xlsx", ".jpg", ".jpeg", ".png", ".webp", ".zip"]);
-const allowedMimePrefixes = ["application/pdf", "application/msword", "application/vnd.", "image/jpeg", "image/png", "image/webp", "application/zip"];
+const allowedExtensions = new Set([".pdf", ".doc", ".docx", ".xls", ".xlsx", ".txt", ".csv", ".jpg", ".jpeg", ".png", ".webp", ".zip"]);
+const allowedMimePrefixes = ["application/pdf", "application/msword", "application/vnd.", "text/plain", "text/csv", "image/jpeg", "image/png", "image/webp", "application/zip"];
 
 export function sanitizeFileName(fileName: string) {
   const base = path.basename(fileName).replace(/[^\p{L}\p{N}._ -]/gu, "_").trim();

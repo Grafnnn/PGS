@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { AlertTriangle, BadgeCheck, BarChart3, Bot, ClipboardList, DatabaseZap, FileText, HardHat, Landmark, Package, Pencil, Plus, ReceiptText, Search, Send, Settings2, Table2, TimerReset, Trash2, Truck, Users } from "lucide-react";
+import { AlertTriangle, BadgeCheck, BarChart3, BookOpenCheck, Bot, ClipboardList, DatabaseZap, FileText, HardHat, Landmark, Package, Pencil, Plus, ReceiptText, Search, Send, Settings2, Table2, TimerReset, Trash2, Truck, Users } from "lucide-react";
 import { AcceptanceBillingWorkspace } from "@/components/acceptance-billing-workspace";
 import { AiControlAgentWorkspace } from "@/components/ai-control-agent-workspace";
 import { AiLifecycleCopilot } from "@/components/ai-lifecycle-copilot";
@@ -44,6 +44,7 @@ import { RfiSubmittalsWorkspace } from "@/components/rfi-submittals-workspace";
 import { RiskExecutiveWorkspace } from "@/components/risk-executive-workspace";
 import { ScheduleCashflowWorkspace } from "@/components/schedule-cashflow-workspace";
 import { SubcontractorExecutionWorkspace } from "@/components/subcontractor-execution-workspace";
+import { TechnicalDocumentationAssistant } from "@/components/technical-documentation-assistant";
 import { WorkflowDesignerWorkspace } from "@/components/workflow-designer-workspace";
 import { budgetTotals, deriveAutoRisks, financeTotals, materialTotals, money, percent, workTotals } from "@/lib/calculations";
 import { aiScenarioForProjectTab } from "@/lib/ai-command/catalog";
@@ -1248,6 +1249,15 @@ export function ProjectWorkspace({
         }]} />
       )}
 
+      {activeTab === "Техпомощник" && (
+        <ProjectModuleWorkspace moduleKey="technical-docs" title="Технический помощник" icon={<BookOpenCheck size={18} />} views={[{
+          id: "knowledge",
+          label: "Документация проекта",
+          description: "Проверяемые ответы по файлам PGS и read-only папке Google Drive.",
+          content: <TechnicalDocumentationAssistant projectId={initialBundle.project.id} />
+        }]} />
+      )}
+
       {activeTab === "Финансы" && (
         <ProjectModuleWorkspace moduleKey="finance" title="Платежи и кассовый план" icon={<Landmark size={18} />} views={[
           {
@@ -1645,7 +1655,7 @@ export function ProjectWorkspace({
             </label>
             <label>
               Файл
-              <input accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.webp,.zip" type="file" onChange={(event) => setDocumentFile(event.target.files?.[0] ?? null)} />
+              <input accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.csv,.jpg,.jpeg,.png,.webp,.zip" type="file" onChange={(event) => setDocumentFile(event.target.files?.[0] ?? null)} />
             </label>
             <label>
               &nbsp;
@@ -3234,7 +3244,7 @@ function DocumentTable({
         item.author,
         item.uploadedAt ? new Date(item.uploadedAt).toLocaleString("ru-RU") : new Date(item.createdAt).toLocaleString("ru-RU"),
         <div key="actions" className="stack">
-          <input accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.webp,.zip" type="file" onChange={(event) => {
+          <input accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.csv,.jpg,.jpeg,.png,.webp,.zip" type="file" onChange={(event) => {
             const file = event.target.files?.[0];
             if (file) onUploadVersion(item, file);
             event.currentTarget.value = "";

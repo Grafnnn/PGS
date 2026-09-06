@@ -50,6 +50,7 @@ export const aiScenarioById = Object.fromEntries(aiScenarioCatalog.map((item) =>
 export const aiScenarioForProjectTab: Partial<Record<string, AiScenario>> = {
   Обзор: "summary",
   "Бюджет / ВОР": "budget-review",
+  Техпомощник: "document-review",
   ФОТ: "workforce-review",
   График: "schedule-review",
   Материалы: "procurement-review",

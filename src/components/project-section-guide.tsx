@@ -52,6 +52,12 @@ export const projectSectionGuides: Record<ProjectTab, ProjectSectionGuideConfig>
     signalKeys: ["budgetVariance", "profit", "completion"],
     relatedTabs: ["Финансы", "Материалы"]
   },
+  Техпомощник: {
+    objective: "Быстро найти подтверждённый ответ в документации выбранного проекта",
+    question: "В каком файле и точном месте зафиксировано нужное техническое решение?",
+    signalKeys: ["documents", "readiness", "risks"],
+    relatedTabs: ["Документы", "RFI / Согласования"]
+  },
   ФОТ: {
     objective: "Сопоставить трудовую потребность, штат и стоимость выполнения",
     question: "Хватит ли людей для плана и укладывается ли ФОТ в экономику проекта?",
