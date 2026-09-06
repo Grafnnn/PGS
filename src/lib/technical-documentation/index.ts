@@ -431,34 +431,38 @@ export async function searchProjectKnowledge(projectId: string, question: string
   const questionTerms = knowledgeTerms(question, 40);
   if (!questionTerms.length) return [];
   const literalTerms = questionTerms.filter((term) => !term.startsWith("~")).slice(0, 6);
-  const candidates = await prisma.projectKnowledgeChunk.findMany({
-    where: {
-      projectId,
-      knowledgeDocument: { status: "ready" },
-      OR: [
-        { terms: { hasSome: questionTerms } },
-        ...literalTerms.map((term) => ({ knowledgeDocument: { status: "ready", title: { contains: term, mode: "insensitive" as const } } }))
-      ]
-    },
-    include: { knowledgeDocument: true },
-    take: 250
-  });
-  return candidates
-    .map((chunk) => ({
-      id: chunk.id,
-      documentId: chunk.knowledgeDocument.id,
-      sourceKind: chunk.knowledgeDocument.sourceKind,
-      title: chunk.knowledgeDocument.title,
-      locator: chunk.locator,
-      text: chunk.text,
-      sourceUrl: chunk.knowledgeDocument.sourceUrl,
-      score: scoreKnowledgeChunk({ questionTerms, chunkTerms: chunk.terms, title: chunk.knowledgeDocument.title, locator: chunk.locator })
-    }))
-    .filter((item) => item.score > 0)
-    .sort((a, b) => b.score - a.score
-      || Number(b.sourceKind === "google_drive") - Number(a.sourceKind === "google_drive")
-      || a.title.localeCompare(b.title, "ru"))
-    .slice(0, limit);
+
+  async function findMatches(sourceKind: "google_drive" | "pgs") {
+    const candidates = await prisma.projectKnowledgeChunk.findMany({
+      where: {
+        projectId,
+        knowledgeDocument: { status: "ready", sourceKind },
+        OR: [
+          { terms: { hasSome: questionTerms } },
+          ...literalTerms.map((term) => ({ knowledgeDocument: { status: "ready", sourceKind, title: { contains: term, mode: "insensitive" as const } } }))
+        ]
+      },
+      include: { knowledgeDocument: true },
+      take: 250
+    });
+    return candidates
+      .map((chunk) => ({
+        id: chunk.id,
+        documentId: chunk.knowledgeDocument.id,
+        sourceKind: chunk.knowledgeDocument.sourceKind,
+        title: chunk.knowledgeDocument.title,
+        locator: chunk.locator,
+        text: chunk.text,
+        sourceUrl: chunk.knowledgeDocument.sourceUrl,
+        score: scoreKnowledgeChunk({ questionTerms, chunkTerms: chunk.terms, title: chunk.knowledgeDocument.title, locator: chunk.locator })
+      }))
+      .filter((item) => item.score > 0)
+      .sort((a, b) => b.score - a.score || a.title.localeCompare(b.title, "ru"))
+      .slice(0, limit);
+  }
+
+  const driveMatches = await findMatches("google_drive");
+  return driveMatches.length ? driveMatches : findMatches("pgs");
 }
 
 export async function projectKnowledgeFingerprint(projectId: string) {
