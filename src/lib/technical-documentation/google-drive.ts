@@ -8,7 +8,8 @@ const GOOGLE_FOLDER_MIME = "application/vnd.google-apps.folder";
 const GOOGLE_SHORTCUT_MIME = "application/vnd.google-apps.shortcut";
 const GOOGLE_FILE_FIELDS = "id,name,mimeType,modifiedTime,size,webViewLink,shortcutDetails(targetId,targetMimeType)";
 const MAX_DRIVE_FILES = 500;
-const MAX_DRIVE_FILE_BYTES = 40 * 1024 * 1024;
+const MAX_DRIVE_FILE_MB = 64;
+const MAX_DRIVE_FILE_BYTES = MAX_DRIVE_FILE_MB * 1024 * 1024;
 
 type GoogleAccess = { type: "bearer"; value: string } | { type: "api-key"; value: string };
 
@@ -182,10 +183,10 @@ export async function downloadGoogleDriveFile(file: GoogleDriveProjectFile) {
     url.searchParams.set("alt", "media");
     url.searchParams.set("supportsAllDrives", "true");
   }
-  if (file.size && Number(file.size) > MAX_DRIVE_FILE_BYTES) throw new GoogleDriveSyncError("Файл превышает лимит индексирования 40 МБ.", 400);
+  if (file.size && Number(file.size) > MAX_DRIVE_FILE_BYTES) throw new GoogleDriveSyncError(`Файл превышает лимит индексирования ${MAX_DRIVE_FILE_MB} МБ.`, 400);
   const response = await driveFetch(url, access);
   const bytes = Buffer.from(await response.arrayBuffer());
-  if (bytes.byteLength > MAX_DRIVE_FILE_BYTES) throw new GoogleDriveSyncError("Файл превышает лимит индексирования 40 МБ.", 400);
+  if (bytes.byteLength > MAX_DRIVE_FILE_BYTES) throw new GoogleDriveSyncError(`Файл превышает лимит индексирования ${MAX_DRIVE_FILE_MB} МБ.`, 400);
   return {
     bytes,
     fileName: exported ? `${file.name}${exported.extension}` : file.name,
