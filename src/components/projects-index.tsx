@@ -1046,7 +1046,7 @@ export function ProjectCreationWizard() {
                   <FileText size={17} />
                   <span>Выбрать документы</span>
                   <input
-                    accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.webp,.zip"
+                    accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.csv,.jpg,.jpeg,.png,.webp,.zip"
                     multiple
                     type="file"
                     onChange={(event) => addPendingDocuments(event.target.files)}

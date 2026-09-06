@@ -8,6 +8,9 @@ function configuredFromMode(mode: ConnectorMode) {
 export function getConnectorConfig(env: AppEnv = getEnv()): ConnectorConfig[] {
   const githubRepo = env.GITHUB_REPO || "Grafnnn/PGS";
   const openAiConfigured = Boolean(env.OPENAI_API_KEY);
+  const googleDriveApiKey = Boolean(env.GOOGLE_DRIVE_API_KEY);
+  const googleDriveServiceAccount = Boolean(env.GOOGLE_DRIVE_SERVICE_ACCOUNT_EMAIL && env.GOOGLE_DRIVE_SERVICE_ACCOUNT_PRIVATE_KEY);
+  const googleDriveCredentials = googleDriveApiKey || googleDriveServiceAccount;
 
   return [
     {
@@ -23,9 +26,12 @@ export function getConnectorConfig(env: AppEnv = getEnv()): ConnectorConfig[] {
       id: "google_drive",
       label: "Google Drive / Docs / Sheets / Slides",
       mode: env.GOOGLE_DRIVE_CONNECTOR_MODE,
-      configured: configuredFromMode(env.GOOGLE_DRIVE_CONNECTOR_MODE),
-      notes: ["Готовность для будущего поиска и импорта проектных документов."],
-      warnings: env.GOOGLE_DRIVE_CONNECTOR_MODE !== "disabled" ? ["Не импортировать и не изменять реальные файлы без подтверждения."] : []
+      configured: configuredFromMode(env.GOOGLE_DRIVE_CONNECTOR_MODE) && googleDriveCredentials,
+      metadata: { access: "read-only", authentication: googleDriveServiceAccount ? "service-account" : googleDriveApiKey ? "api-key" : "not-configured" },
+      notes: ["Read-only индексирование общей папки проектной документации."],
+      warnings: env.GOOGLE_DRIVE_CONNECTOR_MODE !== "disabled" && !googleDriveCredentials
+        ? ["Для синхронизации нужен API key или service account с доступом к папке."]
+        : []
     },
     {
       id: "gmail",

@@ -20,6 +20,8 @@ describe("document storage helpers", () => {
 
   it("validates allowed metadata", () => {
     expect(validateDocumentUpload("contract.pdf", "application/pdf", 1000)).toBeNull();
+    expect(validateDocumentUpload("requirements.txt", "text/plain", 1000)).toBeNull();
+    expect(validateDocumentUpload("register.csv", "text/csv", 1000)).toBeNull();
     expect(validateDocumentUpload("script.sh", "text/x-shellscript", 1000)).toContain("Unsupported");
   });
 

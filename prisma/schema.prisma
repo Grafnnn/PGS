@@ -65,6 +65,9 @@ model Organization {
   projectExpenses            ProjectExpense[]
   projectExpenseCategories   ProjectExpenseCategory[]
   aiRuns                     AiRun[]
+  knowledgeConfigs           ProjectKnowledgeConfig[]
+  knowledgeDocuments         ProjectKnowledgeDocument[]
+  knowledgeChunks            ProjectKnowledgeChunk[]
 
   @@map("organizations")
 }
@@ -195,6 +198,9 @@ model Project {
   invoices                   ProjectInvoice[]
   closeoutPackages           ProjectCloseoutPackage[]
   warrantyObligations        ProjectWarrantyObligation[]
+  knowledgeConfig            ProjectKnowledgeConfig?
+  knowledgeDocuments         ProjectKnowledgeDocument[]
+  knowledgeChunks            ProjectKnowledgeChunk[]
 
   @@map("projects")
 }
@@ -330,21 +336,21 @@ model ScheduleItem {
 }
 
 model WorkProgressEntry {
-  id             String   @id @default(cuid())
-  organizationId String   @map("organization_id")
-  projectId      String   @map("project_id")
-  scheduleItemId String?  @map("schedule_item_id")
-  dailyReportId  String?  @map("daily_report_id")
+  id             String       @id @default(cuid())
+  organizationId String       @map("organization_id")
+  projectId      String       @map("project_id")
+  scheduleItemId String?      @map("schedule_item_id")
+  dailyReportId  String?      @map("daily_report_id")
   date           DateTime
-  qty            Decimal  @db.Decimal(14, 3)
+  qty            Decimal      @db.Decimal(14, 3)
   performer      String
-  documentId     String?  @map("document_id")
+  documentId     String?      @map("document_id")
   comment        String?
-  status         String   @default("draft")
-  createdBy      String?  @map("created_by")
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
-  project        Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  status         String       @default("draft")
+  createdBy      String?      @map("created_by")
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+  project        Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
   dailyReport    DailyReport? @relation(fields: [dailyReportId], references: [id], onDelete: Cascade)
 
   @@unique([dailyReportId, scheduleItemId])
@@ -625,6 +631,7 @@ model Document {
   closeoutChecklistItems ProjectCloseoutChecklistItem[]
   warrantySourceLinks    ProjectWarrantyObligation[]
   expenseReceipts        ProjectExpense[]
+  knowledgeDocuments     ProjectKnowledgeDocument[]
 
   @@index([dailyReportId])
   @@map("documents")
@@ -652,9 +659,83 @@ model DocumentVersion {
   qualityInspectionLinks ProjectQualityInspection[]
   qualityIssueLinks      ProjectQualityIssue[]
   qualityEvidenceLinks   ProjectQualityEvidence[]
+  knowledgeDocuments     ProjectKnowledgeDocument[]
 
   @@unique([documentId, versionNumber])
   @@map("document_versions")
+}
+
+model ProjectKnowledgeConfig {
+  id                String       @id @default(cuid())
+  organizationId    String       @map("organization_id")
+  projectId         String       @unique @map("project_id")
+  driveFolderId     String?      @map("drive_folder_id")
+  driveFolderUrl    String?      @map("drive_folder_url")
+  driveFolderName   String?      @map("drive_folder_name")
+  driveSyncStatus   String       @default("not_configured") @map("drive_sync_status")
+  driveSyncError    String?      @map("drive_sync_error")
+  lastDriveSyncedAt DateTime?    @map("last_drive_synced_at")
+  createdBy         String?      @map("created_by")
+  createdAt         DateTime     @default(now()) @map("created_at")
+  updatedAt         DateTime     @updatedAt @map("updated_at")
+  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  project           Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@map("project_knowledge_configs")
+}
+
+model ProjectKnowledgeDocument {
+  id                String                  @id @default(cuid())
+  organizationId    String                  @map("organization_id")
+  projectId         String                  @map("project_id")
+  documentId        String?                 @map("document_id")
+  documentVersionId String?                 @map("document_version_id")
+  sourceKind        String                  @map("source_kind")
+  externalId        String?                 @map("external_id")
+  sourceVersion     String                  @map("source_version")
+  title             String
+  fileName          String?                 @map("file_name")
+  mimeType          String?                 @map("mime_type")
+  sourceUrl         String?                 @map("source_url")
+  contentHash       String                  @map("content_hash")
+  status            String                  @default("ready")
+  error             String?
+  charCount         Int                     @default(0) @map("char_count")
+  chunkCount        Int                     @default(0) @map("chunk_count")
+  sourceModifiedAt  DateTime?               @map("source_modified_at")
+  indexedAt         DateTime                @default(now()) @map("indexed_at")
+  createdAt         DateTime                @default(now()) @map("created_at")
+  updatedAt         DateTime                @updatedAt @map("updated_at")
+  organization      Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  project           Project                 @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  document          Document?               @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  documentVersion   DocumentVersion?        @relation(fields: [documentVersionId], references: [id], onDelete: SetNull)
+  chunks            ProjectKnowledgeChunk[]
+
+  @@unique([projectId, documentId])
+  @@unique([projectId, sourceKind, externalId])
+  @@index([projectId, status, indexedAt])
+  @@map("project_knowledge_documents")
+}
+
+model ProjectKnowledgeChunk {
+  id                  String                   @id @default(cuid())
+  organizationId      String                   @map("organization_id")
+  projectId           String                   @map("project_id")
+  knowledgeDocumentId String                   @map("knowledge_document_id")
+  chunkIndex          Int                      @map("chunk_index")
+  locator             String
+  text                String                   @db.Text
+  terms               String[]                 @default([])
+  charCount           Int                      @map("char_count")
+  createdAt           DateTime                 @default(now()) @map("created_at")
+  organization        Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  project             Project                  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  knowledgeDocument   ProjectKnowledgeDocument @relation(fields: [knowledgeDocumentId], references: [id], onDelete: Cascade)
+
+  @@unique([knowledgeDocumentId, chunkIndex])
+  @@index([projectId, knowledgeDocumentId])
+  @@map("project_knowledge_chunks")
 }
 
 model DailyReport {
@@ -748,27 +829,27 @@ model ProjectResourceAssignment {
 }
 
 model WorkforceAdmissionRequest {
-  id             String                       @id @default(cuid())
-  organizationId String                       @map("organization_id")
-  projectId      String                       @map("project_id")
-  requestNumber  String                       @map("request_number")
+  id             String                     @id @default(cuid())
+  organizationId String                     @map("organization_id")
+  projectId      String                     @map("project_id")
+  requestNumber  String                     @map("request_number")
   title          String
   contractor     String
-  objectName     String                       @map("object_name")
-  validFrom      DateTime                     @map("valid_from")
-  validUntil     DateTime?                    @map("valid_until")
-  workScope      String                       @map("work_scope")
-  employmentType String                       @default("subcontract") @map("employment_type")
-  status         String                       @default("draft")
-  sourceFileName String?                      @map("source_file_name")
+  objectName     String                     @map("object_name")
+  validFrom      DateTime                   @map("valid_from")
+  validUntil     DateTime?                  @map("valid_until")
+  workScope      String                     @map("work_scope")
+  employmentType String                     @default("subcontract") @map("employment_type")
+  status         String                     @default("draft")
+  sourceFileName String?                    @map("source_file_name")
   notes          String?
-  createdBy      String?                      @map("created_by")
-  approvedBy     String?                      @map("approved_by")
-  approvedAt     DateTime?                    @map("approved_at")
-  createdAt      DateTime                     @default(now()) @map("created_at")
-  updatedAt      DateTime                     @updatedAt @map("updated_at")
-  organization   Organization                 @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  project        Project                      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdBy      String?                    @map("created_by")
+  approvedBy     String?                    @map("approved_by")
+  approvedAt     DateTime?                  @map("approved_at")
+  createdAt      DateTime                   @default(now()) @map("created_at")
+  updatedAt      DateTime                   @updatedAt @map("updated_at")
+  organization   Organization               @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  project        Project                    @relation(fields: [projectId], references: [id], onDelete: Cascade)
   members        WorkforceAdmissionMember[]
 
   @@unique([projectId, requestNumber])
@@ -777,21 +858,21 @@ model WorkforceAdmissionRequest {
 }
 
 model WorkforceAdmissionMember {
-  id                String                     @id @default(cuid())
-  requestId         String                     @map("request_id")
-  resourceId        String?                    @map("resource_id")
-  fullName          String                     @map("full_name")
-  profession        String
-  kind              String                     @default("worker")
-  birthDate         DateTime?                  @map("birth_date")
-  citizenship       String?
-  documentType      String?                    @map("document_type")
-  documentLast4     String?                    @map("document_last4")
-  status            String                     @default("pending")
-  createdAt         DateTime                   @default(now()) @map("created_at")
-  updatedAt         DateTime                   @updatedAt @map("updated_at")
-  request           WorkforceAdmissionRequest  @relation(fields: [requestId], references: [id], onDelete: Cascade)
-  resource          OrganizationResource?      @relation(fields: [resourceId], references: [id], onDelete: SetNull)
+  id            String                    @id @default(cuid())
+  requestId     String                    @map("request_id")
+  resourceId    String?                   @map("resource_id")
+  fullName      String                    @map("full_name")
+  profession    String
+  kind          String                    @default("worker")
+  birthDate     DateTime?                 @map("birth_date")
+  citizenship   String?
+  documentType  String?                   @map("document_type")
+  documentLast4 String?                   @map("document_last4")
+  status        String                    @default("pending")
+  createdAt     DateTime                  @default(now()) @map("created_at")
+  updatedAt     DateTime                  @updatedAt @map("updated_at")
+  request       WorkforceAdmissionRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  resource      OrganizationResource?     @relation(fields: [resourceId], references: [id], onDelete: SetNull)
 
   @@index([requestId, status])
   @@index([resourceId])

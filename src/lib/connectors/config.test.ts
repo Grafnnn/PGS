@@ -53,4 +53,24 @@ describe("connector readiness config", () => {
     expect(serialized).not.toContain("openai-token-redacted");
     expect(serialized).not.toContain("OPENAI_API_KEY");
   });
+
+  it("requires read-only credentials before marking Google Drive ready", () => {
+    expect(getConnectorConfig(env({ GOOGLE_DRIVE_CONNECTOR_MODE: "read_only" })).find((item) => item.id === "google_drive")?.configured).toBe(false);
+    const connector = getConnectorConfig(env({ GOOGLE_DRIVE_CONNECTOR_MODE: "read_only", GOOGLE_DRIVE_API_KEY: "redacted-key" })).find((item) => item.id === "google_drive");
+    expect(connector?.configured).toBe(true);
+    expect(connector?.metadata).toEqual({ access: "read-only", authentication: "api-key" });
+    expect(JSON.stringify(connector)).not.toContain("redacted-key");
+  });
+
+  it("reports the service account actually preferred by the Drive adapter", () => {
+    const connector = getConnectorConfig(env({
+      GOOGLE_DRIVE_CONNECTOR_MODE: "read_only",
+      GOOGLE_DRIVE_API_KEY: "redacted-key",
+      GOOGLE_DRIVE_SERVICE_ACCOUNT_EMAIL: "pgs@example.test",
+      GOOGLE_DRIVE_SERVICE_ACCOUNT_PRIVATE_KEY: "redacted-private-key"
+    })).find((item) => item.id === "google_drive");
+
+    expect(connector?.metadata).toEqual({ access: "read-only", authentication: "service-account" });
+    expect(JSON.stringify(connector)).not.toContain("redacted-private-key");
+  });
 });

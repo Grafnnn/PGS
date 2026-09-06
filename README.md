@@ -36,6 +36,7 @@
 - Prisma CRUD API для ключевых сущностей проекта.
 - Excel import preview для ВОР/сметы без автосохранения непроверенных данных.
 - Workforce & Payroll Intelligence: штат, ИТР, рабочие и бригады, плановые начисления, потребность из листов ФОТ, распределение трудозатрат по ВОР и помесячный план комплектования.
+- Technical Documentation Assistant в «Ресурсах»: локальный полнотекстовый индекс PDF/DOCX/Excel/CSV/TXT, ответы AI только по найденным фрагментам, ссылки на файл/страницу и read-only синхронизация Google Drive.
 - Транзакционный commit импорта в `BudgetSection`, `BudgetItem`, `Material`, `ScheduleItem`.
 - Inline edit/delete для ВОР, материалов и графика.
 - Audit trail для импорта и ключевых CRUD-операций.
@@ -81,6 +82,7 @@
 - `src/lib/smoke/cleanup.ts` - safety helpers для smoke mutation/cleanup.
 - `src/lib/env.ts` - централизованная валидация env.
 - `src/lib/storage` - local/S3-compatible storage adapter.
+- `src/lib/technical-documentation` - извлечение текста, дешёвый лексический поиск, Google Drive read-only adapter и grounded AI-ответы.
 - `src/lib/calculations.ts` - расчетный слой.
 - `src/lib/ai.ts` - AI context builder и OpenAI вызов.
 - `src/lib/prisma.ts` - Prisma Client singleton.
@@ -154,6 +156,9 @@ APP_URL="http://localhost:3000"
 GITHUB_REPO="Grafnnn/PGS"
 GITHUB_CONNECTOR_MODE="read_only"
 GOOGLE_DRIVE_CONNECTOR_MODE="disabled"
+GOOGLE_DRIVE_API_KEY=""
+GOOGLE_DRIVE_SERVICE_ACCOUNT_EMAIL=""
+GOOGLE_DRIVE_SERVICE_ACCOUNT_PRIVATE_KEY=""
 GMAIL_CONNECTOR_MODE="disabled"
 GOOGLE_CALENDAR_CONNECTOR_MODE="disabled"
 RENDER_CONNECTOR_MODE="disabled"
@@ -610,7 +615,7 @@ Repo: `https://github.com/Grafnnn/PGS`.
 PGS знает о будущих online integrations, но v0.8 не выполняет внешние мутации:
 
 - GitHub: metadata repo `Grafnnn/PGS`, режим `read_only` по умолчанию;
-- Google Drive/Docs/Sheets/Slides: readiness для будущего источника документов;
+- Google Drive/Docs/Sheets/Slides: read-only источник проектной документации через API key для общей папки или service account;
 - Gmail: readiness для invite/reset delivery;
 - Google Calendar: readiness для будущих контрольных дат;
 - Render/Vercel: deployment profile placeholders;
@@ -760,4 +765,4 @@ Production checklist:
 - Подготовить Render/Vercel deployment profile без ручных шагов.
 - Добавить distributed rate limit и более полный request logging.
 - Расширить ПТО/КС закрытие и approval workflow.
-- Добавить Google Drive/Sheets import только после явного connector setup.
+- При необходимости включить Google Drive в `read_only`, выдать service account доступ только к проектной папке и выполнить первую синхронизацию вручную.

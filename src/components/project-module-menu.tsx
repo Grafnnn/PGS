@@ -5,6 +5,7 @@ import {
   AlertTriangle,
   BadgeCheck,
   BarChart3,
+  BookOpenCheck,
   Bot,
   Boxes,
   Building2,
@@ -38,6 +39,7 @@ import {
 export const projectTabs = [
   "Обзор",
   "Бюджет / ВОР",
+  "Техпомощник",
   "ФОТ",
   "График",
   "Материалы",
@@ -94,9 +96,9 @@ export const projectTabGroups: ReadonlyArray<ProjectTabGroup> = [
   {
     id: "resources",
     label: "Ресурсы",
-    description: "Люди, материалы и закупки",
+    description: "Документация, люди и снабжение",
     icon: <Boxes size={18} />,
-    tabs: ["ФОТ", "Материалы", "Заявки"]
+    tabs: ["Техпомощник", "ФОТ", "Материалы", "Заявки"]
   },
   {
     id: "economy",
@@ -136,6 +138,7 @@ export const projectDomainGroups = projectTabGroups.filter(
 const tabMeta: Record<ProjectTab, { icon: React.ReactNode; hint: string; label?: string }> = {
   Обзор: { icon: <LayoutDashboard size={16} />, hint: "Состояние и решения" },
   "Бюджет / ВОР": { icon: <Table2 size={16} />, hint: "Объёмы и себестоимость" },
+  Техпомощник: { icon: <BookOpenCheck size={16} />, hint: "Ответы по проектной документации" },
   ФОТ: { icon: <Users size={16} />, hint: "Люди и начисления" },
   График: { icon: <TimerReset size={16} />, hint: "Сроки и этапы" },
   Материалы: { icon: <Package size={16} />, hint: "Потребность объекта" },
