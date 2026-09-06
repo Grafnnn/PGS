@@ -139,10 +139,12 @@ export async function answerTechnicalQuestion(input: { projectName: string; ques
     });
     const payload = await response.json().catch(() => null);
     if (!response.ok) throw new TechnicalQuestionProviderError("AI временно недоступен. Повторите вопрос позже.", 502);
+    const providerResult = parseResponse(responseText(payload));
+    const citedIds = new Set(providerResult.citationIds);
     const parsed = enforceGrounding({
       question: input.question,
-      sources: input.sources,
-      result: parseResponse(responseText(payload))
+      sources: input.sources.filter((source) => citedIds.has(source.sourceId)),
+      result: providerResult
     });
     const allowedIds = new Set(input.sources.map((source) => source.sourceId));
     const citationIds = Array.from(new Set(parsed.citationIds.filter((id) => allowedIds.has(id))));

@@ -64,7 +64,10 @@ describe("technical documentation answer provider", () => {
     const result = await answerTechnicalQuestion({
       projectName: "Тестовый проект",
       question: "Какая сумма договора и ставка НДС?",
-      sources: [{ sourceId: "S1", title: "КП", locator: "Строка 4", text: "Утверждённое КП, ₽ без НДС | 15 274 035,05" }]
+      sources: [
+        { sourceId: "S1", title: "КП", locator: "Строка 4", text: "Утверждённое КП, ₽ без НДС | 15 274 035,05" },
+        { sourceId: "S2", title: "Чужая строка", locator: "Строка 9", text: "НДС 0%, не облагается" }
+      ]
     });
 
     expect(result).toMatchObject({ confidence: "low", notFound: true });
