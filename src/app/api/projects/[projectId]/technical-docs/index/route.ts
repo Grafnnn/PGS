@@ -10,7 +10,7 @@ import { getProjectKnowledgeStatus, indexGoogleDriveDocuments, indexPgsProjectDo
 export const runtime = "nodejs";
 
 const requestSchema = z.object({
-  source: z.enum(["pgs", "google_drive", "all"]).default("pgs"),
+  source: z.enum(["pgs", "google_drive", "all"]).default("google_drive"),
   force: z.boolean().default(false)
 });
 

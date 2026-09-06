@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import * as XLSX from "xlsx";
-import { extractKnowledgeDocument, UnsupportedKnowledgeDocumentError } from "./extract";
+import { extractKnowledgeDocument, knowledgeDocumentUnsupportedReason, UnsupportedKnowledgeDocumentError } from "./extract";
 
 function simplePdf(text: string) {
   const escaped = text.replace(/[()\\]/g, (value) => `\\${value}`);
@@ -53,7 +53,13 @@ describe("technical document extraction", () => {
   });
 
   it("explains why images cannot be indexed as technical text", async () => {
+    expect(knowledgeDocumentUnsupportedReason({ fileName: "scan.jpg", mimeType: "image/jpeg" })).toContain("OCR");
     await expect(extractKnowledgeDocument({ fileName: "scan.jpg", mimeType: "image/jpeg", bytes: Buffer.from("image") }))
       .rejects.toBeInstanceOf(UnsupportedKnowledgeDocumentError);
+  });
+
+  it("recognizes supported Drive documents before downloading their bytes", () => {
+    expect(knowledgeDocumentUnsupportedReason({ fileName: "project.xlsx", mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" })).toBeNull();
+    expect(knowledgeDocumentUnsupportedReason({ fileName: "archive.zip", mimeType: "application/zip" })).toContain("не поддерживает");
   });
 });

@@ -8,7 +8,7 @@ import { sanitizeAiJournalText, sanitizeAiJournalValue, sanitizeAiRunError } fro
 import { getOpenAiRuntimeConfig } from "@/lib/env";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { projectKnowledgeFingerprint, searchProjectKnowledge } from "@/lib/technical-documentation/index";
+import { ensureGoogleDriveKnowledgeFresh, projectKnowledgeFingerprint, searchProjectKnowledge } from "@/lib/technical-documentation/index";
 import { answerTechnicalQuestion, TechnicalQuestionProviderError } from "@/lib/technical-documentation/qa";
 import { knowledgeExcerpt } from "@/lib/technical-documentation/search";
 
@@ -39,7 +39,10 @@ export async function POST(request: NextRequest, { params }: { params: { project
   }
   const parsed = requestSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Введите технический вопрос длиной от 3 до 1000 символов." }, { status: 400 });
-  const project = await prisma.project.findUnique({ where: { id: params.projectId }, select: { name: true, organizationId: true } });
+  const [project, knowledge] = await Promise.all([
+    prisma.project.findUnique({ where: { id: params.projectId }, select: { name: true, organizationId: true } }),
+    ensureGoogleDriveKnowledgeFresh(params.projectId)
+  ]);
   if (!project) return NextResponse.json({ error: "Project not found" }, { status: 404 });
 
   const matches = await searchProjectKnowledge(params.projectId, parsed.data.question);
@@ -52,7 +55,8 @@ export async function POST(request: NextRequest, { params }: { params: { project
         followUps: ["Проверьте, загружен ли нужный раздел проекта и есть ли в PDF текстовый слой."],
         citations: [],
         cached: false,
-        provider: "deterministic"
+        provider: "deterministic",
+        knowledge
       }
     });
   }
@@ -92,7 +96,8 @@ export async function POST(request: NextRequest, { params }: { params: { project
         result: {
           ...output,
           citations: candidateCitations.filter((citation) => citationIds.has(citation.sourceId)),
-          cached: true
+          cached: true,
+          knowledge
         }
       });
     }
@@ -106,7 +111,8 @@ export async function POST(request: NextRequest, { params }: { params: { project
         followUps: ["Сверьте формулировку и числовые значения с указанными местами в исходных файлах."],
         citations: candidateCitations,
         cached: false,
-        provider: "deterministic"
+        provider: "deterministic",
+        knowledge
       }
     });
   }
@@ -134,7 +140,8 @@ export async function POST(request: NextRequest, { params }: { params: { project
       followUps: answer.followUps,
       citations,
       cached: false,
-      provider: answer.provider
+      provider: answer.provider,
+      knowledge
     };
     await prisma.aiRun.update({
       where: { id: run.id },

@@ -5,6 +5,8 @@ const DRIVE_API = "https://www.googleapis.com/drive/v3";
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
 const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.readonly";
 const GOOGLE_FOLDER_MIME = "application/vnd.google-apps.folder";
+const GOOGLE_SHORTCUT_MIME = "application/vnd.google-apps.shortcut";
+const GOOGLE_FILE_FIELDS = "id,name,mimeType,modifiedTime,size,webViewLink,shortcutDetails(targetId,targetMimeType)";
 const MAX_DRIVE_FILES = 500;
 const MAX_DRIVE_FILE_BYTES = 40 * 1024 * 1024;
 
@@ -17,6 +19,10 @@ export type GoogleDriveProjectFile = {
   modifiedTime?: string;
   size?: string;
   webViewLink?: string;
+  shortcutDetails?: {
+    targetId: string;
+    targetMimeType: string;
+  };
 };
 
 let tokenCache: { token: string; expiresAt: number } | null = null;
@@ -79,6 +85,14 @@ async function driveFetch(url: URL, access: GoogleAccess) {
   }
 }
 
+async function getGoogleDriveFileMetadata(fileId: string, access: GoogleAccess) {
+  const url = new URL(`${DRIVE_API}/files/${encodeURIComponent(fileId)}`);
+  url.searchParams.set("fields", GOOGLE_FILE_FIELDS);
+  url.searchParams.set("supportsAllDrives", "true");
+  const response = await driveFetch(url, access);
+  return response.json() as Promise<GoogleDriveProjectFile>;
+}
+
 export function parseGoogleDriveFolderId(value: string) {
   const trimmed = value.trim();
   const folderMatch = trimmed.match(/\/folders\/([A-Za-z0-9_-]{10,})/);
@@ -97,21 +111,26 @@ export function googleDriveConnectionStatus() {
   return {
     enabled: env.GOOGLE_DRIVE_CONNECTOR_MODE !== "disabled" && authentication !== "none",
     mode: env.GOOGLE_DRIVE_CONNECTOR_MODE,
-    authentication
+    authentication,
+    shareWith: authentication === "service-account" ? env.GOOGLE_DRIVE_SERVICE_ACCOUNT_EMAIL ?? null : null
   } as const;
 }
 
 export async function listGoogleDriveFolder(folderId: string) {
   const access = await googleAccess();
   const queue = [folderId];
+  const visitedFolders = new Set<string>();
+  const visitedFiles = new Set<string>();
   const files: GoogleDriveProjectFile[] = [];
   while (queue.length && files.length < MAX_DRIVE_FILES) {
     const parentId = queue.shift() as string;
+    if (visitedFolders.has(parentId)) continue;
+    visitedFolders.add(parentId);
     let pageToken = "";
     do {
       const url = new URL(`${DRIVE_API}/files`);
       url.searchParams.set("q", `'${parentId}' in parents and trashed = false`);
-      url.searchParams.set("fields", "nextPageToken,files(id,name,mimeType,modifiedTime,size,webViewLink)");
+      url.searchParams.set("fields", `nextPageToken,files(${GOOGLE_FILE_FIELDS})`);
       url.searchParams.set("pageSize", "1000");
       url.searchParams.set("orderBy", "name");
       url.searchParams.set("supportsAllDrives", "true");
@@ -120,8 +139,17 @@ export async function listGoogleDriveFolder(folderId: string) {
       const response = await driveFetch(url, access);
       const payload = (await response.json()) as { nextPageToken?: string; files?: GoogleDriveProjectFile[] };
       for (const file of payload.files ?? []) {
-        if (file.mimeType === GOOGLE_FOLDER_MIME) queue.push(file.id);
-        else files.push(file);
+        const shortcut = file.mimeType === GOOGLE_SHORTCUT_MIME ? file.shortcutDetails : null;
+        const targetId = shortcut?.targetId ?? file.id;
+        const targetMimeType = shortcut?.targetMimeType ?? file.mimeType;
+        if (targetMimeType === GOOGLE_FOLDER_MIME) {
+          if (!visitedFolders.has(targetId)) queue.push(targetId);
+        } else if (!visitedFiles.has(targetId)) {
+          visitedFiles.add(targetId);
+          // Shortcut metadata does not change when its target is edited, so resolve
+          // the target before comparing Drive versions during incremental sync.
+          files.push(shortcut ? await getGoogleDriveFileMetadata(targetId, access) : file);
+        }
         if (files.length >= MAX_DRIVE_FILES) break;
       }
       pageToken = payload.nextPageToken ?? "";

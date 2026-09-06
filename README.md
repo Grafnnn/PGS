@@ -36,7 +36,7 @@
 - Prisma CRUD API для ключевых сущностей проекта.
 - Excel import preview для ВОР/сметы без автосохранения непроверенных данных.
 - Workforce & Payroll Intelligence: штат, ИТР, рабочие и бригады, плановые начисления, потребность из листов ФОТ, распределение трудозатрат по ВОР и помесячный план комплектования.
-- Technical Documentation Assistant в «Ресурсах»: локальный полнотекстовый индекс PDF/DOCX/Excel/CSV/TXT, ответы AI только по найденным фрагментам, ссылки на файл/страницу и read-only синхронизация Google Drive.
+- Technical Documentation Assistant в «Ресурсах»: Google Drive как основная проектная база знаний, автоматическая инкрементальная read-only синхронизация, локальный индекс PDF/DOCX/Excel/CSV/TXT и ответы AI только по найденным фрагментам со ссылками на файл/страницу.
 - Транзакционный commit импорта в `BudgetSection`, `BudgetItem`, `Material`, `ScheduleItem`.
 - Inline edit/delete для ВОР, материалов и графика.
 - Audit trail для импорта и ключевых CRUD-операций.
