@@ -57,19 +57,6 @@ export async function POST(request: NextRequest, { params }: { params: { project
     });
   }
 
-  const fingerprint = await projectKnowledgeFingerprint(params.projectId);
-  const cacheKey = answerCacheKey(parsed.data.question, fingerprint);
-  const cachedRuns = await prisma.aiRun.findMany({
-    where: { projectId: params.projectId, scenario: SCENARIO, status: "succeeded" },
-    orderBy: { createdAt: "desc" },
-    take: 30
-  });
-  const cached = cachedRuns.find((run) => asRecord(run.inputJson)?.cacheKey === cacheKey);
-  if (cached) {
-    const output = asRecord(cached.outputJson);
-    if (output) return NextResponse.json({ result: { ...output, cached: true } });
-  }
-
   const sources = matches.map((match, index) => ({
     sourceId: `S${index + 1}`,
     title: match.title,
@@ -84,6 +71,32 @@ export async function POST(request: NextRequest, { params }: { params: { project
     sourceUrl: match.sourceUrl,
     sourceKind: match.sourceKind
   }));
+
+  const fingerprint = await projectKnowledgeFingerprint(params.projectId);
+  const cacheKey = answerCacheKey(parsed.data.question, fingerprint);
+  const cachedRuns = await prisma.aiRun.findMany({
+    where: { projectId: params.projectId, scenario: SCENARIO, status: "succeeded" },
+    orderBy: { createdAt: "desc" },
+    take: 30
+  });
+  const cached = cachedRuns.find((run) => asRecord(run.inputJson)?.cacheKey === cacheKey);
+  if (cached) {
+    const output = asRecord(cached.outputJson);
+    if (output) {
+      const citationIds = new Set(
+        (Array.isArray(output.citations) ? output.citations : [])
+          .map((citation) => asRecord(citation)?.sourceId)
+          .filter((sourceId): sourceId is string => typeof sourceId === "string")
+      );
+      return NextResponse.json({
+        result: {
+          ...output,
+          citations: candidateCitations.filter((citation) => citationIds.has(citation.sourceId)),
+          cached: true
+        }
+      });
+    }
+  }
   if (!getOpenAiRuntimeConfig().enabled) {
     return NextResponse.json({
       result: {
