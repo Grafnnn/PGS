@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   user: vi.fn(),
   canProject: vi.fn(),
+  ensureFresh: vi.fn(),
   search: vi.fn(),
   fingerprint: vi.fn(),
   answer: vi.fn(),
@@ -15,6 +16,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock("@/lib/auth/session", () => ({ getCurrentUser: mocks.user }));
 vi.mock("@/lib/auth/project-permissions", () => ({ canProject: mocks.canProject }));
 vi.mock("@/lib/technical-documentation/index", () => ({
+  ensureGoogleDriveKnowledgeFresh: mocks.ensureFresh,
   searchProjectKnowledge: mocks.search,
   projectKnowledgeFingerprint: mocks.fingerprint
 }));
@@ -46,6 +48,7 @@ describe("technical documentation question route", () => {
     vi.clearAllMocks();
     mocks.user.mockResolvedValue({ id: "user-1", name: "User", email: "user@example.test", role: "MANAGER", authenticated: true });
     mocks.canProject.mockResolvedValue(true);
+    mocks.ensureFresh.mockResolvedValue({ configured: false, checked: false, refreshed: false, warning: null });
     mocks.search.mockResolvedValue([]);
     mocks.fingerprint.mockResolvedValue("fingerprint");
     mocks.aiRunFindMany.mockResolvedValue([]);
@@ -60,7 +63,19 @@ describe("technical documentation question route", () => {
     const response = await POST(guardedRequest, { params: { projectId: "project-1" } });
     expect(response.status).toBe(403);
     expect((guardedRequest as { json: ReturnType<typeof vi.fn> }).json).not.toHaveBeenCalled();
+    expect(mocks.ensureFresh).not.toHaveBeenCalled();
     expect(mocks.search).not.toHaveBeenCalled();
+  });
+
+  it("refreshes a configured Google Drive knowledge base before searching", async () => {
+    mocks.ensureFresh.mockResolvedValue({ configured: true, checked: true, refreshed: true, warning: null });
+    const { POST } = await import("./route");
+    const response = await POST(request({ question: "Какая марка утеплителя?" }), { params: { projectId: "project-1" } });
+
+    expect(mocks.ensureFresh).toHaveBeenCalledWith("project-1");
+    await expect(response.json()).resolves.toMatchObject({
+      result: { knowledge: { configured: true, checked: true, refreshed: true, warning: null } }
+    });
   });
 
   it("returns an honest no-evidence result without calling AI", async () => {

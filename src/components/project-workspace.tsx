@@ -1253,7 +1253,7 @@ export function ProjectWorkspace({
         <ProjectModuleWorkspace moduleKey="technical-docs" title="Технический помощник" icon={<BookOpenCheck size={18} />} views={[{
           id: "knowledge",
           label: "Документация проекта",
-          description: "Проверяемые ответы по файлам PGS и read-only папке Google Drive.",
+          description: "AI-ответы по основной папке проекта в Google Drive с точными ссылками на источники.",
           content: <TechnicalDocumentationAssistant projectId={initialBundle.project.id} />
         }]} />
       )}

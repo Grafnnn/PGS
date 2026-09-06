@@ -18,6 +18,28 @@ const MAX_EXTRACTED_CHARS = 4_000_000;
 
 export class UnsupportedKnowledgeDocumentError extends Error {}
 
+export function knowledgeDocumentUnsupportedReason(input: { fileName: string; mimeType?: string | null }) {
+  const extension = path.extname(input.fileName).toLowerCase();
+  if (
+    extension === ".pdf"
+    || extension === ".docx"
+    || extension === ".xlsx"
+    || extension === ".xls"
+    || extension === ".txt"
+    || extension === ".csv"
+    || input.mimeType === "application/pdf"
+    || input.mimeType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    || input.mimeType === "application/vnd.ms-excel"
+    || input.mimeType?.includes("spreadsheet")
+    || input.mimeType?.startsWith("text/")
+  ) return null;
+  if (extension === ".doc") return "Формат DOC нужно сохранить как DOCX или PDF.";
+  if ([".jpg", ".jpeg", ".png", ".webp"].includes(extension) || input.mimeType?.startsWith("image/")) {
+    return "Изображение не содержит доступного текстового слоя. Сохраните скан как PDF с OCR.";
+  }
+  return "Этот формат пока не поддерживает текстовое индексирование.";
+}
+
 function cleanText(value: string) {
   return value
     .replace(/\u0000/g, "")
@@ -111,6 +133,8 @@ function extractDelimitedText(bytes: Buffer, fileName: string): ExtractedDocumen
 
 export async function extractKnowledgeDocument(input: { fileName: string; mimeType?: string | null; bytes: Buffer }): Promise<ExtractedDocument> {
   const extension = path.extname(input.fileName).toLowerCase();
+  const unsupportedReason = knowledgeDocumentUnsupportedReason(input);
+  if (unsupportedReason) throw new UnsupportedKnowledgeDocumentError(unsupportedReason);
   if (extension === ".pdf" || input.mimeType === "application/pdf") return extractPdf(input.bytes);
   if (extension === ".docx" || input.mimeType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
     return extractDocx(input.bytes);
@@ -119,9 +143,5 @@ export async function extractKnowledgeDocument(input: { fileName: string; mimeTy
     return extractWorkbook(input.bytes);
   }
   if ([".txt", ".csv"].includes(extension) || input.mimeType?.startsWith("text/")) return extractDelimitedText(input.bytes, input.fileName);
-  if (extension === ".doc") throw new UnsupportedKnowledgeDocumentError("Формат DOC нужно сохранить как DOCX или PDF.");
-  if ([".jpg", ".jpeg", ".png", ".webp"].includes(extension)) {
-    throw new UnsupportedKnowledgeDocumentError("Изображение не содержит доступного текстового слоя. Сохраните скан как PDF с OCR.");
-  }
   throw new UnsupportedKnowledgeDocumentError("Этот формат пока не поддерживает текстовое индексирование.");
 }

@@ -17797,6 +17797,100 @@ input[type="checkbox"] {
   max-width: 820px;
 }
 
+.technical-drive-primary {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--yellow);
+  border-radius: 8px;
+  display: grid;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.technical-drive-primary.is-ready {
+  border-left-color: var(--accent);
+}
+
+.technical-drive-heading {
+  align-items: flex-start;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  padding: 16px;
+}
+
+.technical-drive-title {
+  align-items: flex-start;
+  display: flex;
+  gap: 11px;
+  min-width: 0;
+}
+
+.technical-drive-title > span:last-child {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.technical-drive-title small,
+.technical-drive-title em {
+  color: var(--muted);
+  font-size: 12px;
+  font-style: normal;
+}
+
+.technical-drive-title strong {
+  font-size: 16px;
+  overflow-wrap: anywhere;
+}
+
+.technical-drive-icon {
+  align-items: center;
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface));
+  border-radius: 7px;
+  color: var(--accent);
+  display: inline-flex;
+  flex: 0 0 auto;
+  height: 38px;
+  justify-content: center;
+  width: 38px;
+}
+
+.technical-drive-badges {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.technical-drive-stats {
+  border-block: 1px solid var(--line);
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.technical-drive-stats > span {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  padding: 11px 16px;
+}
+
+.technical-drive-stats > span + span {
+  border-left: 1px solid var(--line);
+}
+
+.technical-drive-stats strong {
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.technical-drive-stats small {
+  color: var(--muted);
+  font-size: 11px;
+}
+
 .technical-docs-actions,
 .technical-answer-heading,
 .technical-question-submit {
@@ -17871,6 +17965,15 @@ input[type="checkbox"] {
   align-content: start;
   display: grid;
   gap: 12px;
+}
+
+.technical-question-source {
+  align-items: center;
+  color: var(--accent);
+  display: flex;
+  font-size: 12px;
+  font-weight: 700;
+  gap: 6px;
 }
 
 .technical-question-panel textarea {
@@ -17950,6 +18053,23 @@ input[type="checkbox"] {
   line-height: 1.58;
   margin: 16px 0;
   white-space: pre-wrap;
+}
+
+.technical-knowledge-warning {
+  align-items: flex-start;
+  background: color-mix(in srgb, var(--yellow) 10%, var(--surface));
+  border-left: 3px solid var(--yellow);
+  color: var(--muted);
+  display: flex;
+  font-size: 12px;
+  gap: 7px;
+  margin-top: 13px;
+  padding: 9px 10px;
+}
+
+.technical-knowledge-warning svg {
+  color: var(--yellow);
+  flex: 0 0 auto;
 }
 
 .technical-citations,
@@ -18051,8 +18171,25 @@ input[type="checkbox"] {
 
 .technical-source-body {
   display: grid;
-  gap: 16px;
+  gap: 10px;
   padding: 0 0 16px;
+}
+
+.technical-source-section-heading {
+  align-items: center;
+  color: var(--muted);
+  display: flex;
+  font-size: 12px;
+  gap: 7px;
+  padding: 4px 2px 0;
+}
+
+.technical-source-section-heading strong {
+  color: var(--text);
+}
+
+.technical-source-section-heading span {
+  margin-left: auto;
 }
 
 .technical-indexed-files {
@@ -18086,12 +18223,9 @@ input[type="checkbox"] {
 }
 
 .technical-drive-form {
-  background: var(--panel-muted);
-  border: 1px solid var(--line);
-  border-radius: 8px;
   display: grid;
   gap: 12px;
-  padding: 14px;
+  padding: 14px 16px 16px;
 }
 
 .technical-drive-fields {
@@ -18113,10 +18247,38 @@ input[type="checkbox"] {
   flex: 0 0 auto;
 }
 
+.technical-drive-note.is-ready svg {
+  color: var(--green);
+}
+
+.technical-drive-note code {
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.technical-drive-actions {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.technical-secondary-source-action {
+  align-items: center;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  display: flex;
+  font-size: 12px;
+  gap: 12px;
+  justify-content: space-between;
+  padding-top: 12px;
+}
+
 @media (max-width: 900px) {
   .technical-docs-summary,
   .technical-docs-actions,
-  .technical-question-submit {
+  .technical-question-submit,
+  .technical-drive-heading,
+  .technical-secondary-source-action {
     align-items: stretch;
     flex-direction: column;
   }
@@ -18128,6 +18290,29 @@ input[type="checkbox"] {
 
   .technical-docs-metrics {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .technical-drive-stats {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .technical-drive-stats > span + span {
+    border-left: 0;
+    border-top: 1px solid var(--line);
+  }
+
+  .technical-drive-badges {
+    justify-content: flex-start;
+  }
+
+  .technical-drive-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .technical-drive-actions .button,
+  .technical-secondary-source-action .button {
+    width: 100%;
   }
 
   .technical-docs-metrics > div + div {
