@@ -6,7 +6,10 @@ const mocks = vi.hoisted(() => ({
   canProject: vi.fn(),
   search: vi.fn(),
   fingerprint: vi.fn(),
-  answer: vi.fn()
+  answer: vi.fn(),
+  aiRunFindMany: vi.fn(),
+  aiRunCreate: vi.fn(),
+  aiRunUpdate: vi.fn()
 }));
 
 vi.mock("@/lib/auth/session", () => ({ getCurrentUser: mocks.user }));
@@ -23,9 +26,9 @@ vi.mock("@/lib/prisma", () => ({
   prisma: {
     project: { findUnique: vi.fn(async () => ({ name: "Проект", organizationId: "org-1" })) },
     aiRun: {
-      findMany: vi.fn(async () => []),
-      create: vi.fn(async () => ({ id: "run-1" })),
-      update: vi.fn(async () => ({ id: "run-1" }))
+      findMany: mocks.aiRunFindMany,
+      create: mocks.aiRunCreate,
+      update: mocks.aiRunUpdate
     }
   }
 }));
@@ -45,6 +48,9 @@ describe("technical documentation question route", () => {
     mocks.canProject.mockResolvedValue(true);
     mocks.search.mockResolvedValue([]);
     mocks.fingerprint.mockResolvedValue("fingerprint");
+    mocks.aiRunFindMany.mockResolvedValue([]);
+    mocks.aiRunCreate.mockResolvedValue({ id: "run-1" });
+    mocks.aiRunUpdate.mockResolvedValue({ id: "run-1" });
   });
 
   it("checks access before reading the question body", async () => {
@@ -92,6 +98,56 @@ describe("technical documentation question route", () => {
       });
       expect(mocks.answer).not.toHaveBeenCalled();
     } finally {
+      if (previousMode === undefined) delete process.env.OPENAI_CONNECTOR_MODE;
+      else process.env.OPENAI_CONNECTOR_MODE = previousMode;
+    }
+  });
+
+  it("rebuilds relevant citation excerpts for cached answers", async () => {
+    const previousKey = process.env.OPENAI_API_KEY;
+    const previousMode = process.env.OPENAI_CONNECTOR_MODE;
+    process.env.OPENAI_API_KEY = "openai-token-redacted";
+    process.env.OPENAI_CONNECTOR_MODE = "read_only";
+    const sourceText = `${"Начало таблицы без нужной строки. ".repeat(30)} Строка 121: НДС не облагается. Строка 122: ВСЕГО без НДС 15 274 035,05 ₽.`;
+    mocks.search.mockResolvedValue([{
+      id: "chunk-1",
+      documentId: "knowledge-1",
+      sourceKind: "pgs",
+      title: "КП",
+      locator: "Лист КП, строки 101–125",
+      text: sourceText,
+      sourceUrl: "/api/projects/project-1/documents/document-1/download",
+      score: 8
+    }]);
+    mocks.answer.mockResolvedValue({
+      answer: "НДС не облагается.",
+      confidence: "high",
+      notFound: false,
+      citationIds: ["S1"],
+      followUps: [],
+      provider: "openai"
+    });
+    try {
+      const { POST } = await import("./route");
+      await POST(request({ question: "Какая ставка НДС?" }), { params: { projectId: "project-1" } });
+      const cacheKey = mocks.aiRunCreate.mock.calls[0][0].data.inputJson.cacheKey;
+      mocks.aiRunFindMany.mockResolvedValue([{
+        inputJson: { cacheKey },
+        outputJson: {
+          answer: "НДС не облагается.", confidence: "high", notFound: false, followUps: [], provider: "openai",
+          citations: [{ sourceId: "S1", title: "КП", locator: "Лист КП", excerpt: "Старое начало", sourceUrl: null, sourceKind: "pgs" }]
+        }
+      }]);
+
+      const response = await POST(request({ question: "Какая ставка НДС?" }), { params: { projectId: "project-1" } });
+      const payload = await response.json();
+      expect(payload.result.cached).toBe(true);
+      expect(payload.result.citations[0].excerpt).toContain("НДС не облагается");
+      expect(payload.result.citations[0].excerpt).not.toContain("Старое начало");
+      expect(mocks.answer).toHaveBeenCalledTimes(1);
+    } finally {
+      if (previousKey === undefined) delete process.env.OPENAI_API_KEY;
+      else process.env.OPENAI_API_KEY = previousKey;
       if (previousMode === undefined) delete process.env.OPENAI_CONNECTOR_MODE;
       else process.env.OPENAI_CONNECTOR_MODE = previousMode;
     }
