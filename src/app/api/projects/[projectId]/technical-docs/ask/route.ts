@@ -10,6 +10,7 @@ import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { projectKnowledgeFingerprint, searchProjectKnowledge } from "@/lib/technical-documentation/index";
 import { answerTechnicalQuestion, TechnicalQuestionProviderError } from "@/lib/technical-documentation/qa";
+import { knowledgeExcerpt } from "@/lib/technical-documentation/search";
 
 export const runtime = "nodejs";
 
@@ -79,7 +80,7 @@ export async function POST(request: NextRequest, { params }: { params: { project
     sourceId: `S${index + 1}`,
     title: match.title,
     locator: match.locator,
-    excerpt: match.text.slice(0, 360),
+    excerpt: knowledgeExcerpt(match.text, parsed.data.question),
     sourceUrl: match.sourceUrl,
     sourceKind: match.sourceKind
   }));

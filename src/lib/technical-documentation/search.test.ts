@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { chunkKnowledgeSections, knowledgeTerms, scoreKnowledgeChunk } from "./search";
+import { chunkKnowledgeSections, knowledgeExcerpt, knowledgeTerms, scoreKnowledgeChunk } from "./search";
 
 describe("technical documentation lexical search", () => {
   it("normalizes Russian terms and adds a stable prefix for word forms", () => {
@@ -27,5 +27,13 @@ describe("technical documentation lexical search", () => {
     const unrelated = scoreKnowledgeChunk({ questionTerms, chunkTerms: knowledgeTerms("Арматура класса А500С"), title: "КЖ" });
     expect(relevant).toBeGreaterThan(unrelated);
     expect(unrelated).toBe(0);
+  });
+
+  it("shows the relevant part of a long source instead of its opening", () => {
+    const text = `${"Строка без налоговых условий. ".repeat(30)} Строка 121: НДС не облагается. Строка 122: ВСЕГО без НДС 15 274 035,05 ₽.`;
+    const excerpt = knowledgeExcerpt(text, "Какая сумма договора и ставка НДС?", 220);
+    expect(excerpt).toContain("НДС не облагается");
+    expect(excerpt).toContain("15 274 035,05");
+    expect(excerpt.startsWith("…")).toBe(true);
   });
 });
