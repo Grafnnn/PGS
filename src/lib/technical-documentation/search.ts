@@ -81,3 +81,42 @@ export function scoreKnowledgeChunk(input: {
     return score + (chunk.has(term) ? exactWeight : 0) + (title.has(term) ? exactWeight * 1.5 : 0);
   }, 0);
 }
+
+export function knowledgeExcerpt(text: string, question: string, maxChars = 360) {
+  const clean = text.replace(/\s+/g, " ").trim();
+  if (clean.length <= maxChars) return clean;
+  const normalized = clean.toLocaleLowerCase("ru-RU").normalize("NFKC").replace(/ё/g, "е");
+  const terms = Array.from(new Set(knowledgeTerms(question).map((term) => term.replace(/^~/, ""))))
+    .filter((term) => term.length >= 2 && normalized.includes(term));
+  if (!terms.length) return `${clean.slice(0, maxChars - 1).trimEnd()}…`;
+
+  let bestIndex = normalized.indexOf(terms[0]);
+  let bestScore = -1;
+  for (const term of terms) {
+    let index = normalized.indexOf(term);
+    let attempts = 0;
+    while (index >= 0 && attempts < 20) {
+      const start = Math.max(0, index - Math.floor(maxChars / 2));
+      const window = normalized.slice(start, start + maxChars);
+      const coverage = terms.reduce((score, candidate) => score + (window.includes(candidate) ? Math.min(candidate.length, 10) : 0), 0);
+      if (coverage > bestScore) {
+        bestScore = coverage;
+        bestIndex = index;
+      }
+      index = normalized.indexOf(term, index + term.length);
+      attempts += 1;
+    }
+  }
+
+  let start = Math.max(0, bestIndex - Math.floor(maxChars / 2));
+  let end = Math.min(clean.length, start + maxChars);
+  if (start > 0) {
+    const boundary = clean.indexOf(" ", start);
+    if (boundary > start && boundary - start < 40) start = boundary + 1;
+  }
+  if (end < clean.length) {
+    const boundary = clean.lastIndexOf(" ", end);
+    if (boundary > start) end = boundary;
+  }
+  return `${start > 0 ? "…" : ""}${clean.slice(start, end).trim()}${end < clean.length ? "…" : ""}`;
+}
