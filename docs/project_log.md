@@ -1,5 +1,38 @@
 # PGS Project Log
 
+## 2026-09-06 - Technical Documentation Assistant v1 online/core GO
+
+Status: PR #219 shipped `Ресурсы -> Техпомощник`, a project-scoped assistant that answers technical questions only from indexed project documentation. Follow-up PRs #220-#223 tightened tax grounding, source excerpts and cached citation refresh without adding automatic provider calls.
+
+- Online URL: https://pgs-frankfurt.onrender.com
+- Online commit: `46296359b2d4f15fb91056cb5406abe40014c120`
+- Feature app commit: `5610ccf112851350f388ec83d9789c744e121016`
+- Feature PR: #219
+- Grounding and citation PRs: #220, #221, #222, #223
+- Decision: ONLINE/CORE GO for PGS documents; Google Drive production configuration remains pending
+- Git SHA source: `RENDER_GIT_COMMIT`
+
+Online verification:
+
+- `/api/health`: HTTP 200 / `ok`; DB: `ok`; migrations: `ok`, count `38`; auth required; AI configured;
+- the authenticated Troitsk workspace exposed `Ресурсы -> Техпомощник` on desktop and mobile without horizontal overflow;
+- the project knowledge index found 7 PGS sources: one workbook was ready with 192 searchable fragments, while scans without a text layer and one unreadable workbook were reported explicitly rather than treated as evidence;
+- a controlled explicit-click question about contract amount and VAT returned a source-grounded answer with exact workbook, sheet and row citations;
+- the cited excerpt showed `КП-250826` rows 120-122, including the total and `НДС не облагается`; the source workbook was independently checked against those rows;
+- after PR #223, the repeated answer was served from cache while its citation excerpt was rebuilt from the current ranked source fragment, with no additional provider call;
+- unauthenticated auth, technical-document read/configuration, indexing and question routes returned 401/403 before project data or provider access.
+
+Implementation and safety:
+
+- supported text extraction covers PDF, DOCX, XLS/XLSX, CSV and TXT; image-only scans require OCR before they can become evidence;
+- retrieval uses a project-scoped PostgreSQL lexical index and sends only the top six short fragments to `gpt-4o-mini` after an explicit user click; no vector database or embedding bill was added;
+- exact source locators, honest no-evidence responses, cache reuse, rate limits, access checks and prompt-injection boundaries are enforced;
+- Google Drive read-only support is implemented, but its API key or service-account connector is not configured on Render and Google Drive online GO is not claimed;
+- GitHub Actions CI #449, #451, #453, #455 and #457 passed; the feature suite reached 962 passing tests, and the final cache regression passed 8/8 focused tests with TypeScript and ESLint green;
+- no project source file, Render environment/secret, auth/session model, manual deploy or unrelated database data was changed during verification; no credential value was printed or committed.
+
+Remaining optional follow-up: configure the read-only Google Drive connector, share one project folder with the service account and run a folder synchronization smoke. OCR for image-only scans is a separate product extension.
+
 ## 2026-09-05 - AI Project Lifecycle Copilot v1 online/live AI GO
 
 Status: PR #217 shipped a unified, explicit-click AI Copilot across the project lifecycle. PGS calculations and stored project facts remain authoritative; AI explains deviations, ranks evidence and prepares drafts or proposed actions that require separate confirmation.
