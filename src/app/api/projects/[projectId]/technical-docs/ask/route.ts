@@ -14,7 +14,7 @@ import { answerTechnicalQuestion, TechnicalQuestionProviderError } from "@/lib/t
 export const runtime = "nodejs";
 
 const SCENARIO = "technical-documentation-qa-v1";
-const PROMPT_VERSION = "technical-documentation-qa-v1";
+const PROMPT_VERSION = "technical-documentation-qa-v2";
 const requestSchema = z.object({ question: z.string().trim().min(3).max(1_000) });
 
 function asRecord(value: Prisma.JsonValue | null) {
@@ -23,7 +23,7 @@ function asRecord(value: Prisma.JsonValue | null) {
 
 function answerCacheKey(question: string, fingerprint: string) {
   const normalized = question.toLocaleLowerCase("ru-RU").replace(/\s+/g, " ").trim();
-  return crypto.createHash("sha256").update(`${fingerprint}:${normalized}`).digest("hex");
+  return crypto.createHash("sha256").update(`${PROMPT_VERSION}:${fingerprint}:${normalized}`).digest("hex");
 }
 
 export async function POST(request: NextRequest, { params }: { params: { projectId: string } }) {
