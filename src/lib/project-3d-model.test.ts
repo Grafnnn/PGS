@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { getProject3dModel, project3dModelViewerUrl } from "@/lib/project-3d-model";
 
 describe("project 3D model registry", () => {
-  it("resolves the published R03 model for the production Troitsk project", () => {
-    expect(getProject3dModel({ id: "cmteg9g33000for4oc06rko5a" })).toMatchObject({ revision: "R03", slug: "troitsk-building-24-r03" });
+  it("resolves the published R04 model for the production Troitsk project", () => {
+    expect(getProject3dModel({ id: "cmteg9g33000for4oc06rko5a" })).toMatchObject({ revision: "R04", slug: "troitsk-building-24-r04" });
   });
 
   it("recognizes a recreated Troitsk building project but not unrelated projects", () => {

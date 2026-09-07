@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { AlertTriangle, BadgeCheck, BarChart3, BookOpenCheck, Bot, ClipboardList, DatabaseZap, FileText, HardHat, Landmark, Package, Pencil, Plus, ReceiptText, Search, Send, Settings2, Table2, TimerReset, Trash2, Truck, Users } from "lucide-react";
+import { AlertTriangle, BadgeCheck, BarChart3, BookOpenCheck, Bot, Box, ClipboardList, DatabaseZap, FileText, HardHat, Landmark, Package, Pencil, Plus, ReceiptText, Search, Send, Settings2, Table2, TimerReset, Trash2, Truck, Users } from "lucide-react";
 import { AcceptanceBillingWorkspace } from "@/components/acceptance-billing-workspace";
 import { AiControlAgentWorkspace } from "@/components/ai-control-agent-workspace";
 import { AiLifecycleCopilot } from "@/components/ai-lifecycle-copilot";
@@ -23,6 +23,7 @@ import { HseSafetyPermitWorkspace } from "@/components/hse-safety-permit-workspa
 import { InvoiceReconciliationWorkspace } from "@/components/invoice-reconciliation-workspace";
 import { MaterialSupplyWorkspace } from "@/components/material-supply-workspace";
 import { ProjectCommandCenter } from "@/components/project-command-center";
+import { openProjectModelViewer } from "@/components/project-model-viewer";
 import { ProjectContractSettings } from "@/components/project-contract-settings";
 import { ProjectActionCenter, type ProjectActionSuggestion } from "@/components/project-action-center";
 import { ProjectControlsWorkspace } from "@/components/project-controls-workspace";
@@ -53,6 +54,7 @@ import type { AiInsightResponse, AiScenario } from "@/lib/project-intelligence-d
 import { buildInitialProjectReadiness } from "@/lib/project-onboarding-intelligence";
 import type { DocumentChecklistItem, PipelineAction, PipelineReadiness } from "@/lib/project-pipeline";
 import { buildExpenseAwareForecast, type ProjectExpenseSummary } from "@/lib/project-expenses";
+import { getProject3dModel } from "@/lib/project-3d-model";
 import type { AuditEvent, BudgetItem, DailyReport, Material, Payment, ProcurementRequest, Project, ProjectDocument, ProjectDocumentVersion, ProjectMember, Risk, ScheduleItem } from "@/lib/types";
 
 type Bundle = {
@@ -255,6 +257,7 @@ export function ProjectWorkspace({
     !risks.length;
   const onboardingPlan = useMemo(() => buildInitialProjectReadiness(initialBundle.project), [initialBundle.project]);
   const showOnboardingPanel = createdFromOnboarding || emptyOperationalBaseline;
+  const project3dModel = getProject3dModel(initialBundle.project);
   const actionSuggestions = useMemo<ProjectActionSuggestion[]>(() => {
     const targetByCategory: Record<PipelineAction["category"], string> = {
       budget: "Бюджет / ВОР",
@@ -898,6 +901,16 @@ export function ProjectWorkspace({
           </div>
         </div>
         {activeTab === "Обзор" && <div className="page-header-actions">
+          {project3dModel ? <button
+            aria-label="Открыть 3D-модель проекта"
+            className="button secondary"
+            title="Открыть 3D-модель проекта"
+            type="button"
+            onClick={() => openProjectModelViewer(initialBundle.project.id)}
+          >
+            <Box size={18} />
+            3D-модель
+          </button> : null}
           <button aria-label="Импортировать ВОР" className="button secondary" title="Импортировать ВОР" type="button" onClick={() => navigateProjectTab("Бюджет / ВОР")}>
             <Table2 size={18} />
             Импорт ВОР

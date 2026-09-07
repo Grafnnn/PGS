@@ -17,13 +17,13 @@ type ProjectIdentity = {
 };
 
 const troitskBuilding24Model: Project3dModel = {
-  slug: "troitsk-building-24-r03",
+  slug: "troitsk-building-24-r04",
   title: "3D-модель здания 24",
-  subtitle: "Кровля, венткамера и лестница Л-1",
-  revision: "R03",
+  subtitle: "Лестница Л-1, узлы крепления, отметки и кровля",
+  revision: "R04",
   updatedAt: "07.09.2026",
   disclaimer: "Координационная модель по проектным чертежам, не исполнительная съемка.",
-  assetPath: "src/assets/project-models/troitsk-b24-r03.html"
+  assetPath: "src/assets/project-models/troitsk-b24-r04.html"
 };
 
 const TROITSK_PROJECT_ID = "cmteg9g33000for4oc06rko5a";

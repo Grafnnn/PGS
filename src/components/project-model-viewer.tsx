@@ -1,7 +1,7 @@
 "use client";
 
 import { Box, ExternalLink, Maximize2, X } from "lucide-react";
-import React, { useEffect, useId, useRef, useState } from "react";
+import React, { useCallback, useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { getProject3dModel, project3dModelViewerUrl } from "@/lib/project-3d-model";
 import type { Project } from "@/lib/types";
@@ -10,6 +10,12 @@ type ProjectModelViewerProps = {
   project: Partial<Project>;
 };
 
+const PROJECT_MODEL_OPEN_EVENT = "pgs:project-model-open";
+
+export function openProjectModelViewer(projectId: string) {
+  window.dispatchEvent(new CustomEvent(PROJECT_MODEL_OPEN_EVENT, { detail: { projectId } }));
+}
+
 export function ProjectModelViewer({ project }: ProjectModelViewerProps) {
   const model = getProject3dModel(project);
   const [open, setOpen] = useState(false);
@@ -17,6 +23,21 @@ export function ProjectModelViewer({ project }: ProjectModelViewerProps) {
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
   const titleId = useId();
+  const openViewer = useCallback(() => {
+    previousFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    setLoaded(false);
+    setOpen(true);
+  }, []);
+
+  useEffect(() => {
+    const openFromShortcut = (event: Event) => {
+      const requestedProjectId = (event as CustomEvent<{ projectId?: string }>).detail?.projectId;
+      if (requestedProjectId !== project.id) return;
+      openViewer();
+    };
+    window.addEventListener(PROJECT_MODEL_OPEN_EVENT, openFromShortcut);
+    return () => window.removeEventListener(PROJECT_MODEL_OPEN_EVENT, openFromShortcut);
+  }, [openViewer, project.id]);
 
   useEffect(() => {
     if (!open) return;
@@ -40,11 +61,6 @@ export function ProjectModelViewer({ project }: ProjectModelViewerProps) {
   if (!model || !project.id) return null;
 
   const viewerUrl = project3dModelViewerUrl(project.id);
-  const openViewer = () => {
-    previousFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    setLoaded(false);
-    setOpen(true);
-  };
 
   return (
     <>
