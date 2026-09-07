@@ -86,7 +86,7 @@ export function ProjectModelViewer({ project }: ProjectModelViewerProps) {
 
   if (!model || !project.id) return null;
 
-  const viewerUrl = project3dModelViewerUrl(project.id);
+  const viewerUrl = project3dModelViewerUrl(project.id, model.revision);
 
   return open && typeof document !== "undefined" ? createPortal(
         <div className="project-model-overlay">

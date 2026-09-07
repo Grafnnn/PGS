@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { getProject3dModel, project3dModelViewerUrl } from "@/lib/project-3d-model";
 
 describe("project 3D model registry", () => {
-  it("resolves the published R04 model for the production Troitsk project", () => {
-    expect(getProject3dModel({ id: "cmteg9g33000for4oc06rko5a" })).toMatchObject({ revision: "R04", slug: "troitsk-building-24-r04" });
+  it("resolves the published R06 model for the production Troitsk project", () => {
+    expect(getProject3dModel({ id: "cmteg9g33000for4oc06rko5a" })).toMatchObject({ revision: "R06", slug: "troitsk-building-24-r06", assetPath: "src/assets/project-models/troitsk-b24-r06.html.gz" });
   });
 
   it("recognizes a recreated Troitsk building project but not unrelated projects", () => {
@@ -13,5 +13,10 @@ describe("project 3D model registry", () => {
 
   it("encodes project identifiers in the protected viewer URL", () => {
     expect(project3dModelViewerUrl("project / 24")).toBe("/api/projects/project%20%2F%2024/model-viewer");
+  });
+
+  it("invalidates a previously cached model when its revision changes", () => {
+    expect(project3dModelViewerUrl("project-24", "R06")).toBe("/api/projects/project-24/model-viewer?v=R06");
+    expect(project3dModelViewerUrl("project-24", "R06 / test")).toContain("?v=R06%20%2F%20test");
   });
 });
