@@ -132,6 +132,43 @@ describe("procurement request workflow", () => {
     expect(mocks.requestUpdate).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ status: "partially_received" }) }));
   });
 
+  it("does not treat an explicitly empty receipt selection as receiving all remaining stock", async () => {
+    mocks.requestFindFirst.mockResolvedValue(requestRecord("expected"));
+    mocks.findFirstOrThrow.mockResolvedValue(requestRecord("expected"));
+    mocks.materialFindFirst.mockResolvedValue(materialRecord(0, 100));
+    mocks.materialUpdate.mockResolvedValue(materialRecord(100, 100));
+    mocks.itemFindMany.mockResolvedValue(requestRecord("received", 100).items);
+    mocks.requestUpdate.mockResolvedValue(requestRecord("received", 100));
+
+    // This is the payload sent by the receiving form when every quantity is zero.
+    const response = (await POST(post({ action: "receive", items: [] }), context))!;
+
+    expect(response.status).toBe(400);
+    expect(mocks.itemUpdate).not.toHaveBeenCalled();
+    expect(mocks.materialUpdate).not.toHaveBeenCalled();
+    expect(mocks.requestUpdate).not.toHaveBeenCalled();
+    expect(mocks.audit).not.toHaveBeenCalled();
+  });
+
+  it("receives only selected lines and leaves omitted lines untouched", async () => {
+    const original = requestRecord("expected");
+    const request = { ...original, items: [...original.items, { ...original.items[0], id: "line-2" }] };
+    mocks.requestFindFirst.mockResolvedValue(request);
+    mocks.findFirstOrThrow.mockResolvedValue(request);
+    mocks.materialFindFirst.mockResolvedValue(materialRecord(0, 200));
+    mocks.materialUpdate.mockResolvedValue(materialRecord(40, 200));
+    const items = request.items.map((line) => ({ ...line, receivedQty: new Prisma.Decimal(line.id === "line-1" ? 40 : 0) }));
+    mocks.itemFindMany.mockResolvedValue(items);
+    mocks.requestUpdate.mockResolvedValue({ ...request, status: "partially_received", items });
+
+    const response = (await POST(post({ action: "receive", items: [{ itemId: "line-1", qty: 40 }] }), context))!;
+
+    expect(response.status).toBe(200);
+    expect(mocks.itemUpdate).toHaveBeenCalledOnce();
+    expect(mocks.itemUpdate.mock.calls[0][0].where).toEqual({ id: "line-1" });
+    expect(mocks.materialUpdate.mock.calls[0][0].data.deliveredQty.toNumber()).toBe(40);
+  });
+
   it("rolls back receipt before changing quantities when a linked material is stale", async () => {
     mocks.requestFindFirst.mockResolvedValue(requestRecord("expected"));
     mocks.findFirstOrThrow.mockResolvedValue(requestRecord("expected"));

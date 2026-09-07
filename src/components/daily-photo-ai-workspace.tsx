@@ -2,7 +2,7 @@
 
 import { Bot, CalendarDays, Camera, Check, Images, Sparkles } from "lucide-react";
 import Image from "next/image";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { dailyReportWorkScopeLabel } from "@/lib/daily-report-work-scopes";
 import type { PhotoQuestionResult } from "@/lib/photo-question";
 import type { DailyReport } from "@/lib/types";
@@ -52,9 +52,18 @@ export function DailyPhotoAiWorkspace({ projectId, reports, currentUser, current
   const [answer, setAnswer] = useState<PhotoQuestionResult | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const analysisVersion = useRef(0);
 
   const selectedReport = photoReports.find((item) => item.report.id === selectedReportId) ?? photoReports[0] ?? null;
   const canAsk = currentUser?.authenticated && ["OWNER", "ADMIN", "MANAGER"].includes(currentUser.role ?? "");
+
+  useEffect(() => {
+    analysisVersion.current += 1;
+    setAnswer(null);
+    setError("");
+    setBusy(false);
+    return () => { analysisVersion.current += 1; };
+  }, [projectId, selectedReport?.report.id]);
 
   useEffect(() => {
     if (!selectedReport) {
@@ -70,12 +79,18 @@ export function DailyPhotoAiWorkspace({ projectId, reports, currentUser, current
     });
   }, [selectedReport, selectedReportId]);
 
+  function resetAnalysis() {
+    analysisVersion.current += 1;
+    setAnswer(null);
+    setError("");
+    setBusy(false);
+  }
+
   function chooseReport(reportId: string) {
     const next = photoReports.find((item) => item.report.id === reportId) ?? null;
     setSelectedReportId(reportId);
     setSelectedPhotoIds(next?.photos.slice(0, 4).map((item) => item.id) ?? []);
-    setAnswer(null);
-    setError("");
+    resetAnalysis();
   }
 
   function togglePhoto(documentId: string) {
@@ -83,12 +98,12 @@ export function DailyPhotoAiWorkspace({ projectId, reports, currentUser, current
       if (current.includes(documentId)) return current.filter((id) => id !== documentId);
       return current.length < 4 ? [...current, documentId] : current;
     });
-    setAnswer(null);
-    setError("");
+    resetAnalysis();
   }
 
   async function askAboutPhotos() {
     if (!canAsk || !selectedReport || !selectedPhotoIds.length || question.trim().length < 3) return;
+    const version = ++analysisVersion.current;
     setBusy(true);
     setError("");
     setAnswer(null);
@@ -100,11 +115,11 @@ export function DailyPhotoAiWorkspace({ projectId, reports, currentUser, current
       });
       if (!response.ok) throw new Error(await responseError(response));
       const body = (await response.json()) as { result: PhotoQuestionResult };
-      setAnswer(body.result);
+      if (version === analysisVersion.current) setAnswer(body.result);
     } catch (analysisError) {
-      setError(analysisError instanceof Error ? analysisError.message : "Не удалось проанализировать фотографии.");
+      if (version === analysisVersion.current) setError(analysisError instanceof Error ? analysisError.message : "Не удалось проанализировать фотографии.");
     } finally {
-      setBusy(false);
+      if (version === analysisVersion.current) setBusy(false);
     }
   }
 
@@ -166,12 +181,12 @@ export function DailyPhotoAiWorkspace({ projectId, reports, currentUser, current
             <div className="daily-photo-ai-prompts">
               <span><Sparkles size={15} /> Быстрый вопрос</span>
               <div>
-                {quickQuestions.map((item) => <button key={item} type="button" onClick={() => { setQuestion(item); setAnswer(null); }}>{item}</button>)}
+                {quickQuestions.map((item) => <button key={item} type="button" onClick={() => { setQuestion(item); resetAnalysis(); }}>{item}</button>)}
               </div>
             </div>
             <label>
               <span>Ваш вопрос</span>
-              <textarea maxLength={2000} placeholder="Например: видны ли дефекты примыкания и что проверить на месте?" rows={5} value={question} onChange={(event) => { setQuestion(event.target.value); setAnswer(null); }} />
+              <textarea maxLength={2000} placeholder="Например: видны ли дефекты примыкания и что проверить на месте?" rows={5} value={question} onChange={(event) => { setQuestion(event.target.value); resetAnalysis(); }} />
             </label>
             <button className="button primary daily-photo-ai-submit" disabled={!canAsk || !selectedPhotoIds.length || question.trim().length < 3 || busy} type="button" onClick={() => void askAboutPhotos()}>
               <Bot size={17} /> {busy ? "Анализирую фото..." : "Спросить AI"}

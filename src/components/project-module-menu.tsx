@@ -68,6 +68,10 @@ export const projectTabs = [
 
 export type ProjectTab = (typeof projectTabs)[number];
 
+export function resolveProjectTab(tab?: string | null): ProjectTab {
+  return projectTabs.includes(tab as ProjectTab) ? tab as ProjectTab : projectTabs[0];
+}
+
 export type ProjectTabGroup = {
   id: "control" | "production" | "resources" | "economy" | "documents" | "acceptance" | "system";
   label: string;

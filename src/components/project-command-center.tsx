@@ -31,7 +31,6 @@ type ProjectCommandCenterProps = {
   aiInsight?: CommandCenterAiInsight | null;
   aiLoading?: boolean;
   onNavigate: (tab: string) => void;
-  onDrilldown?: (sectionId: string) => void;
   onRunAiSummary: () => void;
 };
 
@@ -74,37 +73,18 @@ function tabForRecommendedApp(app: string) {
   return app;
 }
 
-function drilldownForTab(tab: string) {
-  if (tab === "Документы") return "documents";
-  if (tab === "Риски") return "risks";
-  if (tab === "График") return "schedule";
-  if (tab === "КС") return "acceptance-billing";
-  if (tab === "Договор / Тендер") return "contract-tender";
-  if (tab === "КП / Подача") return "proposal-submission";
-  if (tab === "Бюджет / ВОР" || tab === "Финансы") return "finance-vor";
-  if (tab === "Исполнение") return "execution-control";
-  if (tab === "Рапорты") return "field-operations";
-  if (tab === "Материалы" || tab === "Заявки") return "procurement";
-  if (tab === "AI-помощник" || tab === "Аналитика") return "ai-recommendations";
-  return null;
-}
-
-function drilldownForKpi(key: string) {
-  if (key === "baseline") return "baseline";
-  if (key === "budget" || key === "cash" || key === "costToComplete" || key === "changeOrders") return "finance-vor";
-  if (key === "notices") return "contract-tender";
-  if (key === "schedule") return "schedule";
-  if (key === "acceptance") return "acceptance-billing";
-  if (key === "contract") return "contract-tender";
-  if (key === "proposal") return "proposal-submission";
-  if (key === "execution") return "execution-control";
-  if (key === "fieldOps") return "field-operations";
-  if (key === "evidence") return "photo-evidence";
-  if (key === "quality") return "quality-issues";
-  if (key === "risks") return "risks";
-  if (key === "materials") return "procurement";
-  if (key === "readiness") return "documents";
-  return null;
+function tabForKpi(key: string) {
+  if (key === "cash" || key === "costToComplete") return "Финансы";
+  if (key === "schedule") return "График";
+  if (key === "acceptance") return "КС";
+  if (key === "contract" || key === "notices" || key === "changeOrders") return "Договор / Тендер";
+  if (key === "proposal") return "КП / Подача";
+  if (key === "execution") return "Исполнение";
+  if (key === "fieldOps" || key === "evidence") return "Рапорты";
+  if (key === "quality" || key === "risks") return "Риски";
+  if (key === "materials") return "Материалы";
+  if (key === "baseline" || key === "readiness") return "Аналитика";
+  return "Бюджет / ВОР";
 }
 
 export function ProjectCommandCenter({
@@ -124,7 +104,6 @@ export function ProjectCommandCenter({
   aiInsight,
   aiLoading = false,
   onNavigate,
-  onDrilldown,
   onRunAiSummary
 }: ProjectCommandCenterProps) {
   const model = buildProjectCommandCenterModel({
@@ -147,16 +126,7 @@ export function ProjectCommandCenter({
   const secondaryKpis = model.kpis.filter((kpi) => !featuredKpiKeys.has(kpi.key));
   const featuredProgress = model.progress.filter((item) => featuredProgressKeys.has(item.key));
   const secondaryProgress = model.progress.filter((item) => !featuredProgressKeys.has(item.key));
-  const openTabOrDrilldown = (tab: string) => {
-    const section = drilldownForTab(tab);
-    if (section && onDrilldown) onDrilldown(section);
-    else onNavigate(tab);
-  };
-  const openKpi = (key: string) => {
-    const section = drilldownForKpi(key);
-    if (section && onDrilldown) onDrilldown(section);
-    else onNavigate(key === "cash" ? "Финансы" : key === "schedule" ? "График" : key === "acceptance" ? "КС" : key === "contract" ? "Договор / Тендер" : key === "proposal" ? "КП / Подача" : key === "execution" ? "Исполнение" : key === "materials" ? "Материалы" : key === "risks" || key === "quality" ? "Риски" : key === "baseline" ? "Обзор" : key === "readiness" ? "Аналитика" : "Бюджет / ВОР");
-  };
+  const openKpi = (key: string) => onNavigate(tabForKpi(key));
 
   return (
     <section className="command-center" aria-label="Project command center">
@@ -234,7 +204,7 @@ export function ProjectCommandCenter({
           </div>
           <div className="command-apps">
             {model.aiSummary.recommendedApps.slice(0, 6).map((app) => (
-              <button className="app-chip" key={app} type="button" onClick={() => openTabOrDrilldown(tabForRecommendedApp(app))}>
+              <button className="app-chip" key={app} type="button" onClick={() => onNavigate(tabForRecommendedApp(app))}>
                 {app}
               </button>
             ))}
@@ -244,7 +214,7 @@ export function ProjectCommandCenter({
               <Bot size={18} />
               {aiLoading ? "Готовлю сводку..." : model.aiSummary.empty ? "Сформировать AI-сводку" : "Обновить AI-сводку"}
             </button>
-            <button className="button secondary" type="button" onClick={() => openTabOrDrilldown("AI-помощник")}>
+            <button className="button secondary" type="button" onClick={() => onNavigate("AI-помощник")}>
               Открыть сценарии
             </button>
           </div>
@@ -296,7 +266,7 @@ export function ProjectCommandCenter({
           <summary>Статус по модулям <span>{model.statusBoard.length}</span></summary>
           <div className="status-board-grid">
             {model.statusBoard.map((item) => (
-              <button className="status-board-item" key={item.key} type="button" onClick={() => openTabOrDrilldown(item.tab)}>
+              <button className="status-board-item" key={item.key} type="button" onClick={() => onNavigate(item.tab)}>
                 <span className={`status-dot tone-${item.tone}`} />
                 <span>
                   <small>{item.label}</small>
@@ -312,7 +282,7 @@ export function ProjectCommandCenter({
           <summary>Центр действий <span>{model.nextActions.length}</span></summary>
           <div className="action-center-list">
             {model.nextActions.map((action, index) => (
-              <button className={`action-center-item tone-${action.tone}`} key={action.key} type="button" onClick={() => openTabOrDrilldown(action.tab)}>
+              <button className={`action-center-item tone-${action.tone}`} key={action.key} type="button" onClick={() => onNavigate(action.tab)}>
                 <span>{index + 1}</span>
                 <strong>{action.title}</strong>
                 <small>{action.detail}</small>

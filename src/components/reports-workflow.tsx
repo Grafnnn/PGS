@@ -311,6 +311,7 @@ export function isProjectEvidenceCandidate(document: ProjectDocument) {
 function ReportEvidenceGallery({ documents, projectId }: { documents: ProjectDocument[]; projectId: string }) {
   const images = documents.filter((document) => (document.mimeType ?? "").startsWith("image/"));
   const otherDocuments = documents.filter((document) => !(document.mimeType ?? "").startsWith("image/"));
+  const linkedDocuments = [...images.slice(6), ...otherDocuments];
   return (
     <section className="daily-report-evidence" aria-label={`Фото и документы рапорта: ${documents.length}`}>
       <div className="daily-report-evidence-count"><Camera size={14} /> {images.length} фото{otherDocuments.length ? ` · ${otherDocuments.length} файлов` : ""}</div>
@@ -325,9 +326,9 @@ function ReportEvidenceGallery({ documents, projectId }: { documents: ProjectDoc
           ))}
         </div>
       ) : null}
-      {otherDocuments.length ? (
+      {linkedDocuments.length ? (
         <div className="daily-report-evidence-files">
-          {otherDocuments.map((document) => <a href={`/api/projects/${projectId}/documents/${document.id}/download`} key={document.id} rel="noreferrer" target="_blank"><FileDown size={13} />{document.title}</a>)}
+          {linkedDocuments.map((document) => <a href={`/api/projects/${projectId}/documents/${document.id}/download`} key={document.id} rel="noreferrer" target="_blank">{(document.mimeType ?? "").startsWith("image/") ? <Camera size={13} /> : <FileDown size={13} />}{document.title}</a>)}
         </div>
       ) : null}
     </section>
