@@ -7,6 +7,7 @@ import {
   BarChart3,
   BookOpenCheck,
   Bot,
+  Box,
   Boxes,
   Building2,
   CalendarRange,
@@ -164,6 +165,21 @@ const tabMeta: Record<ProjectTab, { icon: React.ReactNode; hint: string; label?:
   "AI-помощник": { icon: <Bot size={16} />, hint: "Контекстный анализ" }
 };
 
+const projectModelMenuMeta = {
+  label: "3D-модель",
+  hint: "Координационная модель проекта"
+} as const;
+
+type ProjectDomainMenuItem =
+  | { kind: "tab"; tab: ProjectTab }
+  | { kind: "project-model" };
+
+function domainMenuItems(group: Pick<ProjectTabGroup, "id" | "tabs">, includeProjectModel: boolean): ProjectDomainMenuItem[] {
+  const items: ProjectDomainMenuItem[] = group.tabs.map((tab) => ({ kind: "tab", tab }));
+  if (group.id === "control" && includeProjectModel) items.splice(1, 0, { kind: "project-model" });
+  return items;
+}
+
 export function projectTabLabel(tab: ProjectTab) {
   return tabMeta[tab].label ?? tab;
 }
@@ -193,10 +209,12 @@ function groupForTab(tab: ProjectTab) {
 export function ProjectModuleMenu({
   activeTab,
   defaultOpen = false,
+  onOpenProjectModel,
   onSelect
 }: {
   activeTab: ProjectTab;
   defaultOpen?: boolean | ProjectDomainId;
+  onOpenProjectModel?: () => void;
   onSelect: (tab: ProjectTab) => void;
 }) {
   const activeGroup = groupForTab(activeTab);
@@ -218,6 +236,7 @@ export function ProjectModuleMenu({
   const openDomainId = openNavigation?.kind === "domain" ? openNavigation.domainId : null;
   const openDomain = openDomainId ? projectDomainGroups.find((group) => group.id === openDomainId) ?? null : null;
   const openDomainIndex = openDomain ? projectDomainGroups.findIndex((group) => group.id === openDomain.id) : 0;
+  const openDomainItems = openDomain ? domainMenuItems(openDomain, Boolean(onOpenProjectModel)) : [];
 
   const closeNavigation = useCallback((restoreFocus = true) => {
     const trigger = lastTriggerRef.current;
@@ -316,18 +335,28 @@ export function ProjectModuleMenu({
 
   const visibleGroups = useMemo(() => {
     const normalized = query.trim().toLocaleLowerCase("ru-RU");
-    if (!normalized) return projectTabGroups;
     return projectTabGroups
-      .map((group) => ({
-        ...group,
-        tabs: group.tabs.filter((tab) => `${tab} ${projectTabLabel(tab)} ${tabMeta[tab].hint}`.toLocaleLowerCase("ru-RU").includes(normalized))
-      }))
-      .filter((group) => group.tabs.length);
-  }, [query]);
+      .map((group) => {
+        const tabs = normalized
+          ? group.tabs.filter((tab) => `${tab} ${projectTabLabel(tab)} ${tabMeta[tab].hint}`.toLocaleLowerCase("ru-RU").includes(normalized))
+          : group.tabs;
+        const projectModelMatches = Boolean(onOpenProjectModel)
+          && group.id === "control"
+          && (!normalized || `${projectModelMenuMeta.label} ${projectModelMenuMeta.hint}`.toLocaleLowerCase("ru-RU").includes(normalized));
+        return { ...group, tabs, projectModelMatches };
+      })
+      .filter((group) => group.tabs.length || group.projectModelMatches);
+  }, [onOpenProjectModel, query]);
 
   function selectTab(tab: ProjectTab) {
     onSelect(tab);
     closeNavigation();
+  }
+
+  function openProjectModel() {
+    if (!onOpenProjectModel) return;
+    closeNavigation(false);
+    onOpenProjectModel();
   }
 
   function openDomainMenu(domainId: ProjectDomainId, trigger: HTMLButtonElement, focusTarget: "first" | "last" | null = null) {
@@ -451,17 +480,14 @@ export function ProjectModuleMenu({
             <span><strong>{openDomain.label}</strong><small>{openDomain.description}</small></span>
           </header>
           <div className="project-domain-modules">
-            {openDomain.tabs.map((tab, index) => {
-              const active = tab === activeTab;
-              return (
+            {openDomainItems.map((item, index) => {
+              if (item.kind === "project-model") return (
                 <button
-                  aria-current={active ? "page" : undefined}
-                  className={active ? "active" : undefined}
-                  data-current={active ? "true" : "false"}
-                  data-project-module={tab}
-                  key={tab}
-                  onClick={() => selectTab(tab)}
-                  onKeyDown={(event) => handleDomainItemKeyDown(event, index, openDomain.tabs.length)}
+                  aria-label="Открыть 3D-модель проекта"
+                  data-project-model-action="true"
+                  key="project-model"
+                  onClick={openProjectModel}
+                  onKeyDown={(event) => handleDomainItemKeyDown(event, index, openDomainItems.length)}
                   ref={(element) => {
                     domainItemRefs.current[index] = element;
                   }}
@@ -469,8 +495,30 @@ export function ProjectModuleMenu({
                   tabIndex={-1}
                   type="button"
                 >
-                  <span aria-hidden="true">{tabMeta[tab].icon}</span>
-                  <span><strong>{projectTabLabel(tab)}</strong><small>{tabMeta[tab].hint}</small></span>
+                  <span aria-hidden="true"><Box size={16} /></span>
+                  <span><strong>{projectModelMenuMeta.label}</strong><small>{projectModelMenuMeta.hint}</small></span>
+                </button>
+              );
+
+              const active = item.tab === activeTab;
+              return (
+                <button
+                  aria-current={active ? "page" : undefined}
+                  className={active ? "active" : undefined}
+                  data-current={active ? "true" : "false"}
+                  data-project-module={item.tab}
+                  key={item.tab}
+                  onClick={() => selectTab(item.tab)}
+                  onKeyDown={(event) => handleDomainItemKeyDown(event, index, openDomainItems.length)}
+                  ref={(element) => {
+                    domainItemRefs.current[index] = element;
+                  }}
+                  role="menuitem"
+                  tabIndex={-1}
+                  type="button"
+                >
+                  <span aria-hidden="true">{tabMeta[item.tab].icon}</span>
+                  <span><strong>{projectTabLabel(item.tab)}</strong><small>{tabMeta[item.tab].hint}</small></span>
                   {active ? <Check size={15} aria-hidden="true" /> : null}
                 </button>
               );
@@ -524,12 +572,19 @@ export function ProjectModuleMenu({
                 <section className={`project-domain ${group.service ? "is-service" : ""} ${group.tabs.includes(activeTab) ? "is-active" : ""}`} key={group.id}>
                   <header><span className="project-domain-icon" aria-hidden="true">{group.icon}</span><span><strong>{group.label}</strong><small>{group.description}</small></span></header>
                   <div className="project-domain-modules">
-                    {group.tabs.map((tab) => {
-                      const active = tab === activeTab;
+                    {domainMenuItems(group, group.projectModelMatches).map((item) => {
+                      if (item.kind === "project-model") return (
+                        <button aria-label="Открыть 3D-модель проекта" data-project-model-action="true" key="project-model" onClick={openProjectModel} type="button">
+                          <span aria-hidden="true"><Box size={16} /></span>
+                          <span><strong>{projectModelMenuMeta.label}</strong><small>{projectModelMenuMeta.hint}</small></span>
+                        </button>
+                      );
+
+                      const active = item.tab === activeTab;
                       return (
-                        <button aria-current={active ? "page" : undefined} className={active ? "active" : undefined} key={tab} onClick={() => selectTab(tab)} type="button">
-                          <span aria-hidden="true">{tabMeta[tab].icon}</span>
-                          <span><strong>{projectTabLabel(tab)}</strong><small>{tabMeta[tab].hint}</small></span>
+                        <button aria-current={active ? "page" : undefined} className={active ? "active" : undefined} key={item.tab} onClick={() => selectTab(item.tab)} type="button">
+                          <span aria-hidden="true">{tabMeta[item.tab].icon}</span>
+                          <span><strong>{projectTabLabel(item.tab)}</strong><small>{tabMeta[item.tab].hint}</small></span>
                           {active ? <Check size={15} aria-hidden="true" /> : null}
                         </button>
                       );

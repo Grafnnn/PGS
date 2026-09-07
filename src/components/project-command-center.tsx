@@ -2,7 +2,7 @@
 
 import { AlertTriangle, Bot, CheckCircle2, ClipboardList, FileText, Landmark, Package, ReceiptText, Scale, Send, Sparkles, TimerReset, Users } from "lucide-react";
 import React, { type CSSProperties } from "react";
-import { ProjectModelViewer } from "@/components/project-model-viewer";
+import { ProjectModelLauncher } from "@/components/project-model-viewer";
 import { buildProjectCommandCenterModel, type CommandCenterAiInsight, type CommandTone } from "@/lib/project-command-center";
 import type { DocumentChecklistItem, PipelineAction, PipelineReadiness } from "@/lib/project-pipeline";
 import type { RiskExecutiveImportHistoryItem } from "@/lib/risk-executive-intelligence";
@@ -183,7 +183,7 @@ export function ProjectCommandCenter({
         </div>
       </div>
 
-      <ProjectModelViewer project={project} />
+      <ProjectModelLauncher project={project} />
 
       <div className="command-kpi-grid command-kpi-grid-primary">
         {featuredKpis.map((kpi) => (

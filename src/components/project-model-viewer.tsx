@@ -16,6 +16,32 @@ export function openProjectModelViewer(projectId: string) {
   window.dispatchEvent(new CustomEvent(PROJECT_MODEL_OPEN_EVENT, { detail: { projectId } }));
 }
 
+export function ProjectModelLauncher({ project }: ProjectModelViewerProps) {
+  const model = getProject3dModel(project);
+  const projectId = project.id;
+
+  if (!model || !projectId) return null;
+
+  return (
+    <section className="project-model-launcher" aria-label="3D-модель проекта">
+      <span className="project-model-launcher-icon" aria-hidden="true"><Box size={22} /></span>
+      <div className="project-model-launcher-copy">
+        <div className="project-model-launcher-heading">
+          <strong>{model.title}</strong>
+          <span className="badge blue">{model.revision}</span>
+          <span className="badge gray">только просмотр</span>
+        </div>
+        <span>{model.subtitle} · редакция от {model.updatedAt}</span>
+        <small>{model.disclaimer}</small>
+      </div>
+      <button className="button primary project-model-open" type="button" onClick={() => openProjectModelViewer(projectId)}>
+        <Maximize2 size={18} />
+        Открыть 3D-модель
+      </button>
+    </section>
+  );
+}
+
 export function ProjectModelViewer({ project }: ProjectModelViewerProps) {
   const model = getProject3dModel(project);
   const [open, setOpen] = useState(false);
@@ -62,26 +88,7 @@ export function ProjectModelViewer({ project }: ProjectModelViewerProps) {
 
   const viewerUrl = project3dModelViewerUrl(project.id);
 
-  return (
-    <>
-      <section className="project-model-launcher" aria-label="3D-модель проекта">
-        <span className="project-model-launcher-icon" aria-hidden="true"><Box size={22} /></span>
-        <div className="project-model-launcher-copy">
-          <div className="project-model-launcher-heading">
-            <strong>{model.title}</strong>
-            <span className="badge blue">{model.revision}</span>
-            <span className="badge gray">только просмотр</span>
-          </div>
-          <span>{model.subtitle} · редакция от {model.updatedAt}</span>
-          <small>{model.disclaimer}</small>
-        </div>
-        <button className="button primary project-model-open" type="button" onClick={openViewer}>
-          <Maximize2 size={18} />
-          Открыть 3D-модель
-        </button>
-      </section>
-
-      {open && typeof document !== "undefined" ? createPortal(
+  return open && typeof document !== "undefined" ? createPortal(
         <div className="project-model-overlay">
           <section aria-labelledby={titleId} aria-modal="true" className="project-model-dialog" role="dialog">
             <header className="project-model-dialog-header">
@@ -114,7 +121,5 @@ export function ProjectModelViewer({ project }: ProjectModelViewerProps) {
           </section>
         </div>,
         document.body
-      ) : null}
-    </>
-  );
+      ) : null;
 }
