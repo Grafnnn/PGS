@@ -79,6 +79,31 @@ describe("ProjectModuleMenu", () => {
     expect(html).not.toContain('data-project-all-modules="true"');
   });
 
+  it("adds the project 3D model to the control menu when the model is available", () => {
+    const domainHtml = renderToStaticMarkup(
+      createElement(ProjectModuleMenu, {
+        activeTab: "Обзор",
+        defaultOpen: "control",
+        onOpenProjectModel: () => undefined,
+        onSelect: () => undefined
+      })
+    );
+    const allModulesHtml = renderToStaticMarkup(
+      createElement(ProjectModuleMenu, {
+        activeTab: "Обзор",
+        defaultOpen: true,
+        onOpenProjectModel: () => undefined,
+        onSelect: () => undefined
+      })
+    );
+
+    expect(domainHtml).toContain('data-project-model-action="true"');
+    expect(domainHtml).toContain("3D-модель");
+    expect(domainHtml).toContain("Координационная модель проекта");
+    expect(domainHtml.match(/role="menuitem"/g)).toHaveLength(projectTabGroups[0].tabs.length + 1);
+    expect(allModulesHtml).toContain('data-project-model-action="true"');
+  });
+
   it("keeps the grouped menu exhaustive and free of duplicate sections", () => {
     const groupedTabs = projectTabGroups.flatMap((group) => group.tabs);
 

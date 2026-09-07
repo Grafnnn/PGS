@@ -23,7 +23,7 @@ import { HseSafetyPermitWorkspace } from "@/components/hse-safety-permit-workspa
 import { InvoiceReconciliationWorkspace } from "@/components/invoice-reconciliation-workspace";
 import { MaterialSupplyWorkspace } from "@/components/material-supply-workspace";
 import { ProjectCommandCenter } from "@/components/project-command-center";
-import { openProjectModelViewer } from "@/components/project-model-viewer";
+import { openProjectModelViewer, ProjectModelViewer } from "@/components/project-model-viewer";
 import { ProjectContractSettings } from "@/components/project-contract-settings";
 import { ProjectActionCenter, type ProjectActionSuggestion } from "@/components/project-action-center";
 import { ProjectControlsWorkspace } from "@/components/project-controls-workspace";
@@ -258,6 +258,10 @@ export function ProjectWorkspace({
   const onboardingPlan = useMemo(() => buildInitialProjectReadiness(initialBundle.project), [initialBundle.project]);
   const showOnboardingPanel = createdFromOnboarding || emptyOperationalBaseline;
   const project3dModel = getProject3dModel(initialBundle.project);
+  const project3dModelId = project3dModel ? initialBundle.project.id : null;
+  const openProject3dModel = useCallback(() => {
+    if (project3dModelId) openProjectModelViewer(project3dModelId);
+  }, [project3dModelId]);
   const actionSuggestions = useMemo<ProjectActionSuggestion[]>(() => {
     const targetByCategory: Record<PipelineAction["category"], string> = {
       budget: "Бюджет / ВОР",
@@ -906,7 +910,7 @@ export function ProjectWorkspace({
             className="button secondary"
             title="Открыть 3D-модель проекта"
             type="button"
-            onClick={() => openProjectModelViewer(initialBundle.project.id)}
+            onClick={openProject3dModel}
           >
             <Box size={18} />
             3D-модель
@@ -927,7 +931,12 @@ export function ProjectWorkspace({
       </div>
 
       <div className="workspace-layout workspace-layout-full project-workspace-layout">
-        <ProjectModuleMenu activeTab={activeProjectTab} onSelect={navigateProjectTab} />
+        <ProjectModuleMenu
+          activeTab={activeProjectTab}
+          onOpenProjectModel={project3dModel ? openProject3dModel : undefined}
+          onSelect={navigateProjectTab}
+        />
+        <ProjectModelViewer project={initialBundle.project} />
         <div className="project-workspace-content">
           {activeTab !== "Обзор" && (
             <ProjectSectionGuide
