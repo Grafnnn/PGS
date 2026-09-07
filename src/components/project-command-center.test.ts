@@ -69,4 +69,31 @@ describe("ProjectCommandCenter", () => {
     expect(html).not.toContain("DATABASE_URL");
     expect(html).not.toContain("OPENAI_API_KEY");
   });
+
+  it("publishes the Troitsk R03 model from the project command center", () => {
+    const bundle = getProjectBundle("project-demo");
+    const html = renderToStaticMarkup(
+      createElement(ProjectCommandCenter, {
+        project: { ...bundle.project, id: "cmteg9g33000for4oc06rko5a", name: "Троицк", object: "Здание 24" },
+        budgetItems: bundle.budgetItems,
+        scheduleItems: bundle.scheduleItems,
+        materials: bundle.materials,
+        procurementRequests: bundle.procurementRequests,
+        payments: bundle.payments,
+        dailyReports: bundle.dailyReports,
+        risks: bundle.risks,
+        readiness: null,
+        documentChecklist: [],
+        intelligence: null,
+        onNavigate: vi.fn(),
+        onRunAiSummary: vi.fn()
+      })
+    );
+
+    expect(html).toContain("3D-модель здания 24");
+    expect(html).toContain("Кровля, венткамера и лестница Л-1");
+    expect(html).toContain("R03");
+    expect(html).toContain("Открыть 3D-модель");
+    expect(html).not.toContain("<iframe");
+  });
 });

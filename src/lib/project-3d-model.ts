@@ -1,0 +1,50 @@
+export type Project3dModel = {
+  slug: string;
+  title: string;
+  subtitle: string;
+  revision: string;
+  updatedAt: string;
+  disclaimer: string;
+  assetPath: string;
+};
+
+type ProjectIdentity = {
+  id?: string | null;
+  name?: string | null;
+  code?: string | null;
+  object?: string | null;
+  address?: string | null;
+};
+
+const troitskBuilding24Model: Project3dModel = {
+  slug: "troitsk-building-24-r03",
+  title: "3D-модель здания 24",
+  subtitle: "Кровля, венткамера и лестница Л-1",
+  revision: "R03",
+  updatedAt: "07.09.2026",
+  disclaimer: "Координационная модель по проектным чертежам, не исполнительная съемка.",
+  assetPath: "src/assets/project-models/troitsk-b24-r03.html"
+};
+
+const TROITSK_PROJECT_ID = "cmteg9g33000for4oc06rko5a";
+
+function normalizeProjectIdentity(project: ProjectIdentity) {
+  return [project.name, project.code, project.object, project.address]
+    .filter(Boolean)
+    .join(" ")
+    .toLocaleLowerCase("ru-RU")
+    .replace(/ё/g, "е");
+}
+
+export function getProject3dModel(project: ProjectIdentity): Project3dModel | null {
+  if (project.id === TROITSK_PROJECT_ID) return troitskBuilding24Model;
+
+  const identity = normalizeProjectIdentity(project);
+  return identity.includes("троицк") && (identity.includes("здание 24") || identity.includes("кровл"))
+    ? troitskBuilding24Model
+    : null;
+}
+
+export function project3dModelViewerUrl(projectId: string) {
+  return `/api/projects/${encodeURIComponent(projectId)}/model-viewer`;
+}
