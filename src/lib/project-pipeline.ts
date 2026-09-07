@@ -196,15 +196,34 @@ type PipelineClient = Pick<Prisma.TransactionClient, "project">;
 export async function loadPipelineDataWithClient(client: PipelineClient, projectId: string): Promise<PipelineData | null> {
   const project = await client.project.findUnique({
     where: { id: projectId },
-    include: {
+    select: {
+      id: true,
+      organizationId: true,
+      contractAmount: true,
+      startsAt: true,
+      endsAt: true,
+      name: true,
       budgetItems: { orderBy: [{ section: "asc" }, { code: "asc" }] },
       materials: { orderBy: { neededAt: "asc" } },
       scheduleItems: { where: { isCurrent: true }, orderBy: { startsAt: "asc" } },
       procurementRequests: { include: { items: true }, orderBy: { neededAt: "asc" } },
       payments: { orderBy: { plannedAt: "asc" } },
       cashflowPeriods: { orderBy: { periodStart: "asc" } },
-      documents: { orderBy: { createdAt: "desc" } },
+      documents: {
+        select: { id: true, category: true, title: true, fileName: true },
+        orderBy: { createdAt: "desc" }
+      },
       importBatches: {
+        select: {
+          id: true,
+          fileName: true,
+          status: true,
+          mode: true,
+          committedAt: true,
+          createdAt: true,
+          previewJson: true,
+          summary: true
+        },
         where: { status: "committed" },
         orderBy: [{ committedAt: "desc" }, { createdAt: "desc" }],
         take: 10

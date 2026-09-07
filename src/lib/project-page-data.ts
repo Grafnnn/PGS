@@ -48,17 +48,18 @@ export async function loadProjectsForPage(
 
 export async function loadDashboardData({
   loadProjects = listProjectsFromDb,
-  loadBundle = getProjectBundleFromDb,
+  loadBundle,
   allowDemoFallback = demoFallbackAllowed
 }: {
   loadProjects?: () => Promise<ProjectListItem[]>;
+  // Dashboard summaries do not need the full bundle; load it only on explicit request.
   loadBundle?: (id: string) => Promise<ProjectBundle>;
   allowDemoFallback?: () => boolean;
 } = {}): Promise<{ projects: ProjectListItem[]; bundle: ProjectBundle; primaryProjectHref: string; source: ProjectPageDataSource }> {
   try {
     const projects = await loadProjects();
     const primaryProject = projects[0] ?? null;
-    const bundle = primaryProject ? await loadBundle(primaryProject.id) : null;
+    const bundle = primaryProject && loadBundle ? await loadBundle(primaryProject.id) : null;
     return {
       projects,
       bundle,
@@ -69,7 +70,7 @@ export async function loadDashboardData({
     if (!allowDemoFallback()) throw error;
     return {
       projects: demoProjectsWithProgress(),
-      bundle: getProjectBundle("project-demo"),
+      bundle: loadBundle ? getProjectBundle("project-demo") : null,
       primaryProjectHref: "/projects/project-demo",
       source: "demo-fallback"
     };

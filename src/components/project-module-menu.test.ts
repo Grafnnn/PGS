@@ -8,10 +8,18 @@ import {
   projectDomainGroups,
   projectTabLabel,
   projectTabGroups,
-  projectTabs
+  projectTabs,
+  resolveProjectTab
 } from "@/components/project-module-menu";
 
 describe("ProjectModuleMenu", () => {
+  it("restores overview for bare project URLs and invalid history entries", () => {
+    expect(resolveProjectTab(null)).toBe("Обзор");
+    expect(resolveProjectTab(undefined)).toBe("Обзор");
+    expect(resolveProjectTab("")).toBe("Обзор");
+    expect(resolveProjectTab("missing")).toBe("Обзор");
+    for (const tab of projectTabs) expect(resolveProjectTab(tab)).toBe(tab);
+  });
   it("shows every project section through six work domains and one service domain", () => {
     const html = renderToStaticMarkup(
       createElement(ProjectModuleMenu, {

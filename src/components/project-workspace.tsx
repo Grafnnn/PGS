@@ -1,52 +1,14 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { AlertTriangle, BadgeCheck, BarChart3, BookOpenCheck, Bot, Box, ClipboardList, DatabaseZap, FileText, HardHat, Landmark, Package, Pencil, Plus, ReceiptText, Search, Send, Settings2, Table2, TimerReset, Trash2, Truck, Users } from "lucide-react";
-import { AcceptanceBillingWorkspace } from "@/components/acceptance-billing-workspace";
-import { AiControlAgentWorkspace } from "@/components/ai-control-agent-workspace";
-import { AiLifecycleCopilot } from "@/components/ai-lifecycle-copilot";
-import { AiRunJournal } from "@/components/ai-run-journal";
-import { AccountingBridgeWorkspace } from "@/components/accounting-bridge-workspace";
-import { CommercialProposalWorkspace } from "@/components/commercial-proposal-workspace";
-import { ChangeOrderManagementWorkspace } from "@/components/change-order-management-workspace";
-import { ClaimsNoticesWorkspace } from "@/components/claims-notices-workspace";
-import { ContractCommitmentsWorkspace } from "@/components/contract-commitments-workspace";
-import { ContractTenderWorkspace } from "@/components/contract-tender-workspace";
-import { CostCodeWorkspace } from "@/components/cost-code-workspace";
-import { CostForecastByCodeWorkspace } from "@/components/cost-forecast-by-code-workspace";
-import { CostToCompleteWorkspace } from "@/components/cost-to-complete-workspace";
-import { ExternalCollaborationWorkspace } from "@/components/external-collaboration-workspace";
-import { ExpenseRegisterWorkspace } from "@/components/expense-register-workspace";
-import { FieldOperationsWorkspace } from "@/components/field-operations-workspace";
-import { FieldMobileWorkspace } from "@/components/field-mobile-workspace";
-import { HseSafetyPermitWorkspace } from "@/components/hse-safety-permit-workspace";
-import { InvoiceReconciliationWorkspace } from "@/components/invoice-reconciliation-workspace";
-import { MaterialSupplyWorkspace } from "@/components/material-supply-workspace";
 import { ProjectCommandCenter } from "@/components/project-command-center";
 import { openProjectModelViewer, ProjectModelViewer } from "@/components/project-model-viewer";
-import { ProjectContractSettings } from "@/components/project-contract-settings";
-import { ProjectActionCenter, type ProjectActionSuggestion } from "@/components/project-action-center";
-import { ProjectControlsWorkspace } from "@/components/project-controls-workspace";
-import { ProjectCloseoutOverview, ProjectCloseoutWorkspace } from "@/components/project-closeout-workspace";
-import { ProjectModuleMenu, projectTabs, type ProjectTab } from "@/components/project-module-menu";
+import type { ProjectActionSuggestion } from "@/components/project-action-center";
+import { ProjectModuleMenu, projectTabs, resolveProjectTab, type ProjectTab } from "@/components/project-module-menu";
 import { ProjectModuleWorkspace } from "@/components/project-module-workspace";
 import { ProjectSectionGuide, projectSectionGuides, type ProjectSectionSignal, type ProjectSignalKey } from "@/components/project-section-guide";
-import { DocumentComplianceWorkspace } from "@/components/document-compliance-workspace";
-import { DocumentTransmittalsWorkspace } from "@/components/document-transmittals-workspace";
-import { DailyPhotoAiWorkspace } from "@/components/daily-photo-ai-workspace";
-import { PhotoEvidenceWorkspace } from "@/components/photo-evidence-workspace";
-import { ProjectIntelligenceDrilldown } from "@/components/project-intelligence-drilldown";
-import { ProductionScheduleWorkspace } from "@/components/production-schedule-workspace";
-import { QualityIssuesWorkspace } from "@/components/quality-issues-workspace";
-import { QualityManagementWorkspace } from "@/components/quality-management-workspace";
-import { ResourcesEquipmentWorkspace } from "@/components/resources-equipment-workspace";
-import { ReportsWorkflow } from "@/components/reports-workflow";
-import { RfiSubmittalsWorkspace } from "@/components/rfi-submittals-workspace";
-import { RiskExecutiveWorkspace } from "@/components/risk-executive-workspace";
-import { ScheduleCashflowWorkspace } from "@/components/schedule-cashflow-workspace";
-import { SubcontractorExecutionWorkspace } from "@/components/subcontractor-execution-workspace";
-import { TechnicalDocumentationAssistant } from "@/components/technical-documentation-assistant";
-import { WorkflowDesignerWorkspace } from "@/components/workflow-designer-workspace";
 import { budgetTotals, deriveAutoRisks, financeTotals, materialTotals, money, percent, workTotals } from "@/lib/calculations";
 import { aiScenarioForProjectTab } from "@/lib/ai-command/catalog";
 import type { ImportExplanation, ImportMode, ImportPreview, ImportSheetMapping } from "@/lib/excel/import-types";
@@ -56,6 +18,53 @@ import type { DocumentChecklistItem, PipelineAction, PipelineReadiness } from "@
 import { buildExpenseAwareForecast, type ProjectExpenseSummary } from "@/lib/project-expenses";
 import { getProject3dModel } from "@/lib/project-3d-model";
 import type { AuditEvent, BudgetItem, DailyReport, Material, Payment, ProcurementRequest, Project, ProjectDocument, ProjectDocumentVersion, ProjectMember, Risk, ScheduleItem } from "@/lib/types";
+
+function ModuleLoading() {
+  return <div className="empty-state" role="status">Загрузка раздела...</div>;
+}
+
+// Keep the overview immediate; load other workspaces only when their view opens.
+const AcceptanceBillingWorkspace = dynamic(() => import("@/components/acceptance-billing-workspace").then((m) => m.AcceptanceBillingWorkspace), { loading: ModuleLoading });
+const AiControlAgentWorkspace = dynamic(() => import("@/components/ai-control-agent-workspace").then((m) => m.AiControlAgentWorkspace), { loading: ModuleLoading });
+const AiLifecycleCopilot = dynamic(() => import("@/components/ai-lifecycle-copilot").then((m) => m.AiLifecycleCopilot), { loading: ModuleLoading });
+const AiRunJournal = dynamic(() => import("@/components/ai-run-journal").then((m) => m.AiRunJournal), { loading: ModuleLoading });
+const AccountingBridgeWorkspace = dynamic(() => import("@/components/accounting-bridge-workspace").then((m) => m.AccountingBridgeWorkspace), { loading: ModuleLoading });
+const CommercialProposalWorkspace = dynamic(() => import("@/components/commercial-proposal-workspace").then((m) => m.CommercialProposalWorkspace), { loading: ModuleLoading });
+const ChangeOrderManagementWorkspace = dynamic(() => import("@/components/change-order-management-workspace").then((m) => m.ChangeOrderManagementWorkspace), { loading: ModuleLoading });
+const ClaimsNoticesWorkspace = dynamic(() => import("@/components/claims-notices-workspace").then((m) => m.ClaimsNoticesWorkspace), { loading: ModuleLoading });
+const ContractCommitmentsWorkspace = dynamic(() => import("@/components/contract-commitments-workspace").then((m) => m.ContractCommitmentsWorkspace), { loading: ModuleLoading });
+const ContractTenderWorkspace = dynamic(() => import("@/components/contract-tender-workspace").then((m) => m.ContractTenderWorkspace), { loading: ModuleLoading });
+const CostCodeWorkspace = dynamic(() => import("@/components/cost-code-workspace").then((m) => m.CostCodeWorkspace), { loading: ModuleLoading });
+const CostForecastByCodeWorkspace = dynamic(() => import("@/components/cost-forecast-by-code-workspace").then((m) => m.CostForecastByCodeWorkspace), { loading: ModuleLoading });
+const CostToCompleteWorkspace = dynamic(() => import("@/components/cost-to-complete-workspace").then((m) => m.CostToCompleteWorkspace), { loading: ModuleLoading });
+const ExternalCollaborationWorkspace = dynamic(() => import("@/components/external-collaboration-workspace").then((m) => m.ExternalCollaborationWorkspace), { loading: ModuleLoading });
+const ExpenseRegisterWorkspace = dynamic(() => import("@/components/expense-register-workspace").then((m) => m.ExpenseRegisterWorkspace), { loading: ModuleLoading });
+const FieldOperationsWorkspace = dynamic(() => import("@/components/field-operations-workspace").then((m) => m.FieldOperationsWorkspace), { loading: ModuleLoading });
+const FieldMobileWorkspace = dynamic(() => import("@/components/field-mobile-workspace").then((m) => m.FieldMobileWorkspace), { loading: ModuleLoading });
+const HseSafetyPermitWorkspace = dynamic(() => import("@/components/hse-safety-permit-workspace").then((m) => m.HseSafetyPermitWorkspace), { loading: ModuleLoading });
+const InvoiceReconciliationWorkspace = dynamic(() => import("@/components/invoice-reconciliation-workspace").then((m) => m.InvoiceReconciliationWorkspace), { loading: ModuleLoading });
+const MaterialSupplyWorkspace = dynamic(() => import("@/components/material-supply-workspace").then((m) => m.MaterialSupplyWorkspace), { loading: ModuleLoading });
+const ProjectContractSettings = dynamic(() => import("@/components/project-contract-settings").then((m) => m.ProjectContractSettings), { loading: ModuleLoading });
+const ProjectActionCenter = dynamic(() => import("@/components/project-action-center").then((m) => m.ProjectActionCenter), { loading: ModuleLoading });
+const ProjectControlsWorkspace = dynamic(() => import("@/components/project-controls-workspace").then((m) => m.ProjectControlsWorkspace), { loading: ModuleLoading });
+const ProjectCloseoutOverview = dynamic(() => import("@/components/project-closeout-workspace").then((m) => m.ProjectCloseoutOverview), { loading: ModuleLoading });
+const ProjectCloseoutWorkspace = dynamic(() => import("@/components/project-closeout-workspace").then((m) => m.ProjectCloseoutWorkspace), { loading: ModuleLoading });
+const DocumentComplianceWorkspace = dynamic(() => import("@/components/document-compliance-workspace").then((m) => m.DocumentComplianceWorkspace), { loading: ModuleLoading });
+const DocumentTransmittalsWorkspace = dynamic(() => import("@/components/document-transmittals-workspace").then((m) => m.DocumentTransmittalsWorkspace), { loading: ModuleLoading });
+const DailyPhotoAiWorkspace = dynamic(() => import("@/components/daily-photo-ai-workspace").then((m) => m.DailyPhotoAiWorkspace), { loading: ModuleLoading });
+const PhotoEvidenceWorkspace = dynamic(() => import("@/components/photo-evidence-workspace").then((m) => m.PhotoEvidenceWorkspace), { loading: ModuleLoading });
+const ProjectIntelligenceDrilldown = dynamic(() => import("@/components/project-intelligence-drilldown").then((m) => m.ProjectIntelligenceDrilldown), { loading: ModuleLoading });
+const ProductionScheduleWorkspace = dynamic(() => import("@/components/production-schedule-workspace").then((m) => m.ProductionScheduleWorkspace), { loading: ModuleLoading });
+const QualityIssuesWorkspace = dynamic(() => import("@/components/quality-issues-workspace").then((m) => m.QualityIssuesWorkspace), { loading: ModuleLoading });
+const QualityManagementWorkspace = dynamic(() => import("@/components/quality-management-workspace").then((m) => m.QualityManagementWorkspace), { loading: ModuleLoading });
+const ResourcesEquipmentWorkspace = dynamic(() => import("@/components/resources-equipment-workspace").then((m) => m.ResourcesEquipmentWorkspace), { loading: ModuleLoading });
+const ReportsWorkflow = dynamic(() => import("@/components/reports-workflow").then((m) => m.ReportsWorkflow), { loading: ModuleLoading });
+const RfiSubmittalsWorkspace = dynamic(() => import("@/components/rfi-submittals-workspace").then((m) => m.RfiSubmittalsWorkspace), { loading: ModuleLoading });
+const RiskExecutiveWorkspace = dynamic(() => import("@/components/risk-executive-workspace").then((m) => m.RiskExecutiveWorkspace), { loading: ModuleLoading });
+const ScheduleCashflowWorkspace = dynamic(() => import("@/components/schedule-cashflow-workspace").then((m) => m.ScheduleCashflowWorkspace), { loading: ModuleLoading });
+const SubcontractorExecutionWorkspace = dynamic(() => import("@/components/subcontractor-execution-workspace").then((m) => m.SubcontractorExecutionWorkspace), { loading: ModuleLoading });
+const TechnicalDocumentationAssistant = dynamic(() => import("@/components/technical-documentation-assistant").then((m) => m.TechnicalDocumentationAssistant), { loading: ModuleLoading });
+const WorkflowDesignerWorkspace = dynamic(() => import("@/components/workflow-designer-workspace").then((m) => m.WorkflowDesignerWorkspace), { loading: ModuleLoading });
 
 type Bundle = {
   project: Project;
@@ -148,7 +157,7 @@ export function ProjectWorkspace({
   createdFromOnboarding?: boolean;
   initialTab?: string;
 }) {
-  const [activeTab, setActiveTab] = useState(() => (initialTab && projectTabs.includes(initialTab as ProjectTab) ? initialTab : projectTabs[0]));
+  const [activeTab, setActiveTabState] = useState<ProjectTab>(() => resolveProjectTab(initialTab));
   const [budgetItems, setBudgetItems] = useState(initialBundle.budgetItems);
   const [scheduleItems, setScheduleItems] = useState(initialBundle.scheduleItems);
   const [materials, setMaterials] = useState(initialBundle.materials);
@@ -187,6 +196,8 @@ export function ProjectWorkspace({
   const [postImportActions, setPostImportActions] = useState<PipelineAction[]>([]);
   const [documentChecklist, setDocumentChecklist] = useState<DocumentChecklistItem[]>([]);
   const [intelligence, setIntelligence] = useState<IntelligenceState | null>(null);
+  const [pipelineReadError, setPipelineReadError] = useState(false);
+  const pipelineReadController = useRef<AbortController | null>(null);
   const [pipelineDraft, setPipelineDraft] = useState<PipelineDraftState | null>(null);
   const [pipelineLoading, setPipelineLoading] = useState("");
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
@@ -196,27 +207,23 @@ export function ProjectWorkspace({
   const [deleteProjectName, setDeleteProjectName] = useState("");
   const [deleteProjectConfirm, setDeleteProjectConfirm] = useState(false);
   const [deleteProjectDone, setDeleteProjectDone] = useState(false);
-  const openIntelligenceSection = useCallback((sectionId: string) => {
-    const element = document.getElementById(sectionId);
-    if (!element) return;
-    const details = element.closest("details");
-    if (details) details.open = true;
-    window.requestAnimationFrame(() => element.scrollIntoView({ behavior: "smooth", block: "start" }));
-  }, []);
   const navigateProjectTab = useCallback((tab: ProjectTab | string) => {
     if (!projectTabs.includes(tab as ProjectTab)) return;
     const nextTab = tab as ProjectTab;
-    setActiveTab(nextTab);
+    setActiveTabState(nextTab);
     const url = new URL(window.location.href);
-    url.searchParams.set("tab", nextTab);
-    window.history.pushState({ tab: nextTab }, "", url);
+    if (resolveProjectTab(url.searchParams.get("tab")) !== nextTab) {
+      url.searchParams.set("tab", nextTab);
+      window.history.pushState({ tab: nextTab }, "", url);
+    }
     window.requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "smooth" }));
   }, []);
+  const setActiveTab = navigateProjectTab;
 
   useEffect(() => {
     const syncFromHistory = () => {
       const tab = new URL(window.location.href).searchParams.get("tab");
-      if (tab && projectTabs.includes(tab as ProjectTab)) setActiveTab(tab as ProjectTab);
+      setActiveTabState(resolveProjectTab(tab));
     };
     window.addEventListener("popstate", syncFromHistory);
     return () => window.removeEventListener("popstate", syncFromHistory);
@@ -443,28 +450,37 @@ export function ProjectWorkspace({
   }, [activeTab, loadMembers]);
 
   const loadPipeline = useCallback(async () => {
+    pipelineReadController.current?.abort();
+    const controller = new AbortController();
+    pipelineReadController.current = controller;
     try {
-      const [readinessResponse, actionsResponse, checklistResponse, intelligenceResponse] = await Promise.all([
-        fetch(`/api/projects/${initialBundle.project.id}/data-readiness`),
-        fetch(`/api/projects/${initialBundle.project.id}/post-import-actions`),
-        fetch(`/api/projects/${initialBundle.project.id}/document-checklist`),
-        fetch(`/api/projects/${initialBundle.project.id}/intelligence`)
-      ]);
-      const readinessData = (await readinessResponse.json()) as { readiness?: PipelineReadiness };
-      const actionsData = (await actionsResponse.json()) as { items?: PipelineAction[] };
-      const checklistData = (await checklistResponse.json()) as { items?: DocumentChecklistItem[] };
-      const intelligenceData = (await intelligenceResponse.json()) as { intelligence?: IntelligenceState; calculatedRisks?: PipelineAction[]; readiness?: PipelineReadiness };
-      if (readinessResponse.ok && readinessData.readiness) setReadiness(readinessData.readiness);
-      if (actionsResponse.ok) setPostImportActions(actionsData.items ?? []);
-      if (checklistResponse.ok) setDocumentChecklist(checklistData.items ?? []);
-      if (intelligenceResponse.ok && intelligenceData.intelligence) setIntelligence(intelligenceData.intelligence);
+      const response = await fetch(`/api/projects/${initialBundle.project.id}/intelligence`, { cache: "no-store", signal: controller.signal });
+      if (!response.ok) throw new Error("Project summary unavailable");
+      const data = (await response.json()) as {
+        readiness: PipelineReadiness;
+        intelligence: IntelligenceState;
+        postImportActions: PipelineAction[];
+        documentChecklist: DocumentChecklistItem[];
+      };
+      if (!data.readiness || !data.intelligence || !Array.isArray(data.postImportActions) || !Array.isArray(data.documentChecklist)) {
+        throw new Error("Incomplete project summary");
+      }
+      if (controller.signal.aborted) return;
+      setReadiness(data.readiness);
+      setIntelligence(data.intelligence);
+      setPostImportActions(data.postImportActions);
+      setDocumentChecklist(data.documentChecklist);
+      setPipelineReadError(false);
     } catch {
-      setPostImportActions([]);
+      if (!controller.signal.aborted) setPipelineReadError(true);
+    } finally {
+      if (pipelineReadController.current === controller) pipelineReadController.current = null;
     }
   }, [initialBundle.project.id]);
 
   useEffect(() => {
     void loadPipeline();
+    return () => pipelineReadController.current?.abort();
   }, [loadPipeline]);
 
   async function runAiCommandScenario(scenario: AiScenario) {
@@ -956,6 +972,12 @@ export function ProjectWorkspace({
               {error || `Сохраняю: ${saving}`}
             </div>
           )}
+          {pipelineReadError && (
+            <div className="form-hint delta-bad" role="alert">
+              Не удалось обновить сводку проекта. Показатели могут быть неполными или устаревшими.
+              <button className="button secondary compact-button" type="button" onClick={() => void loadPipeline()}>Повторить</button>
+            </div>
+          )}
 
           <div className={`project-module-stage ${activeTab === "Обзор" ? "is-overview" : "is-focused"}`}>
           {activeTab === "Обзор" && (
@@ -979,7 +1001,6 @@ export function ProjectWorkspace({
                 aiInsight={aiResults.summary ?? aiResults["executive-report"] ?? null}
                 aiLoading={aiScenarioLoading === "summary" || aiScenarioLoading === "executive-report"}
                 onNavigate={setActiveTab}
-                onDrilldown={openIntelligenceSection}
                 onRunAiSummary={() => {
                   void runAiCommandScenario("summary");
                 }}

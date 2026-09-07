@@ -11,7 +11,7 @@ import { serializeMaterial, serializeProcurementRequest } from "@/lib/serializer
 const workflowSchema = z.object({
   action: z.enum(["submit", "approve", "receive"]),
   expectedAt: z.coerce.date().optional(),
-  items: z.array(z.object({ itemId: z.string().min(1), qty: z.coerce.number().positive() })).max(200).optional()
+  items: z.array(z.object({ itemId: z.string().min(1), qty: z.coerce.number().positive() })).min(1).max(200).optional()
 });
 
 class ProcurementWorkflowConflict extends Error {}

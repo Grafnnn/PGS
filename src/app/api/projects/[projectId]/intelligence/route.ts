@@ -14,6 +14,8 @@ export async function GET(_request: Request, { params }: { params: { projectId: 
   return NextResponse.json({
     readiness: snapshot.readiness,
     calculatedRisks: snapshot.calculatedRisks,
-    intelligence: snapshot.intelligence
+    intelligence: snapshot.intelligence,
+    postImportActions: snapshot.postImportActions,
+    documentChecklist: snapshot.documentChecklist
   });
 }

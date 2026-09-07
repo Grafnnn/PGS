@@ -4,7 +4,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { buildScheduleWorkSuggestions, dailyReportPhotoMutationId, isProjectEvidenceCandidate, ReportsWorkflow, ScheduleWorkPicker } from "@/components/reports-workflow";
 import { dailyReportCompletedWorksFromOutputs } from "@/lib/daily-report-work-outputs";
-import type { ProjectDocument, ScheduleItem } from "@/lib/types";
+import type { DailyReport, ProjectDocument, ScheduleItem } from "@/lib/types";
 
 describe("ReportsWorkflow", () => {
   it("builds the report summary from structured measured work instead of duplicate free text", () => {
@@ -164,6 +164,30 @@ describe("ReportsWorkflow", () => {
     expect(html).toContain("Факт ещё не учтён в графике");
     expect(html).toContain("Учесть в графике");
     expect(html).toContain("Исправить");
+  });
+
+  it("keeps every attached photo accessible even when a report exceeds six thumbnails", () => {
+    const evidenceDocuments: ProjectDocument[] = Array.from({ length: 12 }, (_, index) => ({
+      id: `photo-${index + 1}`, projectId: "project-1", dailyReportId: "report-1",
+      category: "photo", title: `Photo ${index + 1}`, filePath: `photo-${index + 1}.jpg`,
+      mimeType: "image/jpeg", version: 1, author: "Foreman", createdAt: "2026-09-01"
+    }));
+    const report: DailyReport = {
+      id: "report-1", projectId: "project-1", date: "2026-09-01", author: "Foreman",
+      status: "approved", weather: "", workers: 1, engineers: 0, equipment: "",
+      completedWorks: "Roof installation", materialsReceived: "", materialsConsumed: "",
+      downtime: "", issues: "", evidenceDocuments
+    };
+    const html = renderToStaticMarkup(createElement(ReportsWorkflow, {
+      projectId: "project-1", reports: [report], scheduleItems: [],
+      currentUser: { authenticated: true, role: "VIEWER" }, currentUserLoaded: true,
+      onReportsChange: () => undefined
+    }));
+
+    for (const document of evidenceDocuments) {
+      expect(html).toContain(`href="/api/projects/project-1/documents/${document.id}/download"`);
+    }
+    expect(html.match(/<img /g)).toHaveLength(6);
   });
 
   it("marks progress linked to a historical schedule revision and blocks resync", () => {
