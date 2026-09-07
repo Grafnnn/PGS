@@ -70,7 +70,7 @@ describe("ProjectCommandCenter", () => {
     expect(html).not.toContain("OPENAI_API_KEY");
   });
 
-  it("publishes the Troitsk R04 model from the project command center", () => {
+  it("publishes the Troitsk R06 model from the project command center", () => {
     const bundle = getProjectBundle("project-demo");
     const html = renderToStaticMarkup(
       createElement(ProjectCommandCenter, {
@@ -91,8 +91,8 @@ describe("ProjectCommandCenter", () => {
     );
 
     expect(html).toContain("3D-модель здания 24");
-    expect(html).toContain("Лестница Л-1, узлы крепления, отметки и кровля");
-    expect(html).toContain("R04");
+    expect(html).toContain("Общая модель, кровля, лестница Л-1, перекрытия, фундаменты и входы");
+    expect(html).toContain("R06");
     expect(html).toContain("Открыть 3D-модель");
     expect(html).not.toContain("<iframe");
   });
