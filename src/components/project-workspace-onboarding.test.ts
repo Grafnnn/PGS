@@ -45,4 +45,21 @@ describe("ProjectWorkspace onboarding panel", () => {
     expect(fetchMock).not.toHaveBeenCalled();
     fetchMock.mockRestore();
   });
+
+  it("shows a one-click 3D model shortcut for the configured Troitsk project", () => {
+    const html = renderToStaticMarkup(React.createElement(ProjectWorkspace, {
+      initialBundle: {
+        ...emptyBundle,
+        project: {
+          ...emptyBundle.project,
+          id: "cmteg9g33000for4oc06rko5a",
+          name: "Устройство кровли — Троицк, здание 24",
+          object: "Здание 24"
+        }
+      }
+    }));
+
+    expect(html).toContain('aria-label="Открыть 3D-модель проекта"');
+    expect(html).toContain("3D-модель здания 24");
+  });
 });

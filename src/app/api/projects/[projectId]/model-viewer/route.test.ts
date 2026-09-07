@@ -41,7 +41,7 @@ describe("project 3D model viewer route", () => {
     expect(response.headers.get("x-frame-options")).toBe("SAMEORIGIN");
     expect(html).toContain("pgs-model-embed-style");
     expect(html).toContain("pgsControlsToggle");
-    expect(mocks.readFile).toHaveBeenCalledWith(expect.stringContaining("troitsk-b24-r03.html"), "utf8");
+    expect(mocks.readFile).toHaveBeenCalledWith(expect.stringContaining("troitsk-b24-r04.html"), "utf8");
   });
 
   it("does not expose the Troitsk model for an unrelated project", async () => {
