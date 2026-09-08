@@ -64,9 +64,9 @@ body.design-monolith .app-shell .project-workspace-content :is(
   .project-module-workspace-title h2, .production-schedule-header h2
 ) {
   font-family: var(--font-sans);
-  font-size: 28px;
+  font-size: 23px;
   font-weight: 400;
-  line-height: 34px;
+  line-height: 29px;
   letter-spacing: -.015em;
 }
 
@@ -90,9 +90,9 @@ body.design-monolith .app-shell .project-workspace-content :is(
   .staffing-plan-heading h3
 ) {
   font-family: var(--font-sans);
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 500;
-  line-height: 27px;
+  line-height: 25px;
   letter-spacing: -.01em;
   text-transform: none;
 }
@@ -140,9 +140,9 @@ body.design-monolith .app-shell .project-workspace-content .metric-strip > .kpi 
 }
 body.design-monolith .app-shell .project-workspace-content .metric-strip .kpi-value {
   font-family: var(--font-sans);
-  font-size: 30px;
+  font-size: 26px;
   font-weight: 400;
-  line-height: 36px;
+  line-height: 32px;
   letter-spacing: -.02em;
   font-variant-numeric: tabular-nums;
 }
@@ -329,9 +329,9 @@ body.design-monolith .app-shell .project-workspace-content :is(
 @media (max-width: 720px) {
   body.design-monolith .app-shell .project-workspace-content :is(
     .project-module-workspace-title h2, .production-schedule-header h2
-  ) { font-size: 24px; line-height: 30px; }
+  ) { font-size: 22px; line-height: 28px; }
   body.design-monolith .app-shell .project-workspace-content .metric-strip .kpi-value {
-    font-size: 27px;
+    font-size: 25px;
     line-height: 33px;
   }
 }

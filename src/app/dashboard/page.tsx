@@ -1,3 +1,4 @@
+import React from "react";
 import Link from "next/link";
 import type { Route } from "next";
 import { redirect } from "next/navigation";
@@ -24,13 +25,17 @@ function projectHref(projectId: string | undefined, tab?: string) {
   return (`/projects/${projectId}${tab ? `?tab=${encodeURIComponent(tab)}` : ""}`) as Route;
 }
 
-export default async function DashboardPage(props: { searchParams?: { project?: string } }) {
+export default async function DashboardPage(props: { searchParams?: { project?: string; open?: string } }) {
   const searchParams = props?.searchParams;
   const user = await getCurrentUser();
   if (!user) redirect("/login");
   const { projects, primaryProjectHref } = await loadDashboardData({
     loadProjects: () => listProjectsFromDb(user)
   });
+  if (searchParams?.open === "1") {
+    const projectToOpen = projects.find((project) => project.id === searchParams.project);
+    redirect(projectToOpen ? projectHref(projectToOpen.id) : "/projects");
+  }
   const portfolioSources = await loadPortfolioProjectsForPage(user);
   const portfolio = buildPortfolioControlModel(portfolioSources);
   const selectedProject = projects.find((project) => project.id === searchParams?.project) ?? projects[0] ?? null;
@@ -91,17 +96,18 @@ export default async function DashboardPage(props: { searchParams?: { project?: 
               <span><FolderKanban size={21} strokeWidth={1.5} /></span>
               <div>
                 <small>Рабочий проект</small>
-                <strong title={selectedProject?.name}>{selectedProject?.name ?? "Проект не выбран"}</strong>
+                <strong title={selectedProject?.name}>{selectedProject ? <Link href={selectedProjectRoute}>{selectedProject.name}</Link> : "Проект не выбран"}</strong>
                 <p>{selectedProject ? `${selectedProject.customer} · ${selectedProject.manager}` : "Создайте проект или проверьте права доступа."}</p>
               </div>
             </div>
             <form action="/dashboard" className="dashboard-project-switcher-form" method="get">
+              <input name="open" type="hidden" value="1" />
               <label htmlFor="dashboard-project">Переключить объект</label>
               <select defaultValue={selectedProject?.id ?? ""} disabled={!projects.length} id="dashboard-project" name="project">
                 {!projects.length ? <option value="">Нет доступных проектов</option> : null}
                 {projects.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}
               </select>
-              <button className="button secondary" disabled={!projects.length} type="submit" title="Сделать проект рабочим"><span>Выбрать</span><ArrowRight size={17} /></button>
+              <button className="button secondary" disabled={!projects.length} type="submit" title="Открыть выбранный проект"><span>Открыть</span><ArrowRight size={17} /></button>
             </form>
             <nav className="dashboard-project-switcher-actions" aria-label="Быстрые действия выбранного проекта">
               <span>Быстрый переход</span>
