@@ -187,6 +187,18 @@ body.design-monolith .app-shell .page table th {
   text-transform: none;
 }
 body.design-monolith .app-shell .page table td { border-color: var(--line); }
+/* A zero-minimum stack track let the Versions column collapse below its action.
+   Size the column from its button while long version filenames may still wrap. */
+body.design-monolith .app-shell .page .data-table td[data-label="Версии"] > .stack {
+  grid-template-columns: minmax(min-content, 1fr);
+}
+body.design-monolith .app-shell .page .data-table td[data-label="Версии"] > .stack > .button {
+  justify-self: start;
+  min-width: max-content;
+}
+body.design-monolith .app-shell .page .data-table td[data-label="Версии"] > .stack > a {
+  overflow-wrap: anywhere;
+}
 body.design-monolith .app-shell .page .data-table tbody tr:hover {
   background-color: #faf7f0;
 }
