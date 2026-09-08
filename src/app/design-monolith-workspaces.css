@@ -1,6 +1,62 @@
 /* Project interiors. Shared controls, tables and feedback live in the system layer.
    Keep operational grids, sticky columns, chart geometry and status colors intact. */
 
+/* Section spacing belongs to the container, without a second margin on its tabs. */
+body.design-monolith .app-shell .project-workspace-content .project-section-guide:has(.project-section-ai) {
+  margin-bottom: 16px;
+}
+body.design-monolith .app-shell .project-workspace-content :is(
+  .production-schedule-workspace, .production-schedule-plan-view
+) { gap: 16px; }
+body.design-monolith .app-shell .project-workspace-content .production-schedule-view-tabs {
+  margin-bottom: 0;
+}
+body.design-monolith .app-shell .project-workspace-content .analytics-grid { gap: 24px; }
+body.design-monolith .app-shell .project-workspace-content .metric-strip { gap: 16px; }
+body.design-monolith .app-shell .project-workspace-content :is(.breakdown-panel, .waterfall) { padding: 16px; }
+body.design-monolith .app-shell .project-workspace-content [data-module="finance"] .cost-to-complete-workspace + .finance-grid {
+  margin-top: 24px;
+}
+
+/* Summary counts are fixed by the two views: five budget KPIs and six finance KPIs.
+   Do not apply these column counts to registers, forms or the forecast widgets. */
+body.design-monolith .app-shell .project-workspace-content [data-module="budget"] .project-module-view-body[data-view="summary"] > .analytics-grid > .metric-strip {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+body.design-monolith .app-shell .project-workspace-content [data-module="finance"] .project-module-view-body[data-view="summary"] > .finance-grid > .metric-strip {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+@media (max-width: 1279px) {
+  body.design-monolith .app-shell .project-workspace-content :is([data-module="budget"], [data-module="finance"]) .project-module-view-body[data-view="summary"] > .analytics-grid > .metric-strip {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (max-width: 980px) {
+  body.design-monolith .app-shell .project-workspace-content :is([data-module="budget"], [data-module="finance"]) .project-module-view-body[data-view="summary"] > .analytics-grid > .metric-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  body.design-monolith .app-shell .project-workspace-content [data-module="budget"] .project-module-view-body[data-view="summary"] > .analytics-grid > .metric-strip > .kpi:last-child {
+    grid-column: 1 / -1;
+  }
+}
+@media (max-width: 680px) {
+  body.design-monolith .app-shell .project-workspace-content .project-section-guide:has(.project-section-ai) {
+    margin-inline: 0;
+    margin-bottom: 12px;
+  }
+  body.design-monolith .app-shell .project-workspace-content :is(.production-schedule-workspace, .production-schedule-plan-view) {
+    gap: 12px;
+  }
+  body.design-monolith .app-shell .project-workspace-content .analytics-grid { gap: 16px; }
+  body.design-monolith .app-shell .project-workspace-content .metric-strip { gap: 12px; }
+  body.design-monolith .app-shell .project-workspace-content [data-module="finance"] .cost-to-complete-workspace + .finance-grid {
+    margin-top: 16px;
+  }
+  body.design-monolith .app-shell .project-workspace-content :is([data-module="budget"], [data-module="finance"]) .project-module-view-body[data-view="summary"] > .analytics-grid > .metric-strip {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 /* Large information surfaces; rows and controls retain the square geometry. */
 body.design-monolith .app-shell .project-workspace-content :is(
   .breakdown-panel, .waterfall,
@@ -223,6 +279,7 @@ body.design-monolith .app-shell .project-workspace-content :is(
 ) > button:not(:disabled):not([aria-disabled="true"]) {
   background: transparent;
   border-color: transparent;
+  border-radius: 6px !important;
   color: var(--muted);
   box-shadow: none;
   font-family: var(--font-sans);
@@ -237,10 +294,10 @@ body.design-monolith .app-shell .project-workspace-content :is(
   .production-schedule-view-tabs, .production-schedule-filters,
   .production-gantt-density, .ai-lifecycle-tabs, .payroll-mode-tabs, .material-supply-lanes
 ) > button:is(.active, [aria-pressed="true"]):not(:disabled):not([aria-disabled="true"]) {
-  background: var(--surface);
-  border-color: var(--line-strong);
+  background: var(--monolith-detail-champagne);
+  border-color: transparent;
   color: var(--monolith-detail-brass-deep);
-  box-shadow: inset 0 -2px 0 var(--monolith-detail-brass);
+  box-shadow: none;
 }
 body.design-monolith .app-shell .project-workspace-content :is(
   .project-module-view-tabs, .segmented-control, .density-toggle,

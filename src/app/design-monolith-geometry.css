@@ -1,4 +1,4 @@
-/* Square by default, with explicit information-card and menu-surface exceptions.
+/* Square structural surfaces, with deliberate small control and large card radii.
    Important prevents older theme layers and inline widget styles restoring pills. */
 body.design-monolith { --radius: 0; }
 body.design-monolith .app-shell :where(*, *::before, *::after),
@@ -6,6 +6,20 @@ body.design-monolith .project-model-overlay,
 body.design-monolith .project-model-overlay :where(*, *::before, *::after) {
   border-radius: 0 !important;
 }
+
+/* Small radii restore the first Monolith controls without rounding table cells. */
+body.design-monolith .app-shell :is(.button, .icon-button) { border-radius: 7px !important; }
+body.design-monolith .app-shell :is(
+  .atlas-workspace-trigger, .project-atlas-domains > button,
+  .project-navigation-mobile-trigger, .command-trigger,
+  .project-domain-modules button, .project-domain-nav-actions button,
+  .navigation-sheet-group-items a, .navigation-create-link,
+  .project-module-view-tabs button, .tabs .tab, .segmented-control button,
+  .atlas-chart-mode button, .atlas-chart-reset, .atlas-chart-legend button
+) { border-radius: 6px !important; }
+body.design-monolith .app-shell :is(.project-domain-search, .navigation-search) { border-radius: 6px !important; }
+body.design-monolith .app-shell .navigation-sheet { border-radius: 8px !important; }
+body.design-monolith .app-shell .project-domain-popover { border-radius: 0 0 8px 8px !important; }
 
 @media (min-width: 821px) {
   body.design-monolith .app-shell .project-atlas-mega { border-radius: 8px !important; }

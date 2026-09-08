@@ -68,7 +68,7 @@ body.design-monolith :is(.app-shell .page, .login-page, .external-response-page)
 }
 
 body.design-monolith :is(.app-shell .page, .login-page, .external-response-page) .button:not(:where(.dashboard-hero *)) {
-  border-radius: 0 !important;
+  border-radius: 7px !important;
   font-family: inherit;
   font-size: 13px;
   font-weight: 500;
@@ -86,15 +86,15 @@ body.design-monolith :is(.app-shell .page, .login-page, .external-response-page)
   border-color: var(--accent-hover);
 }
 body.design-monolith :is(.app-shell .page, .login-page, .external-response-page) :is(.button.secondary, .icon-button):not(:where(.danger-button, .danger, .dashboard-hero *)) {
-  background-color: var(--surface);
-  border-color: var(--monolith-control-border);
+  background-color: transparent;
+  border-color: #c6c9c3;
   color: var(--text);
-  border-radius: 0 !important;
+  border-radius: 7px !important;
   box-shadow: none;
 }
 body.design-monolith :is(.app-shell .page, .login-page, .external-response-page) :is(.button.secondary, .icon-button):hover:not(:disabled):not(:where(.danger-button, .danger, .dashboard-hero *)):not([aria-disabled="true"]) {
   background-color: var(--monolith-detail-champagne);
-  border-color: var(--monolith-detail-brass-deep);
+  border-color: #bca988;
   color: var(--monolith-detail-brass-deep);
 }
 body.design-monolith :is(.app-shell .page, .login-page, .external-response-page) .button.danger-button {
@@ -125,6 +125,8 @@ body.design-monolith :is(.app-shell .page, .login-page, .external-response-page)
   box-shadow: none;
   transform: none;
 }
+
+body.design-monolith .app-shell .page :is(.button, .icon-button) > svg { stroke-width: 1.5px; }
 
 /* Plain language statuses; colour is retained in addition to their text. */
 body.design-monolith :is(.app-shell .page, .login-page, .external-response-page) .badge {

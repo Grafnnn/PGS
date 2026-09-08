@@ -14,6 +14,24 @@ body.design-monolith .app-shell .topbar {
   filter: none;
   transform: none;
   contain: none;
+  background: transparent;
+  border-bottom-color: rgb(255 255 255 / 8%);
+}
+/* Blur only the visual layer: fixed catalogues must stay viewport-positioned. */
+body.design-monolith .app-shell .topbar::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: #0b0d0e;
+}
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  body.design-monolith .app-shell .topbar::before {
+    background: rgb(8 10 11 / 84%);
+    -webkit-backdrop-filter: blur(18px);
+    backdrop-filter: blur(18px);
+  }
 }
 body.design-monolith .app-shell .atlas-workspace-trigger {
   display: inline-flex;
@@ -25,7 +43,7 @@ body.design-monolith .app-shell .atlas-workspace-trigger {
   margin: 0;
   padding: 0 8px;
   border: 1px solid transparent;
-  border-radius: 9px;
+  border-radius: 6px;
   background: transparent;
   color: #f4f2ed;
   cursor: pointer;
@@ -34,7 +52,7 @@ body.design-monolith .app-shell .atlas-workspace-trigger > span { display: block
 body.design-monolith .app-shell .atlas-workspace-trigger strong { font-size: 28px; font-weight: 500; letter-spacing: -1.4px; }
 body.design-monolith .app-shell .atlas-workspace-trigger > svg { color: var(--monolith-detail-brass-light); transition: transform 160ms ease; }
 body.design-monolith .app-shell .atlas-workspace-trigger[aria-expanded="true"] > svg { transform: rotate(180deg); }
-body.design-monolith .app-shell .atlas-workspace-trigger:is(:hover, [aria-expanded="true"]) { background: #24241f; border-color: #4c4231; }
+body.design-monolith .app-shell .atlas-workspace-trigger:is(:hover, [aria-expanded="true"]) { background: rgb(206 178 124 / 12%); border-color: transparent; }
 body.design-monolith .app-shell .topbar-page-context { padding-left: 18px; border-left: 1px solid #393b36; color: #b8b9b1; font-size: 13px; white-space: nowrap; }
 body.design-monolith .app-shell .topbar:has(.project-atlas-navigation) .topbar-page-context { display: none; }
 body.design-monolith .app-shell .topbar-project-slot { position: static; flex: 1 1 auto; min-width: 0; }
@@ -51,13 +69,13 @@ body.design-monolith .app-shell .topbar .icon-button {
   max-width: 40px;
   height: 40px;
   padding: 0;
-  border: 1px solid #363830;
-  border-radius: 9px;
+  border: 1px solid transparent;
+  border-radius: 6px;
   background: transparent;
   color: var(--monolith-detail-brass-light);
 }
-body.design-monolith .app-shell .topbar :is(.command-trigger, .icon-button):hover { background: #24241f; border-color: #786443; color: #e5d2ad; }
-body.design-monolith .app-shell .topbar .button.primary { border-radius: 9px; padding-inline: 14px; }
+body.design-monolith .app-shell .topbar :is(.command-trigger, .icon-button):hover { background: rgb(206 178 124 / 8%); border-color: transparent; color: #e5d2ad; }
+body.design-monolith .app-shell .topbar .button.primary { border-radius: 6px; padding-inline: 14px; }
 body.design-monolith .app-shell .topbar .button.primary > svg { color: var(--monolith-detail-brass-deep); }
 body.design-monolith .app-shell .topbar > :focus-visible,
 body.design-monolith .app-shell .project-atlas-domains > button:focus-visible,
@@ -95,14 +113,14 @@ body.design-monolith .app-shell .project-atlas-domains > button {
   gap: 6px;
   padding: 0 6px;
   border: 1px solid transparent;
-  border-radius: 9px;
+  border-radius: 6px;
   color: #d5d6cf;
 }
 body.design-monolith .app-shell .project-atlas-domains > button strong { font-size: 13px; }
 body.design-monolith .app-shell .project-atlas-domains > button > span { display: inline-flex; align-items: center; color: var(--monolith-detail-brass-light); }
-body.design-monolith .app-shell .project-atlas-domains > button > span svg { width: 16px; height: 16px; stroke-width: 1.6px; }
+body.design-monolith .app-shell .project-atlas-domains > button > span svg { width: 16px; height: 16px; stroke-width: 1.5px; }
 body.design-monolith .app-shell .project-domain-chevron { color: var(--monolith-detail-brass-light); opacity: .8; }
-body.design-monolith .app-shell .project-atlas-domains > button:is(:hover, .active, [data-state="open"]) { background: #24241f; color: #e5d2ad; border-color: #4c4231; }
+body.design-monolith .app-shell .project-atlas-domains > button:is(:hover, .active, [data-state="open"]) { background: rgb(206 178 124 / 12%); color: #e5d2ad; border-color: transparent; }
 body.design-monolith .app-shell .project-atlas-domains .project-atlas-all { min-width: 40px; padding: 0; margin-left: auto; color: var(--monolith-detail-brass-light); }
 body.design-monolith .app-shell .project-atlas-all strong { display: none; }
 body.design-monolith .app-shell .project-domain-popover {
@@ -116,10 +134,10 @@ body.design-monolith .app-shell .project-domain-popover-header > .project-domain
 body.design-monolith .app-shell .project-domain-popover-header > .project-domain-icon svg { width: 28px; height: 28px; stroke-width: 1.5px; }
 body.design-monolith .app-shell .project-domain-modules button {
   padding-inline: 10px;
-  border-radius: 9px;
+  border-radius: 6px;
 }
 body.design-monolith .app-shell .project-domain-modules button > span:first-child { display: inline-flex; flex: 0 0 20px; justify-content: center; color: var(--monolith-detail-brass); }
-body.design-monolith .app-shell .project-domain-modules button > span:first-child svg { width: 18px; height: 18px; stroke-width: 1.6px; }
+body.design-monolith .app-shell .project-domain-modules button > span:first-child svg { width: 18px; height: 18px; stroke-width: 1.5px; }
 body.design-monolith .app-shell .project-domain-modules button:is(:hover, :focus-visible, .active) { background: var(--monolith-detail-champagne); color: #654b29; }
 body.design-monolith .app-shell .project-domain-modules button:is(:hover, .active) strong { text-decoration: none; }
 body.design-monolith .app-shell .project-atlas-mega {
@@ -128,7 +146,7 @@ body.design-monolith .app-shell .project-atlas-mega {
   border-radius: 14px;
 }
 body.design-monolith .app-shell .project-domain-search,
-body.design-monolith .app-shell .project-domain-nav-header button { border-radius: 9px; }
+body.design-monolith .app-shell .project-domain-nav-header button { border-radius: 6px; }
 body.design-monolith .app-shell .project-domain-search > svg,
 body.design-monolith .app-shell .project-domain-nav-header button > svg { color: var(--monolith-detail-brass); }
 body.design-monolith .app-shell .project-domain-nav-header > div:first-child { min-width: 0; }
@@ -140,7 +158,7 @@ body.design-monolith .app-shell .project-domain-nav-actions {
 }
 body.design-monolith .app-shell .project-domain-nav-actions button:is(:hover, [aria-expanded="true"]) {
   background: #ede5d7;
-  border-color: #b69a6d;
+  border-color: transparent;
 }
 body.design-monolith .app-shell .project-domain-nav-actions button:focus-visible { outline: 2px solid #92713e; outline-offset: 2px; }
 body.design-monolith .app-shell .project-domain-search-region { flex: 0 0 auto; }
@@ -166,18 +184,18 @@ body.design-monolith .app-shell .navigation-sheet {
 body.design-monolith .app-shell .navigation-sheet > * { flex-shrink: 0; }
 body.design-monolith .app-shell .navigation-sheet-header strong { font-size: 21px; font-weight: 500; letter-spacing: -.025em; }
 body.design-monolith .app-shell .navigation-sheet-header small { margin-bottom: 5px; color: #7d735f; font-size: 10px; letter-spacing: .07em; text-transform: uppercase; }
-body.design-monolith .app-shell .navigation-sheet :is(.icon-button, .navigation-create-link, .navigation-search) { border-radius: 9px; }
+body.design-monolith .app-shell .navigation-sheet :is(.icon-button, .navigation-create-link, .navigation-search) { border-radius: 6px; }
 body.design-monolith .app-shell .navigation-create-link { min-height: 60px; }
 body.design-monolith .app-shell .navigation-create-link small { font-size: 10px; }
 body.design-monolith .app-shell .navigation-sheet-links { display: grid; grid-template-columns: 1fr; gap: 12px; }
 body.design-monolith .app-shell .navigation-sheet-group h2 { margin: 0 0 7px 10px; color: #7b7366; font-size: 10px; letter-spacing: .08em; }
 body.design-monolith .app-shell .navigation-sheet-group-items { gap: 2px; }
-body.design-monolith .app-shell .navigation-sheet-group-items a { min-height: 40px; padding: 4px 10px; grid-template-columns: 24px 1fr auto; border: 0; border-radius: 9px; }
+body.design-monolith .app-shell .navigation-sheet-group-items a { min-height: 40px; padding: 4px 10px; grid-template-columns: 24px 1fr auto; border: 0; border-radius: 6px; }
 body.design-monolith .app-shell .navigation-sheet-group-items a:is(:hover, .active) { background: #ede5d7; color: #654b29; }
 body.design-monolith .app-shell .navigation-sheet-copy strong { font-size: 15px; font-weight: 500; }
 body.design-monolith .app-shell .navigation-sheet-copy small { display: none; }
 body.design-monolith .app-shell .navigation-sheet-icon { width: 24px; height: 28px; background: transparent; color: var(--monolith-detail-brass); }
-body.design-monolith .app-shell .navigation-sheet-icon svg { stroke-width: 1.6px; }
+body.design-monolith .app-shell .navigation-sheet-icon svg { stroke-width: 1.5px; }
 body.design-monolith .app-shell .navigation-sheet :is(.navigation-search, .icon-button) > svg,
 body.design-monolith .app-shell .navigation-sheet-group-items a > svg { color: var(--monolith-detail-brass); }
 body.design-monolith .app-shell .navigation-sheet-footer { padding-top: 15px; }
@@ -208,14 +226,14 @@ body.design-monolith .app-shell .navigation-search input:focus-visible { outline
     margin: 0;
     padding: 0 10px;
     border: 1px solid transparent;
-    border-radius: 9px;
+    border-radius: 6px;
     background: transparent;
     color: #d5d6cf;
     cursor: pointer;
   }
-  body.design-monolith .app-shell .project-navigation-mobile-trigger:is(:hover, [aria-expanded="true"]) { border-color: #4c4231; background: #24241f; }
+  body.design-monolith .app-shell .project-navigation-mobile-trigger:is(:hover, [aria-expanded="true"]) { border-color: transparent; background: rgb(206 178 124 / 12%); }
   body.design-monolith .app-shell .project-navigation-mobile-trigger > span:first-child { display: inline-flex; flex: 0 0 18px; color: var(--monolith-detail-brass-light); }
-  body.design-monolith .app-shell .project-navigation-mobile-trigger > span:first-child svg { width: 18px; height: 18px; stroke-width: 1.6px; }
+  body.design-monolith .app-shell .project-navigation-mobile-trigger > span:first-child svg { width: 18px; height: 18px; stroke-width: 1.5px; }
   body.design-monolith .app-shell .project-navigation-mobile-trigger > span:nth-child(2) { display: flex; flex: 1; align-items: baseline; gap: 12px; min-width: 0; }
   body.design-monolith .app-shell .project-navigation-mobile-trigger small { color: #d5d6cf; font-size: 13px; font-weight: 500; }
   body.design-monolith .app-shell .project-navigation-mobile-trigger strong { min-width: 0; margin-left: 0; overflow: hidden; color: var(--monolith-detail-brass-light); font-size: 12px; font-weight: 400; white-space: nowrap; text-overflow: ellipsis; }
@@ -243,26 +261,28 @@ body.design-monolith .app-shell .navigation-search input:focus-visible { outline
   body.design-monolith .app-shell .atlas-workspace-trigger > svg { transition: none; }
 }
 
-/* Smoked stone separates navigation from the warm paper workspace. */
+/* Restore the original warm paper surfaces; glass belongs to the masthead. */
 body.design-monolith .app-shell :is(.project-domain-popover, .project-atlas-mega, .navigation-sheet) {
-  background-color: #d7ddd5;
-  border-color: #99a18f;
-  box-shadow: 0 24px 54px rgb(8 10 11 / 23%), inset 0 1px 0 rgb(255 255 255 / 48%);
-}
-body.design-monolith .app-shell :is(.project-navigation-backdrop, .navigation-backdrop) {
-  background: rgb(8 10 11 / 28%);
+  background: #f4f2ed;
+  color: #212320;
+  border-color: #d4d0c9;
+  box-shadow: 0 18px 40px rgb(23 20 16 / 14%);
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
 }
-body.design-monolith .app-shell .project-atlas-mega > .project-domain-nav-header {
-  background: transparent;
+body.design-monolith .app-shell .navigation-sheet { background: #f4f3ef; border-color: #d5ccbc; }
+body.design-monolith .app-shell :is(.project-navigation-backdrop, .navigation-backdrop) {
+  background: rgb(8 10 11 / 22%);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }
+body.design-monolith .app-shell .project-atlas-mega > .project-domain-nav-header { background: transparent; }
 body.design-monolith .app-shell :is(.project-domain-popover, .project-atlas-mega) :is(.project-domain-modules button small, .project-domain-popover-header small, .project-domain-column h3, .project-domain > header strong, .project-domain-nav-header small, .project-domain-footer),
 body.design-monolith .app-shell .navigation-sheet :is(.navigation-sheet-header small, .navigation-sheet-group h2) {
-  color: #454f44;
+  color: #666258;
 }
 body.design-monolith .app-shell :is(.project-domain-popover, .project-atlas-mega) :is(.project-domain-column h3, .project-domain > header) {
-  border-bottom-color: rgb(87 99 80 / 24%);
+  border-bottom-color: #d4d0c9;
 }
 body.design-monolith .app-shell :is(.project-domain-popover, .project-atlas-mega) :is(.project-domain-icon, .project-domain-modules button > span:first-child),
 body.design-monolith .app-shell .navigation-sheet :is(.navigation-sheet-icon, .navigation-sheet-group-items a > svg) {
@@ -270,29 +290,70 @@ body.design-monolith .app-shell .navigation-sheet :is(.navigation-sheet-icon, .n
 }
 body.design-monolith .app-shell :is(.project-domain-search, .navigation-search) {
   background-color: #fffefa;
+  border-color: #c9c6be;
 }
 body.design-monolith .app-shell :is(.project-domain-search, .navigation-search) input::placeholder {
-  color: #64665e;
+  color: #666258;
   opacity: 1;
 }
-@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  body.design-monolith .app-shell :is(.project-domain-popover, .project-atlas-mega, .navigation-sheet) {
-    background-color: rgb(215 221 213 / 86%);
-    -webkit-backdrop-filter: blur(26px) saturate(65%);
-    backdrop-filter: blur(26px) saturate(65%);
-  }
-  @media (max-width: 820px) {
-    body.design-monolith .app-shell :is(.project-atlas-mega, .navigation-sheet) {
-      background-color: rgb(215 221 213 / 96%);
-      -webkit-backdrop-filter: blur(16px) saturate(65%);
-      backdrop-filter: blur(16px) saturate(65%);
-    }
-  }
+body.design-monolith .app-shell .project-atlas-domains > button:hover:not(.active):not([data-state="open"]),
+body.design-monolith .app-shell .atlas-workspace-trigger:hover:not([aria-expanded="true"]),
+body.design-monolith .app-shell .project-navigation-mobile-trigger:hover:not([aria-expanded="true"]) {
+  background: rgb(206 178 124 / 7%);
+  border-color: transparent;
+}
+/* An open group receives the sole filled highlight; current location stays legible. */
+body.design-monolith .app-shell .project-atlas-domains:has(> button[data-state="open"]) > button.active:not([data-state="open"]),
+body.design-monolith .app-shell .topbar:has(.atlas-workspace-trigger[aria-expanded="true"]) .project-atlas-domains > button.active {
+  background: transparent;
+  border-color: transparent;
+}
+body.design-monolith .app-shell .topbar :is(.command-trigger, .icon-button) > svg,
+body.design-monolith .app-shell .project-domain-chevron,
+body.design-monolith .app-shell .project-domain-nav-actions button > svg {
+  stroke-width: 1.5px;
+}
+body.design-monolith .app-shell .project-domain-nav-actions button {
+  border-color: transparent;
+  background: transparent;
+}
+body.design-monolith .app-shell .navigation-sheet .icon-button {
+  border-color: transparent;
+  background: transparent;
+}
+body.design-monolith .app-shell .topbar .button.primary {
+  border-color: transparent;
+  background: #eeeae2;
+}
+body.design-monolith .app-shell .topbar .button.primary:hover {
+  border-color: transparent;
+  background: #f5eee2;
 }
 @media (prefers-reduced-transparency: reduce), (prefers-contrast: more), (forced-colors: active) {
-  body.design-monolith .app-shell :is(.project-domain-popover, .project-atlas-mega, .navigation-sheet) {
-    background-color: #d7ddd5;
+  body.design-monolith .app-shell .topbar::before {
+    background: #0b0d0e;
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
+  }
+}
+@media (forced-colors: active) {
+  body.design-monolith .app-shell .topbar :is(button, .button, .icon-button),
+  body.design-monolith .app-shell .project-domain-nav-actions button {
+    border-color: ButtonText;
+  }
+  body.design-monolith .app-shell .project-atlas-domains > button:is(.active, [data-state="open"]),
+  body.design-monolith .app-shell .atlas-workspace-trigger[aria-expanded="true"],
+  body.design-monolith .app-shell .project-navigation-mobile-trigger[aria-expanded="true"] {
+    outline: 1px solid Highlight;
+  }
+}
+
+@media (pointer: coarse) {
+  body.design-monolith .app-shell .topbar :is(.command-trigger, .icon-button) {
+    flex-basis: 44px;
+    width: 44px;
+    min-width: 44px;
+    max-width: 44px;
+    height: 44px;
   }
 }

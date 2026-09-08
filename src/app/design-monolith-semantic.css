@@ -75,7 +75,7 @@ body.design-monolith .app-shell td[data-label]::before {
   color: var(--muted);
 }
 
-/* Deep brass stays distinct against translucent smoke green. Masthead marks
+/* Deep brass stays distinct against the warm paper menu. Masthead marks
    are excluded: only interactive icons inside an open navigation panel change. */
 body.design-monolith .app-shell :is(.project-domain-popover, .project-atlas-mega) .project-domain-modules button > :is(span:first-child, svg),
 body.design-monolith .app-shell .project-atlas-mega .project-domain-nav-actions button > svg,
