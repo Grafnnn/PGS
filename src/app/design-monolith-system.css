@@ -85,14 +85,15 @@ body.design-monolith :is(.app-shell .page, .login-page, .external-response-page)
   background-color: var(--accent-hover);
   border-color: var(--accent-hover);
 }
-body.design-monolith :is(.app-shell .page, .login-page, .external-response-page) :is(.button.secondary, .icon-button):not(:where(.danger-button, .danger, .dashboard-hero *)) {
+/* Dark project and dashboard heroes keep their own light control colours. */
+body.design-monolith :is(.app-shell .page, .login-page, .external-response-page) :is(.button.secondary, .icon-button):not(:where(.danger-button, .danger, .dashboard-hero *, .project-header-compact *)) {
   background-color: transparent;
   border-color: #c6c9c3;
   color: var(--text);
   border-radius: 7px !important;
   box-shadow: none;
 }
-body.design-monolith :is(.app-shell .page, .login-page, .external-response-page) :is(.button.secondary, .icon-button):hover:not(:disabled):not(:where(.danger-button, .danger, .dashboard-hero *)):not([aria-disabled="true"]) {
+body.design-monolith :is(.app-shell .page, .login-page, .external-response-page) :is(.button.secondary, .icon-button):hover:not(:disabled):not(:where(.danger-button, .danger, .dashboard-hero *, .project-header-compact *)):not([aria-disabled="true"]) {
   background-color: var(--monolith-detail-champagne);
   border-color: #bca988;
   color: var(--monolith-detail-brass-deep);
@@ -127,6 +128,17 @@ body.design-monolith :is(.app-shell .page, .login-page, .external-response-page)
 }
 
 body.design-monolith .app-shell .page :is(.button, .icon-button) > svg { stroke-width: 1.5px; }
+
+/* Section titles share one baseline whether their component uses h3 or h4.
+   Keep each module's font size; remove the browser's default h4 block margins. */
+body.design-monolith .app-shell .project-workspace-content .section-title > :is(h3, h4) {
+  min-width: 0;
+  margin: 0;
+}
+body.design-monolith .app-shell .project-workspace-content .section-title > h4 {
+  font-weight: 500;
+  line-height: inherit;
+}
 
 /* Plain language statuses; colour is retained in addition to their text. */
 body.design-monolith :is(.app-shell .page, .login-page, .external-response-page) .badge {

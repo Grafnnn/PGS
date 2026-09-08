@@ -1,6 +1,60 @@
 /* Project interiors. Shared controls, tables and feedback live in the system layer.
    Keep operational grids, sticky columns, chart geometry and status colors intact. */
 
+/* Views can return fragments: the body owns spacing between their real children. */
+body.design-monolith .app-shell .project-workspace-content {
+  --monolith-workspace-gap: 16px;
+  --monolith-workspace-section-gap: 24px;
+}
+body.design-monolith .app-shell .project-workspace-content .project-module-view-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  row-gap: var(--monolith-workspace-gap);
+}
+body.design-monolith .app-shell .project-workspace-content .project-module-view-body > :where(:not(dialog):not([role="dialog"])) {
+  min-width: 0;
+  margin-block: 0;
+}
+/* These views combine independent workspaces, rather than a metric strip and its action. */
+body.design-monolith .app-shell .project-workspace-content [data-module="overview"] .project-module-view-body[data-view="command"],
+body.design-monolith .app-shell .project-workspace-content [data-module="budget"] .project-module-view-body[data-view="changes"],
+body.design-monolith .app-shell .project-workspace-content [data-module="finance"] .project-module-view-body:is([data-view="summary"], [data-view="forecast"]),
+body.design-monolith .app-shell .project-workspace-content [data-module="documents"] .project-module-view-body:is([data-view="compliance"], [data-view="evidence"]) {
+  row-gap: var(--monolith-workspace-section-gap);
+}
+
+/* Existing one-column workspace roots; preserve their internal tables and diagrams. */
+body.design-monolith .app-shell .project-workspace-content :is(
+  .stack, .wizard-section, .project-intelligence-drilldown,
+  .material-supply-workspace, .payroll-workspace, .technical-docs-assistant,
+  .cost-code-workspace, .change-management, .commitment-workspace,
+  .cost-code-forecast, .invoice-reconciliation, .expense-register,
+  .accounting-bridge-workspace, .contract-tender-workspace,
+  .commercial-proposal-workspace, .acceptance-billing-workspace,
+  .closeout-workspace, .execution-control-workspace, .quality-management-workspace,
+  .reports-workflow, .field-ops-workspace, .quality-issues-workspace,
+  .photo-evidence-workspace, .daily-photo-ai-workspace, .risk-executive-workspace,
+  .field-mobile-workspace, .transmittal-workspace, .document-compliance-workspace,
+  .rfi-workspace, .external-collaboration, .schedule-cashflow-workspace,
+  .ai-control-agent, .project-action-center, .workflow-designer,
+  .project-contract-settings, .ai-copilot, .ai-run-journal
+) {
+  row-gap: var(--monolith-workspace-gap);
+}
+/* Remove only the legacy child margins that duplicate those container gaps. */
+body.design-monolith .app-shell .project-workspace-content :is(.stack, .wizard-section) > .toolbar,
+body.design-monolith .app-shell .project-workspace-content .risk-executive-workspace > .risk-exec-view-tabs,
+body.design-monolith .app-shell .project-workspace-content .reports-workflow > .executive-heading,
+body.design-monolith .app-shell .project-workspace-content .closeout-workspace > .warranty-head,
+body.design-monolith .app-shell .project-workspace-content .payroll-workspace > .resource-filter {
+  margin-block: 0;
+}
+/* An import result may exist without any follow-up actions. */
+body.design-monolith .app-shell .project-workspace-content .wizard-section > .action-grid:empty {
+  display: none;
+}
+
 /* Section spacing belongs to the container, without a second margin on its tabs. */
 body.design-monolith .app-shell .project-workspace-content .project-section-guide:has(.project-section-ai) {
   margin-bottom: 16px;
@@ -11,12 +65,9 @@ body.design-monolith .app-shell .project-workspace-content :is(
 body.design-monolith .app-shell .project-workspace-content .production-schedule-view-tabs {
   margin-bottom: 0;
 }
-body.design-monolith .app-shell .project-workspace-content .analytics-grid { gap: 24px; }
+body.design-monolith .app-shell .project-workspace-content .analytics-grid { gap: var(--monolith-workspace-section-gap); }
 body.design-monolith .app-shell .project-workspace-content .metric-strip { gap: 16px; }
 body.design-monolith .app-shell .project-workspace-content :is(.breakdown-panel, .waterfall) { padding: 16px; }
-body.design-monolith .app-shell .project-workspace-content [data-module="finance"] .cost-to-complete-workspace + .finance-grid {
-  margin-top: 24px;
-}
 
 /* Summary counts are fixed by the two views: five budget KPIs and six finance KPIs.
    Do not apply these column counts to registers, forms or the forecast widgets. */
@@ -40,6 +91,10 @@ body.design-monolith .app-shell .project-workspace-content [data-module="finance
   }
 }
 @media (max-width: 680px) {
+  body.design-monolith .app-shell .project-workspace-content {
+    --monolith-workspace-gap: 12px;
+    --monolith-workspace-section-gap: 12px;
+  }
   body.design-monolith .app-shell .project-workspace-content .project-section-guide:has(.project-section-ai) {
     margin-inline: 0;
     margin-bottom: 12px;
@@ -47,11 +102,7 @@ body.design-monolith .app-shell .project-workspace-content [data-module="finance
   body.design-monolith .app-shell .project-workspace-content :is(.production-schedule-workspace, .production-schedule-plan-view) {
     gap: 12px;
   }
-  body.design-monolith .app-shell .project-workspace-content .analytics-grid { gap: 16px; }
   body.design-monolith .app-shell .project-workspace-content .metric-strip { gap: 12px; }
-  body.design-monolith .app-shell .project-workspace-content [data-module="finance"] .cost-to-complete-workspace + .finance-grid {
-    margin-top: 16px;
-  }
   body.design-monolith .app-shell .project-workspace-content :is([data-module="budget"], [data-module="finance"]) .project-module-view-body[data-view="summary"] > .analytics-grid > .metric-strip {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -209,6 +260,18 @@ body.design-monolith .app-shell .project-workspace-content .metric-strip .kpi-la
   line-height: 18px;
   letter-spacing: 0;
   text-transform: none;
+}
+
+/* Shared Kpi renders exactly label + value. Align each row by its longest label. */
+@supports (grid-template-rows: subgrid) {
+  body.design-monolith .app-shell .project-workspace-content .metric-strip > .kpi:has(> .kpi-label:first-child + .kpi-value:last-child) {
+    grid-row: span 2;
+    grid-template-rows: subgrid;
+    row-gap: 8px;
+  }
+  body.design-monolith .app-shell .project-workspace-content .metric-strip > .kpi > .kpi-label {
+    align-self: start;
+  }
 }
 
 body.design-monolith .app-shell .project-workspace-content :is(

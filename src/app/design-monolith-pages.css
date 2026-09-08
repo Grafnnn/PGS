@@ -83,6 +83,11 @@ body.design-monolith .app-shell .portfolio-segments button.active { color: var(-
 body.design-monolith .app-shell .portfolio-sort { gap: 10px; }
 body.design-monolith .app-shell .portfolio-table-wrap { margin-top: 16px; }
 body.design-monolith .app-shell .portfolio-project-link strong { font-weight: 500; line-height: 1.45; }
+body.design-monolith .app-shell .portfolio-table td > strong { font-weight: 500; }
+body.design-monolith .app-shell .portfolio-table :is(th, td):is(:nth-child(4), :nth-child(5)) {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
 body.design-monolith .app-shell :is(.portfolio-project-link, .portfolio-table td) > small { margin-top: 6px; line-height: 1.5; }
 body.design-monolith .app-shell .portfolio-health { font-weight: 400; }
 body.design-monolith .app-shell .portfolio-progress i,
@@ -178,6 +183,28 @@ body.design-monolith .app-shell .project-registry .project-card-kpis > span { mi
 body.design-monolith .app-shell .project-registry .project-card-kpis strong { font-size: 16px; font-weight: 400; line-height: 1.35; overflow-wrap: anywhere; }
 body.design-monolith .app-shell .project-registry .project-card-footer { flex-wrap: wrap; align-items: center; gap: 12px; padding-top: 4px; font-size: 11px; line-height: 1.5; }
 body.design-monolith .app-shell .project-registry .project-card-footer strong { color: var(--monolith-detail-brass-deep); font-size: 12px; font-weight: 400; }
+
+/* Share intrinsic row heights so wrapped copy cannot stagger peer card values. */
+@supports (grid-template-rows: subgrid) {
+  body.design-monolith .app-shell .portfolio-kpi {
+    grid-row: span 3;
+    grid-template-rows: subgrid;
+  }
+  body.design-monolith .app-shell .project-registry .project-card {
+    grid-row: span 5;
+    grid-template-rows: subgrid;
+    row-gap: 16px;
+  }
+  body.design-monolith .app-shell .project-registry .project-thumb {
+    grid-column: 1;
+    grid-row: 1 / -1;
+  }
+  body.design-monolith .app-shell .project-registry .project-card-body {
+    grid-column: 2;
+    grid-row: 1 / -1;
+    grid-template-rows: subgrid;
+  }
+}
 
 /* Approvals: a quiet metric strip, readable request rows, clear action groups. */
 body.design-monolith .app-shell .inbox-metrics { background: var(--surface); border: 1px solid var(--line); border-radius: 14px !important; }
