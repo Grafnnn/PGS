@@ -6,13 +6,13 @@ import { usePathname } from "next/navigation";
 import {
   Bell,
   BriefcaseBusiness,
+  ChevronDown,
   ChevronRight,
   Command,
   Gauge,
   Layers3,
   LogIn,
   LogOut,
-  Menu,
   Plug,
   Plus,
   Search,
@@ -20,8 +20,9 @@ import {
   X
 } from "lucide-react";
 import { type ReactNode, type RefObject, useCallback, useEffect, useId, useRef, useState } from "react";
-import { BrandLogo } from "@/components/brand-logo";
+import { ProjectNavigationHostContext } from "@/components/project-navigation-host";
 import { PwaRegister } from "@/components/pwa-register";
+import { BrandWordmark } from "@/components/brand-logo";
 import { isStandaloneAppSurface } from "@/components/app-nav-routes";
 import {
   APP_NAVIGATION_GROUPS,
@@ -114,7 +115,7 @@ function NavigationSearch({
         aria-label="Найти раздел или действие"
         autoComplete="off"
         onChange={(event) => onChange(event.target.value)}
-        placeholder="Раздел или действие"
+        placeholder="Найти раздел…"
         ref={inputRef}
         type="search"
         value={value}
@@ -296,57 +297,84 @@ export function AppNav({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [navigationOpen, setNavigationOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [projectNavigationHost, setProjectNavigationHost] = useState<HTMLDivElement | null>(null);
   const menuButton = useRef<HTMLButtonElement>(null);
+  const lastOpener = useRef<HTMLElement | null>(null);
   const sheetRef = useRef<HTMLElement>(null);
   const searchInput = useRef<HTMLInputElement>(null);
   const activeItem = APP_NAVIGATION_ITEMS.find((item) => isNavigationItemActive(pathname, item));
   const isStandaloneSurface = isStandaloneAppSurface(pathname);
 
-  const closeNavigation = useCallback(() => {
+  const closeNavigation = useCallback((restoreFocus = true) => {
     setNavigationOpen(false);
     setQuery("");
+    if (restoreFocus) requestAnimationFrame(() => {
+      const opener = lastOpener.current;
+      const target = opener?.isConnected && !opener.closest("[inert]") ? opener : menuButton.current;
+      target?.focus({ preventScroll: true });
+    });
   }, []);
 
-  const openNavigation = useCallback(() => {
+  const openNavigation = useCallback((opener?: HTMLElement | null) => {
+    if (sheetRef.current) {
+      searchInput.current?.focus();
+      return;
+    }
+    lastOpener.current = opener ?? (document.activeElement instanceof HTMLElement ? document.activeElement : menuButton.current);
     window.dispatchEvent(new Event("pgs:global-navigation-open"));
     setNavigationOpen(true);
   }, []);
 
   useEffect(() => {
-    closeNavigation();
+    closeNavigation(false);
   }, [closeNavigation, pathname]);
 
   useEffect(() => {
     function openCommand(event: KeyboardEvent) {
       if ((event.metaKey || event.ctrlKey) && event.key.toLocaleLowerCase() === "k") {
+        if (isStandaloneSurface) return;
+        const otherDialog = document.querySelector('[aria-modal="true"]:not(.navigation-sheet):not(.project-atlas-mega)');
+        if (otherDialog) return;
         event.preventDefault();
         openNavigation();
       }
     }
     window.addEventListener("keydown", openCommand);
     return () => window.removeEventListener("keydown", openCommand);
-  }, [openNavigation]);
+  }, [isStandaloneSurface, openNavigation]);
 
   useEffect(() => {
-    const closeForProjectNavigation = () => closeNavigation();
+    const closeForProjectNavigation = () => closeNavigation(false);
     window.addEventListener("pgs:project-navigation-open", closeForProjectNavigation);
     return () => window.removeEventListener("pgs:project-navigation-open", closeForProjectNavigation);
   }, [closeNavigation]);
 
   useEffect(() => {
     if (!navigationOpen) return;
-    const previousFocus = document.activeElement as HTMLElement | null;
-    requestAnimationFrame(() => searchInput.current?.focus());
+    const focusFrame = requestAnimationFrame(() => searchInput.current?.focus());
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const inertElements: Array<{ element: HTMLElement; previous: boolean }> = [];
+    let branch: HTMLElement | null = sheetRef.current;
+    while (branch?.parentElement) {
+      for (const sibling of branch.parentElement.children) {
+        if (sibling !== branch && sibling instanceof HTMLElement && !sibling.classList.contains("navigation-backdrop")) {
+          inertElements.push({ element: sibling, previous: sibling.inert });
+          sibling.inert = true;
+        }
+      }
+      if (branch.parentElement === document.body) break;
+      branch = branch.parentElement;
+    }
 
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
         event.preventDefault();
         closeNavigation();
-        menuButton.current?.focus();
         return;
       }
       if (event.key !== "Tab" || !sheetRef.current) return;
-      const focusable = Array.from(sheetRef.current.querySelectorAll<HTMLElement>("a[href], button:not([disabled]), input, select, textarea, [tabindex]:not([tabindex='-1'])"));
+      const focusable = Array.from(sheetRef.current.querySelectorAll<HTMLElement>("a[href], button:not([disabled]), input, select, textarea, [tabindex]:not([tabindex='-1'])")).filter((element) => element.offsetParent !== null);
       const first = focusable[0];
       const last = focusable[focusable.length - 1];
       if (!first || !last) return;
@@ -361,8 +389,10 @@ export function AppNav({ children }: { children: ReactNode }) {
 
     document.addEventListener("keydown", handleKeyDown);
     return () => {
+      cancelAnimationFrame(focusFrame);
       document.removeEventListener("keydown", handleKeyDown);
-      previousFocus?.focus();
+      inertElements.forEach(({ element, previous }) => { element.inert = previous; });
+      document.body.style.overflow = previousOverflow;
     };
   }, [closeNavigation, navigationOpen]);
 
@@ -371,47 +401,35 @@ export function AppNav({ children }: { children: ReactNode }) {
   }
 
   return (
+    <ProjectNavigationHostContext.Provider value={projectNavigationHost}>
     <div className="app-shell">
       <PwaRegister />
       <div className="app-main">
         <header className="topbar">
-          <Link aria-label="PGS Studio" className="atlas-brand" href="/dashboard">
-            <BrandLogo compact href={null} />
-            <span><strong>PGS</strong><small>Project Atlas</small></span>
-          </Link>
           <button
             aria-controls={sheetId}
             aria-expanded={navigationOpen}
-            aria-label="Открыть навигацию"
-            className="icon-button topbar-menu-button"
-            onClick={openNavigation}
+            aria-haspopup="dialog"
+            aria-label="Открыть меню PGS"
+            className="atlas-brand atlas-workspace-trigger"
+            onClick={(event) => navigationOpen ? closeNavigation() : openNavigation(event.currentTarget)}
             ref={menuButton}
+            title="Главная, портфель и проекты"
             type="button"
           >
-            <Menu size={19} />
+            <BrandWordmark decorative />
+            <ChevronDown size={15} aria-hidden="true" />
           </button>
-          <nav className="atlas-global-nav" aria-label="Основные разделы PGS">
-            {APP_NAVIGATION_ITEMS.filter((item) => item.group === "Работа").map((item) => (
-              <Link
-                aria-current={isNavigationItemActive(pathname, item) ? "page" : undefined}
-                className={isNavigationItemActive(pathname, item) ? "active" : undefined}
-                href={item.href as Route}
-                key={item.id}
-              >
-                {item.label}
-              </Link>
-            ))}
-          </nav>
-          <button className="command-trigger" onClick={openNavigation} type="button">
+          <span className="topbar-page-context">{activeItem?.label ?? "Рабочая область"}</span>
+          <div className="topbar-project-slot" ref={setProjectNavigationHost} />
+          <button aria-label="Поиск по PGS" className="command-trigger" onClick={(event) => openNavigation(event.currentTarget)} title="Поиск по PGS · ⌘ K / Ctrl K" type="button">
             <Search size={17} aria-hidden="true" />
-            <span>Поиск и команды</span>
-            <kbd>⌘ K</kbd>
           </button>
           <div className="topbar-actions">
             <SystemStatusIndicator />
             <InboxBell />
             <Link className="button primary" href="/projects#create-project" title="Создать проект">
-              <Plus size={17} />
+              <Plus size={17} aria-hidden="true" />
               <span>Создать</span>
             </Link>
           </div>
@@ -421,28 +439,29 @@ export function AppNav({ children }: { children: ReactNode }) {
 
       {navigationOpen ? (
         <>
-          <button aria-label="Закрыть навигацию" className="navigation-backdrop" onClick={closeNavigation} type="button" />
+          <button aria-label="Закрыть навигацию" className="navigation-backdrop" onClick={() => closeNavigation()} type="button" />
           <aside aria-label="Навигация PGS" aria-modal="true" className="navigation-sheet" id={sheetId} ref={sheetRef} role="dialog">
             <header className="navigation-sheet-header">
-              <div><small>PGS Project Atlas</small><strong>{activeItem?.label ?? "Рабочая область"}</strong></div>
-              <button aria-label="Закрыть навигацию" className="icon-button" onClick={closeNavigation} title="Закрыть" type="button">
+              <div><small>PGS Project Atlas</small><strong>Рабочее пространство</strong></div>
+              <button aria-label="Закрыть навигацию" className="icon-button" onClick={() => closeNavigation()} title="Закрыть" type="button">
                 <X size={18} />
               </button>
             </header>
-            <Link className="navigation-create-link" href={"/projects#create-project" as Route} onClick={closeNavigation}>
-              <span><Plus size={18} /></span>
+            <NavigationSearch inputRef={searchInput} onChange={setQuery} onClear={() => setQuery("")} value={query} />
+            <NavigationLinks onClearQuery={() => setQuery("")} onNavigate={() => closeNavigation(false)} query={query} />
+            <Link className="navigation-create-link" href={"/projects#create-project" as Route} onClick={() => closeNavigation(false)}>
+              <span aria-hidden="true"><Plus size={18} /></span>
               <div><strong>Новый проект</strong><small>Создание, Excel и стартовые документы</small></div>
               <ChevronRight size={16} aria-hidden="true" />
             </Link>
-            <NavigationSearch inputRef={searchInput} onChange={setQuery} onClear={() => setQuery("")} value={query} />
-            <NavigationLinks onClearQuery={() => setQuery("")} onNavigate={closeNavigation} query={query} />
             <footer className="navigation-sheet-footer">
               <div className="navigation-sheet-version"><Command size={15} /><span>PGS Studio · операционный контур</span></div>
-              <SidebarUserCard onNavigate={closeNavigation} />
+              <SidebarUserCard onNavigate={() => closeNavigation(false)} />
             </footer>
           </aside>
         </>
       ) : null}
     </div>
+    </ProjectNavigationHostContext.Provider>
   );
 }

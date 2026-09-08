@@ -63,7 +63,8 @@ describe("ProjectCommandCenter", () => {
       })
     );
 
-    expect(html).toContain("Проект без названия");
+    expect(html).toContain("Состояние проекта");
+    expect(html).toContain("Объект не указан");
     expect(html).toContain("Локальная сводка");
     expect(html).toContain("degraded");
     expect(html).not.toContain("DATABASE_URL");

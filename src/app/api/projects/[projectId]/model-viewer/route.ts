@@ -3,22 +3,13 @@ import { promisify } from "node:util";
 import { gunzip as gunzipCallback } from "node:zlib";
 import path from "node:path";
 import { getProject3dModel } from "@/lib/project-3d-model";
+import { acceptsProjectModelGzip, appendProjectModelEmbed, hasProjectModelEmbed, PROJECT_MODEL_EMBED_VERSION } from "@/lib/project-model-embed";
 import { prisma } from "@/lib/prisma";
 import { requireProjectAccess } from "@/lib/project-route-guards";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 const gunzip = promisify(gunzipCallback);
-
-function acceptsGzip(header: string | null) {
-  const encodings = (header ?? "").split(",").map((part) => {
-    const [name, ...parameters] = part.trim().toLowerCase().split(";");
-    const quality = parameters.map((value) => value.trim()).find((value) => value.startsWith("q="));
-    return { name, quality: quality ? Number(quality.slice(2)) : 1 };
-  });
-  const gzip = encodings.find((encoding) => encoding.name === "gzip") ?? encodings.find((encoding) => encoding.name === "*");
-  return Boolean(gzip && gzip.quality > 0 && gzip.quality <= 1);
-}
 
 function responseHeaders(modelSlug: string) {
   return {
@@ -44,16 +35,20 @@ export async function GET(request: Request, { params }: { params: { projectId: s
   const model = project ? getProject3dModel(project) : null;
   if (!model) return new Response("3D model not found", { status: 404 });
 
-  const headers = responseHeaders(model.slug);
+  const embed = hasProjectModelEmbed(request.url);
+  const headers = responseHeaders(`${model.slug}${embed ? `-${PROJECT_MODEL_EMBED_VERSION}` : ""}`);
   if (request.headers.get("if-none-match") === headers.ETag) return new Response(null, { status: 304, headers });
 
   try {
-    // Ship the portable model byte-for-byte, precompressed once rather than on every request.
+    // Raw responses ship the original package; only opt-in embeds are recompressed.
     const compressed = await readFile(path.join(process.cwd(), model.assetPath));
-    if (acceptsGzip(request.headers.get("accept-encoding"))) {
-      return new Response(new Uint8Array(compressed), { status: 200, headers: { ...headers, "Content-Encoding": "gzip" } });
+    if (acceptsProjectModelGzip(request.headers.get("accept-encoding"))) {
+      const body = embed ? await appendProjectModelEmbed(compressed, "gzip") : compressed;
+      return new Response(new Uint8Array(body), { status: 200, headers: { ...headers, "Content-Encoding": "gzip" } });
     }
-    return new Response(new Uint8Array(await gunzip(compressed)), { status: 200, headers });
+    const source = await gunzip(compressed);
+    const body = embed ? await appendProjectModelEmbed(source, "identity") : source;
+    return new Response(new Uint8Array(body), { status: 200, headers });
   } catch (error) {
     console.error("Unable to load project 3D model", error);
     return new Response("3D model is temporarily unavailable", { status: 503 });

@@ -2,6 +2,7 @@
 
 import { AlertTriangle, CheckCircle2, Clock3, FileCheck2, FileQuestion, Send } from "lucide-react";
 import React, { useEffect, useState } from "react";
+import { BrandWordmark } from "@/components/brand-logo";
 
 type PublicContext = {
   project: { name: string; customer: string; object: string };
@@ -70,7 +71,7 @@ export function ExternalCollaborationResponse({ token }: { token: string }) {
     <main className="external-response-page">
       <form className="external-response-shell" onSubmit={submit}>
         <header>
-          <div className="external-response-brand">PGS</div>
+          <div className="external-response-brand"><BrandWordmark /></div>
           <span className="badge blue">{context.entityType === "rfi" ? "RFI" : "Согласование"}</span>
         </header>
         <div className="eyebrow">{context.project.name}</div>

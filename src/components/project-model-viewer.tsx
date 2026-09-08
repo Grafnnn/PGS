@@ -3,7 +3,7 @@
 import { Box, ExternalLink, Maximize2, X } from "lucide-react";
 import React, { useCallback, useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { getProject3dModel, project3dModelViewerUrl } from "@/lib/project-3d-model";
+import { getProject3dModel, getProject3dPresentation } from "@/lib/project-3d-model";
 import type { Project } from "@/lib/types";
 
 type ProjectModelViewerProps = {
@@ -12,8 +12,8 @@ type ProjectModelViewerProps = {
 
 const PROJECT_MODEL_OPEN_EVENT = "pgs:project-model-open";
 
-export function openProjectModelViewer(projectId: string) {
-  window.dispatchEvent(new CustomEvent(PROJECT_MODEL_OPEN_EVENT, { detail: { projectId } }));
+export function openProjectModelViewer(projectId: string, returnFocusTo?: HTMLElement | null) {
+  window.dispatchEvent(new CustomEvent(PROJECT_MODEL_OPEN_EVENT, { detail: { projectId, returnFocusTo } }));
 }
 
 export function ProjectModelLauncher({ project }: ProjectModelViewerProps) {
@@ -43,23 +43,32 @@ export function ProjectModelLauncher({ project }: ProjectModelViewerProps) {
 }
 
 export function ProjectModelViewer({ project }: ProjectModelViewerProps) {
-  const model = getProject3dModel(project);
+  const presentation = getProject3dPresentation(project);
+  const model = presentation?.model;
   const [open, setOpen] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const frameRef = useRef<HTMLIFrameElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
   const titleId = useId();
-  const openViewer = useCallback(() => {
-    previousFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  const previewNoteId = useId();
+  const openViewer = useCallback((returnFocusTo?: HTMLElement | null) => {
+    previousFocusRef.current = returnFocusTo ?? (document.activeElement instanceof HTMLElement ? document.activeElement : null);
     setLoaded(false);
     setOpen(true);
   }, []);
 
   useEffect(() => {
+    setOpen(false);
+  }, [project.id]);
+
+  useEffect(() => {
     const openFromShortcut = (event: Event) => {
-      const requestedProjectId = (event as CustomEvent<{ projectId?: string }>).detail?.projectId;
+      const detail = (event as CustomEvent<{ projectId?: string; returnFocusTo?: HTMLElement | null }>).detail;
+      const requestedProjectId = detail?.projectId;
       if (requestedProjectId !== project.id) return;
-      openViewer();
+      openViewer(detail?.returnFocusTo);
     };
     window.addEventListener(PROJECT_MODEL_OPEN_EVENT, openFromShortcut);
     return () => window.removeEventListener(PROJECT_MODEL_OPEN_EVENT, openFromShortcut);
@@ -67,59 +76,81 @@ export function ProjectModelViewer({ project }: ProjectModelViewerProps) {
 
   useEffect(() => {
     if (!open) return;
-
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    closeButtonRef.current?.focus();
-
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false);
+    const closeFromModel = (event: MessageEvent) => {
+      // The sandbox has an opaque origin; trust only this specific iframe window.
+      if (frameRef.current?.contentWindow && event.source === frameRef.current.contentWindow && event.data?.type === "pgs:project-model-close") setOpen(false);
     };
-    document.addEventListener("keydown", closeOnEscape);
-
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      document.removeEventListener("keydown", closeOnEscape);
-      previousFocusRef.current?.focus();
-    };
+    window.addEventListener("message", closeFromModel);
+    return () => window.removeEventListener("message", closeFromModel);
   }, [open]);
 
-  if (!model || !project.id) return null;
+  useEffect(() => {
+    if (!open || !project.id || !dialogRef.current) return;
 
-  const viewerUrl = project3dModelViewerUrl(project.id, model.revision);
+    const dialog = dialogRef.current;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    dialog.showModal();
+    closeButtonRef.current?.focus();
+
+    return () => {
+      dialog.close();
+      document.body.style.overflow = previousOverflow;
+      const candidates = [previousFocusRef.current, ...document.querySelectorAll<HTMLElement>('[data-project-mobile-switcher-trigger], [data-project-all-modules-trigger]')];
+      const target = candidates.find((element) => element?.isConnected && element.getClientRects().length > 0 && !element.closest("[inert]"));
+      target?.focus({ preventScroll: true });
+    };
+  }, [open, project.id]);
+
+  if (!project.id) return null;
+
+  const viewerUrl = presentation?.url;
 
   return open && typeof document !== "undefined" ? createPortal(
-        <div className="project-model-overlay">
-          <section aria-labelledby={titleId} aria-modal="true" className="project-model-dialog" role="dialog">
+        <dialog
+          aria-describedby={presentation?.isPreview ? previewNoteId : undefined}
+          aria-labelledby={titleId}
+          aria-modal="true"
+          className="project-model-overlay project-model-dialog"
+          onCancel={(event) => { event.preventDefault(); setOpen(false); }}
+          onClose={() => setOpen(false)}
+          ref={dialogRef}
+        >
             <header className="project-model-dialog-header">
               <div>
-                <span><Box size={18} aria-hidden="true" /> Координационная модель · {model.revision}</span>
-                <strong id={titleId}>{model.title}</strong>
+                <span><Box size={18} aria-hidden="true" /> {presentation?.isPreview ? "Пример · Троицк · здание 24 · R06" : model ? `Координационная модель · ${model.revision}` : "3D-модель проекта"}</span>
+                <strong id={titleId}>{model?.title ?? project.name ?? "Модель проекта"}</strong>
+                {presentation?.isPreview ? <small className="project-model-preview-note" id={previewNoteId}>У текущего объекта модель не подключена. Показан пример другого объекта.</small> : null}
               </div>
               <div className="project-model-dialog-actions">
-                <a className="button secondary" href={viewerUrl} rel="noreferrer" target="_blank">
+                {viewerUrl ? <a className="button secondary" href={viewerUrl} rel="noreferrer" target="_blank">
                   <ExternalLink size={17} />
                   В новой вкладке
-                </a>
+                </a> : null}
                 <button aria-label="Закрыть 3D-модель" className="icon-button" onClick={() => setOpen(false)} ref={closeButtonRef} title="Закрыть" type="button">
                   <X size={20} />
                 </button>
               </div>
             </header>
             <div className="project-model-stage">
-              {!loaded ? <div className="project-model-loading" role="status">Загружаю геометрию модели...</div> : null}
-              <iframe
+              {viewerUrl && !loaded ? <div className="project-model-loading" role="status">Загружаю геометрию модели...</div> : null}
+              {viewerUrl && model ? <iframe
                 allow="fullscreen"
                 allowFullScreen
                 onLoad={() => setLoaded(true)}
+                ref={frameRef}
                 referrerPolicy="same-origin"
                 sandbox="allow-downloads allow-scripts"
                 src={viewerUrl}
                 title={`${model.title}, ${model.revision}`}
-              />
+              /> : <div className="project-model-empty">
+                <Box size={40} aria-hidden="true" />
+                <h2>Модель этого проекта пока не подключена</h2>
+                <p>Когда модель будет добавлена к объекту, она появится здесь. Раздел 3D всегда доступен из верхнего меню.</p>
+                <button className="button secondary" onClick={() => setOpen(false)} type="button">Вернуться к проекту</button>
+              </div>}
             </div>
-          </section>
-        </div>,
+        </dialog>,
         document.body
       ) : null;
 }

@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import { AlertTriangle, BadgeCheck, BarChart3, BookOpenCheck, Bot, Box, ClipboardList, DatabaseZap, FileText, HardHat, Landmark, Package, Pencil, Plus, ReceiptText, Search, Send, Settings2, Table2, TimerReset, Trash2, Truck, Users } from "lucide-react";
+import { AlertTriangle, ArrowUpRight, BadgeCheck, BarChart3, BookOpenCheck, Bot, Box, ClipboardList, DatabaseZap, FileText, HardHat, Landmark, Package, Pencil, Plus, ReceiptText, Search, Send, Settings2, Table2, TimerReset, Trash2, Truck, Users } from "lucide-react";
 import { ProjectCommandCenter } from "@/components/project-command-center";
 import { openProjectModelViewer, ProjectModelViewer } from "@/components/project-model-viewer";
 import type { ProjectActionSuggestion } from "@/components/project-action-center";
@@ -16,7 +16,7 @@ import type { AiInsightResponse, AiScenario } from "@/lib/project-intelligence-d
 import { buildInitialProjectReadiness } from "@/lib/project-onboarding-intelligence";
 import type { DocumentChecklistItem, PipelineAction, PipelineReadiness } from "@/lib/project-pipeline";
 import { buildExpenseAwareForecast, type ProjectExpenseSummary } from "@/lib/project-expenses";
-import { getProject3dModel } from "@/lib/project-3d-model";
+import { getProject3dModel, getProject3dPresentation } from "@/lib/project-3d-model";
 import type { AuditEvent, BudgetItem, DailyReport, Material, Payment, ProcurementRequest, Project, ProjectDocument, ProjectDocumentVersion, ProjectMember, Risk, ScheduleItem } from "@/lib/types";
 
 function ModuleLoading() {
@@ -265,9 +265,10 @@ export function ProjectWorkspace({
   const onboardingPlan = useMemo(() => buildInitialProjectReadiness(initialBundle.project), [initialBundle.project]);
   const showOnboardingPanel = createdFromOnboarding || emptyOperationalBaseline;
   const project3dModel = getProject3dModel(initialBundle.project);
-  const project3dModelId = project3dModel ? initialBundle.project.id : null;
-  const openProject3dModel = useCallback(() => {
-    if (project3dModelId) openProjectModelViewer(project3dModelId);
+  const project3dPresentation = getProject3dPresentation(initialBundle.project);
+  const project3dModelId = initialBundle.project.id;
+  const openProject3dModel = useCallback((returnFocusTo?: HTMLElement | null) => {
+    if (project3dModelId) openProjectModelViewer(project3dModelId, returnFocusTo);
   }, [project3dModelId]);
   const actionSuggestions = useMemo<ProjectActionSuggestion[]>(() => {
     const targetByCategory: Record<PipelineAction["category"], string> = {
@@ -890,9 +891,17 @@ export function ProjectWorkspace({
 
   return (
     <main className={`page project-workspace-page ${activeTab === "Обзор" ? "is-overview" : "is-module"}`}>
+      <ProjectModuleMenu
+        activeTab={activeProjectTab}
+        onOpenProjectModel={openProject3dModel}
+        projectModelHint={project3dPresentation?.isPreview
+          ? "Пример: Троицк · здание 24 · R06"
+          : project3dModel ? "Координационная модель проекта" : "Модель пока не подключена"}
+        onSelect={navigateProjectTab}
+      />
       <div className="page-header project-header project-header-compact">
         <div className="page-header-main">
-          <div className="eyebrow">{initialBundle.project.customer}</div>
+          <div className="eyebrow">{initialBundle.project.customer || "Рабочее пространство проекта"}</div>
           <div className="project-title-row">
             <h1>{initialBundle.project.name}</h1>
             <StatusBadge tone={statusTone(initialBundle.project.status)}>{readableStatus(initialBundle.project.status)}</StatusBadge>
@@ -903,7 +912,24 @@ export function ProjectWorkspace({
             <span>РП: {initialBundle.project.manager}</span>
           </div>
         </div>
-        <div className="project-atlas-signals" aria-label="Ключевые сигналы проекта">
+        {activeTab === "Обзор" && <div className="project-feature-cards" aria-label="Инструменты проекта">
+          <button className="project-feature-card project-feature-progress" type="button" onClick={() => navigateProjectTab("График")}>
+            <span className="project-feature-label">Ход строительства <ArrowUpRight size={23} aria-hidden="true" /></span>
+            <strong>{scheduleItems.length ? percent(works.completionPercent) : "Нет данных"}</strong>
+            <span className="project-feature-caption">{scheduleItems.length ? "Фактическое выполнение · открыть график" : "Перейти к графику работ"}</span>
+          </button>
+          <button className="project-feature-card project-feature-budget" type="button" onClick={() => navigateProjectTab("Бюджет / ВОР")}>
+            <span className="project-feature-label">Бюджет и объёмы <ArrowUpRight size={23} aria-hidden="true" /></span>
+            <strong>{budgetItems.length ? `${budgetDeviation > 0 ? "+" : ""}${new Intl.NumberFormat("ru-RU", { notation: "compact", maximumFractionDigits: 1 }).format(budgetDeviation)} ₽` : "Загрузить ВОР"}</strong>
+            <span className="project-feature-caption">{budgetItems.length ? "Отклонение от плановой себестоимости" : "Перейти к бюджету и импорту"}</span>
+          </button>
+          <button className="project-feature-card project-feature-field" type="button" onClick={() => navigateProjectTab("Рапорты")}>
+            <span className="project-feature-label">Рапорт с площадки <ArrowUpRight size={23} aria-hidden="true" /></span>
+            <strong className="project-feature-message">Зафиксировать <br />результат дня</strong>
+            <span className="project-feature-caption">Работы, люди и фотоотчёт</span>
+          </button>
+        </div>}
+        {activeTab !== "Обзор" && <div className="project-atlas-signals" aria-label="Ключевые сигналы проекта">
           <div className="project-atlas-signal tone-good">
             <small>Готовность</small>
             <strong>{percent(works.completionPercent)}</strong>
@@ -919,39 +945,26 @@ export function ProjectWorkspace({
             <strong>{budgetDeviation ? money(budgetDeviation) : "В коридоре"}</strong>
             <span>{budgetDeviation > 0 ? "к плановой себестоимости" : "перерасход не выявлен"}</span>
           </div>
-        </div>
+        </div>}
         {activeTab === "Обзор" && <div className="page-header-actions">
           {project3dModel ? <button
             aria-label="Открыть 3D-модель проекта"
             className="button secondary"
             title="Открыть 3D-модель проекта"
             type="button"
-            onClick={openProject3dModel}
+            onClick={() => openProject3dModel()}
           >
             <Box size={18} />
             3D-модель
           </button> : null}
-          <button aria-label="Импортировать ВОР" className="button secondary" title="Импортировать ВОР" type="button" onClick={() => navigateProjectTab("Бюджет / ВОР")}>
-            <Table2 size={18} />
-            Импорт ВОР
-          </button>
-          <button aria-label="Добавить ежедневный рапорт" className="button secondary" title="Добавить ежедневный рапорт" type="button" onClick={() => navigateProjectTab("Рапорты")}>
-            <ClipboardList size={18} />
-            Добавить рапорт
-          </button>
           <button aria-label="Открыть AI-анализ" className="button primary" title="Открыть AI-анализ" type="button" onClick={() => navigateProjectTab("AI-помощник")}>
             <Bot size={18} />
-            AI-анализ
+            Разобрать проект с AI
           </button>
         </div>}
       </div>
 
       <div className="workspace-layout workspace-layout-full project-workspace-layout">
-        <ProjectModuleMenu
-          activeTab={activeProjectTab}
-          onOpenProjectModel={project3dModel ? openProject3dModel : undefined}
-          onSelect={navigateProjectTab}
-        />
         <ProjectModelViewer project={initialBundle.project} />
         <div className="project-workspace-content">
           {activeTab !== "Обзор" && (
@@ -981,7 +994,7 @@ export function ProjectWorkspace({
 
           <div className={`project-module-stage ${activeTab === "Обзор" ? "is-overview" : "is-focused"}`}>
           {activeTab === "Обзор" && (
-            <ProjectModuleWorkspace moduleKey="overview" title="Командный центр проекта" icon={<BarChart3 size={18} />} views={[
+            <ProjectModuleWorkspace moduleKey="overview" title="Сводка проекта" icon={<BarChart3 size={18} />} views={[
               { id: "command", label: "Сводка", description: "Главные показатели, приоритеты и ближайшие управленческие действия.", content: <>
                 {showOnboardingPanel && <ProjectWorkspaceOnboardingPanel created={createdFromOnboarding} onNavigate={setActiveTab} plan={onboardingPlan} />}
                 <ProjectCommandCenter

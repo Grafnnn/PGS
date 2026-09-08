@@ -39,7 +39,7 @@ describe("ProjectWorkspace onboarding panel", () => {
     expect(html).toContain("Импортировать ВОР");
     expect(html).toContain("Project command center");
     expect(html).toContain("Project Intelligence");
-    expect(html).toContain("Представления раздела Командный центр проекта");
+    expect(html).toContain("Представления раздела Сводка проекта");
     expect(html).toContain("Сдача и гарантия");
     expect(html).not.toContain('<div class="eyebrow">Контекст проекта</div>');
     expect(fetchMock).not.toHaveBeenCalled();

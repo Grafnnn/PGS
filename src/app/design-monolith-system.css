@@ -1,0 +1,252 @@
+/* Shared working controls. Navigation and the approved masthead are deliberately
+   outside this scope; specialised charts retain their geometry and series. */
+body.design-monolith {
+  --monolith-control-border: #858b83;
+  --monolith-detail-brass: #92713e;
+  --monolith-detail-brass-light: #ceb27c;
+  --monolith-detail-brass-deep: #654b29;
+  --monolith-detail-champagne: #f3ecdf;
+  --focus: 0 0 0 3px rgb(146 113 62 / 16%);
+}
+
+body.design-monolith :is(.app-shell .page, .login-page, .external-response-page) {
+  font-kerning: normal;
+  accent-color: var(--monolith-detail-brass-deep);
+}
+
+/* Input borders are stronger than the quiet dividers between information cards. */
+body.design-monolith :is(.app-shell .page, .login-page, .external-response-page) :where(
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="hidden"]):not([type="submit"]):not([type="button"]),
+  select,
+  textarea
+) {
+  background-color: var(--surface);
+  border-color: var(--monolith-control-border);
+  border-radius: 0 !important;
+  color: var(--text);
+  font-family: inherit;
+  font-weight: 400;
+  box-shadow: none;
+}
+body.design-monolith :is(.app-shell .page, .login-page, .external-response-page) :is(input, textarea)::placeholder {
+  color: var(--muted);
+  opacity: 1;
+}
+body.design-monolith :is(.app-shell .page, .login-page, .external-response-page) :is(input, select, textarea):focus {
+  border-color: var(--monolith-detail-brass);
+  box-shadow: var(--focus);
+}
+body.design-monolith :is(.app-shell .page, .login-page, .external-response-page) :focus-visible {
+  outline: 2px solid var(--monolith-detail-brass);
+  outline-offset: 3px;
+}
+body.design-monolith :is(.app-shell .page, .login-page, .external-response-page) :is(input, select, textarea)[aria-invalid="true"] {
+  border-color: var(--red);
+}
+body.design-monolith :is(.app-shell .page, .login-page, .external-response-page) :is(input, select, textarea)[aria-invalid="true"]:focus {
+  outline-color: var(--red);
+  box-shadow: 0 0 0 3px rgb(161 61 50 / 12%);
+}
+body.design-monolith :is(.app-shell .page, .login-page, .external-response-page) :is(input, select, textarea):disabled {
+  background-color: var(--panel-muted);
+  border-color: var(--line-strong);
+  color: var(--muted);
+  cursor: not-allowed;
+  box-shadow: none;
+}
+body.design-monolith :is(.app-shell .page, .login-page, .external-response-page) .field > span {
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 18px;
+}
+body.design-monolith :is(.app-shell .page, .login-page, .external-response-page) :is(.form-hint:not([role="alert"]), .field > small) {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 18px;
+}
+
+body.design-monolith :is(.app-shell .page, .login-page, .external-response-page) .button:not(:where(.dashboard-hero *)) {
+  border-radius: 0 !important;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0;
+  line-height: 18px;
+  box-shadow: none;
+}
+body.design-monolith :is(.app-shell .page, .login-page, .external-response-page) .button.primary:not(:where(.danger-button, .danger, .dashboard-hero *)) {
+  color: #fff;
+  background-color: var(--accent);
+  border-color: var(--accent);
+}
+body.design-monolith :is(.app-shell .page, .login-page, .external-response-page) .button.primary:hover:not(:disabled):not(:where(.danger-button, .danger, .dashboard-hero *)) {
+  background-color: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+body.design-monolith :is(.app-shell .page, .login-page, .external-response-page) :is(.button.secondary, .icon-button):not(:where(.danger-button, .danger, .dashboard-hero *)) {
+  background-color: var(--surface);
+  border-color: var(--monolith-control-border);
+  color: var(--text);
+  border-radius: 0 !important;
+  box-shadow: none;
+}
+body.design-monolith :is(.app-shell .page, .login-page, .external-response-page) :is(.button.secondary, .icon-button):hover:not(:disabled):not(:where(.danger-button, .danger, .dashboard-hero *)):not([aria-disabled="true"]) {
+  background-color: var(--monolith-detail-champagne);
+  border-color: var(--monolith-detail-brass-deep);
+  color: var(--monolith-detail-brass-deep);
+}
+body.design-monolith :is(.app-shell .page, .login-page, .external-response-page) .button.danger-button {
+  background-color: var(--red);
+  border-color: var(--red);
+  color: #fff;
+}
+body.design-monolith :is(.app-shell .page, .login-page, .external-response-page) .button.danger-button:hover:not(:disabled) {
+  background-color: #862f26;
+  border-color: #862f26;
+}
+body.design-monolith :is(.app-shell .page, .login-page, .external-response-page) :is(.button.danger, .icon-button.danger) {
+  color: var(--red);
+  background-color: var(--red-soft);
+  border-color: var(--red);
+}
+body.design-monolith :is(.app-shell .page, .login-page, .external-response-page) :is(.button.danger, .icon-button.danger):hover:not(:disabled) {
+  color: #fff;
+  background-color: var(--red);
+  border-color: var(--red);
+}
+body.design-monolith :is(.app-shell .page, .login-page, .external-response-page) :is(.button.primary, .button.secondary, .button.danger-button, .button.danger, .icon-button.danger, .button, .icon-button):disabled,
+body.design-monolith :is(.app-shell .page, .login-page, .external-response-page) :is(.button.primary, .button.secondary, .button.danger-button, .button.danger, .button)[aria-disabled="true"] {
+  background-color: var(--bg-soft);
+  border-color: var(--line-strong);
+  color: var(--muted);
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+/* Plain language statuses; colour is retained in addition to their text. */
+body.design-monolith :is(.app-shell .page, .login-page, .external-response-page) .badge {
+  border-radius: 0 !important;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 15px;
+  text-transform: none;
+  font-variant-numeric: tabular-nums;
+}
+body.design-monolith :is(.app-shell .page, .login-page, .external-response-page) .badge.gray {
+  background-color: var(--panel-muted);
+  border-color: var(--line);
+  color: var(--muted);
+}
+body.design-monolith :is(.app-shell .page, .login-page, .external-response-page) .badge.blue {
+  background-color: var(--blue-soft);
+  border-color: #ccd3d5;
+  color: var(--blue);
+}
+
+/* Only the presentation changes: sticky headers, column widths and scrolling
+   continue to be owned by each register. */
+body.design-monolith .app-shell .page .table-wrap {
+  border-color: var(--line);
+  box-shadow: none;
+  scrollbar-color: #999d94 transparent;
+}
+body.design-monolith .app-shell .page table {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 19px;
+  font-variant-numeric: tabular-nums;
+}
+body.design-monolith .app-shell .page table th {
+  background-color: var(--panel-muted);
+  border-color: var(--line);
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0;
+  line-height: 18px;
+  text-transform: none;
+}
+body.design-monolith .app-shell .page table td { border-color: var(--line); }
+body.design-monolith .app-shell .page .data-table tbody tr:hover {
+  background-color: #faf7f0;
+}
+body.design-monolith .app-shell .page .data-table tbody tr:focus-within {
+  background-color: var(--monolith-detail-champagne);
+}
+body.design-monolith .app-shell .page :is(.table-count, .table-search > svg) {
+  color: var(--muted);
+  font-weight: 400;
+}
+body.design-monolith .app-shell .page .panel:hover { box-shadow: none; }
+
+body.design-monolith :is(.app-shell .page, .login-page, .external-response-page) .empty-state {
+  background-color: var(--panel-muted);
+  border-color: var(--line-strong);
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 20px;
+}
+body.design-monolith :is(.app-shell .page, .login-page, .external-response-page) :is(.error-text, .error-box, .form-error) {
+  background-color: var(--red-soft);
+  border-color: #d5b4aa;
+  color: var(--red);
+  font-weight: 400;
+  line-height: 1.5;
+}
+body.design-monolith :is(.app-shell .page, .login-page, .external-response-page) .success-text {
+  background-color: var(--green-soft);
+  border-color: #b4caba;
+  color: var(--green);
+  font-weight: 400;
+}
+
+/* Module-specific feedback uses the same palette, including unavailable data. */
+body.design-monolith .app-shell .page :is(
+  .callout.danger, .alert.error, .notice.error,
+  .material-supply-message.error, .production-schedule-form-error,
+  .daily-photo-ai-workspace .inline-error, .ai-error-preview, .expense-notice.error
+) {
+  padding: 14px 16px;
+  border: 1px solid #d5b4aa;
+  background-color: var(--red-soft);
+  color: var(--red);
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 20px;
+}
+body.design-monolith .app-shell .page .callout.danger {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+body.design-monolith .app-shell .page .callout.danger > svg { flex-shrink: 0; }
+body.design-monolith .app-shell .project-workspace-content :is(.closeout-loading, .reports-empty, .daily-photo-ai-empty) {
+  color: var(--muted);
+  background-color: var(--panel-muted);
+  border-color: var(--line);
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 20px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.design-monolith :is(.app-shell .page, .login-page, .external-response-page) :is(.button, .icon-button, .data-table tbody tr) {
+    transition: none;
+  }
+}
+@media (forced-colors: active) {
+  body.design-monolith :is(.app-shell .page, .login-page, .external-response-page) :is(input, select, textarea, .button, .icon-button) {
+    border-color: ButtonText;
+    box-shadow: none;
+  }
+  body.design-monolith :is(.app-shell .page, .login-page, .external-response-page) :focus-visible {
+    outline-color: Highlight;
+  }
+}

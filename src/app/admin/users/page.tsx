@@ -133,7 +133,7 @@ export default function AdminUsersPage() {
   }
 
   return (
-    <main className="page">
+    <main className="page admin-page admin-users-page">
       <div className="header-row">
         <div>
           <div className="eyebrow">Администрирование</div>

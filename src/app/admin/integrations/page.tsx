@@ -18,7 +18,7 @@ export default async function AdminIntegrationsPage() {
   const currentUser = await getCurrentUser();
   if (!canManageUsers(currentUser)) {
     return (
-      <main className="page">
+      <main className="page admin-page admin-integrations-page">
         <section className="panel">
           <h1>Доступ запрещен</h1>
           <p className="muted">Статус интеграций доступен только OWNER/ADMIN.</p>
@@ -32,7 +32,7 @@ export default async function AdminIntegrationsPage() {
   const email = getEmailProviderStatus();
 
   return (
-    <main className="page">
+    <main className="page admin-page admin-integrations-page">
       <div className="header-row">
         <div>
           <div className="eyebrow">Администрирование</div>

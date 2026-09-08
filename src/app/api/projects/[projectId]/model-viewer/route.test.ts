@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { gzipSync, gunzipSync } from "node:zlib";
+import { gzipSync, gunzipSync, inflateRawSync } from "node:zlib";
+import { runInNewContext } from "node:vm";
 
 const mocks = vi.hoisted(() => ({
   access: vi.fn(),
@@ -63,6 +64,86 @@ describe("project 3D model viewer route", () => {
     expect(await response.text()).toBe(source);
   });
 
+  it.each(["identity", "gzip"])("appends the opt-in integration after the unchanged model for %s", async (encoding) => {
+    const { GET } = await import("./route");
+    const response = await GET(new Request("https://pgs.local/?embed=monolith-v1", { headers: { "accept-encoding": encoding } }), context);
+    const body = Buffer.from(await response.arrayBuffer());
+    const html = encoding === "gzip" ? gunzipSync(body) : body;
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-encoding")).toBe(encoding === "gzip" ? "gzip" : null);
+    expect(response.headers.get("etag")).toBe('W/"troitsk-building-24-r06-monolith-v1"');
+    expect(response.headers.get("content-security-policy")).toContain("connect-src 'none'");
+    expect(response.headers.get("content-security-policy")).toContain("frame-ancestors 'self'");
+    expect(response.headers.get("x-frame-options")).toBe("SAMEORIGIN");
+    expect(html.subarray(0, Buffer.byteLength(source))).toEqual(Buffer.from(source));
+    expect(html.toString().slice(source.length)).toMatch(/^\s*<style id="pgs-model-embed-style">[\s\S]*<\/style>\s*<script id="pgs-model-embed-script">[\s\S]*<\/script>\s*$/);
+    // Decode just the first gzip member to catch browsers dropping concatenated members.
+    if (encoding === "gzip") expect(inflateRawSync(body.subarray(10))).toEqual(html);
+  });
+
+  it("keeps unsupported embed versions on the original byte-for-byte response", async () => {
+    const { GET } = await import("./route");
+    const response = await GET(new Request("https://pgs.local/?embed=monolith-v2", { headers: { "accept-encoding": "gzip" } }), context);
+    expect(response.headers.get("etag")).toBe('W/"troitsk-building-24-r06"');
+    expect(Buffer.from(await response.arrayBuffer())).toEqual(gzipSync(source));
+  });
+
+  it("keeps raw and embedded model cache validators distinct", async () => {
+    const { GET } = await import("./route");
+    const rawTag = 'W/"troitsk-building-24-r06"';
+    const embedTag = 'W/"troitsk-building-24-r06-monolith-v1"';
+    const embedded = await GET(new Request("https://pgs.local/?embed=monolith-v1", { headers: { "if-none-match": rawTag } }), context);
+    expect(embedded.status).toBe(200);
+    expect(embedded.headers.get("etag")).toBe(embedTag);
+
+    const raw = await GET(new Request("https://pgs.local/", { headers: { "if-none-match": embedTag } }), context);
+    expect(raw.status).toBe(200);
+    expect(raw.headers.get("etag")).toBe(rawTag);
+    expect(await raw.text()).toBe(source);
+
+    mocks.readFile.mockClear();
+    const cached = await GET(new Request("https://pgs.local/?embed=monolith-v1", { headers: { "if-none-match": embedTag } }), context);
+    expect(cached.status).toBe(304);
+    expect(cached.headers.get("etag")).toBe(embedTag);
+    expect(mocks.access).toHaveBeenCalledWith(context.params.projectId, "view");
+    expect(mocks.readFile).not.toHaveBeenCalled();
+  });
+
+  it.each([401, 403])("checks access before embedded metadata or cache responses (%s)", async (status) => {
+    mocks.access.mockResolvedValue({ response: new Response("Denied", { status }) });
+    const { GET } = await import("./route");
+    const response = await GET(new Request("https://pgs.local/?embed=monolith-v1", { headers: { "if-none-match": 'W/"troitsk-building-24-r06-monolith-v1"' } }), context);
+    expect(response.status).toBe(status);
+    expect(mocks.projectFind).not.toHaveBeenCalled();
+    expect(mocks.readFile).not.toHaveBeenCalled();
+  });
+
+  it("only forwards unhandled Escape from the embedded document to its parent", async () => {
+    const { GET } = await import("./route");
+    const response = await GET(new Request("https://pgs.local/?embed=monolith-v1"), context);
+    const html = await response.text();
+    const script = html.match(/<script id="pgs-model-embed-script">([\s\S]*?)<\/script>/)![1];
+    const addEventListener = vi.fn();
+    const postMessage = vi.fn();
+    const frame = { addEventListener };
+    runInNewContext(script, { window: frame, parent: { postMessage } });
+    expect(addEventListener).toHaveBeenCalledWith("keydown", expect.any(Function));
+    const handleKey = addEventListener.mock.calls[0][1];
+    handleKey({ key: "Enter", defaultPrevented: false });
+    handleKey({ key: "Escape", defaultPrevented: true });
+    expect(postMessage).not.toHaveBeenCalled();
+    handleKey({ key: "Escape", defaultPrevented: false });
+    expect(postMessage).toHaveBeenCalledWith({ type: "pgs:project-model-close" }, "*");
+
+    addEventListener.mockClear();
+    postMessage.mockClear();
+    const standalone = { addEventListener, postMessage };
+    runInNewContext(script, { window: standalone, parent: standalone });
+    addEventListener.mock.calls[0][1]({ key: "Escape", defaultPrevented: false });
+    expect(postMessage).not.toHaveBeenCalled();
+  });
+
   it("revalidates the R06 cache only after checking project access", async () => {
     const { GET } = await import("./route");
     const request = new Request("https://pgs.local", { headers: { "if-none-match": 'W/"troitsk-building-24-r06"' } });
@@ -95,10 +176,10 @@ describe("project 3D model viewer route", () => {
     }
   });
 
-  it("does not expose the Troitsk model for an unrelated project", async () => {
+  it.each(["", "?embed=monolith-v1"])("does not expose the Troitsk model for an unrelated project (%s)", async (query) => {
     mocks.projectFind.mockResolvedValue({ id: "project-2", name: "Другой объект", code: "OTHER", object: "Склад", address: "Москва" });
     const { GET } = await import("./route");
-    const response = await GET(new Request("https://pgs.local"), { params: { projectId: "project-2" } });
+    const response = await GET(new Request(`https://pgs.local/${query}`), { params: { projectId: "project-2" } });
 
     expect(response.status).toBe(404);
     expect(mocks.readFile).not.toHaveBeenCalled();

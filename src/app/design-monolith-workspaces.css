@@ -1,0 +1,337 @@
+/* Project interiors. Shared controls, tables and feedback live in the system layer.
+   Keep operational grids, sticky columns, chart geometry and status colors intact. */
+
+/* Large information surfaces; rows and controls retain the square geometry. */
+body.design-monolith .app-shell .project-workspace-content :is(
+  .breakdown-panel, .waterfall,
+  .intelligence-panel, .project-onboarding-panel, .closeout-overview,
+  .import-panel, .expense-category-insights,
+  .material-supply-panel, .field-mobile-capture, .field-mobile-queue,
+  .contract-tender-card, .commercial-proposal-card:not(.metric), .acceptance-billing-card,
+  .doc-compliance-card, .quality-issues-card:not(.metric),
+  .field-ops-card:not(.metric), .execution-control-card:not(.metric),
+  .photo-evidence-card:not(.metric), .risk-exec-card,
+  .schedule-cashflow-card, .executive-plan-card, .executive-report-card,
+  .cost-actual-panel, .technical-question-panel, .technical-answer-panel,
+  .ai-copilot-hero, .workflow-section, .daily-report-editor,
+  .daily-photo-workspace, .daily-existing-photo-panel
+) {
+  border-radius: 14px !important;
+  box-shadow: none;
+}
+
+/* These surfaces carry state on their contents, rather than on the panel itself. */
+body.design-monolith .app-shell .project-workspace-content :is(
+  .breakdown-panel, .waterfall,
+  .intelligence-panel, .project-onboarding-panel, .import-panel,
+  .expense-category-insights, .material-supply-panel,
+  .contract-tender-card, .commercial-proposal-card:not(.metric), .acceptance-billing-card,
+  .doc-compliance-card, .risk-exec-card, .schedule-cashflow-card,
+  .cost-actual-panel, .technical-question-panel, .technical-answer-panel,
+  .ai-copilot-hero, .workflow-section, .daily-report-editor
+) {
+  background: var(--surface);
+  border-color: var(--line);
+  box-shadow: none;
+}
+
+body.design-monolith .app-shell .project-workspace-content :is(
+  .quality-issues-card, .field-ops-card, .execution-control-card,
+  .photo-evidence-card, .closeout-overview, .executive-report-card
+):not([class*="tone-"]) {
+  background-color: var(--surface);
+  border-color: var(--line);
+}
+
+/* Keep form layout and field dimensions local to each operational module. */
+body.design-monolith .app-shell .project-workspace-content :is(
+  .form-surface, .mapping-card, .cost-code-form, .change-order-form,
+  .commitment-form, .payment-application-form, .expense-form, .invoice-form,
+  .rfi-form, .external-collaboration-form, .project-action-form,
+  .closeout-create-form, .quality-management-form, .quality-evidence-form,
+  .quality-corrective-form, .resource-capacity-form, .payroll-policy-form,
+  .workforce-admission-form, .workforce-import-panel, .technical-drive-form,
+  .project-contract-settings-grid, .production-schedule-form,
+  .workflow-builder, .workflow-launch
+) {
+  background-color: var(--panel-muted);
+  border-color: var(--line);
+  box-shadow: none;
+}
+
+/* One quiet heading scale across native and shared module wrappers. */
+body.design-monolith .app-shell .project-workspace-content :is(
+  .project-module-workspace-title h2, .production-schedule-header h2
+) {
+  font-family: var(--font-sans);
+  font-size: 28px;
+  font-weight: 400;
+  line-height: 34px;
+  letter-spacing: -.015em;
+}
+
+body.design-monolith .app-shell .project-workspace-content :is(
+  .section-title, .section-title > h3, .breakdown-panel > h3, .waterfall > h3,
+  .quality-management-header h3, .quality-management-section-title h4,
+  .project-contract-settings-copy h3, .reports-workflow-heading h3,
+  .rfi-workspace-header h3, .transmittal-header h3,
+  .expense-register-header h3, .invoice-reconciliation-header h3,
+  .project-action-header h3, .ai-control-agent-header h3,
+  .ai-copilot-identity h3, .workflow-section-title h3,
+  .workflow-designer-header h2, .closeout-header h2,
+  .technical-docs-summary h4, .accounting-bridge-header h3,
+  .material-supply-command-title h3, .payroll-workspace-header h3,
+  .quality-issues-header h3, .field-ops-header h3,
+  .execution-control-header h3, .photo-evidence-header h3,
+  .contract-tender-header h3, .commercial-proposal-header h3,
+  .acceptance-billing-header h3, .doc-compliance-header h3,
+  .risk-exec-header h3, .field-mobile-header h3,
+  .material-supply-panel-heading h3, .payroll-section-heading h3,
+  .staffing-plan-heading h3
+) {
+  font-family: var(--font-sans);
+  font-size: 20px;
+  font-weight: 500;
+  line-height: 27px;
+  letter-spacing: -.01em;
+  text-transform: none;
+}
+
+body.design-monolith .app-shell .project-workspace-content :is(
+  .project-module-view-context, .production-schedule-header p,
+  .quality-management-header p, .reports-workflow-heading p,
+  .project-contract-settings-copy p, .rfi-workspace-header p,
+  .ai-copilot-identity p, .ai-control-narrative,
+  .technical-docs-summary p, .accounting-bridge-header p,
+  .material-supply-command-title p, .payroll-workspace-header p,
+  .quality-issues-header p, .field-ops-header p,
+  .execution-control-header p, .photo-evidence-header p,
+  .contract-tender-header p, .commercial-proposal-header p,
+  .acceptance-billing-header p, .doc-compliance-header p,
+  .risk-exec-header p, .field-mobile-header p,
+  .workflow-designer-header p, .closeout-header p
+) {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 20px;
+  letter-spacing: 0;
+}
+
+body.design-monolith .app-shell .project-workspace-content :is(
+  .eyebrow, .ai-copilot-brief small, .ai-copilot-instructions > span,
+  .workflow-section-title small, .project-module-workspace-title small
+) {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 18px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+/* Numerals stay semantic; only weight, spacing and alignment are unified. */
+body.design-monolith .app-shell .project-workspace-content .metric-strip > .kpi {
+  padding: 16px 18px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px !important;
+  box-shadow: none;
+}
+body.design-monolith .app-shell .project-workspace-content .metric-strip .kpi-value {
+  font-family: var(--font-sans);
+  font-size: 30px;
+  font-weight: 400;
+  line-height: 36px;
+  letter-spacing: -.02em;
+  font-variant-numeric: tabular-nums;
+}
+body.design-monolith .app-shell .project-workspace-content .metric-strip .kpi-label {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 18px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+body.design-monolith .app-shell .project-workspace-content :is(
+  .rfi-metrics, .transmittal-metrics, .expense-metrics,
+  .project-action-metrics, .workflow-metrics, .closeout-metrics,
+  .quality-management-metrics, .production-schedule-metrics,
+  .risk-exec-metric, .contract-tender-metric, .acceptance-billing-metric,
+  .doc-compliance-metric, .schedule-cashflow-metric,
+  .accounting-bridge-metric, .cost-code-forecast-metric, .invoice-metric,
+  .commercial-proposal-card.metric, .quality-issues-card.metric, .field-ops-card.metric,
+  .execution-control-card.metric, .photo-evidence-card.metric
+) strong {
+  font-family: var(--font-sans);
+  font-size: 26px;
+  font-weight: 400;
+  line-height: 32px;
+  letter-spacing: -.015em;
+  font-variant-numeric: tabular-nums;
+}
+
+body.design-monolith .app-shell .project-workspace-content :is(
+  .rfi-metrics, .transmittal-metrics, .expense-metrics,
+  .project-action-metrics, .workflow-metrics, .closeout-metrics,
+  .quality-management-metrics, .production-schedule-metrics,
+  .risk-exec-metric, .contract-tender-metric, .acceptance-billing-metric,
+  .doc-compliance-metric, .schedule-cashflow-metric,
+  .accounting-bridge-metric, .cost-code-forecast-metric, .invoice-metric,
+  .commercial-proposal-card.metric, .quality-issues-card.metric, .field-ops-card.metric,
+  .execution-control-card.metric, .photo-evidence-card.metric
+) :is(small, span) {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 18px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+body.design-monolith .app-shell .project-workspace-content :is(
+  .breakdown-row strong, .waterfall > strong, .waterfall-track > span,
+  .import-commit-summary strong, .cost-code-preview-summary strong,
+  .accounting-bridge-summary strong, .ai-control-agent-summary strong,
+  .ai-run-summary strong, .technical-docs-summary strong,
+  .workforce-import-summary strong, .material-supply-source-strip b,
+  .technical-docs-metrics strong, .expense-row-amount,
+  .payroll-economics-band strong
+) {
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Internal view controls, including the schedule's independent navigation. */
+body.design-monolith .app-shell .project-workspace-content :is(
+  .project-module-view-tabs, .segmented-control, .density-toggle,
+  .rfi-mode-switch, .risk-exec-view-tabs, .field-mobile-mode,
+  .production-schedule-view-tabs, .production-schedule-filters,
+  .production-gantt-density, .ai-lifecycle-tabs, .payroll-mode-tabs, .material-supply-lanes
+) {
+  background-color: var(--panel-muted);
+  border-color: var(--line);
+  box-shadow: none;
+}
+body.design-monolith .app-shell .project-workspace-content :is(
+  .project-module-view-tabs, .segmented-control, .density-toggle,
+  .rfi-mode-switch, .risk-exec-view-tabs, .field-mobile-mode,
+  .production-schedule-view-tabs, .production-schedule-filters,
+  .production-gantt-density, .ai-lifecycle-tabs, .payroll-mode-tabs, .material-supply-lanes
+) > button:not(:disabled):not([aria-disabled="true"]) {
+  background: transparent;
+  border-color: transparent;
+  color: var(--muted);
+  box-shadow: none;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 20px;
+  letter-spacing: 0;
+}
+body.design-monolith .app-shell .project-workspace-content :is(
+  .project-module-view-tabs, .segmented-control, .density-toggle,
+  .rfi-mode-switch, .risk-exec-view-tabs, .field-mobile-mode,
+  .production-schedule-view-tabs, .production-schedule-filters,
+  .production-gantt-density, .ai-lifecycle-tabs, .payroll-mode-tabs, .material-supply-lanes
+) > button:is(.active, [aria-pressed="true"]):not(:disabled):not([aria-disabled="true"]) {
+  background: var(--surface);
+  border-color: var(--line-strong);
+  color: var(--monolith-detail-brass-deep);
+  box-shadow: inset 0 -2px 0 var(--monolith-detail-brass);
+}
+body.design-monolith .app-shell .project-workspace-content :is(
+  .project-module-view-tabs, .segmented-control, .density-toggle,
+  .rfi-mode-switch, .risk-exec-view-tabs, .field-mobile-mode,
+  .production-schedule-view-tabs, .production-schedule-filters,
+  .production-gantt-density, .ai-lifecycle-tabs, .payroll-mode-tabs, .material-supply-lanes
+) > button:hover:not(.active):not([aria-pressed="true"]):not(:disabled):not([aria-disabled="true"]) {
+  background-color: var(--monolith-detail-champagne);
+  color: var(--text);
+}
+body.design-monolith .app-shell .project-workspace-content .ai-lifecycle-tabs span,
+body.design-monolith .app-shell .project-workspace-content .material-supply-lane-copy strong {
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 19px;
+}
+body.design-monolith .app-shell .project-workspace-content .ai-lifecycle-tabs small,
+body.design-monolith .app-shell .project-workspace-content .material-supply-lane-copy small {
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 16px;
+}
+
+/* Registers implemented as lists/grids keep their columns and state borders. */
+body.design-monolith .app-shell .project-workspace-content :is(
+  .expense-row, .invoice-row, .rfi-card, .submittal-card, .transmittal-card,
+  .commitment-card, .change-order-card, .payment-application-row,
+  .external-link-row, .closeout-checklist-row, .warranty-row,
+  .resource-capacity-row, .labor-demand-row, .workforce-admission-request,
+  .daily-report-row, .quality-inspection-row, .workflow-run,
+  .ai-run-item, .ai-control-proposal, .executive-report-version,
+  .material-supply-stock-row, .document-card
+) {
+  box-shadow: none;
+}
+body.design-monolith .app-shell .project-workspace-content :is(
+  .expense-row, .invoice-row, .rfi-card, .submittal-card, .transmittal-card,
+  .commitment-card, .change-order-card, .external-link-row,
+  .resource-capacity-row, .labor-demand-row, .daily-report-row,
+  .quality-inspection-row, .workflow-run, .ai-run-item
+):not([class*="tone-"]):not([class*="status-"]):not([class*="priority-"]):not(.active):not(.selected) {
+  background-color: var(--surface);
+}
+body.design-monolith .app-shell .project-workspace-content :is(
+  .expense-row-main, .invoice-row > header, .rfi-card > header,
+  .submittal-card > header, .transmittal-card > header,
+  .commitment-card > header, .change-order-card > header,
+  .external-link-row > div, .daily-report-row-main,
+  .material-supply-request-title, .quality-inspection-row > header,
+  .resource-capacity-row > div, .ai-run-item > header
+) strong {
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 22px;
+  letter-spacing: -.005em;
+}
+
+body.design-monolith .app-shell .project-workspace-content .executive-report-history > button.active {
+  background: var(--monolith-detail-champagne);
+  border-color: var(--line-strong);
+  color: var(--monolith-detail-brass-deep);
+  box-shadow: none;
+}
+body.design-monolith .app-shell .project-workspace-content .ai-copilot-scenario.has-result {
+  border-color: var(--line-strong);
+}
+
+/* Schedule chrome only: no changes to tracks, axes, bars, scroll or density. */
+body.design-monolith .app-shell .project-workspace-content .production-schedule-header,
+body.design-monolith .app-shell .project-workspace-content .quality-management-header {
+  background: var(--surface);
+  border-color: var(--line);
+  border-left-color: var(--monolith-detail-brass);
+  box-shadow: none;
+}
+body.design-monolith .app-shell .project-workspace-content .production-schedule-metrics article:not([class*="tone-"]) {
+  background-color: var(--surface);
+  border-color: var(--line);
+}
+body.design-monolith .app-shell .project-workspace-content :is(
+  .quality-linked-issues button, .quality-workflow-link
+) {
+  color: var(--monolith-detail-brass-deep);
+}
+
+@media (max-width: 720px) {
+  body.design-monolith .app-shell .project-workspace-content :is(
+    .project-module-workspace-title h2, .production-schedule-header h2
+  ) { font-size: 24px; line-height: 30px; }
+  body.design-monolith .app-shell .project-workspace-content .metric-strip .kpi-value {
+    font-size: 27px;
+    line-height: 33px;
+  }
+}

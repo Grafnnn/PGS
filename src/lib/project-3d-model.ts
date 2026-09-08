@@ -49,3 +49,19 @@ export function project3dModelViewerUrl(projectId: string, revision?: string) {
   const url = `/api/projects/${encodeURIComponent(projectId)}/model-viewer`;
   return revision ? `${url}?v=${encodeURIComponent(revision)}` : url;
 }
+
+export function getProject3dPresentation(project: ProjectIdentity) {
+  const model = getProject3dModel(project);
+  if (model && project.id) return {
+    model,
+    url: `${project3dModelViewerUrl(project.id, model.revision)}&embed=monolith-v1`,
+    isPreview: false
+  };
+  // The existing local showcase is explicitly separate from the demo object's data.
+  if (process.env.NODE_ENV === "development" && project.id === "project-demo") return {
+    model: troitskBuilding24Model,
+    url: "/design-contest/model?embed=monolith-v1#module=master&view=overview",
+    isPreview: true
+  };
+  return null;
+}

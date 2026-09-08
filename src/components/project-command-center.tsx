@@ -1,7 +1,7 @@
 "use client";
 
-import { AlertTriangle, Bot, CheckCircle2, ClipboardList, FileText, Landmark, Package, ReceiptText, Scale, Send, Sparkles, TimerReset, Users } from "lucide-react";
-import React, { type CSSProperties } from "react";
+import { AlertTriangle, ArrowUpRight, Bot, CheckCircle2, ClipboardList, FileText, Landmark, Package, ReceiptText, Scale, Send, Sparkles, TimerReset, Users } from "lucide-react";
+import React from "react";
 import { ProjectModelLauncher } from "@/components/project-model-viewer";
 import { buildProjectCommandCenterModel, type CommandCenterAiInsight, type CommandTone } from "@/lib/project-command-center";
 import type { DocumentChecklistItem, PipelineAction, PipelineReadiness } from "@/lib/project-pipeline";
@@ -127,42 +127,65 @@ export function ProjectCommandCenter({
   const featuredProgress = model.progress.filter((item) => featuredProgressKeys.has(item.key));
   const secondaryProgress = model.progress.filter((item) => !featuredProgressKeys.has(item.key));
   const openKpi = (key: string) => onNavigate(tabForKpi(key));
+  const priorityRank: Record<CommandTone, number> = { bad: 0, warn: 1, info: 2, good: 3, neutral: 4 };
+  const priorities = model.nextActions
+    .filter((action) => action.tab !== "Обзор")
+    .slice()
+    .sort((left, right) => priorityRank[left.tone] - priorityRank[right.tone])
+    .slice(0, 3);
 
   return (
     <section className="command-center" aria-label="Project command center">
       <div className={`command-hero tone-${model.health.tone}`}>
         <div className="command-hero-main">
-          <div className="eyebrow">Command center · {model.project.customer}</div>
           <div className="command-title-row">
-            <h2>{model.project.name}</h2>
+            <h2>Состояние проекта</h2>
             <span className={`badge ${model.health.tone === "bad" ? "red" : model.health.tone === "warn" ? "yellow" : "green"}`}>{model.health.label}</span>
           </div>
           <p>{model.health.summary}</p>
-          <div className="command-meta-grid">
-            <span>{model.project.object}</span>
-            <span>{model.project.address}</span>
-            <span>РП: {model.project.manager}</span>
-            <span>{model.project.startsAt} - {model.project.endsAt}</span>
-          </div>
+          <details className="command-passport">
+            <summary>Паспорт объекта и период работ</summary>
+            <div className="command-meta-grid">
+            <span><small>Объект</small><strong title={model.project.object}>{model.project.object}</strong></span>
+            <span><small>Адрес</small><strong title={model.project.address}>{model.project.address}</strong></span>
+            <span><small>Руководитель</small><strong title={model.project.manager}>{model.project.manager}</strong></span>
+            <span><small>Период работ</small><strong title={`${model.project.startsAt} — ${model.project.endsAt}`}>{model.project.startsAt} — {model.project.endsAt}</strong></span>
+            </div>
+          </details>
         </div>
-        <div className="health-meter" aria-label={`Health score ${model.health.score}%`}>
-          <div className="health-ring" style={{ "--score": model.health.score } as CSSProperties}>
-            <span>{model.health.score}%</span>
-          </div>
-          <small>Состояние проекта</small>
+        <div className="health-meter" aria-label={`Сводная оценка состояния проекта: ${model.health.score}%`}>
+          <strong>{model.health.score}<span>/100</span></strong>
+          <small>Сводная оценка</small>
         </div>
       </div>
+
+      <section className="command-priorities" aria-labelledby="command-priorities-title">
+        <div className="command-priorities-heading">
+          <h3 id="command-priorities-title">Начать с главного</h3>
+          <button type="button" onClick={() => onNavigate("Действия")}>Все действия <ArrowUpRight size={16} aria-hidden="true" /></button>
+        </div>
+        <div className="command-priority-grid">
+          {priorities.map((action, index) => (
+            <button className={`command-priority tone-${action.tone}`} key={action.key} type="button" onClick={() => onNavigate(action.tab)}>
+              <span className="command-priority-top"><small>{String(index + 1).padStart(2, "0")} / {action.tab}</small><ArrowUpRight size={21} aria-hidden="true" /></span>
+              <strong>{action.title}</strong>
+              <span className="command-priority-detail">{action.detail}</span>
+            </button>
+          ))}
+        </div>
+      </section>
 
       <ProjectModelLauncher project={project} />
 
       <div className="command-kpi-grid command-kpi-grid-primary">
-        {featuredKpis.map((kpi) => (
+        {featuredKpis.map((kpi, index) => (
           <button className={`command-kpi tone-${kpi.tone}`} key={kpi.key} type="button" onClick={() => openKpi(kpi.key)}>
+            <span aria-hidden="true" className="command-kpi-index">{String(index + 1).padStart(2, "0")}</span>
             <span className="command-kpi-icon">{icons[kpi.key as keyof typeof icons] ?? <CheckCircle2 size={18} />}</span>
             <span className="command-kpi-copy">
-              <small>{kpi.label}</small>
+              <small>{kpi.key === "baseline" ? "Исходные данные" : kpi.key === "cash" ? "Кассовый разрыв" : kpi.label}</small>
               <strong>{kpi.value}</strong>
-              <em>{kpi.hint}</em>
+              <em>{kpi.hint.replace("forecast margin", "прогнозная маржа")}</em>
             </span>
           </button>
         ))}
@@ -191,8 +214,8 @@ export function ProjectCommandCenter({
             <h3>{model.aiSummary.subject}</h3>
           </div>
           <div className="ai-source-row">
-            <span className={`badge ${model.aiSummary.degraded ? "yellow" : "blue"}`}>{model.aiSummary.provider}</span>
-            {model.aiSummary.empty && <span className="badge gray">без автозапроса</span>}
+            <span title={model.aiSummary.provider} className={`badge ${model.aiSummary.degraded ? "yellow" : "blue"}`}>{model.aiSummary.empty ? "По данным проекта" : model.aiSummary.degraded ? "Локальная сводка" : "AI-сводка"}</span>
+            {model.aiSummary.empty && <span className="badge gray">AI-анализ по запросу</span>}
           </div>
           <div className="command-ai-bullets">
             {model.aiSummary.bullets.slice(0, 4).map((item, index) => (

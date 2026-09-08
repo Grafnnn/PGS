@@ -1,0 +1,91 @@
+/* Semantic colour repairs only. Load after the Monolith component styles.
+   Keep status roles local; chart series and working controls own their colours. */
+
+body.design-monolith .app-shell .project-workbook-module,
+body.design-monolith .app-shell .project-workbook-module.tone-info {
+  border-left-color: var(--blue);
+}
+body.design-monolith .app-shell .project-workbook-module.tone-good {
+  border-left-color: var(--green);
+}
+
+body.design-monolith .app-shell .intelligence-signal.tone-good .status-dot {
+  background-color: var(--green);
+}
+body.design-monolith .app-shell .intelligence-signal.tone-warn .status-dot {
+  background-color: var(--yellow);
+}
+body.design-monolith .app-shell .intelligence-signal.tone-bad .status-dot {
+  background-color: var(--red);
+}
+body.design-monolith .app-shell .intelligence-signal:is(.tone-info, .tone-neutral) .status-dot {
+  background-color: var(--blue);
+}
+
+/* These outlines supplement the written status; they are not control boundaries. */
+body.design-monolith .app-shell .status-insight-card.tone-good {
+  border-color: color-mix(in srgb, var(--green) 32%, var(--green-soft));
+}
+body.design-monolith .app-shell .status-insight-card.tone-warn {
+  border-color: color-mix(in srgb, var(--yellow) 32%, var(--yellow-soft));
+}
+body.design-monolith .app-shell .status-insight-card.tone-bad {
+  border-color: color-mix(in srgb, var(--red) 32%, var(--red-soft));
+}
+
+body.design-monolith .app-shell .contract-tender-risk.tone-bad {
+  border-left-color: var(--red);
+}
+body.design-monolith .app-shell .contract-tender-risk.tone-warn {
+  border-left-color: var(--yellow);
+}
+body.design-monolith .app-shell .contract-tender-risk.tone-info {
+  border-left-color: var(--blue);
+}
+
+/* Priority rules must follow the informational default and remain more specific.
+   Retain the existing strip scale: urgent / high / medium / low. */
+body.design-monolith .app-shell :is(.risk-action-item, .doc-compliance-action) {
+  border-left-color: var(--blue);
+}
+body.design-monolith .app-shell :is(.risk-action-item, .doc-compliance-action).priority-urgent {
+  border-left-color: var(--red);
+}
+body.design-monolith .app-shell :is(.risk-action-item, .doc-compliance-action).priority-high {
+  border-left-color: var(--yellow);
+}
+body.design-monolith .app-shell :is(.risk-action-item, .doc-compliance-action):is(.priority-medium, .priority-low) {
+  border-left-color: var(--blue);
+}
+
+/* Readable captions on paper surfaces; leave value tones and dark hero copy alone. */
+body.design-monolith .app-shell .mini-bar small,
+body.design-monolith .app-shell .cashflow-bars small,
+body.design-monolith .app-shell .status-board-item small,
+body.design-monolith .app-shell .status-insight-card small,
+body.design-monolith .app-shell .schedule-cashflow-metric small,
+body.design-monolith .app-shell .daily-report-field > small,
+body.design-monolith .app-shell .dashboard-page .kpi-hint,
+body.design-monolith .app-shell .dashboard-page .atlas-chart-header small,
+body.design-monolith .app-shell .dashboard-page .atlas-chart-header p,
+body.design-monolith .app-shell .dashboard-page .atlas-chart-summary {
+  color: var(--muted);
+}
+body.design-monolith .app-shell td[data-label]::before {
+  color: var(--muted);
+}
+
+/* Deep brass stays distinct against translucent smoke green. Masthead marks
+   are excluded: only interactive icons inside an open navigation panel change. */
+body.design-monolith .app-shell :is(.project-domain-popover, .project-atlas-mega) .project-domain-modules button > :is(span:first-child, svg),
+body.design-monolith .app-shell .project-atlas-mega .project-domain-nav-actions button > svg,
+body.design-monolith .app-shell .project-atlas-mega .project-domain-search button > svg,
+body.design-monolith .app-shell .navigation-sheet :is(.navigation-sheet-icon, .navigation-sheet-group-items a > svg, .icon-button > svg) {
+  color: var(--monolith-detail-brass-deep);
+}
+
+/* Unread is an attention count, not an error state. */
+body.design-monolith .app-shell .inbox-bell-count {
+  background-color: var(--monolith-detail-brass-light);
+  color: var(--ink);
+}
