@@ -19,7 +19,7 @@ body.design-monolith .app-shell .topbar {
   transform: none;
   contain: none;
   background: transparent;
-  border-bottom-color: rgb(255 255 255 / 8%);
+  border-bottom: 0;
 }
 /* A uniform translucent layer; the header remains outside fixed-panel geometry. */
 body.design-monolith .app-shell .topbar::before {
