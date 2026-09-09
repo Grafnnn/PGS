@@ -199,6 +199,10 @@ body.design-monolith .app-shell .page .data-table td[data-label="Версии"] 
 body.design-monolith .app-shell .page .data-table td[data-label="Версии"] > .stack > a {
   overflow-wrap: anywhere;
 }
+/* Native file pickers need room for their label; ordinary action columns stay compact. */
+body.design-monolith .app-shell .page .data-table td.action-column > .stack:has(> input[type="file"]) {
+  min-width: 224px;
+}
 body.design-monolith .app-shell .page .data-table tbody tr:hover {
   background-color: #faf7f0;
 }

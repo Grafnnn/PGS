@@ -1,5 +1,9 @@
 /* A single masthead: workspace switcher, project navigation, global actions. */
-body.design-monolith { --monolith-topbar-height: 68px; }
+body.design-monolith {
+  --monolith-topbar-height: 68px;
+  --monolith-nav-hover: rgb(255 255 255 / 3%);
+  --monolith-nav-selected: rgb(255 255 255 / 5%);
+}
 
 body.design-monolith .app-shell .topbar {
   display: flex;
@@ -17,21 +21,16 @@ body.design-monolith .app-shell .topbar {
   background: transparent;
   border-bottom-color: rgb(255 255 255 / 8%);
 }
-/* Blur only the visual layer: fixed catalogues must stay viewport-positioned. */
+/* A uniform translucent layer; the header remains outside fixed-panel geometry. */
 body.design-monolith .app-shell .topbar::before {
   content: "";
   position: absolute;
   inset: 0;
   z-index: -1;
   pointer-events: none;
-  background: #0b0d0e;
-}
-@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  body.design-monolith .app-shell .topbar::before {
-    background: rgb(8 10 11 / 84%);
-    -webkit-backdrop-filter: blur(18px);
-    backdrop-filter: blur(18px);
-  }
+  background: rgb(8 10 11 / 84%);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }
 body.design-monolith .app-shell .atlas-workspace-trigger {
   display: inline-flex;
@@ -52,7 +51,7 @@ body.design-monolith .app-shell .atlas-workspace-trigger > span { display: block
 body.design-monolith .app-shell .atlas-workspace-trigger strong { font-size: 28px; font-weight: 500; letter-spacing: -1.4px; }
 body.design-monolith .app-shell .atlas-workspace-trigger > svg { color: var(--monolith-detail-brass-light); transition: transform 160ms ease; }
 body.design-monolith .app-shell .atlas-workspace-trigger[aria-expanded="true"] > svg { transform: rotate(180deg); }
-body.design-monolith .app-shell .atlas-workspace-trigger:is(:hover, [aria-expanded="true"]) { background: rgb(206 178 124 / 12%); border-color: transparent; }
+body.design-monolith .app-shell .atlas-workspace-trigger:is(:hover, [aria-expanded="true"]) { background: var(--monolith-nav-selected); border-color: transparent; }
 body.design-monolith .app-shell .topbar-page-context { padding-left: 18px; border-left: 1px solid #393b36; color: #b8b9b1; font-size: 13px; white-space: nowrap; }
 body.design-monolith .app-shell .topbar:has(.project-atlas-navigation) .topbar-page-context { display: none; }
 body.design-monolith .app-shell .topbar-project-slot { position: static; flex: 1 1 auto; min-width: 0; }
@@ -74,7 +73,7 @@ body.design-monolith .app-shell .topbar .icon-button {
   background: transparent;
   color: var(--monolith-detail-brass-light);
 }
-body.design-monolith .app-shell .topbar :is(.command-trigger, .icon-button):hover { background: rgb(206 178 124 / 8%); border-color: transparent; color: #e5d2ad; }
+body.design-monolith .app-shell .topbar :is(.command-trigger, .icon-button):hover { background: var(--monolith-nav-hover); border-color: transparent; color: #d5d6cf; }
 body.design-monolith .app-shell .topbar .button.primary { border-radius: 6px; padding-inline: 14px; }
 body.design-monolith .app-shell .topbar .button.primary > svg { color: var(--monolith-detail-brass-deep); }
 body.design-monolith .app-shell .topbar > :focus-visible,
@@ -120,7 +119,7 @@ body.design-monolith .app-shell .project-atlas-domains > button strong { font-si
 body.design-monolith .app-shell .project-atlas-domains > button > span { display: inline-flex; align-items: center; color: var(--monolith-detail-brass-light); }
 body.design-monolith .app-shell .project-atlas-domains > button > span svg { width: 16px; height: 16px; stroke-width: 1.5px; }
 body.design-monolith .app-shell .project-domain-chevron { color: var(--monolith-detail-brass-light); opacity: .8; }
-body.design-monolith .app-shell .project-atlas-domains > button:is(:hover, .active, [data-state="open"]) { background: rgb(206 178 124 / 12%); color: #e5d2ad; border-color: transparent; }
+body.design-monolith .app-shell .project-atlas-domains > button:is(:hover, .active, [data-state="open"]) { background: var(--monolith-nav-selected); color: #deded8; border-color: transparent; }
 body.design-monolith .app-shell .project-atlas-domains .project-atlas-all { min-width: 40px; padding: 0; margin-left: auto; color: var(--monolith-detail-brass-light); }
 body.design-monolith .app-shell .project-atlas-all strong { display: none; }
 body.design-monolith .app-shell .project-domain-popover {
@@ -231,7 +230,7 @@ body.design-monolith .app-shell .navigation-search input:focus-visible { outline
     color: #d5d6cf;
     cursor: pointer;
   }
-  body.design-monolith .app-shell .project-navigation-mobile-trigger:is(:hover, [aria-expanded="true"]) { border-color: transparent; background: rgb(206 178 124 / 12%); }
+  body.design-monolith .app-shell .project-navigation-mobile-trigger:is(:hover, [aria-expanded="true"]) { border-color: transparent; background: var(--monolith-nav-selected); }
   body.design-monolith .app-shell .project-navigation-mobile-trigger > span:first-child { display: inline-flex; flex: 0 0 18px; color: var(--monolith-detail-brass-light); }
   body.design-monolith .app-shell .project-navigation-mobile-trigger > span:first-child svg { width: 18px; height: 18px; stroke-width: 1.5px; }
   body.design-monolith .app-shell .project-navigation-mobile-trigger > span:nth-child(2) { display: flex; flex: 1; align-items: baseline; gap: 12px; min-width: 0; }
@@ -261,7 +260,7 @@ body.design-monolith .app-shell .navigation-search input:focus-visible { outline
   body.design-monolith .app-shell .atlas-workspace-trigger > svg { transition: none; }
 }
 
-/* Restore the original warm paper surfaces; glass belongs to the masthead. */
+/* Warm paper panels remain distinct from the translucent masthead. */
 body.design-monolith .app-shell :is(.project-domain-popover, .project-atlas-mega, .navigation-sheet) {
   background: #f4f2ed;
   color: #212320;
@@ -299,7 +298,7 @@ body.design-monolith .app-shell :is(.project-domain-search, .navigation-search) 
 body.design-monolith .app-shell .project-atlas-domains > button:hover:not(.active):not([data-state="open"]),
 body.design-monolith .app-shell .atlas-workspace-trigger:hover:not([aria-expanded="true"]),
 body.design-monolith .app-shell .project-navigation-mobile-trigger:hover:not([aria-expanded="true"]) {
-  background: rgb(206 178 124 / 7%);
+  background: var(--monolith-nav-hover);
   border-color: transparent;
 }
 /* An open group receives the sole filled highlight; current location stays legible. */
