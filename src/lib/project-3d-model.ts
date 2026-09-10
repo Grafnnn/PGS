@@ -6,6 +6,7 @@ export type Project3dModel = {
   updatedAt: string;
   disclaimer: string;
   assetPath: string;
+  publicUrl: string;
 };
 
 type ProjectIdentity = {
@@ -17,16 +18,22 @@ type ProjectIdentity = {
 };
 
 const troitskBuilding24Model: Project3dModel = {
-  slug: "troitsk-building-24-r06",
+  slug: "troitsk-building-24-r10",
   title: "3D-модель здания 24",
-  subtitle: "Общая модель, кровля, лестница Л-1, перекрытия, фундаменты и входы",
-  revision: "R06",
-  updatedAt: "08.09.2026",
-  disclaimer: "Координационная модель по проектным чертежам, не исполнительная съемка.",
-  assetPath: "src/assets/project-models/troitsk-b24-r06.html.gz"
+  subtitle: "14 разделов: общая модель, кровля, лестница, перекрытия, фундаменты и детали здания",
+  revision: "R10 local",
+  updatedAt: "10.09.2026",
+  disclaimer: "Рабочая координационная модель. Полный перенос чертежей не завершён; не исполнительная съёмка.",
+  assetPath: "src/assets/project-models/troitsk-b24-r10.html.gz",
+  publicUrl: "/models/troitsk-building-24#module=master"
 };
 
 const TROITSK_PROJECT_ID = "cmteg9g33000for4oc06rko5a";
+
+// Explicit publication allowlist. Never resolve arbitrary project IDs on a public route.
+export function getPublicProject3dModel(slug: string): Project3dModel | null {
+  return slug === "troitsk-building-24" ? troitskBuilding24Model : null;
+}
 
 function normalizeProjectIdentity(project: ProjectIdentity) {
   return [project.name, project.code, project.object, project.address]
@@ -54,7 +61,7 @@ export function getProject3dPresentation(project: ProjectIdentity) {
   const model = getProject3dModel(project);
   if (model && project.id) return {
     model,
-    url: `${project3dModelViewerUrl(project.id, model.revision)}&embed=monolith-v1`,
+    url: `${project3dModelViewerUrl(project.id, model.revision)}&embed=monolith-v1#module=master`,
     isPreview: false
   };
   // The existing local showcase is explicitly separate from the demo object's data.

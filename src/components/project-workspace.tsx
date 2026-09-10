@@ -895,7 +895,7 @@ export function ProjectWorkspace({
         activeTab={activeProjectTab}
         onOpenProjectModel={openProject3dModel}
         projectModelHint={project3dPresentation?.isPreview
-          ? "Пример: Троицк · здание 24 · R06"
+          ? `Пример: Троицк · здание 24 · ${project3dPresentation.model.revision}`
           : project3dModel ? "Координационная модель проекта" : "Модель пока не подключена"}
         onSelect={navigateProjectTab}
       />

@@ -1,11 +1,14 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { getProject3dModel, getProject3dPresentation, project3dModelViewerUrl } from "@/lib/project-3d-model";
+import { getProject3dModel, getPublicProject3dModel, getProject3dPresentation, project3dModelViewerUrl } from "@/lib/project-3d-model";
 
 afterEach(() => vi.unstubAllEnvs());
 
 describe("project 3D model registry", () => {
-  it("resolves the published R06 model for the production Troitsk project", () => {
-    expect(getProject3dModel({ id: "cmteg9g33000for4oc06rko5a" })).toMatchObject({ revision: "R06", slug: "troitsk-building-24-r06", assetPath: "src/assets/project-models/troitsk-b24-r06.html.gz" });
+  it("resolves R10 and exposes a stable explicitly published URL", () => {
+    expect(getProject3dModel({ id: "cmteg9g33000for4oc06rko5a" })).toMatchObject({ revision: "R10 local", slug: "troitsk-building-24-r10", assetPath: "src/assets/project-models/troitsk-b24-r10.html.gz" });
+    expect(getPublicProject3dModel("troitsk-building-24")).toBe(getProject3dModel({ id: "cmteg9g33000for4oc06rko5a" }));
+    expect(getPublicProject3dModel("troitsk-building-24")?.publicUrl).toBe("/models/troitsk-building-24#module=master");
+    expect(getPublicProject3dModel("cmteg9g33000for4oc06rko5a")).toBeNull();
   });
 
   it("recognizes a recreated Troitsk building project but not unrelated projects", () => {
@@ -27,7 +30,7 @@ describe("project 3D presentation", () => {
   it("keeps actual project models on the authenticated API even in development", () => {
     vi.stubEnv("NODE_ENV", "development");
     expect(getProject3dPresentation({ id: "cmteg9g33000for4oc06rko5a" })).toMatchObject({
-      url: "/api/projects/cmteg9g33000for4oc06rko5a/model-viewer?v=R06&embed=monolith-v1",
+      url: "/api/projects/cmteg9g33000for4oc06rko5a/model-viewer?v=R10%20local&embed=monolith-v1#module=master",
       isPreview: false
     });
   });
@@ -38,7 +41,7 @@ describe("project 3D presentation", () => {
     expect(getProject3dPresentation({ id: "project-demo" })).toMatchObject({
       url: "/design-contest/model?embed=monolith-v1#module=master&view=overview",
       isPreview: true,
-      model: { slug: "troitsk-building-24-r06" }
+      model: { slug: "troitsk-building-24-r10" }
     });
     expect(getProject3dPresentation({ id: "unrelated-project" })).toBeNull();
   });

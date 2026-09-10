@@ -1,0 +1,1268 @@
+{
+  "revision": "R10 local",
+  "date": "2026-09-10",
+  "sourceFile": "Troitsk_B24_R10_local_Portable.html",
+  "sourceBytes": 165938838,
+  "sourceSha256": "466259334b6d4e251035ba9e4dfd14e071062edf046ec4a65f3a08e99f6afdd7",
+  "htmlBytes": 78832272,
+  "htmlSha256": "975eccd992760f08ce96fbd24bb4c6b297838e46f57412a36e6ff57f9377834d",
+  "gzipBytes": 7815641,
+  "geometryAndRendererUnchanged": true,
+  "webStyleSha256": "027cf426cc4dc46143b97730dd1b30225eba94a9006faaebfcb148591761d5ed",
+  "assets": [
+    {
+      "index": 0,
+      "url": "/model-assets/troitsk-b24-r10/25e2a453177bccf4bc14d6f69bd9972ac65c525b8ec20542e4aa94a6086cd04c.webp",
+      "sha256": "25e2a453177bccf4bc14d6f69bd9972ac65c525b8ec20542e4aa94a6086cd04c",
+      "bytes": 33132
+    },
+    {
+      "index": 1,
+      "url": "/model-assets/troitsk-b24-r10/1d472f481c74bfe1f2d3318c47a868203666fb374c2eec71c90d8b9d5a8d5e97.webp",
+      "sha256": "1d472f481c74bfe1f2d3318c47a868203666fb374c2eec71c90d8b9d5a8d5e97",
+      "bytes": 507066
+    },
+    {
+      "index": 2,
+      "url": "/model-assets/troitsk-b24-r10/983e315b61b640ae3a49dd0e26ba820bc825053d54944e8304ef28e3f92130f4.webp",
+      "sha256": "983e315b61b640ae3a49dd0e26ba820bc825053d54944e8304ef28e3f92130f4",
+      "bytes": 33754
+    },
+    {
+      "index": 3,
+      "url": "/model-assets/troitsk-b24-r10/6bb7cc339f96fb49206a90cd8d84bd70b0b959bcc33e3a627c8accfc4cd347cb.webp",
+      "sha256": "6bb7cc339f96fb49206a90cd8d84bd70b0b959bcc33e3a627c8accfc4cd347cb",
+      "bytes": 216062
+    },
+    {
+      "index": 4,
+      "url": "/model-assets/troitsk-b24-r10/0e17ff496db258d843232f3d689a4c02dfa72bee93799f7badb91723ae188a42.webp",
+      "sha256": "0e17ff496db258d843232f3d689a4c02dfa72bee93799f7badb91723ae188a42",
+      "bytes": 203760
+    },
+    {
+      "index": 5,
+      "url": "/model-assets/troitsk-b24-r10/bd368f3759b5b6318c9febce745add378432a7f0ccc971be8cf60a437d209a8f.webp",
+      "sha256": "bd368f3759b5b6318c9febce745add378432a7f0ccc971be8cf60a437d209a8f",
+      "bytes": 210042
+    },
+    {
+      "index": 6,
+      "url": "/model-assets/troitsk-b24-r10/c745275cd484f437dbe2276cf6b8f5d6faabee34e225128e191ac91bf0084006.webp",
+      "sha256": "c745275cd484f437dbe2276cf6b8f5d6faabee34e225128e191ac91bf0084006",
+      "bytes": 41022
+    },
+    {
+      "index": 7,
+      "url": "/model-assets/troitsk-b24-r10/f8f4485966a319460ee640ba92aaf0863c6017e6b4072027b62b42af42ac0cc8.webp",
+      "sha256": "f8f4485966a319460ee640ba92aaf0863c6017e6b4072027b62b42af42ac0cc8",
+      "bytes": 265284
+    },
+    {
+      "index": 8,
+      "url": "/model-assets/troitsk-b24-r10/b619cb1bfc78c181a46df0b7a8e661f013ff11f1dd091866ef99c45697d008a3.webp",
+      "sha256": "b619cb1bfc78c181a46df0b7a8e661f013ff11f1dd091866ef99c45697d008a3",
+      "bytes": 255888
+    },
+    {
+      "index": 9,
+      "url": "/model-assets/troitsk-b24-r10/858c659cb9f810d50f2b026bb6fe3369fdc8a8d612e26eae1b0764bfdbc0cc49.webp",
+      "sha256": "858c659cb9f810d50f2b026bb6fe3369fdc8a8d612e26eae1b0764bfdbc0cc49",
+      "bytes": 30874
+    },
+    {
+      "index": 10,
+      "url": "/model-assets/troitsk-b24-r10/c886ac231d8567227b32253a87d9c6b7982cb51a2083b1c68d808ae95d25370a.webp",
+      "sha256": "c886ac231d8567227b32253a87d9c6b7982cb51a2083b1c68d808ae95d25370a",
+      "bytes": 123686
+    },
+    {
+      "index": 11,
+      "url": "/model-assets/troitsk-b24-r10/e868f926e157cf59836a99f7bc3c63476f42fcaf5f7eaa1401c4300bdfc2e6b9.webp",
+      "sha256": "e868f926e157cf59836a99f7bc3c63476f42fcaf5f7eaa1401c4300bdfc2e6b9",
+      "bytes": 172924
+    },
+    {
+      "index": 12,
+      "url": "/model-assets/troitsk-b24-r10/77520a5546f4430987dcc3160013bc3923faa6de7a04b096d90794d99eaf57d6.webp",
+      "sha256": "77520a5546f4430987dcc3160013bc3923faa6de7a04b096d90794d99eaf57d6",
+      "bytes": 282660
+    },
+    {
+      "index": 13,
+      "url": "/model-assets/troitsk-b24-r10/3046c1822ce66d54e6a5967f76ce802350e1107a6bbcb88a6a2b61a5c3218a77.webp",
+      "sha256": "3046c1822ce66d54e6a5967f76ce802350e1107a6bbcb88a6a2b61a5c3218a77",
+      "bytes": 53000
+    },
+    {
+      "index": 14,
+      "url": "/model-assets/troitsk-b24-r10/4fc70b851bb34c159e26ab6360469eb7ecee66848f2ab8f906a3f313eec5b853.webp",
+      "sha256": "4fc70b851bb34c159e26ab6360469eb7ecee66848f2ab8f906a3f313eec5b853",
+      "bytes": 349664
+    },
+    {
+      "index": 15,
+      "url": "/model-assets/troitsk-b24-r10/8915f78d9f19e0781cc6aa4881d59f9dd7fa0bd762c7ac00c6cc556752e79137.webp",
+      "sha256": "8915f78d9f19e0781cc6aa4881d59f9dd7fa0bd762c7ac00c6cc556752e79137",
+      "bytes": 34454
+    },
+    {
+      "index": 16,
+      "url": "/model-assets/troitsk-b24-r10/263a8b54b004e40878287d1ecbe5ca2521354289748a81584c7046e14dd48274.webp",
+      "sha256": "263a8b54b004e40878287d1ecbe5ca2521354289748a81584c7046e14dd48274",
+      "bytes": 137668
+    },
+    {
+      "index": 17,
+      "url": "/model-assets/troitsk-b24-r10/5d3e292bf904d39e045ad3c3e0da095d627c0b418f93c9599286d8df8e3ea3d6.webp",
+      "sha256": "5d3e292bf904d39e045ad3c3e0da095d627c0b418f93c9599286d8df8e3ea3d6",
+      "bytes": 424042
+    },
+    {
+      "index": 18,
+      "url": "/model-assets/troitsk-b24-r10/4ee693002f16da7441b6aa6ec003220a7ef812505a2646d6442d77f9e4adcbcb.webp",
+      "sha256": "4ee693002f16da7441b6aa6ec003220a7ef812505a2646d6442d77f9e4adcbcb",
+      "bytes": 1079846
+    },
+    {
+      "index": 19,
+      "url": "/model-assets/troitsk-b24-r10/325c2438341ee23979a8edcb102b74e35afe63725f10f5e90638146c2b89f1bf.webp",
+      "sha256": "325c2438341ee23979a8edcb102b74e35afe63725f10f5e90638146c2b89f1bf",
+      "bytes": 135788
+    },
+    {
+      "index": 20,
+      "url": "/model-assets/troitsk-b24-r10/e12f88d3364491e2608b906a4358883161b2b84cfce4ebb91a28f3081dbc76f1.webp",
+      "sha256": "e12f88d3364491e2608b906a4358883161b2b84cfce4ebb91a28f3081dbc76f1",
+      "bytes": 117396
+    },
+    {
+      "index": 21,
+      "url": "/model-assets/troitsk-b24-r10/2a9d898cf5a65f84af3d85f63575d928133304e35c1205c5384c5446d14f8c3e.webp",
+      "sha256": "2a9d898cf5a65f84af3d85f63575d928133304e35c1205c5384c5446d14f8c3e",
+      "bytes": 152586
+    },
+    {
+      "index": 22,
+      "url": "/model-assets/troitsk-b24-r10/350ffdbdd06792290e6b7e51e9dab5e58274981b0713dc707c57034bb8a41a0b.webp",
+      "sha256": "350ffdbdd06792290e6b7e51e9dab5e58274981b0713dc707c57034bb8a41a0b",
+      "bytes": 150846
+    },
+    {
+      "index": 23,
+      "url": "/model-assets/troitsk-b24-r10/552b73b1a672ad77e8220998183b2390be099e28149f45be10b08e928a5cd478.webp",
+      "sha256": "552b73b1a672ad77e8220998183b2390be099e28149f45be10b08e928a5cd478",
+      "bytes": 210924
+    },
+    {
+      "index": 24,
+      "url": "/model-assets/troitsk-b24-r10/bdb36ad67c56eb57de613d95dc18454a9951629903fa55bd8a3d13839559da4a.webp",
+      "sha256": "bdb36ad67c56eb57de613d95dc18454a9951629903fa55bd8a3d13839559da4a",
+      "bytes": 183692
+    },
+    {
+      "index": 25,
+      "url": "/model-assets/troitsk-b24-r10/1778d649ddb050ec2fa66b5aba19f9b2a99ef1ff70e29c6bc337e08247ee5ca2.webp",
+      "sha256": "1778d649ddb050ec2fa66b5aba19f9b2a99ef1ff70e29c6bc337e08247ee5ca2",
+      "bytes": 190630
+    },
+    {
+      "index": 26,
+      "url": "/model-assets/troitsk-b24-r10/76deeaa15ff03f71780c500dae53e5c817c28264721b4b99cddb94b9602afdab.webp",
+      "sha256": "76deeaa15ff03f71780c500dae53e5c817c28264721b4b99cddb94b9602afdab",
+      "bytes": 182810
+    },
+    {
+      "index": 27,
+      "url": "/model-assets/troitsk-b24-r10/1080df4db0225d17f652ce39dd1ed3d9b1e7a8762aa45b4c690d4f2377a9c663.webp",
+      "sha256": "1080df4db0225d17f652ce39dd1ed3d9b1e7a8762aa45b4c690d4f2377a9c663",
+      "bytes": 181372
+    },
+    {
+      "index": 28,
+      "url": "/model-assets/troitsk-b24-r10/791c226c37aa29049671fd83c154937a14f6ac8cc92313ace91593f0dbf8a3b3.webp",
+      "sha256": "791c226c37aa29049671fd83c154937a14f6ac8cc92313ace91593f0dbf8a3b3",
+      "bytes": 149778
+    },
+    {
+      "index": 29,
+      "url": "/model-assets/troitsk-b24-r10/4813fa5483cb2e5a7e12d14e3be2a0c9bc722f4cb6385bc6155d410725e0ceee.webp",
+      "sha256": "4813fa5483cb2e5a7e12d14e3be2a0c9bc722f4cb6385bc6155d410725e0ceee",
+      "bytes": 207384
+    },
+    {
+      "index": 30,
+      "url": "/model-assets/troitsk-b24-r10/e6e1565a43e6bd77eeb57f961232729306b2494814979d078635b938983ccc44.webp",
+      "sha256": "e6e1565a43e6bd77eeb57f961232729306b2494814979d078635b938983ccc44",
+      "bytes": 204078
+    },
+    {
+      "index": 31,
+      "url": "/model-assets/troitsk-b24-r10/4ea60e90401302b1cf86d6b708985d77dec0eab75966a392352f75eb4dbd1031.webp",
+      "sha256": "4ea60e90401302b1cf86d6b708985d77dec0eab75966a392352f75eb4dbd1031",
+      "bytes": 241484
+    },
+    {
+      "index": 32,
+      "url": "/model-assets/troitsk-b24-r10/f5473c954f4f2212bf6dea60ef8e890b3275699e8926039e10f4d7f35e148769.webp",
+      "sha256": "f5473c954f4f2212bf6dea60ef8e890b3275699e8926039e10f4d7f35e148769",
+      "bytes": 218978
+    },
+    {
+      "index": 33,
+      "url": "/model-assets/troitsk-b24-r10/c05b3fcd888bff96bb17d70d6dccf8745dcfba44db5efe3c9b831f52a20c9b5b.webp",
+      "sha256": "c05b3fcd888bff96bb17d70d6dccf8745dcfba44db5efe3c9b831f52a20c9b5b",
+      "bytes": 219350
+    },
+    {
+      "index": 34,
+      "url": "/model-assets/troitsk-b24-r10/9039a182747580c6f0fbd254cc5774d670506513ddd199ccc9e731cc986bac7e.webp",
+      "sha256": "9039a182747580c6f0fbd254cc5774d670506513ddd199ccc9e731cc986bac7e",
+      "bytes": 217878
+    },
+    {
+      "index": 35,
+      "url": "/model-assets/troitsk-b24-r10/9ad4bae2aaf49f38c13253b2ef5060099a417fca74f299591200811c1c2ff3b6.webp",
+      "sha256": "9ad4bae2aaf49f38c13253b2ef5060099a417fca74f299591200811c1c2ff3b6",
+      "bytes": 191650
+    },
+    {
+      "index": 36,
+      "url": "/model-assets/troitsk-b24-r10/cc802ee1cdf84d8ee259da23509bcd1ff05f5b50acc791295b80c4bcd10a609c.webp",
+      "sha256": "cc802ee1cdf84d8ee259da23509bcd1ff05f5b50acc791295b80c4bcd10a609c",
+      "bytes": 181624
+    },
+    {
+      "index": 37,
+      "url": "/model-assets/troitsk-b24-r10/2a3a17aa1f2366fb03fc597325dc4a897f9e6f46b473b392545396afcd507ea8.webp",
+      "sha256": "2a3a17aa1f2366fb03fc597325dc4a897f9e6f46b473b392545396afcd507ea8",
+      "bytes": 179138
+    },
+    {
+      "index": 38,
+      "url": "/model-assets/troitsk-b24-r10/6a2f5cb2f513ab6409a92ed5ccc1b0522d70071df945f58a44fd3d845dfaef4b.webp",
+      "sha256": "6a2f5cb2f513ab6409a92ed5ccc1b0522d70071df945f58a44fd3d845dfaef4b",
+      "bytes": 209968
+    },
+    {
+      "index": 39,
+      "url": "/model-assets/troitsk-b24-r10/46cc57eddf93eb4d8860025816be2f379bfc02b7356563be75a9561f79ac41a2.webp",
+      "sha256": "46cc57eddf93eb4d8860025816be2f379bfc02b7356563be75a9561f79ac41a2",
+      "bytes": 183648
+    },
+    {
+      "index": 40,
+      "url": "/model-assets/troitsk-b24-r10/1c6533b588d72cafbabf2a4cb85fd8856a2c829745ad1a4ec8d3e85fdd47ff2f.webp",
+      "sha256": "1c6533b588d72cafbabf2a4cb85fd8856a2c829745ad1a4ec8d3e85fdd47ff2f",
+      "bytes": 181478
+    },
+    {
+      "index": 41,
+      "url": "/model-assets/troitsk-b24-r10/40b31b8370f7af3a8b32bc09bc133bab0dc514b09f0848108ec25d820a2e823a.webp",
+      "sha256": "40b31b8370f7af3a8b32bc09bc133bab0dc514b09f0848108ec25d820a2e823a",
+      "bytes": 205032
+    },
+    {
+      "index": 42,
+      "url": "/model-assets/troitsk-b24-r10/05ea75c5a3afebeccb4bd53706b3ec38945033bdd92d1c090b54a7946226130c.webp",
+      "sha256": "05ea75c5a3afebeccb4bd53706b3ec38945033bdd92d1c090b54a7946226130c",
+      "bytes": 174932
+    },
+    {
+      "index": 43,
+      "url": "/model-assets/troitsk-b24-r10/1a3729f5cf3b8c51f14795a53f6c570b740eb61a56af7bd2d72bbd8f2b2102d3.webp",
+      "sha256": "1a3729f5cf3b8c51f14795a53f6c570b740eb61a56af7bd2d72bbd8f2b2102d3",
+      "bytes": 218914
+    },
+    {
+      "index": 44,
+      "url": "/model-assets/troitsk-b24-r10/d99fbc6615f7756cb947e1e27b7eb51e793d84bda74e67a0277095badbda6407.webp",
+      "sha256": "d99fbc6615f7756cb947e1e27b7eb51e793d84bda74e67a0277095badbda6407",
+      "bytes": 70618
+    },
+    {
+      "index": 45,
+      "url": "/model-assets/troitsk-b24-r10/2c9b66969a0c3bb63e7a4913625cf726927ff034bb28dc326413745f0c0ffb04.webp",
+      "sha256": "2c9b66969a0c3bb63e7a4913625cf726927ff034bb28dc326413745f0c0ffb04",
+      "bytes": 191718
+    },
+    {
+      "index": 46,
+      "url": "/model-assets/troitsk-b24-r10/9f36f51cec7f9db6823d30d8fa4a3c0b7b97cb146f7915be281a65a9092d6483.webp",
+      "sha256": "9f36f51cec7f9db6823d30d8fa4a3c0b7b97cb146f7915be281a65a9092d6483",
+      "bytes": 93656
+    },
+    {
+      "index": 47,
+      "url": "/model-assets/troitsk-b24-r10/d62a44fd8ee166ec2b35b0fc58a9c115d1a1b41326f3e7afe62701ecdd4ac18e.webp",
+      "sha256": "d62a44fd8ee166ec2b35b0fc58a9c115d1a1b41326f3e7afe62701ecdd4ac18e",
+      "bytes": 131454
+    },
+    {
+      "index": 48,
+      "url": "/model-assets/troitsk-b24-r10/7e5751dc09e878acb6857cd418d08ea6fbec10a0a5a85937555af56031b3fdd1.webp",
+      "sha256": "7e5751dc09e878acb6857cd418d08ea6fbec10a0a5a85937555af56031b3fdd1",
+      "bytes": 126368
+    },
+    {
+      "index": 49,
+      "url": "/model-assets/troitsk-b24-r10/d477fcc105468e1df37305d46867222a8f6774d5d245f7d51c70361683bce2e4.webp",
+      "sha256": "d477fcc105468e1df37305d46867222a8f6774d5d245f7d51c70361683bce2e4",
+      "bytes": 128090
+    },
+    {
+      "index": 50,
+      "url": "/model-assets/troitsk-b24-r10/b9f7ebeaa9428d29c476c72b3467734176855da43d6e858aca21cf05fdd73171.webp",
+      "sha256": "b9f7ebeaa9428d29c476c72b3467734176855da43d6e858aca21cf05fdd73171",
+      "bytes": 125012
+    },
+    {
+      "index": 51,
+      "url": "/model-assets/troitsk-b24-r10/9c95bf114e6d0176494669dffaeda9caa9e79eb4bc31cea80cbcb0c0a6c20b5b.webp",
+      "sha256": "9c95bf114e6d0176494669dffaeda9caa9e79eb4bc31cea80cbcb0c0a6c20b5b",
+      "bytes": 115506
+    },
+    {
+      "index": 52,
+      "url": "/model-assets/troitsk-b24-r10/f865c04028ef817eba520a856aa0470bf6e0a22401aa0134d2c42ff09c15ac31.webp",
+      "sha256": "f865c04028ef817eba520a856aa0470bf6e0a22401aa0134d2c42ff09c15ac31",
+      "bytes": 203388
+    },
+    {
+      "index": 53,
+      "url": "/model-assets/troitsk-b24-r10/3ff0436a5e762bd2fa7ce7e2ed4aa4b3038d3b3b937f1cc68d841bd9ba575cd2.webp",
+      "sha256": "3ff0436a5e762bd2fa7ce7e2ed4aa4b3038d3b3b937f1cc68d841bd9ba575cd2",
+      "bytes": 138604
+    },
+    {
+      "index": 54,
+      "url": "/model-assets/troitsk-b24-r10/2cac688b9e174caa3528874c1e5302b03695f5277a88affb7dfa2848f7caf8d4.webp",
+      "sha256": "2cac688b9e174caa3528874c1e5302b03695f5277a88affb7dfa2848f7caf8d4",
+      "bytes": 155756
+    },
+    {
+      "index": 55,
+      "url": "/model-assets/troitsk-b24-r10/b7fb8b6c33d8dfb1986398e834af1aca4595174351d3e30e9d66b839a73b54e7.webp",
+      "sha256": "b7fb8b6c33d8dfb1986398e834af1aca4595174351d3e30e9d66b839a73b54e7",
+      "bytes": 128562
+    },
+    {
+      "index": 56,
+      "url": "/model-assets/troitsk-b24-r10/ab7eb51529d9d6ec3b7f489aa7700e12e64ba688f2b8bc749daf7b361869dcff.webp",
+      "sha256": "ab7eb51529d9d6ec3b7f489aa7700e12e64ba688f2b8bc749daf7b361869dcff",
+      "bytes": 140022
+    },
+    {
+      "index": 57,
+      "url": "/model-assets/troitsk-b24-r10/4dcc4e4c195d646089fa8d852250a603d20efb4abbb702bd4373e12499698303.webp",
+      "sha256": "4dcc4e4c195d646089fa8d852250a603d20efb4abbb702bd4373e12499698303",
+      "bytes": 132926
+    },
+    {
+      "index": 58,
+      "url": "/model-assets/troitsk-b24-r10/78efaba2f369d6f34cf2fdbef83aac191302e5d6e54c27154462cdad86a98ae0.webp",
+      "sha256": "78efaba2f369d6f34cf2fdbef83aac191302e5d6e54c27154462cdad86a98ae0",
+      "bytes": 163744
+    },
+    {
+      "index": 59,
+      "url": "/model-assets/troitsk-b24-r10/2e3541cb20f181236b843f71fdcdda18be1d7a7d6e9a95bd0b73a2b39cdab5f7.webp",
+      "sha256": "2e3541cb20f181236b843f71fdcdda18be1d7a7d6e9a95bd0b73a2b39cdab5f7",
+      "bytes": 203266
+    },
+    {
+      "index": 60,
+      "url": "/model-assets/troitsk-b24-r10/6f03032c11c53154a38386d8f7572736ce0af19a3cba0e5cdf577cccf3e10747.webp",
+      "sha256": "6f03032c11c53154a38386d8f7572736ce0af19a3cba0e5cdf577cccf3e10747",
+      "bytes": 147358
+    },
+    {
+      "index": 61,
+      "url": "/model-assets/troitsk-b24-r10/6cb8d089cbcd8977837ffdc4ff905071ef43383bc8970678f0a3c5fe75adbeba.webp",
+      "sha256": "6cb8d089cbcd8977837ffdc4ff905071ef43383bc8970678f0a3c5fe75adbeba",
+      "bytes": 141222
+    },
+    {
+      "index": 62,
+      "url": "/model-assets/troitsk-b24-r10/ba4ba79db2ea5ddf07a3a7d76f69e6a701266e7a57ee870aee41e297962a7b67.webp",
+      "sha256": "ba4ba79db2ea5ddf07a3a7d76f69e6a701266e7a57ee870aee41e297962a7b67",
+      "bytes": 173926
+    },
+    {
+      "index": 63,
+      "url": "/model-assets/troitsk-b24-r10/198e2e7cb62d890f2d3883b0585e5dc6cc6e3bdd0fea4e90b52d7346597ce5d8.webp",
+      "sha256": "198e2e7cb62d890f2d3883b0585e5dc6cc6e3bdd0fea4e90b52d7346597ce5d8",
+      "bytes": 163250
+    },
+    {
+      "index": 64,
+      "url": "/model-assets/troitsk-b24-r10/70fa6c3f2199eb522a150b11daef6a7f8b47f6aff1339cfb5519c3bc94f6b9b0.webp",
+      "sha256": "70fa6c3f2199eb522a150b11daef6a7f8b47f6aff1339cfb5519c3bc94f6b9b0",
+      "bytes": 244474
+    },
+    {
+      "index": 65,
+      "url": "/model-assets/troitsk-b24-r10/0b2102f10d683dbde2e7c5bd453fdc68740bd308bc7fa620dd7d75a20fdfb2a3.webp",
+      "sha256": "0b2102f10d683dbde2e7c5bd453fdc68740bd308bc7fa620dd7d75a20fdfb2a3",
+      "bytes": 167992
+    },
+    {
+      "index": 66,
+      "url": "/model-assets/troitsk-b24-r10/0ea63bc6793a14be657615de9ac561e71d5db50280e962841e6676cad7f71836.webp",
+      "sha256": "0ea63bc6793a14be657615de9ac561e71d5db50280e962841e6676cad7f71836",
+      "bytes": 138016
+    },
+    {
+      "index": 67,
+      "url": "/model-assets/troitsk-b24-r10/628e6aa271cafb4f673a3a4b11b457a14f77aea6f89bd1d8efefa87244298a6f.webp",
+      "sha256": "628e6aa271cafb4f673a3a4b11b457a14f77aea6f89bd1d8efefa87244298a6f",
+      "bytes": 200406
+    },
+    {
+      "index": 68,
+      "url": "/model-assets/troitsk-b24-r10/ab5e2359727ca5665a99f7e5f096e6435bdca8df3988c81c03e7342acc0e9242.webp",
+      "sha256": "ab5e2359727ca5665a99f7e5f096e6435bdca8df3988c81c03e7342acc0e9242",
+      "bytes": 188620
+    },
+    {
+      "index": 69,
+      "url": "/model-assets/troitsk-b24-r10/e79e361f97ede6705966202493edd82b11d2a2eaa47cf17343f09143a5850598.webp",
+      "sha256": "e79e361f97ede6705966202493edd82b11d2a2eaa47cf17343f09143a5850598",
+      "bytes": 181520
+    },
+    {
+      "index": 70,
+      "url": "/model-assets/troitsk-b24-r10/66fdca1f7c4383aff539be3798ba432ed4d5485917dd410d99e7a8c805fba231.webp",
+      "sha256": "66fdca1f7c4383aff539be3798ba432ed4d5485917dd410d99e7a8c805fba231",
+      "bytes": 174852
+    },
+    {
+      "index": 71,
+      "url": "/model-assets/troitsk-b24-r10/a4b01ee30e51ef76279a8e5c6839f648f3e7625588e9fd8a4f9e7eb2d477ec97.webp",
+      "sha256": "a4b01ee30e51ef76279a8e5c6839f648f3e7625588e9fd8a4f9e7eb2d477ec97",
+      "bytes": 125834
+    },
+    {
+      "index": 72,
+      "url": "/model-assets/troitsk-b24-r10/a52ba8e8ba5185a0e5b44f0e070f9e9fdc6989c446b8b63ad0ad0ae18913ccd8.webp",
+      "sha256": "a52ba8e8ba5185a0e5b44f0e070f9e9fdc6989c446b8b63ad0ad0ae18913ccd8",
+      "bytes": 173590
+    },
+    {
+      "index": 73,
+      "url": "/model-assets/troitsk-b24-r10/8fe7fb88393c159cd3303b9ac8c78ecca46ca9780c75789e99138a55e384cc0e.webp",
+      "sha256": "8fe7fb88393c159cd3303b9ac8c78ecca46ca9780c75789e99138a55e384cc0e",
+      "bytes": 163802
+    },
+    {
+      "index": 74,
+      "url": "/model-assets/troitsk-b24-r10/3af497030a96e2da4d472af1f26fb22580fc7a8cfe24e4b43318e3e6b382f996.webp",
+      "sha256": "3af497030a96e2da4d472af1f26fb22580fc7a8cfe24e4b43318e3e6b382f996",
+      "bytes": 116480
+    },
+    {
+      "index": 75,
+      "url": "/model-assets/troitsk-b24-r10/20be2e4d45efdbf7862892675a356ec150f7502d122b90688e56e690e994af3c.webp",
+      "sha256": "20be2e4d45efdbf7862892675a356ec150f7502d122b90688e56e690e994af3c",
+      "bytes": 186296
+    },
+    {
+      "index": 76,
+      "url": "/model-assets/troitsk-b24-r10/0d4bab1ea3d95b54d2c3e8b4f7145e03ee67e45d41c834a9b07c1ef6998b0b58.webp",
+      "sha256": "0d4bab1ea3d95b54d2c3e8b4f7145e03ee67e45d41c834a9b07c1ef6998b0b58",
+      "bytes": 107244
+    },
+    {
+      "index": 77,
+      "url": "/model-assets/troitsk-b24-r10/7ebacf53a1d078d710ef22ee8d3555e311b31f4c7180bf3bc8dc93ed4745e4d2.webp",
+      "sha256": "7ebacf53a1d078d710ef22ee8d3555e311b31f4c7180bf3bc8dc93ed4745e4d2",
+      "bytes": 212164
+    },
+    {
+      "index": 78,
+      "url": "/model-assets/troitsk-b24-r10/42fa9d33ea5b38588c8ae29e2e55870469c8f46c8c7fb8d4f279952739e513ba.webp",
+      "sha256": "42fa9d33ea5b38588c8ae29e2e55870469c8f46c8c7fb8d4f279952739e513ba",
+      "bytes": 218298
+    },
+    {
+      "index": 79,
+      "url": "/model-assets/troitsk-b24-r10/b0e7d6c840ad0f1d787f85aa96e89fd248e5cfe8876ed69e32f370057ba438c6.webp",
+      "sha256": "b0e7d6c840ad0f1d787f85aa96e89fd248e5cfe8876ed69e32f370057ba438c6",
+      "bytes": 129602
+    },
+    {
+      "index": 80,
+      "url": "/model-assets/troitsk-b24-r10/39d5400b716951186420914573cfd3d7a7c7b332c54b51ce187ba13f36fde266.webp",
+      "sha256": "39d5400b716951186420914573cfd3d7a7c7b332c54b51ce187ba13f36fde266",
+      "bytes": 442528
+    },
+    {
+      "index": 81,
+      "url": "/model-assets/troitsk-b24-r10/986948a26ccd78c4a90e74a81349fcabc227fe425673b2b69121bbaa23d89f4a.webp",
+      "sha256": "986948a26ccd78c4a90e74a81349fcabc227fe425673b2b69121bbaa23d89f4a",
+      "bytes": 379788
+    },
+    {
+      "index": 82,
+      "url": "/model-assets/troitsk-b24-r10/5d9536a9e5f04a3df2a9a9ab9d70b22dc868bb34d21e2495b611d39a5428fb0d.webp",
+      "sha256": "5d9536a9e5f04a3df2a9a9ab9d70b22dc868bb34d21e2495b611d39a5428fb0d",
+      "bytes": 280098
+    },
+    {
+      "index": 83,
+      "url": "/model-assets/troitsk-b24-r10/5ffd6a424149f1251fb6100d9d3bf37e24fa5b8ed517dc9ce90d55d651bee0d5.webp",
+      "sha256": "5ffd6a424149f1251fb6100d9d3bf37e24fa5b8ed517dc9ce90d55d651bee0d5",
+      "bytes": 347918
+    },
+    {
+      "index": 84,
+      "url": "/model-assets/troitsk-b24-r10/d4b96c3fc59e37a5ae7ca89044eb59f0ec50aaa46ce71a49f9c665ef3728d642.webp",
+      "sha256": "d4b96c3fc59e37a5ae7ca89044eb59f0ec50aaa46ce71a49f9c665ef3728d642",
+      "bytes": 287254
+    },
+    {
+      "index": 85,
+      "url": "/model-assets/troitsk-b24-r10/ced10d1c293f46b3d94995a56da42f8fa4bb28aa0b5260e95bfe285a2b2b7fa8.webp",
+      "sha256": "ced10d1c293f46b3d94995a56da42f8fa4bb28aa0b5260e95bfe285a2b2b7fa8",
+      "bytes": 322184
+    },
+    {
+      "index": 86,
+      "url": "/model-assets/troitsk-b24-r10/027d85d54ab3c38f6eb190ebe6cffb26f30b4ed4b7353d21df38a1d8b2f6426e.webp",
+      "sha256": "027d85d54ab3c38f6eb190ebe6cffb26f30b4ed4b7353d21df38a1d8b2f6426e",
+      "bytes": 397852
+    },
+    {
+      "index": 87,
+      "url": "/model-assets/troitsk-b24-r10/ced39ee265b7f7c2823d5fd9136a581a5fb9a77633e520eec9478195be27eb3f.webp",
+      "sha256": "ced39ee265b7f7c2823d5fd9136a581a5fb9a77633e520eec9478195be27eb3f",
+      "bytes": 242768
+    },
+    {
+      "index": 88,
+      "url": "/model-assets/troitsk-b24-r10/39f94335a4606bee6b1234d46b3ce02e663f65777d792bc390b70e8e5b3f7e7a.webp",
+      "sha256": "39f94335a4606bee6b1234d46b3ce02e663f65777d792bc390b70e8e5b3f7e7a",
+      "bytes": 203744
+    },
+    {
+      "index": 89,
+      "url": "/model-assets/troitsk-b24-r10/7cf8df4fb583c1cc34ea7cbeae512c718e8f3e1c81611188bf0f9770c946997f.webp",
+      "sha256": "7cf8df4fb583c1cc34ea7cbeae512c718e8f3e1c81611188bf0f9770c946997f",
+      "bytes": 161966
+    },
+    {
+      "index": 90,
+      "url": "/model-assets/troitsk-b24-r10/0b90e1ac3271b94148c44470e6108954d67dd339d4901140c1a500b84324f064.webp",
+      "sha256": "0b90e1ac3271b94148c44470e6108954d67dd339d4901140c1a500b84324f064",
+      "bytes": 68828
+    },
+    {
+      "index": 91,
+      "url": "/model-assets/troitsk-b24-r10/1d6d98c9e594b69dd9d2298520796cc017ee44cb65e9fd4ed215be5f40a56e66.webp",
+      "sha256": "1d6d98c9e594b69dd9d2298520796cc017ee44cb65e9fd4ed215be5f40a56e66",
+      "bytes": 377544
+    },
+    {
+      "index": 92,
+      "url": "/model-assets/troitsk-b24-r10/4804829be3e4539a18a7e7684376c45678a5c6d9f3f29b3b67a339d3c16a7cf2.webp",
+      "sha256": "4804829be3e4539a18a7e7684376c45678a5c6d9f3f29b3b67a339d3c16a7cf2",
+      "bytes": 25786
+    },
+    {
+      "index": 93,
+      "url": "/model-assets/troitsk-b24-r10/1c54375b4b63ab290df0e01ce1ffd9bfc24d425f3b60a7bd067fb1dcd81df3a8.webp",
+      "sha256": "1c54375b4b63ab290df0e01ce1ffd9bfc24d425f3b60a7bd067fb1dcd81df3a8",
+      "bytes": 352356
+    },
+    {
+      "index": 94,
+      "url": "/model-assets/troitsk-b24-r10/8a04e54d415f6c2db0f58a31e2fdbc731af057a7589bffd25ee8c56e2cb76e7f.webp",
+      "sha256": "8a04e54d415f6c2db0f58a31e2fdbc731af057a7589bffd25ee8c56e2cb76e7f",
+      "bytes": 32668
+    },
+    {
+      "index": 95,
+      "url": "/model-assets/troitsk-b24-r10/6398e023148d40f1459bf5fe58ed893d006666193c041584f96b75cfb2d389a8.webp",
+      "sha256": "6398e023148d40f1459bf5fe58ed893d006666193c041584f96b75cfb2d389a8",
+      "bytes": 371658
+    },
+    {
+      "index": 96,
+      "url": "/model-assets/troitsk-b24-r10/5fd28f7a552c2d50ded11641cf8443263c93ebe501ed303d7422508b9c48ea38.webp",
+      "sha256": "5fd28f7a552c2d50ded11641cf8443263c93ebe501ed303d7422508b9c48ea38",
+      "bytes": 332932
+    },
+    {
+      "index": 97,
+      "url": "/model-assets/troitsk-b24-r10/1f907fdc2cf7c1069ba139d100329a6169524a32998e394ab6fa73127c59ff91.webp",
+      "sha256": "1f907fdc2cf7c1069ba139d100329a6169524a32998e394ab6fa73127c59ff91",
+      "bytes": 330372
+    },
+    {
+      "index": 98,
+      "url": "/model-assets/troitsk-b24-r10/c6ad609fa3a621e5c0733ef6738729b29309a36a97d8d03d2101c4042a299cf6.webp",
+      "sha256": "c6ad609fa3a621e5c0733ef6738729b29309a36a97d8d03d2101c4042a299cf6",
+      "bytes": 400898
+    },
+    {
+      "index": 99,
+      "url": "/model-assets/troitsk-b24-r10/bf91127de768fc1482ffe1d2ef340684c198edee0f335b422d4249d731abc964.webp",
+      "sha256": "bf91127de768fc1482ffe1d2ef340684c198edee0f335b422d4249d731abc964",
+      "bytes": 328002
+    },
+    {
+      "index": 100,
+      "url": "/model-assets/troitsk-b24-r10/1e35917476c1ae32c4e21bc94220a84d655fe819abacfaae436768ee09057871.webp",
+      "sha256": "1e35917476c1ae32c4e21bc94220a84d655fe819abacfaae436768ee09057871",
+      "bytes": 342316
+    },
+    {
+      "index": 101,
+      "url": "/model-assets/troitsk-b24-r10/11666f7e8e02df7aa819b26772583c97a82eebf74b7a0a76ff91f9f1f502a60b.webp",
+      "sha256": "11666f7e8e02df7aa819b26772583c97a82eebf74b7a0a76ff91f9f1f502a60b",
+      "bytes": 327876
+    },
+    {
+      "index": 102,
+      "url": "/model-assets/troitsk-b24-r10/40fd0cce84f4e0347cf0d8d5ec1d2b05bc53a9420e791e1c299ee7905c1ca45a.webp",
+      "sha256": "40fd0cce84f4e0347cf0d8d5ec1d2b05bc53a9420e791e1c299ee7905c1ca45a",
+      "bytes": 285822
+    },
+    {
+      "index": 103,
+      "url": "/model-assets/troitsk-b24-r10/659270f1ae3bcb1fbdac5f4b20d56f52656e14049928c4c2cc5b2486ac4e915f.webp",
+      "sha256": "659270f1ae3bcb1fbdac5f4b20d56f52656e14049928c4c2cc5b2486ac4e915f",
+      "bytes": 402630
+    },
+    {
+      "index": 104,
+      "url": "/model-assets/troitsk-b24-r10/8994f213a9090fc718c594ddcc87c0bc8adc84ce5de3d9af19e186776b8f9406.webp",
+      "sha256": "8994f213a9090fc718c594ddcc87c0bc8adc84ce5de3d9af19e186776b8f9406",
+      "bytes": 370492
+    },
+    {
+      "index": 105,
+      "url": "/model-assets/troitsk-b24-r10/a234e68c17867eb602aef1a9b8d9ed88c961b7539f9b3ebc78b2e116423211ee.svg",
+      "sha256": "a234e68c17867eb602aef1a9b8d9ed88c961b7539f9b3ebc78b2e116423211ee",
+      "bytes": 528034
+    },
+    {
+      "index": 106,
+      "url": "/model-assets/troitsk-b24-r10/b74012cdb992d3b3de45f267f4255c6e5adb33a2060968404b691ccd1776169f.svg",
+      "sha256": "b74012cdb992d3b3de45f267f4255c6e5adb33a2060968404b691ccd1776169f",
+      "bytes": 513432
+    },
+    {
+      "index": 107,
+      "url": "/model-assets/troitsk-b24-r10/5c01dd63a7f8444e7b898cb5cbf29fcdd4ca475b2dac4476678f27ffa6e807e7.svg",
+      "sha256": "5c01dd63a7f8444e7b898cb5cbf29fcdd4ca475b2dac4476678f27ffa6e807e7",
+      "bytes": 343627
+    },
+    {
+      "index": 108,
+      "url": "/model-assets/troitsk-b24-r10/655f5c9b1e97f40034794424e9e2263aab10fb93474c5acc8de55c27b08da3dd.svg",
+      "sha256": "655f5c9b1e97f40034794424e9e2263aab10fb93474c5acc8de55c27b08da3dd",
+      "bytes": 329152
+    },
+    {
+      "index": 109,
+      "url": "/model-assets/troitsk-b24-r10/a83c79a50b958aecc3f4fe7115ec1f85b1c9d72495d7aea3affad4f95ba4398a.svg",
+      "sha256": "a83c79a50b958aecc3f4fe7115ec1f85b1c9d72495d7aea3affad4f95ba4398a",
+      "bytes": 340613
+    },
+    {
+      "index": 110,
+      "url": "/model-assets/troitsk-b24-r10/2254bc96bbd5d8b4f6440d6d05cb09afd76a6e74c59f15848996ddae3b8302ec.svg",
+      "sha256": "2254bc96bbd5d8b4f6440d6d05cb09afd76a6e74c59f15848996ddae3b8302ec",
+      "bytes": 332208
+    },
+    {
+      "index": 111,
+      "url": "/model-assets/troitsk-b24-r10/efda256e75a9675d29b2b27014d352cf93f5dd6a10a25cbd96cd4b6b12bd46b6.svg",
+      "sha256": "efda256e75a9675d29b2b27014d352cf93f5dd6a10a25cbd96cd4b6b12bd46b6",
+      "bytes": 225177
+    },
+    {
+      "index": 112,
+      "url": "/model-assets/troitsk-b24-r10/f65e46a36da36cbf42fcaeaa5aad4bc6b10054585353798afda4fd75c754f7b7.svg",
+      "sha256": "f65e46a36da36cbf42fcaeaa5aad4bc6b10054585353798afda4fd75c754f7b7",
+      "bytes": 225160
+    },
+    {
+      "index": 113,
+      "url": "/model-assets/troitsk-b24-r10/62ab34c55bea0e7f8eb3bd69bb68489c90eb565480c297da1f37bcd5c21cd691.svg",
+      "sha256": "62ab34c55bea0e7f8eb3bd69bb68489c90eb565480c297da1f37bcd5c21cd691",
+      "bytes": 209349
+    },
+    {
+      "index": 114,
+      "url": "/model-assets/troitsk-b24-r10/736ce2239add4fc347b06f029ccdd1a1264867e2f25a459b8943168eb855c594.svg",
+      "sha256": "736ce2239add4fc347b06f029ccdd1a1264867e2f25a459b8943168eb855c594",
+      "bytes": 209332
+    },
+    {
+      "index": 115,
+      "url": "/model-assets/troitsk-b24-r10/8c54e2e44ccb3544156b8d7663499a3ec0c297d6c375421573c4135d9260405c.svg",
+      "sha256": "8c54e2e44ccb3544156b8d7663499a3ec0c297d6c375421573c4135d9260405c",
+      "bytes": 202697
+    },
+    {
+      "index": 116,
+      "url": "/model-assets/troitsk-b24-r10/c3ead7f3bd7ca0dfd2a9e15e708a683ad4fd2f2f5cd1361ed3d8fae4cd3cc1ce.svg",
+      "sha256": "c3ead7f3bd7ca0dfd2a9e15e708a683ad4fd2f2f5cd1361ed3d8fae4cd3cc1ce",
+      "bytes": 202680
+    },
+    {
+      "index": 117,
+      "url": "/model-assets/troitsk-b24-r10/b95dcced5a952edb335f55c5453a6d48084a388313c23627d961ebd970335773.webp",
+      "sha256": "b95dcced5a952edb335f55c5453a6d48084a388313c23627d961ebd970335773",
+      "bytes": 470942
+    },
+    {
+      "index": 118,
+      "url": "/model-assets/troitsk-b24-r10/d90a8f08cc78d59daf323ca0d1769c3b59508e413ba8cb85f39a4f6bbba32309.webp",
+      "sha256": "d90a8f08cc78d59daf323ca0d1769c3b59508e413ba8cb85f39a4f6bbba32309",
+      "bytes": 310222
+    },
+    {
+      "index": 119,
+      "url": "/model-assets/troitsk-b24-r10/d1cce66a7e869f37e671f40a0ac0fb31d09db37bc1b7335452019ad0e106242f.webp",
+      "sha256": "d1cce66a7e869f37e671f40a0ac0fb31d09db37bc1b7335452019ad0e106242f",
+      "bytes": 364776
+    },
+    {
+      "index": 120,
+      "url": "/model-assets/troitsk-b24-r10/0cc8f4311ee9af38c27dbf52ebe1a1b956bd2b8b4666a2f0d964b4a050eb58e3.webp",
+      "sha256": "0cc8f4311ee9af38c27dbf52ebe1a1b956bd2b8b4666a2f0d964b4a050eb58e3",
+      "bytes": 253168
+    },
+    {
+      "index": 121,
+      "url": "/model-assets/troitsk-b24-r10/2127317a83c086e52e0ce9f00ced715bcbe7cb42564cabc7fec70fbfdd88b0b7.webp",
+      "sha256": "2127317a83c086e52e0ce9f00ced715bcbe7cb42564cabc7fec70fbfdd88b0b7",
+      "bytes": 228698
+    },
+    {
+      "index": 122,
+      "url": "/model-assets/troitsk-b24-r10/1c12dfc9961ad95d7bda507acbab955d3d93d0c09f31d6f5753725bfb9f3ffa6.webp",
+      "sha256": "1c12dfc9961ad95d7bda507acbab955d3d93d0c09f31d6f5753725bfb9f3ffa6",
+      "bytes": 452320
+    },
+    {
+      "index": 123,
+      "url": "/model-assets/troitsk-b24-r10/3702a85cbc1796d300b004755396ff30b4cf0ba9107fe5bd8a7292e540349def.webp",
+      "sha256": "3702a85cbc1796d300b004755396ff30b4cf0ba9107fe5bd8a7292e540349def",
+      "bytes": 276310
+    },
+    {
+      "index": 124,
+      "url": "/model-assets/troitsk-b24-r10/898b20e03042ed432cf48106aad09734e7eea578347259c168f6b071df8f262d.webp",
+      "sha256": "898b20e03042ed432cf48106aad09734e7eea578347259c168f6b071df8f262d",
+      "bytes": 558216
+    },
+    {
+      "index": 125,
+      "url": "/model-assets/troitsk-b24-r10/8395757b73945cdfe86d4773484340ed0ab484f532770dfec0f65e622de89f1b.webp",
+      "sha256": "8395757b73945cdfe86d4773484340ed0ab484f532770dfec0f65e622de89f1b",
+      "bytes": 467920
+    },
+    {
+      "index": 126,
+      "url": "/model-assets/troitsk-b24-r10/11f818379cd63525bcff43381f47e51acbb0f8de108fbf6587ba244300aa0ef7.webp",
+      "sha256": "11f818379cd63525bcff43381f47e51acbb0f8de108fbf6587ba244300aa0ef7",
+      "bytes": 415904
+    },
+    {
+      "index": 127,
+      "url": "/model-assets/troitsk-b24-r10/51e5fa2a78d689e2919123adfda746a2cc87325e6d7193ad20fb025f183e2f46.webp",
+      "sha256": "51e5fa2a78d689e2919123adfda746a2cc87325e6d7193ad20fb025f183e2f46",
+      "bytes": 258996
+    },
+    {
+      "index": 128,
+      "url": "/model-assets/troitsk-b24-r10/570593c4daef44f2f1b3b742e51b763e0a71ced2a92b8f0a9b0763ae3dd0fce5.webp",
+      "sha256": "570593c4daef44f2f1b3b742e51b763e0a71ced2a92b8f0a9b0763ae3dd0fce5",
+      "bytes": 292024
+    },
+    {
+      "index": 129,
+      "url": "/model-assets/troitsk-b24-r10/127cf1ba05fd8c29c6a7fe15e6279a86cb3dd86511e262f9c23c2a772ccf758a.webp",
+      "sha256": "127cf1ba05fd8c29c6a7fe15e6279a86cb3dd86511e262f9c23c2a772ccf758a",
+      "bytes": 229544
+    },
+    {
+      "index": 130,
+      "url": "/model-assets/troitsk-b24-r10/5f768c9dafd07d92f2c31b51c80d660604a87cd1726821ec2018cd26dd110c0b.webp",
+      "sha256": "5f768c9dafd07d92f2c31b51c80d660604a87cd1726821ec2018cd26dd110c0b",
+      "bytes": 305510
+    },
+    {
+      "index": 131,
+      "url": "/model-assets/troitsk-b24-r10/ad5246ce4133de169b4b6263292cd80b013b69593bce217673b410750e591c40.webp",
+      "sha256": "ad5246ce4133de169b4b6263292cd80b013b69593bce217673b410750e591c40",
+      "bytes": 258042
+    },
+    {
+      "index": 132,
+      "url": "/model-assets/troitsk-b24-r10/cf9df6e3c3ccb194016ab10ba457de1051804ef707f786ea858409f1f8c75edf.webp",
+      "sha256": "cf9df6e3c3ccb194016ab10ba457de1051804ef707f786ea858409f1f8c75edf",
+      "bytes": 224336
+    },
+    {
+      "index": 133,
+      "url": "/model-assets/troitsk-b24-r10/aede7528733cc0a38c2aa4b98d2c3a6c0f205f614a4642f844fa17bd49d1eef3.webp",
+      "sha256": "aede7528733cc0a38c2aa4b98d2c3a6c0f205f614a4642f844fa17bd49d1eef3",
+      "bytes": 243856
+    },
+    {
+      "index": 134,
+      "url": "/model-assets/troitsk-b24-r10/06c6c9cf855ab83d502a91b6e1bfc2b1b1ef357a1439e95619be69a4dbd41a59.webp",
+      "sha256": "06c6c9cf855ab83d502a91b6e1bfc2b1b1ef357a1439e95619be69a4dbd41a59",
+      "bytes": 304494
+    },
+    {
+      "index": 135,
+      "url": "/model-assets/troitsk-b24-r10/c9236ce3030633c43378ab22fb3ba76d6f01ad9fa921ebfd55d07fb9db1bffd2.webp",
+      "sha256": "c9236ce3030633c43378ab22fb3ba76d6f01ad9fa921ebfd55d07fb9db1bffd2",
+      "bytes": 241482
+    },
+    {
+      "index": 136,
+      "url": "/model-assets/troitsk-b24-r10/d7603312c9bde7c2ecce561efd97d9408eb902a58f3f18979f244e1140575a45.webp",
+      "sha256": "d7603312c9bde7c2ecce561efd97d9408eb902a58f3f18979f244e1140575a45",
+      "bytes": 215146
+    },
+    {
+      "index": 137,
+      "url": "/model-assets/troitsk-b24-r10/528945131123d46e3b4fb37dd3bf2d4ad2fadf82d0a6a30667f904244434b6d7.webp",
+      "sha256": "528945131123d46e3b4fb37dd3bf2d4ad2fadf82d0a6a30667f904244434b6d7",
+      "bytes": 343882
+    },
+    {
+      "index": 138,
+      "url": "/model-assets/troitsk-b24-r10/06ed4ca65dbdd29f669b757591cdff105dd26f325b6a64ff0ba09b71978d8f83.webp",
+      "sha256": "06ed4ca65dbdd29f669b757591cdff105dd26f325b6a64ff0ba09b71978d8f83",
+      "bytes": 327680
+    },
+    {
+      "index": 139,
+      "url": "/model-assets/troitsk-b24-r10/e0a4c14309651d9b1c15ecda29b899ac3ea9114b445832ca3f547372798817ab.webp",
+      "sha256": "e0a4c14309651d9b1c15ecda29b899ac3ea9114b445832ca3f547372798817ab",
+      "bytes": 285780
+    },
+    {
+      "index": 140,
+      "url": "/model-assets/troitsk-b24-r10/33e97e05f64a7e97474fc7b3fc09b23ae1c237b66976abb29f29e67a3b6f76c8.webp",
+      "sha256": "33e97e05f64a7e97474fc7b3fc09b23ae1c237b66976abb29f29e67a3b6f76c8",
+      "bytes": 220216
+    },
+    {
+      "index": 141,
+      "url": "/model-assets/troitsk-b24-r10/a0c196b035761e4b5609d8005b06bd5e008c9b16e6c819bf0bbca0a987834ff6.webp",
+      "sha256": "a0c196b035761e4b5609d8005b06bd5e008c9b16e6c819bf0bbca0a987834ff6",
+      "bytes": 243808
+    },
+    {
+      "index": 142,
+      "url": "/model-assets/troitsk-b24-r10/dbcb594eababa415d58cebbd31fd8938fd9dba731643dab906007db8ab70bcad.webp",
+      "sha256": "dbcb594eababa415d58cebbd31fd8938fd9dba731643dab906007db8ab70bcad",
+      "bytes": 400392
+    },
+    {
+      "index": 143,
+      "url": "/model-assets/troitsk-b24-r10/f32637365adbac1b9cc3a1ad92bfaf1dea8e85792b5a5eb5e99e705ce88e1006.webp",
+      "sha256": "f32637365adbac1b9cc3a1ad92bfaf1dea8e85792b5a5eb5e99e705ce88e1006",
+      "bytes": 442490
+    },
+    {
+      "index": 144,
+      "url": "/model-assets/troitsk-b24-r10/b1f93ee05e5c6209db011283d4f77c73ca51ac9c13174fe571a108e69a27a2d5.webp",
+      "sha256": "b1f93ee05e5c6209db011283d4f77c73ca51ac9c13174fe571a108e69a27a2d5",
+      "bytes": 459688
+    },
+    {
+      "index": 145,
+      "url": "/model-assets/troitsk-b24-r10/00d0c45cfc58eb7b0336fd8f285f7b1152ff05769c19243649a3c1f2cf136b36.webp",
+      "sha256": "00d0c45cfc58eb7b0336fd8f285f7b1152ff05769c19243649a3c1f2cf136b36",
+      "bytes": 295896
+    },
+    {
+      "index": 146,
+      "url": "/model-assets/troitsk-b24-r10/3ffa5ed6262ce6c822982a63b722374c776b6d8ad528f555334181b7d047bd1b.webp",
+      "sha256": "3ffa5ed6262ce6c822982a63b722374c776b6d8ad528f555334181b7d047bd1b",
+      "bytes": 351874
+    },
+    {
+      "index": 147,
+      "url": "/model-assets/troitsk-b24-r10/cdcab4518c04b6308f6f1dc1726f2aaebd3b605ba053875bdae2068f9107602f.webp",
+      "sha256": "cdcab4518c04b6308f6f1dc1726f2aaebd3b605ba053875bdae2068f9107602f",
+      "bytes": 397144
+    },
+    {
+      "index": 148,
+      "url": "/model-assets/troitsk-b24-r10/52e73e1c23e73d60fb3b9f07c0360c597e141663990943bfdd39e9b0106d6573.webp",
+      "sha256": "52e73e1c23e73d60fb3b9f07c0360c597e141663990943bfdd39e9b0106d6573",
+      "bytes": 313194
+    },
+    {
+      "index": 149,
+      "url": "/model-assets/troitsk-b24-r10/48974f499c0915a71008e3329b636980384950fd429b34a1987d55d90be58dd1.webp",
+      "sha256": "48974f499c0915a71008e3329b636980384950fd429b34a1987d55d90be58dd1",
+      "bytes": 349426
+    },
+    {
+      "index": 150,
+      "url": "/model-assets/troitsk-b24-r10/3ad75f56cae9ca6841389874730f4831e1207656246a0ebfa862d01185f4e3b6.webp",
+      "sha256": "3ad75f56cae9ca6841389874730f4831e1207656246a0ebfa862d01185f4e3b6",
+      "bytes": 276026
+    },
+    {
+      "index": 151,
+      "url": "/model-assets/troitsk-b24-r10/32b7d38c7518afc117197bc247ed3d4c7512d80bd43612fe01c2ff31ce80ad26.webp",
+      "sha256": "32b7d38c7518afc117197bc247ed3d4c7512d80bd43612fe01c2ff31ce80ad26",
+      "bytes": 448250
+    },
+    {
+      "index": 152,
+      "url": "/model-assets/troitsk-b24-r10/266f53599039e3bc451736dbfff2e9e829e37d5048d3e264ae5cb949bb4d708b.webp",
+      "sha256": "266f53599039e3bc451736dbfff2e9e829e37d5048d3e264ae5cb949bb4d708b",
+      "bytes": 192972
+    },
+    {
+      "index": 153,
+      "url": "/model-assets/troitsk-b24-r10/c73658fc5ffb82380f19118ba4fe2c23e09ed38e63c09e6d036cbb164b750a39.webp",
+      "sha256": "c73658fc5ffb82380f19118ba4fe2c23e09ed38e63c09e6d036cbb164b750a39",
+      "bytes": 179322
+    },
+    {
+      "index": 154,
+      "url": "/model-assets/troitsk-b24-r10/2426a601129160148e2c6738c69d055aaaf9f6a97529fbc5634c54c055723104.webp",
+      "sha256": "2426a601129160148e2c6738c69d055aaaf9f6a97529fbc5634c54c055723104",
+      "bytes": 417096
+    },
+    {
+      "index": 155,
+      "url": "/model-assets/troitsk-b24-r10/2808adcd5bb7b4e02e52fe4cc350e66775f309bca12cb3bcbf6235a52510643b.webp",
+      "sha256": "2808adcd5bb7b4e02e52fe4cc350e66775f309bca12cb3bcbf6235a52510643b",
+      "bytes": 277326
+    },
+    {
+      "index": 156,
+      "url": "/model-assets/troitsk-b24-r10/016ed3947a5f7ef2a58da31ebbbf2c9fa80e405a6256a8e97b9c62677262d5ef.webp",
+      "sha256": "016ed3947a5f7ef2a58da31ebbbf2c9fa80e405a6256a8e97b9c62677262d5ef",
+      "bytes": 412872
+    },
+    {
+      "index": 157,
+      "url": "/model-assets/troitsk-b24-r10/c39544d263dbea447adc28468ec92913270d38707d1ba120e9a516452af437c4.webp",
+      "sha256": "c39544d263dbea447adc28468ec92913270d38707d1ba120e9a516452af437c4",
+      "bytes": 353320
+    },
+    {
+      "index": 158,
+      "url": "/model-assets/troitsk-b24-r10/753932a40656d3aad4659fa7167d646521c5929b1c7ce1d00cc30bd68e7df4c0.webp",
+      "sha256": "753932a40656d3aad4659fa7167d646521c5929b1c7ce1d00cc30bd68e7df4c0",
+      "bytes": 249318
+    },
+    {
+      "index": 159,
+      "url": "/model-assets/troitsk-b24-r10/876ff7bfa9d8c23ad7cb6dd1fdaf9d03d6c7b6365dfb7b9518dcc6bf1af37d13.webp",
+      "sha256": "876ff7bfa9d8c23ad7cb6dd1fdaf9d03d6c7b6365dfb7b9518dcc6bf1af37d13",
+      "bytes": 74920
+    },
+    {
+      "index": 160,
+      "url": "/model-assets/troitsk-b24-r10/37273e4deebfc75a4db991ee5c96c22fa37861494d3dc59a3900df514d361a8c.webp",
+      "sha256": "37273e4deebfc75a4db991ee5c96c22fa37861494d3dc59a3900df514d361a8c",
+      "bytes": 46144
+    },
+    {
+      "index": 161,
+      "url": "/model-assets/troitsk-b24-r10/eef5a45d1326d0fe6ded5dd6322cc538603ef3e86a5ea61e1a46f0d48f100fd9.webp",
+      "sha256": "eef5a45d1326d0fe6ded5dd6322cc538603ef3e86a5ea61e1a46f0d48f100fd9",
+      "bytes": 30076
+    },
+    {
+      "index": 162,
+      "url": "/model-assets/troitsk-b24-r10/b160b73d7d54159449b067e09c6f1f7cb4293f9861897f052855261d7cd24915.webp",
+      "sha256": "b160b73d7d54159449b067e09c6f1f7cb4293f9861897f052855261d7cd24915",
+      "bytes": 43150
+    },
+    {
+      "index": 163,
+      "url": "/model-assets/troitsk-b24-r10/da269d2eded316ac884362388008f3be3d006a23cec17634f40899ad989dc230.webp",
+      "sha256": "da269d2eded316ac884362388008f3be3d006a23cec17634f40899ad989dc230",
+      "bytes": 10304
+    },
+    {
+      "index": 164,
+      "url": "/model-assets/troitsk-b24-r10/b98ec8bfa6dc368c2a48dc50e9e574860a5fb463508db18def704a4e0ae741c6.webp",
+      "sha256": "b98ec8bfa6dc368c2a48dc50e9e574860a5fb463508db18def704a4e0ae741c6",
+      "bytes": 13546
+    },
+    {
+      "index": 165,
+      "url": "/model-assets/troitsk-b24-r10/f25c5a35d925ddd315f8d6c09cb8a3230d1eb94e05f7c750323a36b1cf85727a.webp",
+      "sha256": "f25c5a35d925ddd315f8d6c09cb8a3230d1eb94e05f7c750323a36b1cf85727a",
+      "bytes": 5992
+    },
+    {
+      "index": 166,
+      "url": "/model-assets/troitsk-b24-r10/1914a6937dcc4c454fff5c2423b3d18c142ec8db1295031e21bda7b9c79899f0.webp",
+      "sha256": "1914a6937dcc4c454fff5c2423b3d18c142ec8db1295031e21bda7b9c79899f0",
+      "bytes": 39196
+    },
+    {
+      "index": 167,
+      "url": "/model-assets/troitsk-b24-r10/91f78f2637afed3e7d4deffa5059d439ba59a94040d9904ae03d40615a520b86.webp",
+      "sha256": "91f78f2637afed3e7d4deffa5059d439ba59a94040d9904ae03d40615a520b86",
+      "bytes": 14686
+    },
+    {
+      "index": 168,
+      "url": "/model-assets/troitsk-b24-r10/8d29e6be04ae3dbe61795c1d1435593325f8330c32946ad443716e22ad5c50a4.webp",
+      "sha256": "8d29e6be04ae3dbe61795c1d1435593325f8330c32946ad443716e22ad5c50a4",
+      "bytes": 12038
+    },
+    {
+      "index": 169,
+      "url": "/model-assets/troitsk-b24-r10/8fdc71a49b3e3822e233f655dfeef7ad439112edafdc5d0e85132e3bef87766a.webp",
+      "sha256": "8fdc71a49b3e3822e233f655dfeef7ad439112edafdc5d0e85132e3bef87766a",
+      "bytes": 16234
+    },
+    {
+      "index": 220,
+      "url": "/model-assets/troitsk-b24-r10/955b7c103d80c125bf9cd70a10c6bbb557c158cdedd8e91b5cfecd61e8af3139.png",
+      "sha256": "955b7c103d80c125bf9cd70a10c6bbb557c158cdedd8e91b5cfecd61e8af3139",
+      "bytes": 307336
+    },
+    {
+      "index": 221,
+      "url": "/model-assets/troitsk-b24-r10/5e5fbcd695323d208f3b1ad119a724695430257308791320925b87775dd14eb6.png",
+      "sha256": "5e5fbcd695323d208f3b1ad119a724695430257308791320925b87775dd14eb6",
+      "bytes": 420448
+    },
+    {
+      "index": 222,
+      "url": "/model-assets/troitsk-b24-r10/06494f583bee87a61c2d7eb3d90f1a609dd9982c9a86b2a48adbcd087bfbcd49.png",
+      "sha256": "06494f583bee87a61c2d7eb3d90f1a609dd9982c9a86b2a48adbcd087bfbcd49",
+      "bytes": 329378
+    },
+    {
+      "index": 223,
+      "url": "/model-assets/troitsk-b24-r10/f29dd44020e05b6b5479e7510256702d28c4b7c7f5d87db223034a29876ca037.png",
+      "sha256": "f29dd44020e05b6b5479e7510256702d28c4b7c7f5d87db223034a29876ca037",
+      "bytes": 231144
+    },
+    {
+      "index": 224,
+      "url": "/model-assets/troitsk-b24-r10/6e29034d6b98c756c8ab30f5b8d03ecba0cb7a39aa6463796eccda0a3bd6d56a.jpg",
+      "sha256": "6e29034d6b98c756c8ab30f5b8d03ecba0cb7a39aa6463796eccda0a3bd6d56a",
+      "bytes": 249120
+    },
+    {
+      "index": 225,
+      "url": "/model-assets/troitsk-b24-r10/bd33269c652b077a6c8bc38936873cb41e77d5957aaaca06e10c229a85a42908.jpg",
+      "sha256": "bd33269c652b077a6c8bc38936873cb41e77d5957aaaca06e10c229a85a42908",
+      "bytes": 263103
+    },
+    {
+      "index": 226,
+      "url": "/model-assets/troitsk-b24-r10/abbcd04e739f87a6f9fc844abf29e4c49360b04d6520244ef79295fbe2829245.jpg",
+      "sha256": "abbcd04e739f87a6f9fc844abf29e4c49360b04d6520244ef79295fbe2829245",
+      "bytes": 251705
+    },
+    {
+      "index": 227,
+      "url": "/model-assets/troitsk-b24-r10/31d9b1113c0d894415e894858ee565d319c330bbb4dc93e960d63a9901a9ecaf.jpg",
+      "sha256": "31d9b1113c0d894415e894858ee565d319c330bbb4dc93e960d63a9901a9ecaf",
+      "bytes": 217351
+    },
+    {
+      "index": 228,
+      "url": "/model-assets/troitsk-b24-r10/7a33923303717b421d3bf03aad184e340d61d6d1ae875e0b19d72d01775b002a.jpg",
+      "sha256": "7a33923303717b421d3bf03aad184e340d61d6d1ae875e0b19d72d01775b002a",
+      "bytes": 294627
+    },
+    {
+      "index": 229,
+      "url": "/model-assets/troitsk-b24-r10/8c96b020acc9b5b6e07c7ba4aafbbcade91e81b1af0a1d5884c3ffee2363150b.jpg",
+      "sha256": "8c96b020acc9b5b6e07c7ba4aafbbcade91e81b1af0a1d5884c3ffee2363150b",
+      "bytes": 295817
+    },
+    {
+      "index": 230,
+      "url": "/model-assets/troitsk-b24-r10/a4e8ba37edd74640410a35f7d5c7ebb1d4024c2dca3043d0733d70cf98d959cc.png",
+      "sha256": "a4e8ba37edd74640410a35f7d5c7ebb1d4024c2dca3043d0733d70cf98d959cc",
+      "bytes": 287832
+    },
+    {
+      "index": 231,
+      "url": "/model-assets/troitsk-b24-r10/8d473be8f4f7aa1140938d86930e099aab9e8933ad725360a17374d4f95dfb73.png",
+      "sha256": "8d473be8f4f7aa1140938d86930e099aab9e8933ad725360a17374d4f95dfb73",
+      "bytes": 519388
+    },
+    {
+      "index": 232,
+      "url": "/model-assets/troitsk-b24-r10/235dd371486fda419f6d6cb4712731e06cd7e0d2fa8448892052d321881ad28c.png",
+      "sha256": "235dd371486fda419f6d6cb4712731e06cd7e0d2fa8448892052d321881ad28c",
+      "bytes": 883431
+    },
+    {
+      "index": 233,
+      "url": "/model-assets/troitsk-b24-r10/99425f205930172ed7fe99c380b44d5b319e080511c32760c7d77057b2ba112d.png",
+      "sha256": "99425f205930172ed7fe99c380b44d5b319e080511c32760c7d77057b2ba112d",
+      "bytes": 776564
+    },
+    {
+      "index": 234,
+      "url": "/model-assets/troitsk-b24-r10/ab2cc10c03d9ec8f35fb922c0d7e43e9180381e1ba3cacbec161edafc94bee29.png",
+      "sha256": "ab2cc10c03d9ec8f35fb922c0d7e43e9180381e1ba3cacbec161edafc94bee29",
+      "bytes": 436061
+    },
+    {
+      "index": 235,
+      "url": "/model-assets/troitsk-b24-r10/638b674d7a2cf3e8034aa0cf2097bdaf0509c940ca7ede89585c0eb3094a93df.png",
+      "sha256": "638b674d7a2cf3e8034aa0cf2097bdaf0509c940ca7ede89585c0eb3094a93df",
+      "bytes": 505369
+    },
+    {
+      "index": 236,
+      "url": "/model-assets/troitsk-b24-r10/2a201e5e52ac87390d422e341ddaf2a0fd725356bc1268c96c9a90c1c5d3a5c9.png",
+      "sha256": "2a201e5e52ac87390d422e341ddaf2a0fd725356bc1268c96c9a90c1c5d3a5c9",
+      "bytes": 671095
+    },
+    {
+      "index": 237,
+      "url": "/model-assets/troitsk-b24-r10/632d2571421de935a85a00a3bc4de7932d68ccea4d78da4fbd96c1f9c1f6cc2a.png",
+      "sha256": "632d2571421de935a85a00a3bc4de7932d68ccea4d78da4fbd96c1f9c1f6cc2a",
+      "bytes": 320119
+    },
+    {
+      "index": 238,
+      "url": "/model-assets/troitsk-b24-r10/77a44ae9fad5776904d9b8c02e931174cea0c70ea3bc4c4bf641661570a61fe1.png",
+      "sha256": "77a44ae9fad5776904d9b8c02e931174cea0c70ea3bc4c4bf641661570a61fe1",
+      "bytes": 267837
+    },
+    {
+      "index": 239,
+      "url": "/model-assets/troitsk-b24-r10/c093a4187f487d09ba13a0f7b4995b4769c0a881fb0a3768ddbf6b690231d604.png",
+      "sha256": "c093a4187f487d09ba13a0f7b4995b4769c0a881fb0a3768ddbf6b690231d604",
+      "bytes": 601259
+    },
+    {
+      "index": 240,
+      "url": "/model-assets/troitsk-b24-r10/d0ba7748a36d901b512c70e2464acbd6921c21d19f02217bc0f4c77782622943.jpg",
+      "sha256": "d0ba7748a36d901b512c70e2464acbd6921c21d19f02217bc0f4c77782622943",
+      "bytes": 1274588
+    },
+    {
+      "index": 241,
+      "url": "/model-assets/troitsk-b24-r10/fc3313f9e4c9170e0446e15f43e79aac6973fef1b4c228fffb2a2e7ad49dfe01.jpg",
+      "sha256": "fc3313f9e4c9170e0446e15f43e79aac6973fef1b4c228fffb2a2e7ad49dfe01",
+      "bytes": 1203370
+    },
+    {
+      "index": 242,
+      "url": "/model-assets/troitsk-b24-r10/51ef7ec8e2e6a7949a9f06d3fb493226cfa1bce845f975e6bb5b62ce9fc19093.jpg",
+      "sha256": "51ef7ec8e2e6a7949a9f06d3fb493226cfa1bce845f975e6bb5b62ce9fc19093",
+      "bytes": 1149285
+    },
+    {
+      "index": 243,
+      "url": "/model-assets/troitsk-b24-r10/d352042923aa9e7812471d77d4c0b108b6d5148bc94e93529e8c509034cea832.jpg",
+      "sha256": "d352042923aa9e7812471d77d4c0b108b6d5148bc94e93529e8c509034cea832",
+      "bytes": 1277192
+    },
+    {
+      "index": 244,
+      "url": "/model-assets/troitsk-b24-r10/a3ab7b346ce22c6b829779b20d68032dda3a0bebd874a0c4e0b1838ac8c8890f.jpg",
+      "sha256": "a3ab7b346ce22c6b829779b20d68032dda3a0bebd874a0c4e0b1838ac8c8890f",
+      "bytes": 1191341
+    },
+    {
+      "index": 245,
+      "url": "/model-assets/troitsk-b24-r10/4a2f4e0888105586a022191052eca9ef91fe14147f033e1b995a46bdeaaab40b.jpg",
+      "sha256": "4a2f4e0888105586a022191052eca9ef91fe14147f033e1b995a46bdeaaab40b",
+      "bytes": 1160355
+    },
+    {
+      "index": 246,
+      "url": "/model-assets/troitsk-b24-r10/9296e00ec0a8e9565713af4cf27d5d8933f89ea7c0ee57cacdd796a893de36e7.jpg",
+      "sha256": "9296e00ec0a8e9565713af4cf27d5d8933f89ea7c0ee57cacdd796a893de36e7",
+      "bytes": 1226659
+    },
+    {
+      "index": 247,
+      "url": "/model-assets/troitsk-b24-r10/af283307b31354a50653b6f34a23ff718e4112e251365cb6a64e9d964a535301.jpg",
+      "sha256": "af283307b31354a50653b6f34a23ff718e4112e251365cb6a64e9d964a535301",
+      "bytes": 867848
+    },
+    {
+      "index": 248,
+      "url": "/model-assets/troitsk-b24-r10/43b967155c72a29f3f85a94ba08167a8c902095c30f410fa8755c3d2cddf92e5.jpg",
+      "sha256": "43b967155c72a29f3f85a94ba08167a8c902095c30f410fa8755c3d2cddf92e5",
+      "bytes": 1122433
+    },
+    {
+      "index": 249,
+      "url": "/model-assets/troitsk-b24-r10/027aabc331e69ab567043829a4196c5208d6e018ee1bf8524ece4aa8dae1ded7.jpg",
+      "sha256": "027aabc331e69ab567043829a4196c5208d6e018ee1bf8524ece4aa8dae1ded7",
+      "bytes": 704821
+    },
+    {
+      "index": 250,
+      "url": "/model-assets/troitsk-b24-r10/1d88525fe752fbd1bc5a86acc0ad9ce628189289022d08d213350c300f47403b.jpg",
+      "sha256": "1d88525fe752fbd1bc5a86acc0ad9ce628189289022d08d213350c300f47403b",
+      "bytes": 616552
+    },
+    {
+      "index": 251,
+      "url": "/model-assets/troitsk-b24-r10/e9ba81aad77c0334f07711b6edf54be5e94343263061f0b951a486916b4254ad.jpg",
+      "sha256": "e9ba81aad77c0334f07711b6edf54be5e94343263061f0b951a486916b4254ad",
+      "bytes": 769840
+    },
+    {
+      "index": 252,
+      "url": "/model-assets/troitsk-b24-r10/4adc6da9fa5f97400afaba411b9e396c25ccf99617c903e2de0c404748078f8c.jpg",
+      "sha256": "4adc6da9fa5f97400afaba411b9e396c25ccf99617c903e2de0c404748078f8c",
+      "bytes": 725703
+    },
+    {
+      "index": 253,
+      "url": "/model-assets/troitsk-b24-r10/2d6d359f6b97e6942cff1dbaea904cee4bb4ecda2846190b3511521f11040785.jpg",
+      "sha256": "2d6d359f6b97e6942cff1dbaea904cee4bb4ecda2846190b3511521f11040785",
+      "bytes": 700391
+    },
+    {
+      "index": 254,
+      "url": "/model-assets/troitsk-b24-r10/43c79e61625c9909109b664d9ed2d3cec63f28230c994ccc9d855f589db83833.jpg",
+      "sha256": "43c79e61625c9909109b664d9ed2d3cec63f28230c994ccc9d855f589db83833",
+      "bytes": 770602
+    },
+    {
+      "index": 255,
+      "url": "/model-assets/troitsk-b24-r10/e814285b2fff1a7d626570f3334db8a2d4b1af9a0613fcd2a53e3eadff987f06.jpg",
+      "sha256": "e814285b2fff1a7d626570f3334db8a2d4b1af9a0613fcd2a53e3eadff987f06",
+      "bytes": 728178
+    },
+    {
+      "index": 256,
+      "url": "/model-assets/troitsk-b24-r10/9ad60865aa6da3e685aea6e1ba41cf6379444f11481d3435cb600360147d058b.jpg",
+      "sha256": "9ad60865aa6da3e685aea6e1ba41cf6379444f11481d3435cb600360147d058b",
+      "bytes": 711153
+    },
+    {
+      "index": 257,
+      "url": "/model-assets/troitsk-b24-r10/a6d76b62b6fbc2c9ed3062018cd04fdba735e72c86c68cc9091e06f2b1bf511a.jpg",
+      "sha256": "a6d76b62b6fbc2c9ed3062018cd04fdba735e72c86c68cc9091e06f2b1bf511a",
+      "bytes": 742103
+    },
+    {
+      "index": 258,
+      "url": "/model-assets/troitsk-b24-r10/96ea6c568f192b63a3836d8460dea5d0ee749a612101fbaa908dcac3354bc2c8.jpg",
+      "sha256": "96ea6c568f192b63a3836d8460dea5d0ee749a612101fbaa908dcac3354bc2c8",
+      "bytes": 526597
+    }
+  ]
+}
