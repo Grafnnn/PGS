@@ -1,6 +1,6 @@
 "use client";
 
-import { Box, ExternalLink, Maximize2, X } from "lucide-react";
+import { Box, ExternalLink, Link2, Maximize2, X } from "lucide-react";
 import React, { useCallback, useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { getProject3dModel, getProject3dPresentation } from "@/lib/project-3d-model";
@@ -118,11 +118,15 @@ export function ProjectModelViewer({ project }: ProjectModelViewerProps) {
         >
             <header className="project-model-dialog-header">
               <div>
-                <span><Box size={18} aria-hidden="true" /> {presentation?.isPreview ? "Пример · Троицк · здание 24 · R06" : model ? `Координационная модель · ${model.revision}` : "3D-модель проекта"}</span>
+                <span><Box size={18} aria-hidden="true" /> {presentation?.isPreview ? `Пример · Троицк · здание 24 · ${model?.revision}` : model ? `Координационная модель · ${model.revision}` : "3D-модель проекта"}</span>
                 <strong id={titleId}>{model?.title ?? project.name ?? "Модель проекта"}</strong>
                 {presentation?.isPreview ? <small className="project-model-preview-note" id={previewNoteId}>У текущего объекта модель не подключена. Показан пример другого объекта.</small> : null}
               </div>
               <div className="project-model-dialog-actions">
+                {model && !presentation?.isPreview ? <a className="button secondary" href={model.publicUrl} rel="noreferrer" target="_blank" title="Общая ссылка на модель, без пароля">
+                  <Link2 size={17} />
+                  Общая ссылка
+                </a> : null}
                 {viewerUrl ? <a className="button secondary" href={viewerUrl} rel="noreferrer" target="_blank">
                   <ExternalLink size={17} />
                   В новой вкладке

@@ -1,0 +1,5 @@
+@media (max-width: 720px) {
+  .topbar select { flex: 1; min-width: 0; }
+  .topbar .brand, .topbar .rev { flex-shrink: 0; }
+  .topbar .rev { letter-spacing: 0; }
+}

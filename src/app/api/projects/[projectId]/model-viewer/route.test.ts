@@ -47,7 +47,7 @@ describe("project 3D model viewer route", () => {
     expect(response.headers.get("content-encoding")).toBeNull();
     expect(html).toBe(source);
     expect(html).not.toContain("pgs-model-embed-style");
-    expect(mocks.readFile).toHaveBeenCalledWith(expect.stringContaining("troitsk-b24-r06.html.gz"));
+    expect(mocks.readFile).toHaveBeenCalledWith(expect.stringContaining("troitsk-b24-r10.html.gz"));
   });
 
   it.each(["gzip", "br, gzip, deflate", "GZIP; q=0.5", "*"])("serves precompressed bytes for %s", async (encoding) => {
@@ -72,7 +72,7 @@ describe("project 3D model viewer route", () => {
 
     expect(response.status).toBe(200);
     expect(response.headers.get("content-encoding")).toBe(encoding === "gzip" ? "gzip" : null);
-    expect(response.headers.get("etag")).toBe('W/"troitsk-building-24-r06-monolith-v1"');
+    expect(response.headers.get("etag")).toBe('W/"troitsk-building-24-r10-monolith-v1"');
     expect(response.headers.get("content-security-policy")).toContain("connect-src 'none'");
     expect(response.headers.get("content-security-policy")).toContain("frame-ancestors 'self'");
     expect(response.headers.get("x-frame-options")).toBe("SAMEORIGIN");
@@ -85,14 +85,14 @@ describe("project 3D model viewer route", () => {
   it("keeps unsupported embed versions on the original byte-for-byte response", async () => {
     const { GET } = await import("./route");
     const response = await GET(new Request("https://pgs.local/?embed=monolith-v2", { headers: { "accept-encoding": "gzip" } }), context);
-    expect(response.headers.get("etag")).toBe('W/"troitsk-building-24-r06"');
+    expect(response.headers.get("etag")).toBe('W/"troitsk-building-24-r10"');
     expect(Buffer.from(await response.arrayBuffer())).toEqual(gzipSync(source));
   });
 
   it("keeps raw and embedded model cache validators distinct", async () => {
     const { GET } = await import("./route");
-    const rawTag = 'W/"troitsk-building-24-r06"';
-    const embedTag = 'W/"troitsk-building-24-r06-monolith-v1"';
+    const rawTag = 'W/"troitsk-building-24-r10"';
+    const embedTag = 'W/"troitsk-building-24-r10-monolith-v1"';
     const embedded = await GET(new Request("https://pgs.local/?embed=monolith-v1", { headers: { "if-none-match": rawTag } }), context);
     expect(embedded.status).toBe(200);
     expect(embedded.headers.get("etag")).toBe(embedTag);
@@ -113,7 +113,7 @@ describe("project 3D model viewer route", () => {
   it.each([401, 403])("checks access before embedded metadata or cache responses (%s)", async (status) => {
     mocks.access.mockResolvedValue({ response: new Response("Denied", { status }) });
     const { GET } = await import("./route");
-    const response = await GET(new Request("https://pgs.local/?embed=monolith-v1", { headers: { "if-none-match": 'W/"troitsk-building-24-r06-monolith-v1"' } }), context);
+    const response = await GET(new Request("https://pgs.local/?embed=monolith-v1", { headers: { "if-none-match": 'W/"troitsk-building-24-r10-monolith-v1"' } }), context);
     expect(response.status).toBe(status);
     expect(mocks.projectFind).not.toHaveBeenCalled();
     expect(mocks.readFile).not.toHaveBeenCalled();
@@ -146,7 +146,7 @@ describe("project 3D model viewer route", () => {
 
   it("revalidates the R06 cache only after checking project access", async () => {
     const { GET } = await import("./route");
-    const request = new Request("https://pgs.local", { headers: { "if-none-match": 'W/"troitsk-building-24-r06"' } });
+    const request = new Request("https://pgs.local", { headers: { "if-none-match": 'W/"troitsk-building-24-r10"' } });
     const response = await GET(request, context);
     expect(response.status).toBe(304);
     expect(mocks.access).toHaveBeenCalledWith(context.params.projectId, "view");
