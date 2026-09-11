@@ -9,6 +9,10 @@ body.design-monolith .app-shell .project-workbook-module.tone-good {
   border-left-color: var(--green);
 }
 
+body.design-monolith .app-shell .intelligence-signal {
+  background-color: var(--surface);
+  color: var(--text);
+}
 body.design-monolith .app-shell .intelligence-signal.tone-good .status-dot {
   background-color: var(--green);
 }
@@ -58,7 +62,7 @@ body.design-monolith .app-shell :is(.risk-action-item, .doc-compliance-action):i
   border-left-color: var(--blue);
 }
 
-/* Readable captions on paper surfaces; leave value tones and dark hero copy alone. */
+/* Readable captions on graphite surfaces; keep semantic value tones distinct. */
 body.design-monolith .app-shell .mini-bar small,
 body.design-monolith .app-shell .cashflow-bars small,
 body.design-monolith .app-shell .status-board-item small,
@@ -75,17 +79,25 @@ body.design-monolith .app-shell td[data-label]::before {
   color: var(--muted);
 }
 
-/* Deep brass stays distinct against the warm paper menu. Masthead marks
-   are excluded: only interactive icons inside an open navigation panel change. */
+/* Graphite catalogue icons are neutral until their item is selected or focused.
+   Masthead marks keep the states owned by the header layer. */
 body.design-monolith .app-shell :is(.project-domain-popover, .project-atlas-mega) .project-domain-modules button > :is(span:first-child, svg),
 body.design-monolith .app-shell .project-atlas-mega .project-domain-nav-actions button > svg,
 body.design-monolith .app-shell .project-atlas-mega .project-domain-search button > svg,
 body.design-monolith .app-shell .navigation-sheet :is(.navigation-sheet-icon, .navigation-sheet-group-items a > svg, .icon-button > svg) {
-  color: var(--monolith-detail-brass-deep);
+  color: var(--muted);
+}
+body.design-monolith .app-shell :is(.project-domain-popover, .project-atlas-mega) .project-domain-modules button:is(.active, :hover, :focus-visible) > :is(span:first-child, svg),
+body.design-monolith .app-shell .project-atlas-mega .project-domain-nav-actions button:is(:hover, :focus-visible, [aria-expanded="true"]) > svg,
+body.design-monolith .app-shell .project-atlas-mega .project-domain-search button:is(:hover, :focus-visible) > svg,
+body.design-monolith .app-shell .navigation-sheet .navigation-sheet-group-items a:is(.active, :hover, :focus-visible) :is(.navigation-sheet-icon, svg),
+body.design-monolith .app-shell .navigation-sheet .icon-button:is(:hover, :focus-visible) > svg {
+  color: var(--accent);
 }
 
 /* Unread is an attention count, not an error state. */
 body.design-monolith .app-shell .inbox-bell-count {
-  background-color: var(--monolith-detail-brass-light);
-  color: var(--ink);
+  background-color: var(--accent-soft);
+  border-color: var(--surface);
+  color: var(--accent);
 }

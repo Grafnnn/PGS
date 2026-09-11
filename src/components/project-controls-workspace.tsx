@@ -288,10 +288,10 @@ export function ProjectControlsWorkspace({ projectId, role, onNavigate }: Props)
             description="S-кривая сравнивает плановую стоимость, освоенный объём и подтверждённый факт по отчётным периодам."
             height={300}
             series={[
-              { key: "planned", label: "PV · план", color: "#1b6670", type: "line", format: "money" },
-              { key: "earned", label: "EV · освоено", color: "#087a70", type: "area", format: "money" },
-              { key: "actual", label: "AC · факт", color: "#b84721", type: "line", format: "money" },
-              { key: "bac", label: "BAC", color: "#8a9093", type: "line", format: "money", dashed: true }
+              { key: "planned", label: "PV · план", color: "var(--blue)", type: "line", format: "money" },
+              { key: "earned", label: "EV · освоено", color: "var(--green)", type: "area", format: "money" },
+              { key: "actual", label: "AC · факт", color: "var(--red)", type: "line", format: "money" },
+              { key: "bac", label: "BAC", color: "var(--muted)", type: "line", format: "money", dashed: true }
             ]}
             title="S-кривая Project Controls"
             xKey="label"

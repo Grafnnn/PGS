@@ -167,9 +167,9 @@ function CashflowChart({ items }: { items: PortfolioControlModel["cashflow"] }) 
     description="Входящий и исходящий поток по портфелю с расчётом чистой позиции."
     height={300}
     series={[
-      { key: "incoming", label: "Поступления", color: "#087a70", type: "bar", format: "money" },
-      { key: "outgoing", label: "Платежи", color: "#b84721", type: "bar", format: "money" },
-      { key: "net", label: "Чистый поток", color: "#1b6670", type: "line", format: "money" }
+      { key: "incoming", label: "Поступления", color: "var(--green)", type: "bar", format: "money" },
+      { key: "outgoing", label: "Платежи", color: "var(--red)", type: "bar", format: "money" },
+      { key: "net", label: "Чистый поток", color: "var(--blue)", type: "line", format: "money" }
     ]}
     title="Плановый cash-flow"
     xKey="label"
