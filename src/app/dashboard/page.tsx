@@ -187,7 +187,7 @@ export default async function DashboardPage(props: { searchParams?: { project?: 
           data={cashFlowSeries}
           description="Плановые входящие и исходящие платежи по ближайшим датам. Наведите курсор для точного значения."
           height={290}
-          series={[{ key: "value", label: "Чистый поток", color: "#262d31", type: "area", format: "money" }]}
+          series={[{ key: "value", label: "Чистый поток", color: "var(--chart-actual)", type: "area", format: "money" }]}
           summary={cashFlowSeries.length ? "Отрицательные значения показывают финансовую нагрузку проекта." : "Платёжный календарь ещё не заполнен."}
           title="Денежный поток"
           xKey="label"
@@ -197,8 +197,8 @@ export default async function DashboardPage(props: { searchParams?: { project?: 
           description="Прогноз по ВОР и зарегистрированные фактические расходы по всему доступному портфелю."
           height={290}
           series={[
-            { key: "forecast", label: "Прогноз", color: "#ac825c", type: "bar", format: "money" },
-            { key: "actual", label: "Факт по реестру", color: "#262d31", type: "bar", format: "money" }
+            { key: "forecast", label: "Прогноз", color: "var(--chart-forecast)", type: "bar", format: "money" },
+            { key: "actual", label: "Факт по реестру", color: "var(--chart-actual)", type: "bar", format: "money" }
           ]}
           title="Структура затрат"
           xKey="label"

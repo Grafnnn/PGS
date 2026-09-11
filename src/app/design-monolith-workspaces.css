@@ -1,10 +1,12 @@
-/* Project interiors. Shared controls, tables and feedback live in the system layer.
+/* Obsidian project interiors. Shared controls, tables and feedback live in the system layer.
    Keep operational grids, sticky columns, chart geometry and status colors intact. */
 
 /* Views can return fragments: the body owns spacing between their real children. */
 body.design-monolith .app-shell .project-workspace-content {
   --monolith-workspace-gap: 16px;
   --monolith-workspace-section-gap: 24px;
+  font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums;
 }
 body.design-monolith .app-shell .project-workspace-content .project-module-view-body {
   display: grid;
@@ -108,7 +110,7 @@ body.design-monolith .app-shell .project-workspace-content [data-module="finance
   }
 }
 
-/* Large information surfaces; rows and controls retain the square geometry. */
+/* Ten-pixel information surfaces; data rows retain their existing geometry. */
 body.design-monolith .app-shell .project-workspace-content :is(
   .breakdown-panel, .waterfall,
   .intelligence-panel, .project-onboarding-panel, .closeout-overview,
@@ -123,7 +125,7 @@ body.design-monolith .app-shell .project-workspace-content :is(
   .ai-copilot-hero, .workflow-section, .daily-report-editor,
   .daily-photo-workspace, .daily-existing-photo-panel
 ) {
-  border-radius: 14px !important;
+  border-radius: 10px !important;
   box-shadow: none;
 }
 
@@ -171,9 +173,9 @@ body.design-monolith .app-shell .project-workspace-content :is(
   .project-module-workspace-title h2, .production-schedule-header h2
 ) {
   font-family: var(--font-sans);
-  font-size: 23px;
-  font-weight: 400;
-  line-height: 29px;
+  font-size: 22px;
+  font-weight: 500;
+  line-height: 28px;
   letter-spacing: -.015em;
 }
 
@@ -225,6 +227,13 @@ body.design-monolith .app-shell .project-workspace-content :is(
   letter-spacing: 0;
 }
 
+/* Match the description to the title after its 32px icon and 9px gap. */
+@media (min-width: 821px) {
+  body.design-monolith .app-shell .project-workspace-content .project-module-view-context {
+    padding-inline-start: 41px;
+  }
+}
+
 body.design-monolith .app-shell .project-workspace-content :is(
   .eyebrow, .ai-copilot-brief small, .ai-copilot-instructions > span,
   .workflow-section-title small, .project-module-workspace-title small
@@ -242,13 +251,13 @@ body.design-monolith .app-shell .project-workspace-content .metric-strip > .kpi 
   padding: 16px 18px;
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 14px !important;
+  border-radius: 10px !important;
   box-shadow: none;
 }
 body.design-monolith .app-shell .project-workspace-content .metric-strip .kpi-value {
   font-family: var(--font-sans);
-  font-size: 26px;
-  font-weight: 400;
+  font-size: 28px;
+  font-weight: 500;
   line-height: 32px;
   letter-spacing: -.02em;
   font-variant-numeric: tabular-nums;
@@ -285,8 +294,8 @@ body.design-monolith .app-shell .project-workspace-content :is(
   .execution-control-card.metric, .photo-evidence-card.metric
 ) strong {
   font-family: var(--font-sans);
-  font-size: 26px;
-  font-weight: 400;
+  font-size: 28px;
+  font-weight: 500;
   line-height: 32px;
   letter-spacing: -.015em;
   font-variant-numeric: tabular-nums;
@@ -357,10 +366,11 @@ body.design-monolith .app-shell .project-workspace-content :is(
   .production-schedule-view-tabs, .production-schedule-filters,
   .production-gantt-density, .ai-lifecycle-tabs, .payroll-mode-tabs, .material-supply-lanes
 ) > button:is(.active, [aria-pressed="true"]):not(:disabled):not([aria-disabled="true"]) {
-  background: var(--monolith-detail-champagne);
+  background: var(--accent-soft);
   border-color: transparent;
   color: var(--monolith-detail-brass-deep);
   box-shadow: none;
+  font-weight: 500;
 }
 body.design-monolith .app-shell .project-workspace-content :is(
   .project-module-view-tabs, .segmented-control, .density-toggle,
@@ -424,10 +434,6 @@ body.design-monolith .app-shell .project-workspace-content .executive-report-his
   color: var(--monolith-detail-brass-deep);
   box-shadow: none;
 }
-body.design-monolith .app-shell .project-workspace-content .ai-copilot-scenario.has-result {
-  border-color: var(--line-strong);
-}
-
 /* Schedule chrome only: no changes to tracks, axes, bars, scroll or density. */
 body.design-monolith .app-shell .project-workspace-content .production-schedule-header,
 body.design-monolith .app-shell .project-workspace-content .quality-management-header {
@@ -441,6 +447,121 @@ body.design-monolith .app-shell .project-workspace-content .production-schedule-
   border-color: var(--line);
 }
 body.design-monolith .app-shell .project-workspace-content :is(
+  .production-gantt-controls > button, .production-gantt-zoom,
+  .production-gantt-zoom button
+) {
+  background-color: var(--surface);
+  border-color: var(--monolith-control-border);
+  color: var(--muted);
+}
+body.design-monolith .app-shell .project-workspace-content :is(
+  .production-gantt-controls > button, .production-gantt-zoom button
+):hover:not(:disabled):not([aria-disabled="true"]) {
+  background-color: var(--hover, #24282d);
+  border-color: var(--accent);
+  color: var(--text);
+}
+body.design-monolith .app-shell .project-workspace-content :is(
+  .production-gantt-controls > button, .production-gantt-zoom button
+):disabled {
+  background-color: var(--panel-muted);
+  border-color: var(--line);
+  color: var(--muted);
+}
+body.design-monolith .app-shell .project-workspace-content :is(
+  .production-gantt-axis, .production-gantt-track.is-phase
+) { background-color: var(--panel-muted); }
+
+/* Nested procurement, acceptance, cash-flow and AI surfaces previously supplied their own white. */
+body.design-monolith .app-shell .project-workspace-content :is(
+  .procurement-group-card, .procurement-draft-items div,
+  .timeline-week-card, .cashflow-week-card, .schedule-risk-list div,
+  .executive-plan-grid > div, .executive-draft-text,
+  .acceptance-billing-metric, .acceptance-readiness, .acceptance-executive-note,
+  .ai-panel, .ai-answer:not(.error), .ai-copilot-scenario, .ai-scenario-card,
+  .ai-result.is-compact, .ai-result-item, .ai-draft-text, .danger-form
+) {
+  background-color: var(--surface);
+  border-color: var(--line);
+}
+body.design-monolith .app-shell .project-workspace-content .ai-copilot-scenario.has-result {
+  border-color: var(--line-strong);
+}
+/* Billing readiness keeps its written status and distinct semantic surface. */
+body.design-monolith .app-shell .project-workspace-content .acceptance-readiness > div > strong {
+  margin-inline-end: 8px;
+}
+body.design-monolith .app-shell .project-workspace-content :is(
+  .acceptance-billing-metric, .acceptance-readiness
+).tone-info {
+  background-color: var(--blue-soft);
+  border-color: color-mix(in srgb, var(--blue) 40%, var(--line));
+  color: var(--blue);
+}
+body.design-monolith .app-shell .project-workspace-content :is(
+  .acceptance-billing-metric, .acceptance-readiness
+).tone-good {
+  background-color: var(--green-soft);
+  border-color: color-mix(in srgb, var(--green) 40%, var(--line));
+  color: var(--green);
+}
+body.design-monolith .app-shell .project-workspace-content :is(
+  .acceptance-billing-metric, .acceptance-readiness
+).tone-warn {
+  background-color: var(--yellow-soft);
+  border-color: color-mix(in srgb, var(--yellow) 40%, var(--line));
+  color: var(--yellow);
+}
+body.design-monolith .app-shell .project-workspace-content :is(
+  .acceptance-billing-metric, .acceptance-readiness
+).tone-bad {
+  background-color: var(--red-soft);
+  border-color: color-mix(in srgb, var(--red) 40%, var(--line));
+  color: var(--red);
+}
+body.design-monolith .app-shell .project-workspace-content :is(
+  .copyable-draft, .quality-inspection-check
+) {
+  background-color: var(--panel-muted);
+  border-color: var(--line);
+  color: var(--text);
+}
+body.design-monolith .app-shell .project-workspace-content :is(
+  .procurement-warning-list div, .timeline-week-card.tone-warn,
+  .cashflow-week-card.tone-warn
+) {
+  background-color: var(--yellow-soft);
+  border-color: color-mix(in srgb, var(--yellow) 40%, var(--line));
+}
+body.design-monolith .app-shell .project-workspace-content :is(
+  .cashflow-week-card.tone-good, .quality-inspection-check.result-pass
+) {
+  background-color: var(--green-soft);
+  border-color: color-mix(in srgb, var(--green) 40%, var(--line));
+}
+body.design-monolith .app-shell .project-workspace-content :is(
+  .cashflow-week-card.tone-bad, .quality-inspection-check.result-fail,
+  .ai-answer.error, .danger-zone-card
+) {
+  background-color: var(--red-soft);
+  border-color: color-mix(in srgb, var(--red) 40%, var(--line));
+}
+body.design-monolith .app-shell .project-workspace-content :is(
+  .ai-answer.error, .danger-zone-card h3
+) { color: var(--red); }
+body.design-monolith .app-shell .project-workspace-content .ai-answer.loading { color: var(--accent); }
+body.design-monolith .app-shell .project-workspace-content :is(
+  .ai-answer.empty, .quality-inspection-check small
+) { color: var(--muted); }
+body.design-monolith .app-shell .project-workspace-content .daily-report-alert {
+  background-color: var(--yellow-soft);
+  border-left-color: var(--yellow);
+  color: var(--text);
+}
+body.design-monolith .app-shell .project-workspace-content :is(
+  .daily-report-form-grid label, .daily-report-output-row .field
+) { color: var(--text); }
+body.design-monolith .app-shell .project-workspace-content :is(
   .quality-linked-issues button, .quality-workflow-link
 ) {
   color: var(--monolith-detail-brass-deep);
@@ -451,7 +572,7 @@ body.design-monolith .app-shell .project-workspace-content :is(
     .project-module-workspace-title h2, .production-schedule-header h2
   ) { font-size: 22px; line-height: 28px; }
   body.design-monolith .app-shell .project-workspace-content .metric-strip .kpi-value {
-    font-size: 25px;
+    font-size: 28px;
     line-height: 33px;
   }
 }

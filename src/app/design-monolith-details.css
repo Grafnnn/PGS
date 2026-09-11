@@ -1,10 +1,5 @@
-/* Small material accents; the main surfaces and navigation keep their geometry. */
-body.design-monolith .app-shell {
-  --monolith-detail-brass: #92713e;
-  --monolith-detail-brass-light: #ceb27c;
-  --monolith-detail-brass-deep: #654b29;
-  --monolith-detail-champagne: #f3ecdf;
-}
+/* Obsidian accents on the existing Lucide marks and information surfaces. */
+/* Shared accent tokens are inherited from body in design-monolith-system.css. */
 
 /* Restore the existing Lucide marks without adding an icon tile. */
 body.design-monolith .app-shell .command-kpi-icon {
@@ -25,12 +20,12 @@ body.design-monolith .app-shell .dashboard-workday-card-top > svg {
 }
 
 body.design-monolith .app-shell .project-feature-label > svg {
-  color: var(--monolith-detail-brass-light);
+  color: var(--monolith-detail-brass);
 }
 
 body.design-monolith .app-shell .project-feature-budget .project-feature-label > svg,
 body.design-monolith .app-shell .dashboard-workday-card-budget .dashboard-workday-card-top > svg {
-  color: var(--monolith-detail-brass-deep);
+  color: var(--muted);
 }
 
 /* Limit the softer corners to controls inside working content, outside both menus. */
@@ -57,7 +52,7 @@ body.design-monolith .app-shell .project-header-compact .project-title-row .badg
   border-radius: 8px;
 }
 
-/* Champagne only on neutral auxiliary controls; selected and warning states stay distinct. */
+/* Quiet graphite only on neutral auxiliary controls; selected and warning states stay distinct. */
 body.design-monolith .app-shell :is(.project-workspace-content, .dashboard-content, .portfolio-page, .inbox-page) :is(
   .button.secondary,
   .icon-button,
@@ -68,9 +63,9 @@ body.design-monolith .app-shell :is(.project-workspace-content, .dashboard-conte
   .atlas-chart-mode button,
   .atlas-chart-reset,
   .atlas-chart-legend button
-):hover:not(:disabled):not([aria-disabled="true"]):not(.active):not([aria-pressed="true"]):not(.danger-button) {
+):hover:not(:disabled):not([aria-disabled="true"]):not(.active):not([aria-pressed="true"]):not(.danger-button):not(.danger) {
   background-color: var(--monolith-detail-champagne);
-  border-color: #c9b58f;
+  border-color: var(--line-strong);
 }
 
 body.design-monolith .app-shell .command-kpi:hover .command-kpi-icon,
@@ -80,41 +75,47 @@ body.design-monolith .app-shell .dashboard-workday-card:not(.dashboard-workday-c
 }
 
 body.design-monolith .app-shell .project-feature-card:not(.project-feature-budget):hover .project-feature-label > svg {
-  color: #e5d2ad;
+  color: var(--monolith-detail-brass-deep);
 }
 
-/* A small brass edge joins the architectural entrance to the paper workspace. */
+/* A sparse architectural motif stays in the overview's empty desktop field. */
 body.design-monolith .app-shell .project-workspace-page.is-overview .project-header-compact,
 body.design-monolith .app-shell .dashboard-hero {
   position: relative;
-  box-shadow: inset 0 -1px 0 rgb(206 178 124 / 20%);
+  box-shadow: none;
 }
 body.design-monolith .app-shell .project-workspace-page.is-overview .project-header-compact::after,
 body.design-monolith .app-shell .dashboard-hero::after {
-  content: "";
-  position: absolute;
-  bottom: 0;
-  left: var(--monolith-gutter);
-  width: clamp(48px, 6vw, 88px);
-  height: 2px;
-  background: #b69660;
-  pointer-events: none;
+  content: none;
+}
+@media (min-width: 1280px) {
+  body.design-monolith .app-shell .project-workspace-page.is-overview .project-header-compact::after {
+    content: "";
+    position: absolute;
+    top: 12px;
+    right: calc(var(--monolith-gutter) + 80px);
+    width: min(28vw, 400px);
+    aspect-ratio: 2 / 1;
+    background: url("/brand/obsidian-contours-v1.png") center / contain no-repeat;
+    opacity: .16;
+    mix-blend-mode: screen;
+    pointer-events: none;
+  }
+  body.design-monolith .app-shell .project-workspace-page.is-overview .project-header-compact > * {
+    position: relative;
+    z-index: 1;
+  }
+}
+@media (prefers-contrast: more), (forced-colors: active), print {
+  body.design-monolith .app-shell .project-workspace-page.is-overview .project-header-compact::after {
+    display: none;
+  }
 }
 body.design-monolith .app-shell :is(.project-module-workspace-header, .command-hero, .command-meta-grid) {
-  border-color: #d9cebc;
+  border-color: var(--line);
 }
 body.design-monolith .app-shell .dashboard-project-switcher,
 body.design-monolith .app-shell .command-ai-card {
-  background-color: #fffdf8;
-  box-shadow: 0 10px 30px rgb(101 75 41 / 4%);
-}
-body.design-monolith .app-shell .dashboard-hero::after { left: max(48px, calc((100% - 1480px) / 2 + 48px)); }
-@media (max-width: 1180px) {
-  body.design-monolith .app-shell .dashboard-hero::after { left: 32px; }
-}
-@media (max-width: 720px) {
-  body.design-monolith .app-shell .dashboard-hero::after { left: 20px; }
-}
-@media (max-width: 370px) {
-  body.design-monolith .app-shell .dashboard-hero::after { left: 16px; }
+  background-color: var(--surface);
+  box-shadow: none;
 }

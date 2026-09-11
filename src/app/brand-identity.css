@@ -1,11 +1,11 @@
-/* Selected identity: 04 / Rhythm, with compact letters and stronger strokes. */
+/* Graphite colourway of Rhythm; the approved compact SVG contours stay unchanged. */
 .brand-wordmark {
-  --brand-symbol: #a48c61;
-  --brand-letters: #e5e1d7;
+  --brand-symbol: #a9c0d2;
+  --brand-letters: #eceff2;
   position: relative;
   display: block;
   flex: 0 0 auto;
-  width: 88px;
+  width: 80px;
   aspect-ratio: 784 / 315;
 }
 .brand-wordmark::before,
@@ -33,8 +33,8 @@ body.design-monolith .brand-lockup {
   gap: 12px;
 }
 body.design-monolith .brand-lockup .brand-wordmark {
-  --brand-symbol: #74603d;
-  --brand-letters: #222725;
+  --brand-symbol: #a9c0d2;
+  --brand-letters: #eceff2;
   width: 150px;
 }
 body.design-monolith .brand-lockup .brand-subtitle {
@@ -42,8 +42,8 @@ body.design-monolith .brand-lockup .brand-subtitle {
   line-height: 1.5;
 }
 .external-response-brand .brand-wordmark {
-  --brand-symbol: #74603d;
-  --brand-letters: #222725;
+  --brand-symbol: #a9c0d2;
+  --brand-letters: #eceff2;
   width: 104px;
 }
 

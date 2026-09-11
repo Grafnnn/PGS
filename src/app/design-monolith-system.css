@@ -1,16 +1,18 @@
-/* Shared working controls. Navigation and the approved masthead are deliberately
+/* Obsidian working controls. Navigation and the masthead are deliberately
    outside this scope; specialised charts retain their geometry and series. */
 body.design-monolith {
-  --monolith-control-border: #858b83;
-  --monolith-detail-brass: #92713e;
-  --monolith-detail-brass-light: #ceb27c;
-  --monolith-detail-brass-deep: #654b29;
-  --monolith-detail-champagne: #f3ecdf;
-  --focus: 0 0 0 3px rgb(146 113 62 / 16%);
+  --monolith-control-border: #727c87;
+  --monolith-detail-brass: #a9c0d2;
+  --monolith-detail-brass-light: #a9c0d2;
+  --monolith-detail-brass-deep: #bed0dd;
+  --monolith-detail-champagne: #2c333a;
+  --focus: none;
 }
 
 body.design-monolith :is(.app-shell .page, .login-page, .external-response-page) {
+  font-family: var(--font-sans);
   font-kerning: normal;
+  font-variant-numeric: tabular-nums;
   accent-color: var(--monolith-detail-brass-deep);
 }
 
@@ -22,9 +24,9 @@ body.design-monolith :is(.app-shell .page, .login-page, .external-response-page)
 ) {
   background-color: var(--surface);
   border-color: var(--monolith-control-border);
-  border-radius: 0 !important;
+  border-radius: 6px !important;
   color: var(--text);
-  font-family: inherit;
+  font-family: var(--font-sans);
   font-weight: 400;
   box-shadow: none;
 }
@@ -34,7 +36,9 @@ body.design-monolith :is(.app-shell .page, .login-page, .external-response-page)
 }
 body.design-monolith :is(.app-shell .page, .login-page, .external-response-page) :is(input, select, textarea):focus {
   border-color: var(--monolith-detail-brass);
-  box-shadow: var(--focus);
+  box-shadow: none;
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 body.design-monolith :is(.app-shell .page, .login-page, .external-response-page) :focus-visible {
   outline: 2px solid var(--monolith-detail-brass);
@@ -44,14 +48,16 @@ body.design-monolith :is(.app-shell .page, .login-page, .external-response-page)
   border-color: var(--red);
 }
 body.design-monolith :is(.app-shell .page, .login-page, .external-response-page) :is(input, select, textarea)[aria-invalid="true"]:focus {
-  outline-color: var(--red);
-  box-shadow: 0 0 0 3px rgb(161 61 50 / 12%);
+  outline: 2px solid var(--red);
+  outline-offset: 2px;
+  box-shadow: none;
 }
 body.design-monolith :is(.app-shell .page, .login-page, .external-response-page) :is(input, select, textarea):disabled {
   background-color: var(--panel-muted);
   border-color: var(--line-strong);
   color: var(--muted);
   cursor: not-allowed;
+  opacity: 1;
   box-shadow: none;
 }
 body.design-monolith :is(.app-shell .page, .login-page, .external-response-page) .field > span {
@@ -68,8 +74,8 @@ body.design-monolith :is(.app-shell .page, .login-page, .external-response-page)
 }
 
 body.design-monolith :is(.app-shell .page, .login-page, .external-response-page) .button:not(:where(.dashboard-hero *)) {
-  border-radius: 7px !important;
-  font-family: inherit;
+  border-radius: 6px !important;
+  font-family: var(--font-sans);
   font-size: 13px;
   font-weight: 500;
   letter-spacing: 0;
@@ -77,7 +83,7 @@ body.design-monolith :is(.app-shell .page, .login-page, .external-response-page)
   box-shadow: none;
 }
 body.design-monolith :is(.app-shell .page, .login-page, .external-response-page) .button.primary:not(:where(.danger-button, .danger, .dashboard-hero *)) {
-  color: #fff;
+  color: var(--on-accent, #171b1f);
   background-color: var(--accent);
   border-color: var(--accent);
 }
@@ -85,22 +91,22 @@ body.design-monolith :is(.app-shell .page, .login-page, .external-response-page)
   background-color: var(--accent-hover);
   border-color: var(--accent-hover);
 }
-/* Dark project and dashboard heroes keep their own light control colours. */
+/* Project and dashboard hero actions retain their dedicated presentation. */
 body.design-monolith :is(.app-shell .page, .login-page, .external-response-page) :is(.button.secondary, .icon-button):not(:where(.danger-button, .danger, .dashboard-hero *, .project-header-compact *)) {
-  background-color: transparent;
-  border-color: #c6c9c3;
+  background-color: var(--surface);
+  border-color: var(--line-strong);
   color: var(--text);
-  border-radius: 7px !important;
+  border-radius: 6px !important;
   box-shadow: none;
 }
 body.design-monolith :is(.app-shell .page, .login-page, .external-response-page) :is(.button.secondary, .icon-button):hover:not(:disabled):not(:where(.danger-button, .danger, .dashboard-hero *, .project-header-compact *)):not([aria-disabled="true"]) {
   background-color: var(--monolith-detail-champagne);
-  border-color: #bca988;
+  border-color: var(--monolith-detail-brass);
   color: var(--monolith-detail-brass-deep);
 }
 body.design-monolith :is(.app-shell .page, .login-page, .external-response-page) .button.danger-button {
-  background-color: var(--red);
-  border-color: var(--red);
+  background-color: #9c4940;
+  border-color: #9c4940;
   color: #fff;
 }
 body.design-monolith :is(.app-shell .page, .login-page, .external-response-page) .button.danger-button:hover:not(:disabled) {
@@ -114,8 +120,8 @@ body.design-monolith :is(.app-shell .page, .login-page, .external-response-page)
 }
 body.design-monolith :is(.app-shell .page, .login-page, .external-response-page) :is(.button.danger, .icon-button.danger):hover:not(:disabled) {
   color: #fff;
-  background-color: var(--red);
-  border-color: var(--red);
+  background-color: #9c4940;
+  border-color: #9c4940;
 }
 body.design-monolith :is(.app-shell .page, .login-page, .external-response-page) :is(.button.primary, .button.secondary, .button.danger-button, .button.danger, .icon-button.danger, .button, .icon-button):disabled,
 body.design-monolith :is(.app-shell .page, .login-page, .external-response-page) :is(.button.primary, .button.secondary, .button.danger-button, .button.danger, .button)[aria-disabled="true"] {
@@ -123,11 +129,12 @@ body.design-monolith :is(.app-shell .page, .login-page, .external-response-page)
   border-color: var(--line-strong);
   color: var(--muted);
   cursor: not-allowed;
+  opacity: 1;
   box-shadow: none;
   transform: none;
 }
 
-body.design-monolith .app-shell .page :is(.button, .icon-button) > svg { stroke-width: 1.5px; }
+body.design-monolith .app-shell .page :is(.button, .icon-button) > svg { stroke-width: 1.65px; }
 
 /* Section titles share one baseline whether their component uses h3 or h4.
    Keep each module's font size; remove the browser's default h4 block margins. */
@@ -142,8 +149,8 @@ body.design-monolith .app-shell .project-workspace-content .section-title > h4 {
 
 /* Plain language statuses; colour is retained in addition to their text. */
 body.design-monolith :is(.app-shell .page, .login-page, .external-response-page) .badge {
-  border-radius: 0 !important;
-  font-family: inherit;
+  border-radius: 3px !important;
+  font-family: var(--font-sans);
   font-size: 11px;
   font-weight: 400;
   letter-spacing: 0;
@@ -158,8 +165,8 @@ body.design-monolith :is(.app-shell .page, .login-page, .external-response-page)
 }
 body.design-monolith :is(.app-shell .page, .login-page, .external-response-page) .badge.blue {
   background-color: var(--blue-soft);
-  border-color: #ccd3d5;
-  color: var(--blue);
+  border-color: var(--line);
+  color: var(--accent);
 }
 
 /* Only the presentation changes: sticky headers, column widths and scrolling
@@ -167,7 +174,7 @@ body.design-monolith :is(.app-shell .page, .login-page, .external-response-page)
 body.design-monolith .app-shell .page .table-wrap {
   border-color: var(--line);
   box-shadow: none;
-  scrollbar-color: #999d94 transparent;
+  scrollbar-color: var(--line-strong) transparent;
 }
 body.design-monolith .app-shell .page table {
   font-family: var(--font-sans);
@@ -179,7 +186,7 @@ body.design-monolith .app-shell .page table th {
   background-color: var(--panel-muted);
   border-color: var(--line);
   color: var(--muted);
-  font-family: inherit;
+  font-family: var(--font-sans);
   font-size: 12px;
   font-weight: 500;
   letter-spacing: 0;
@@ -203,10 +210,12 @@ body.design-monolith .app-shell .page .data-table td[data-label="Версии"] 
 body.design-monolith .app-shell .page .data-table td.action-column > .stack:has(> input[type="file"]) {
   min-width: 224px;
 }
-body.design-monolith .app-shell .page .data-table tbody tr:hover {
-  background-color: #faf7f0;
+body.design-monolith .app-shell .page table tbody tr:hover,
+body.design-monolith .app-shell .page table tbody tr:hover > td {
+  background-color: var(--hover, #24282d);
 }
-body.design-monolith .app-shell .page .data-table tbody tr:focus-within {
+body.design-monolith .app-shell .page table tbody tr:focus-within,
+body.design-monolith .app-shell .page table tbody tr:focus-within > td {
   background-color: var(--monolith-detail-champagne);
 }
 body.design-monolith .app-shell .page :is(.table-count, .table-search > svg) {
@@ -225,14 +234,14 @@ body.design-monolith :is(.app-shell .page, .login-page, .external-response-page)
 }
 body.design-monolith :is(.app-shell .page, .login-page, .external-response-page) :is(.error-text, .error-box, .form-error) {
   background-color: var(--red-soft);
-  border-color: #d5b4aa;
+  border-color: color-mix(in srgb, var(--red) 40%, var(--line));
   color: var(--red);
   font-weight: 400;
   line-height: 1.5;
 }
 body.design-monolith :is(.app-shell .page, .login-page, .external-response-page) .success-text {
   background-color: var(--green-soft);
-  border-color: #b4caba;
+  border-color: color-mix(in srgb, var(--green) 40%, var(--line));
   color: var(--green);
   font-weight: 400;
 }
@@ -244,7 +253,7 @@ body.design-monolith .app-shell .page :is(
   .daily-photo-ai-workspace .inline-error, .ai-error-preview, .expense-notice.error
 ) {
   padding: 14px 16px;
-  border: 1px solid #d5b4aa;
+  border: 1px solid color-mix(in srgb, var(--red) 40%, var(--line));
   background-color: var(--red-soft);
   color: var(--red);
   font-size: 13px;
@@ -265,6 +274,63 @@ body.design-monolith .app-shell .project-workspace-content :is(.closeout-loading
   font-weight: 400;
   line-height: 20px;
 }
+
+/* Chart chrome follows the application palette; series keep their own semantics. */
+body.design-monolith .app-shell .page .atlas-chart-frame {
+  background-color: var(--surface);
+  border-color: var(--line);
+}
+body.design-monolith .app-shell .page .atlas-chart-actions .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+body.design-monolith .app-shell .page :is(
+  .atlas-chart-actions select, .atlas-chart-mode button,
+  .atlas-chart-reset, .atlas-chart-legend button
+) {
+  background-color: var(--panel-muted);
+  border-color: var(--monolith-control-border);
+  color: var(--muted);
+}
+body.design-monolith .app-shell .page :is(
+  .atlas-chart-mode button:not([aria-pressed="true"]), .atlas-chart-reset, .atlas-chart-legend button
+):hover:not(:disabled):not([aria-disabled="true"]) {
+  background-color: var(--hover, #24282d);
+  border-color: var(--accent);
+  color: var(--text);
+}
+body.design-monolith .app-shell .page .atlas-chart-mode button[aria-pressed="true"] {
+  background-color: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent-hover);
+}
+body.design-monolith .app-shell .page .atlas-chart-legend button[aria-pressed="false"] {
+  color: var(--muted);
+  text-decoration-color: var(--red);
+}
+body.design-monolith .app-shell .page :is(
+  .atlas-chart-actions select, .atlas-chart-mode button,
+  .atlas-chart-reset, .atlas-chart-legend button
+):is(:disabled, [aria-disabled="true"]) {
+  background-color: var(--panel-muted);
+  border-color: var(--line);
+  color: var(--muted);
+}
+body.design-monolith .app-shell .page .atlas-chart-tooltip {
+  background-color: var(--panel-muted);
+  border-color: var(--line-strong);
+  color: var(--text);
+}
+body.design-monolith .app-shell .page .atlas-chart-tooltip span { color: var(--muted); }
+body.design-monolith .app-shell .page .atlas-chart-tooltip b { color: var(--text); }
 
 @media (prefers-reduced-motion: reduce) {
   body.design-monolith :is(.app-shell .page, .login-page, .external-response-page) :is(.button, .icon-button, .data-table tbody tr) {

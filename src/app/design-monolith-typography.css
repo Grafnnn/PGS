@@ -1,5 +1,6 @@
 /* Navigation composition: one text axis, a restrained scale, natural Cyrillic spacing. */
-body.design-monolith .app-shell :is(.topbar, .navigation-sheet) {
+body.design-monolith .app-shell :is(.topbar, .navigation-sheet, .project-atlas-navigation) {
+  font-family: var(--font-sans);
   font-kerning: normal;
 }
 body.design-monolith .app-shell .project-atlas-domains > button strong {
@@ -36,7 +37,7 @@ body.design-monolith .app-shell .project-domain-popover-header > span:last-child
 body.design-monolith .app-shell .project-domain-popover-header strong {
   font-size: 26px;
   line-height: 30px;
-  font-weight: 500;
+  font-weight: 450;
   letter-spacing: -.015em;
   text-wrap: balance;
 }
@@ -115,7 +116,7 @@ body.design-monolith .app-shell .project-domain-nav-header > div:first-child { g
 body.design-monolith .app-shell .project-domain-nav-header strong {
   font-size: 28px;
   line-height: 34px;
-  font-weight: 500;
+  font-weight: 450;
   letter-spacing: -.015em;
   text-wrap: balance;
 }
