@@ -71,7 +71,7 @@ describe("ProjectCommandCenter", () => {
     expect(html).not.toContain("OPENAI_API_KEY");
   });
 
-  it("publishes the Troitsk R10 model from the project command center", () => {
+  it("publishes the Troitsk Atlas 3.2 from the project command center", () => {
     const bundle = getProjectBundle("project-demo");
     const html = renderToStaticMarkup(
       createElement(ProjectCommandCenter, {
@@ -91,9 +91,9 @@ describe("ProjectCommandCenter", () => {
       })
     );
 
-    expect(html).toContain("3D-модель здания 24");
-    expect(html).toContain("14 разделов: общая модель");
-    expect(html).toContain("R10 local");
+    expect(html).toContain("3D Атлас здания 24");
+    expect(html).toContain("562 геоблока");
+    expect(html).toContain("3.2");
     expect(html).toContain("Открыть 3D-модель");
     expect(html).not.toContain("<iframe");
   });

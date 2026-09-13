@@ -10,6 +10,15 @@ const gunzip = promisify(gunzipCallback);
 // Callers must authorize either project membership or an explicit public-model allowlist.
 export async function projectModelResponse(request: Request, model: Project3dModel, visibility: "private" | "public") {
   const embed = hasProjectModelEmbed(request.url);
+  if (model.assetBaseUrl) {
+    // Keep the share URL stable; the atlas resolves its immutable resources relative to index.html.
+    // The private caller still authorizes project access before reaching this redirect.
+    return new Response(null, { status: 307, headers: {
+      Location: `${model.assetBaseUrl}index.html${embed ? `?embed=${PROJECT_MODEL_EMBED_VERSION}` : ""}`,
+      "Cache-Control": "no-store",
+      "X-Robots-Tag": "noindex, nofollow"
+    } });
+  }
   const headers = {
     "Cache-Control": `${visibility}, max-age=3600, must-revalidate`,
     "Content-Security-Policy": "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'self'; sandbox allow-scripts allow-downloads",
