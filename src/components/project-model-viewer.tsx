@@ -144,7 +144,7 @@ export function ProjectModelViewer({ project }: ProjectModelViewerProps) {
                 onLoad={() => setLoaded(true)}
                 ref={frameRef}
                 referrerPolicy="same-origin"
-                sandbox="allow-downloads allow-scripts"
+                sandbox="allow-downloads allow-scripts allow-modals allow-popups allow-popups-to-escape-sandbox"
                 src={viewerUrl}
                 title={`${model.title}, ${model.revision}`}
               /> : <div className="project-model-empty">

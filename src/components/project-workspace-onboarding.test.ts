@@ -60,6 +60,6 @@ describe("ProjectWorkspace onboarding panel", () => {
     }));
 
     expect(html).toContain('aria-label="Открыть 3D-модель проекта"');
-    expect(html).toContain("3D-модель здания 24");
+    expect(html).toContain("3D Атлас здания 24");
   });
 });

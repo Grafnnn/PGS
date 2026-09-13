@@ -1,45 +1,40 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { gzipSync, gunzipSync } from "node:zlib";
 
 const mocks = vi.hoisted(() => ({ readFile: vi.fn(), access: vi.fn(), find: vi.fn() }));
 vi.mock("node:fs/promises", () => ({ readFile: mocks.readFile }));
 vi.mock("@/lib/project-route-guards", () => ({ requireProjectAccess: mocks.access }));
 vi.mock("@/lib/prisma", () => ({ prisma: { project: { findUnique: mocks.find } } }));
 import { GET } from "./route";
+import { GET as privateGET } from "@/app/api/projects/[projectId]/model-viewer/route";
 
-const context = { params: { slug: "troitsk-building-24" } };
-const html = "<html><title>R10 local</title><canvas></canvas></html>";
-
-describe("public model publication", () => {
-  beforeEach(() => { vi.clearAllMocks(); mocks.readFile.mockResolvedValue(gzipSync(html)); });
-
-  it("opens only the published model without a session or project database lookup", async () => {
-    const result = await GET(new Request("https://pgs.local/models/troitsk-building-24", { headers: { "accept-encoding": "gzip" } }), context);
-    expect(result.status).toBe(200);
-    expect(gunzipSync(Buffer.from(await result.arrayBuffer())).toString()).toBe(html);
-    expect(result.headers.get("cache-control")).toContain("public");
-    expect(result.headers.has("set-cookie")).toBe(false);
-    const csp = result.headers.get("content-security-policy");
-    expect(csp).toContain("connect-src 'none'");
-    expect(csp).toContain("sandbox allow-scripts allow-downloads");
-    expect(csp).not.toContain("allow-same-origin");
-    expect(csp).toContain("img-src 'self' data: blob:");
+describe("Atlas 3.2 publication", () => {
+  beforeEach(() => vi.clearAllMocks());
+  it("preserves the public alias without sessions or project lookups", async () => {
+    const response = await GET(new Request("https://pgs.local/models/troitsk-building-24"), { params: { slug: "troitsk-building-24" } });
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toBe("/model-assets/troitsk-b24-atlas-3-2/index.html");
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(response.headers.has("set-cookie")).toBe(false);
     expect(mocks.access).not.toHaveBeenCalled();
     expect(mocks.find).not.toHaveBeenCalled();
-  });
-
-  it.each(["other-project", "cmteg9g33000for4oc06rko5a", "..", "%2e%2e", "troitsk-building-24-r06", "troitsk-building-24/../../.env"])("does not publish arbitrary identifiers: %s", async (slug) => {
-    const response = await GET(new Request("https://pgs.local/models/invalid"), { params: { slug } });
-    expect(response.status).toBe(404);
     expect(mocks.readFile).not.toHaveBeenCalled();
   });
-
-  it("invalidates old revision caches while allowing conditional requests for R10", async () => {
-    const old = await GET(new Request("https://pgs.local", { headers: { "if-none-match": 'W/"troitsk-building-24-r06"' } }), context);
-    expect(old.status).toBe(200);
-    mocks.readFile.mockClear();
-    const fresh = await GET(new Request("https://pgs.local", { headers: { "if-none-match": old.headers.get("etag")! } }), context);
-    expect(fresh.status).toBe(304);
-    expect(mocks.readFile).not.toHaveBeenCalled();
+  it.each(["other-project", "cmteg9g33000for4oc06rko5a", "..", "%2e%2e", "troitsk-building-24/../../.env"])("rejects unpublished identifiers: %s", async (slug) => {
+    expect((await GET(new Request("https://pgs.local/models/invalid"), { params: { slug } })).status).toBe(404);
+  });
+  it.each([401, 403])("keeps private project viewer protected: %s", async (status) => {
+    mocks.access.mockResolvedValue({ response: new Response("Denied", { status }) });
+    const response = await privateGET(new Request("https://pgs.local/api/model?embed=monolith-v1"), { params: { projectId: "cmteg9g33000for4oc06rko5a" } });
+    expect(response.status).toBe(status);
+    expect(response.headers.has("location")).toBe(false);
+    expect(mocks.find).not.toHaveBeenCalled();
+  });
+  it("opens the same release after project authorization and preserves embed mode", async () => {
+    mocks.access.mockResolvedValue({ user: { id: "user-1" } });
+    mocks.find.mockResolvedValue({ id: "cmteg9g33000for4oc06rko5a" });
+    const response = await privateGET(new Request("https://pgs.local/api/model?embed=monolith-v1"), { params: { projectId: "cmteg9g33000for4oc06rko5a" } });
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toBe("/model-assets/troitsk-b24-atlas-3-2/index.html?embed=monolith-v1");
+    expect(mocks.access).toHaveBeenCalledWith("cmteg9g33000for4oc06rko5a", "view");
   });
 });

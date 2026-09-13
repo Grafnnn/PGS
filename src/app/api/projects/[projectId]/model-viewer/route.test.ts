@@ -11,6 +11,14 @@ const mocks = vi.hoisted(() => ({
 vi.mock("@/lib/project-route-guards", () => ({ requireProjectAccess: mocks.access }));
 vi.mock("@/lib/prisma", () => ({ prisma: { project: { findUnique: mocks.projectFind } } }));
 vi.mock("node:fs/promises", () => ({ readFile: mocks.readFile }));
+// Preserve coverage of the existing portable viewer for non-modular models.
+vi.mock("@/lib/project-3d-model", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/project-3d-model")>();
+  return { ...actual, getProject3dModel: (identity: Parameters<typeof actual.getProject3dModel>[0]) => {
+    const model = actual.getProject3dModel(identity);
+    return model ? { ...model, assetBaseUrl: undefined, slug: "troitsk-building-24-r10", assetPath: "src/assets/project-models/troitsk-b24-r10.html.gz" } : null;
+  } };
+});
 
 const context = { params: { projectId: "cmteg9g33000for4oc06rko5a" } };
 const source = '<html><head><title>R06</title></head><body><script>window.R06_PORTABLE=true;</script><canvas></canvas></body></html>';

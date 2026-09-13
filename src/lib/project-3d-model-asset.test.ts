@@ -2,12 +2,10 @@ import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { gunzipSync } from "node:zlib";
 import { expect, it } from "vitest";
-import { getProject3dModel } from "@/lib/project-3d-model";
 import manifest from "@/assets/project-models/troitsk-b24-r10.manifest.json";
 
 it("reconstructs the exact R10 portable source from the web package and deferred assets", async () => {
-  const model = getProject3dModel({ id: "cmteg9g33000for4oc06rko5a" });
-  const compressed = await readFile(model!.assetPath);
+  const compressed = await readFile("src/assets/project-models/troitsk-b24-r10.html.gz");
   const source = gunzipSync(compressed);
   const sha = (bytes: string | Uint8Array) => createHash("sha256").update(bytes).digest("hex");
   expect(source.byteLength).toBe(manifest.htmlBytes);
