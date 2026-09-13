@@ -1,0 +1,3418 @@
+{
+  "sourceManifestSha256": "0b90daba4cb11f4f2e4155525f515b0b7d69d1a6e499141053b6c5fabd7fc601",
+  "sourceRegistrySha256": "a4871d10bdbf56487df909e1881de4c343deb14ace2e17662c6140178bc07bec",
+  "renderer": {
+    "name": "pypdfium2",
+    "version": "5.13.0",
+    "maxDimension": 3200,
+    "format": "lossless WebP"
+  },
+  "sources": {
+    "R04_node_OP": {
+      "title": "АС.2 · л.56 · опирание 8–8",
+      "file": "sources/R04_node_OP.jpg",
+      "printedSheet": "56",
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R04_L18": {
+      "title": "АС.2 · лист 18",
+      "file": "sources/R04_L18.jpg",
+      "printedSheet": "18",
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R04_node_V": {
+      "title": "АС.2 · л.56 · узел В",
+      "file": "sources/R04_node_V.jpg",
+      "printedSheet": "56",
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R04_L54": {
+      "title": "АС.2 · лист 54",
+      "file": "sources/R04_L54.jpg",
+      "printedSheet": "54",
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R04_L47": {
+      "title": "АС.2 · лист 47",
+      "file": "sources/R04_L47.jpg",
+      "printedSheet": "47",
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R04_L11_floor": {
+      "title": "АС.2 · л.11 · примыкание пола",
+      "file": "sources/R04_L11_floor.jpg",
+      "printedSheet": "11",
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R04_node_B": {
+      "title": "АС.2 · л.56 · узел Б",
+      "file": "sources/R04_node_B.jpg",
+      "printedSheet": "56",
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R04_L53": {
+      "title": "АС.2 · лист 53",
+      "file": "sources/R04_L53.jpg",
+      "printedSheet": "53",
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R04_L56": {
+      "title": "АС.2 · лист 56",
+      "file": "sources/R04_L56.jpg",
+      "printedSheet": "56",
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R04_node_G": {
+      "title": "АС.2 · л.56 · узел Г",
+      "file": "sources/R04_node_G.jpg",
+      "printedSheet": "56",
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R04_L15": {
+      "title": "АС.2 · лист 15",
+      "file": "sources/R04_L15.jpg",
+      "printedSheet": "15",
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R04_L57": {
+      "title": "АС.2 · лист 57",
+      "file": "sources/R04_L57.jpg",
+      "printedSheet": "57",
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R04_L48": {
+      "title": "АС.2 · лист 48",
+      "file": "sources/R04_L48.jpg",
+      "printedSheet": "48",
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R04_node_A": {
+      "title": "АС.2 · л.56 · узел А",
+      "file": "sources/R04_node_A.jpg",
+      "printedSheet": "56",
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R04_L55": {
+      "title": "АС.2 · лист 55",
+      "file": "sources/R04_L55.jpg",
+      "printedSheet": "55",
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R04_plate_and_cleat": {
+      "title": "АС.2 · л.56 · опорный лист и уголок",
+      "file": "sources/R04_plate_and_cleat.jpg",
+      "printedSheet": "56",
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R04_L59": {
+      "title": "АС.2 · лист 59",
+      "file": "sources/R04_L59.jpg",
+      "printedSheet": "59",
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R04_L11": {
+      "title": "АС.2 · лист 11",
+      "file": "sources/R04_L11.jpg",
+      "printedSheet": "11",
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R04_L3": {
+      "title": "АС.2 · лист 3",
+      "file": "sources/R04_L3.jpg",
+      "printedSheet": "3",
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R05S_N_005": {
+      "title": "АС.2 · лист 4 / PDF 5",
+      "file": "sources/R05S_N_005.jpg",
+      "printedSheet": "4",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 5,
+      "pageFile": "drawing-pages/34ef61583baca209df16f35008ef338ac08ce988d5fe415f016eaef19e95c2fe.webp"
+    },
+    "R05S_N_006": {
+      "title": "АС.2 · лист 5 / PDF 6",
+      "file": "sources/R05S_N_006.jpg",
+      "printedSheet": "5",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 6,
+      "pageFile": "drawing-pages/cb2032458825617a784d0e2263bc9978f6df3c8dbb6bef1c321d9e06044e5853.webp"
+    },
+    "R05S_N_009": {
+      "title": "АС.2 · лист 8 / PDF 9",
+      "file": "sources/R05S_N_009.jpg",
+      "printedSheet": "8",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 9,
+      "pageFile": "drawing-pages/ed5e6f51dcbadc29a58b519677d8494cf566cc678eaf1866304f4cf80d0a36e5.webp"
+    },
+    "R05S_N_010": {
+      "title": "АС.2 · лист 9 / PDF 10",
+      "file": "sources/R05S_N_010.jpg",
+      "printedSheet": "9",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 10,
+      "pageFile": "drawing-pages/48a67b0502168620d3b67c1611890b2b3bd58d19fc9d9d2238ec69445f3a5d41.webp"
+    },
+    "R05S_N_012": {
+      "title": "АС.2 · лист 11 / PDF 12",
+      "file": "sources/R05S_N_012.jpg",
+      "printedSheet": "11",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 12,
+      "pageFile": "drawing-pages/e5a3b410804822b717a333453e3c3cdd6a7567c4c96b1a223d23b661abc84d64.webp"
+    },
+    "R05S_N_021": {
+      "title": "АС.2 · лист 20 / PDF 21",
+      "file": "sources/R05S_N_021.jpg",
+      "printedSheet": "20",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 21,
+      "pageFile": "drawing-pages/ad5ff38466df43a486c49606b6ebc6c24afa48a7fc766f01e307ce5857979cc6.webp"
+    },
+    "R05S_N_022": {
+      "title": "АС.2 · лист 21 / PDF 22",
+      "file": "sources/R05S_N_022.jpg",
+      "printedSheet": "21",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 22,
+      "pageFile": "drawing-pages/4ef53692b16004f662d448fd0b2ebf77e474c55a9a39b5067abe052955c5351e.webp"
+    },
+    "R05S_N_023": {
+      "title": "АС.2 · лист 22 / PDF 23",
+      "file": "sources/R05S_N_023.jpg",
+      "printedSheet": "22",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 23,
+      "pageFile": "drawing-pages/db4313a85f8d6f9ef663f254855f2f457ebfe139a9ab2129add5dadc2b6a4ad1.webp"
+    },
+    "R05S_N_024": {
+      "title": "АС.2 · лист 23 / PDF 24",
+      "file": "sources/R05S_N_024.jpg",
+      "printedSheet": "23",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 24,
+      "pageFile": "drawing-pages/ce09d7e4b09bc84962f91743ccff882674ad7125af9296832bc9ae0559be6733.webp"
+    },
+    "R05S_N_025": {
+      "title": "АС.2 · лист 24 / PDF 25",
+      "file": "sources/R05S_N_025.jpg",
+      "printedSheet": "24",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 25,
+      "pageFile": "drawing-pages/6fe980c8505558731bbe982c6f6a79697f7504b703d27a2019c38985c32a3760.webp"
+    },
+    "R05S_N_026": {
+      "title": "АС.2 · лист 25 / PDF 26",
+      "file": "sources/R05S_N_026.jpg",
+      "printedSheet": "25",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 26,
+      "pageFile": "drawing-pages/f1827a421ceb1a61d2ec634534fb843b5943d18ac0bd6d6dc8850470f47151fd.webp"
+    },
+    "R05S_N_027": {
+      "title": "АС.2 · лист 26 / PDF 27",
+      "file": "sources/R05S_N_027.jpg",
+      "printedSheet": "26",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 27,
+      "pageFile": "drawing-pages/31d3859921be5c6e27a1b90ffebb846c3308db68511c57decff5321554f4f6fb.webp"
+    },
+    "R05S_N_028": {
+      "title": "АС.2 · лист 27 / PDF 28",
+      "file": "sources/R05S_N_028.jpg",
+      "printedSheet": "27",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 28,
+      "pageFile": "drawing-pages/51e8b70f554cb612264ba3c7aa5ed0c0a641248d27c75ced5aeedcc3833943fd.webp"
+    },
+    "R05S_N_029": {
+      "title": "АС.2 · лист 28 / PDF 29",
+      "file": "sources/R05S_N_029.jpg",
+      "printedSheet": "28",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 29,
+      "pageFile": "drawing-pages/83cfc0d2a74177cebb60b931b730f5479187c23fc432af7607151c285cc81bc4.webp"
+    },
+    "R05S_N_030": {
+      "title": "АС.2 · лист 29 / PDF 30",
+      "file": "sources/R05S_N_030.jpg",
+      "printedSheet": "29",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 30,
+      "pageFile": "drawing-pages/b7aea4c998ba4a56870ce4e310f239d67a704c5b2915150ae279f9be24eb028e.webp"
+    },
+    "R05S_N_031": {
+      "title": "АС.2 · лист 30 / PDF 31",
+      "file": "sources/R05S_N_031.jpg",
+      "printedSheet": "30",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 31,
+      "pageFile": "drawing-pages/6adeac46a4eba86ba886799be6f42b176b33a6adfe39f943b48ebdb14f5307aa.webp"
+    },
+    "R05S_N_032": {
+      "title": "АС.2 · лист 31 / PDF 32",
+      "file": "sources/R05S_N_032.jpg",
+      "printedSheet": "31",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 32,
+      "pageFile": "drawing-pages/0ccd9627930bd1b30cf08090e9435a8331d248a09420534011a06c02ea2807cc.webp"
+    },
+    "R05S_N_033": {
+      "title": "АС.2 · лист 32 / PDF 33",
+      "file": "sources/R05S_N_033.jpg",
+      "printedSheet": "32",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 33,
+      "pageFile": "drawing-pages/fc624bd24e7e8ba84d384342de686753231b54e6849c5e052457490f9e276566.webp"
+    },
+    "R05S_N_034": {
+      "title": "АС.2 · лист 33 / PDF 34",
+      "file": "sources/R05S_N_034.jpg",
+      "printedSheet": "33",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 34,
+      "pageFile": "drawing-pages/017c6bc3e0978e3822f3950540759691918bca7157daf78a70085407459dca7f.webp"
+    },
+    "R05S_N_035": {
+      "title": "АС.2 · лист 34 / PDF 35",
+      "file": "sources/R05S_N_035.jpg",
+      "printedSheet": "34",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 35,
+      "pageFile": "drawing-pages/2818ae1059d09d918c5e8c21f07fa4505d211c229423ab1c2995a233a52fb10a.webp"
+    },
+    "R05S_N_036": {
+      "title": "АС.2 · лист 35 / PDF 36",
+      "file": "sources/R05S_N_036.jpg",
+      "printedSheet": "35",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 36,
+      "pageFile": "drawing-pages/eb32c55ae4e1c47194da892310fcc5920ef45372984d7deccbc90fff7dc0b4a1.webp"
+    },
+    "R05S_N_037": {
+      "title": "АС.2 · лист 36 / PDF 37",
+      "file": "sources/R05S_N_037.jpg",
+      "printedSheet": "36",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 37,
+      "pageFile": "drawing-pages/96302517d925f633ecb55f961dd7dfbc1228442661c1c5a59afa9a5901d95ff3.webp"
+    },
+    "R05S_N_038": {
+      "title": "АС.2 · лист 37 / PDF 38",
+      "file": "sources/R05S_N_038.jpg",
+      "printedSheet": "37",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 38,
+      "pageFile": "drawing-pages/211e2263143aca71b50b557edcd4b527355756fd76dd8db6a1cea9815a44a697.webp"
+    },
+    "R05S_N_039": {
+      "title": "АС.2 · лист 38 / PDF 39",
+      "file": "sources/R05S_N_039.jpg",
+      "printedSheet": "38",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 39,
+      "pageFile": "drawing-pages/ed9c88ffda1f33cb61fb77acd3ebd5283a740246a309fcf94706e2f1c2326793.webp"
+    },
+    "R05S_N_054": {
+      "title": "АС.2 · лист 44 / PDF 54",
+      "file": "sources/R05S_N_054.jpg",
+      "printedSheet": "44",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 54,
+      "pageFile": "drawing-pages/fd1c19d2110c97cc8ec10d8a7688c6a2e30d87c5ff5b01f4724aee2f660ba514.webp"
+    },
+    "R05S_N_081": {
+      "title": "АС.2 · лист 71 / PDF 81",
+      "file": "sources/R05S_N_081.jpg",
+      "printedSheet": "71",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 81,
+      "pageFile": "drawing-pages/b31e2c031cf1e61fa3f4f3e34f2ee51c7724deab0fa7d1f71d26a2b56701fcb7.webp"
+    },
+    "R05S_N_082": {
+      "title": "АС.2 · лист 72 / PDF 82",
+      "file": "sources/R05S_N_082.jpg",
+      "printedSheet": "72",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 82,
+      "pageFile": "drawing-pages/2d9e0a2d8f7dd6207da2da3b999ea9df2491e576c731c29af15700d6c84e0b83.webp"
+    },
+    "R05S_N_083": {
+      "title": "АС.2 · лист 73 / PDF 83",
+      "file": "sources/R05S_N_083.jpg",
+      "printedSheet": "73",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 83,
+      "pageFile": "drawing-pages/2e54dede79eee75beebb936a54b3110ef883c76bf0787f537e7277c7f456d195.webp"
+    },
+    "R05S_N_084": {
+      "title": "АС.2 · лист 74 / PDF 84",
+      "file": "sources/R05S_N_084.jpg",
+      "printedSheet": "74",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 84,
+      "pageFile": "drawing-pages/d783fdb8583ad7595eac9118c58f097360cdae1265bff9136a78c339d1caaad2.webp"
+    },
+    "R05S_N_085": {
+      "title": "АС.2 · лист 75 / PDF 85",
+      "file": "sources/R05S_N_085.jpg",
+      "printedSheet": "75",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 85,
+      "pageFile": "drawing-pages/dbeb2747a641dc8b86a8fbd6300d10853a4b391ee306588fc03ac72ee4daea3f.webp"
+    },
+    "R05S_N_086": {
+      "title": "АС.2 · лист 76 / PDF 86",
+      "file": "sources/R05S_N_086.jpg",
+      "printedSheet": "76",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 86,
+      "pageFile": "drawing-pages/c2505c3935b06ed61b116fc970f5ac0bac9a21adee883698a624f5e4a0499db2.webp"
+    },
+    "R05S_N_087": {
+      "title": "АС.2 · лист 77 / PDF 87",
+      "file": "sources/R05S_N_087.jpg",
+      "printedSheet": "77",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 87,
+      "pageFile": "drawing-pages/3dd2bc13b46b2fadbdff7096e9e63f6cf3ac9286fb163cb355b68ba29c6705ff.webp"
+    },
+    "R05S_N_088": {
+      "title": "АС.2 · лист 78 / PDF 88",
+      "file": "sources/R05S_N_088.jpg",
+      "printedSheet": "78",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 88,
+      "pageFile": "drawing-pages/1b5f05c888245770de1e0f8aa69d688b5f7005bc01bc559d411624939dda1dad.webp"
+    },
+    "R05S_N_089": {
+      "title": "АС.2 · лист 79 / PDF 89",
+      "file": "sources/R05S_N_089.jpg",
+      "printedSheet": "79",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 89,
+      "pageFile": "drawing-pages/6cd25c686a284be7c7b523dcd2d4df7fa1fd4493c93d22a6b3607271ee12c3b5.webp"
+    },
+    "R05S_N_090": {
+      "title": "АС.2 · лист 80 / PDF 90",
+      "file": "sources/R05S_N_090.jpg",
+      "printedSheet": "80",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 90,
+      "pageFile": "drawing-pages/0598881676312c6683acd7ebf10502c35a87ce4dea56e8d3eb50fb244c06f848.webp"
+    },
+    "R05S_N_091": {
+      "title": "АС.2 · лист 81 / PDF 91",
+      "file": "sources/R05S_N_091.jpg",
+      "printedSheet": "81",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 91,
+      "pageFile": "drawing-pages/23b8d989ef3bd5645cf89e75a564769b2cad64858694270b783f8d5aba3135ee.webp"
+    },
+    "R05S_N_092": {
+      "title": "АС.2 · лист 82 / PDF 92",
+      "file": "sources/R05S_N_092.jpg",
+      "printedSheet": "82",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 92,
+      "pageFile": "drawing-pages/2cf0affd8e0e352aed9caa288f5372c87c919309c8167310e5661c8ad849bd33.webp"
+    },
+    "R05S_N_129": {
+      "title": "АС.2 · лист 119 / PDF 129",
+      "file": "sources/R05S_N_129.jpg",
+      "printedSheet": "119",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 129,
+      "pageFile": "drawing-pages/9d60711be66277e6786629c26592cac4f45e7093364635a16febc7b293283314.webp"
+    },
+    "R05S_N_130": {
+      "title": "АС.2 · лист 120 / PDF 130",
+      "file": "sources/R05S_N_130.jpg",
+      "printedSheet": "120",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 130,
+      "pageFile": "drawing-pages/3538cd98de9f85d138bccbde28d5a4af139fe5396c3ff8b431d8d0537aab0041.webp"
+    },
+    "R05S_N_131": {
+      "title": "АС.2 · лист 121 / PDF 131",
+      "file": "sources/R05S_N_131.jpg",
+      "printedSheet": "121",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 131,
+      "pageFile": "drawing-pages/3d37e5d5190d002a90989ff4581dfdf0803f6ab4a4437c4ff5685a6e82563abc.webp"
+    },
+    "R05S_N_132": {
+      "title": "АС.2 · лист 122 / PDF 132",
+      "file": "sources/R05S_N_132.jpg",
+      "printedSheet": "122",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 132,
+      "pageFile": "drawing-pages/b60f3a08d44181acab858ccd8dab67532dbf6c669cc073d6d4eb63f578bb26d8.webp"
+    },
+    "R05S_N_133": {
+      "title": "АС.2 · лист 123 / PDF 133",
+      "file": "sources/R05S_N_133.jpg",
+      "printedSheet": "123",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 133,
+      "pageFile": "drawing-pages/2ff873609e380dcbfbfeec76a8e2bb70f1ea7d2d2170a31ee24b9d3c5b20c22c.webp"
+    },
+    "R05S_N_134": {
+      "title": "АС.2 · лист 124 / PDF 134",
+      "file": "sources/R05S_N_134.jpg",
+      "printedSheet": "124",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 134,
+      "pageFile": "drawing-pages/475d0d6c45d5e46dcbda417d0c573789eb773aed7efe302b8054e3c6557d884e.webp"
+    },
+    "R05S_N_135": {
+      "title": "АС.2 · лист 125 / PDF 135",
+      "file": "sources/R05S_N_135.jpg",
+      "printedSheet": "125",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 135,
+      "pageFile": "drawing-pages/7dfd271150a31cd202942a7825dcaa4143fb8c1cfa556632ae8ddaee512f5abe.webp"
+    },
+    "R05S_N_136": {
+      "title": "АС.2 · лист 126 / PDF 136",
+      "file": "sources/R05S_N_136.jpg",
+      "printedSheet": "126",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 136,
+      "pageFile": "drawing-pages/04b4e43a4562371e84cec76f96b462f66af67314a770ae3172213a35717d8e78.webp"
+    },
+    "R05S_N_137": {
+      "title": "АС.2 · лист 127 / PDF 137",
+      "file": "sources/R05S_N_137.jpg",
+      "printedSheet": "127",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 137,
+      "pageFile": "drawing-pages/156fdcb71eccbb035f17125c24da6b659d4a83052f4d7abbf0622ea2dfd0358e.webp"
+    },
+    "R05S_N_138": {
+      "title": "АС.2 · лист 128 / PDF 138",
+      "file": "sources/R05S_N_138.jpg",
+      "printedSheet": "128",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 138,
+      "pageFile": "drawing-pages/0ef2e96ce141e36c0e0be46e304a55aad2f65701ce0684156dd0f034d6203988.webp"
+    },
+    "R05S_N_139": {
+      "title": "АС.2 · лист 129 / PDF 139",
+      "file": "sources/R05S_N_139.jpg",
+      "printedSheet": "129",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 139,
+      "pageFile": "drawing-pages/c6e8b0ac9299e7549f7b25c490629d74815cc1d8cb716a8c1030050652f71c29.webp"
+    },
+    "R05S_N_140": {
+      "title": "АС.2 · лист 130 / PDF 140",
+      "file": "sources/R05S_N_140.jpg",
+      "printedSheet": "130",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 140,
+      "pageFile": "drawing-pages/b76351e614436b3df76300908326dcc6e5474fb60b569d52ab9388ab56fa3323.webp"
+    },
+    "R05S_N_141": {
+      "title": "АС.2 · лист 131 / PDF 141",
+      "file": "sources/R05S_N_141.jpg",
+      "printedSheet": "131",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 141,
+      "pageFile": "drawing-pages/f6cb95a48a957aac3978b0eb90e5cc8550432603dbbefa2d4404df6841dbfcc5.webp"
+    },
+    "R05S_N_142": {
+      "title": "АС.2 · лист 132 / PDF 142",
+      "file": "sources/R05S_N_142.jpg",
+      "printedSheet": "132",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 142,
+      "pageFile": "drawing-pages/b72dc744222910edb9140062850ecf8442e113fe7fe5e2a328523bc9ed7bafb9.webp"
+    },
+    "R05S_N_143": {
+      "title": "АС.2 · лист 133 / PDF 143",
+      "file": "sources/R05S_N_143.jpg",
+      "printedSheet": "133",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 143,
+      "pageFile": "drawing-pages/9ffd8fbcf06bf5a3bceed6833d0878d1d2018779fe367520ec9ea689f515af81.webp"
+    },
+    "R05S_N_144": {
+      "title": "АС.2 · лист 134 / PDF 144",
+      "file": "sources/R05S_N_144.jpg",
+      "printedSheet": "134",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 144,
+      "pageFile": "drawing-pages/c4af5a125c8c28415fe8900b0fa813ad85125e177cf9fbd8e7c7ac8194a4d506.webp"
+    },
+    "R05S_N_145": {
+      "title": "АС.2 · лист 135 / PDF 145",
+      "file": "sources/R05S_N_145.jpg",
+      "printedSheet": "135",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 145,
+      "pageFile": "drawing-pages/65212bf3064ef5eb83865ab37d0a022ee5c77442dd13db924710f6fafd5ee5e1.webp"
+    },
+    "R05S_N_146": {
+      "title": "АС.2 · лист 136 / PDF 146",
+      "file": "sources/R05S_N_146.jpg",
+      "printedSheet": "136",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 146,
+      "pageFile": "drawing-pages/4b8c71714dcbc65b827d6a878fc19e19903e4cad45014e663c2a40cccf2c0c30.webp"
+    },
+    "R05S_N_147": {
+      "title": "АС.2 · лист 137 / PDF 147",
+      "file": "sources/R05S_N_147.jpg",
+      "printedSheet": "137",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 147,
+      "pageFile": "drawing-pages/650a13f71e38fcc7293fcf2da91fefcde3a182c213ae2364383fb7b3a654ace8.webp"
+    },
+    "R05S_N_148": {
+      "title": "АС.2 · лист 138 / PDF 148",
+      "file": "sources/R05S_N_148.jpg",
+      "printedSheet": "138",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 148,
+      "pageFile": "drawing-pages/d059d99fee8cebe6d50814a7a9eab0beaa0f1908eed849b4380c22af3567c57b.webp"
+    },
+    "R05S_N_149": {
+      "title": "АС.2 · лист 139 / PDF 149",
+      "file": "sources/R05S_N_149.jpg",
+      "printedSheet": "139",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 149,
+      "pageFile": "drawing-pages/fad6a5ad4359e4d91d6a2fe783b7d795bff70a5301e53de49790c2fda43d0474.webp"
+    },
+    "R05S_node_A": {
+      "title": "АС.2 · л.56 · узел А",
+      "file": "sources/R05S_node_A.jpg",
+      "printedSheet": "56",
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R05S_node_B": {
+      "title": "АС.2 · л.56 · узел Б",
+      "file": "sources/R05S_node_B.jpg",
+      "printedSheet": "56",
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R05S_node_V": {
+      "title": "АС.2 · л.56 · узел В",
+      "file": "sources/R05S_node_V.jpg",
+      "printedSheet": "56",
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R05S_node_G": {
+      "title": "АС.2 · л.56 · узел Г",
+      "file": "sources/R05S_node_G.jpg",
+      "printedSheet": "56",
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R05S_node_OP": {
+      "title": "АС.2 · л.56 · опирание 8–8",
+      "file": "sources/R05S_node_OP.jpg",
+      "printedSheet": "56",
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R05S_L47": {
+      "title": "АС.2 · лист 47",
+      "file": "sources/R05S_L47.jpg",
+      "printedSheet": "47",
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R05S_L56": {
+      "title": "АС.2 · лист 56",
+      "file": "sources/R05S_L56.jpg",
+      "printedSheet": "56",
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R05S_QA21": {
+      "title": "QA21",
+      "file": "sources/R05S_QA21.jpg",
+      "printedSheet": null,
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R05S_QA22": {
+      "title": "QA22",
+      "file": "sources/R05S_QA22.jpg",
+      "printedSheet": null,
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R05I_high_zone": {
+      "title": "АС.2 · л.20 · поднятое перекрытие",
+      "file": "sources/R05I_high_zone.jpg",
+      "printedSheet": "20",
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R05I_L59": {
+      "title": "АС.2 · лист 59",
+      "file": "sources/R05I_L59.jpg",
+      "printedSheet": "59",
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R05I_L11": {
+      "title": "АС.2 · лист 11",
+      "file": "sources/R05I_L11.jpg",
+      "printedSheet": "11",
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R05I_AS2_L27": {
+      "title": "АС.2 · лист 27",
+      "file": "sources/R05I_AS2_L27.jpg",
+      "printedSheet": "27",
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R05I_L56": {
+      "title": "АС.2 · лист 56",
+      "file": "sources/R05I_L56.jpg",
+      "printedSheet": "56",
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R05I_AS2_L34": {
+      "title": "АС.2 · лист 34",
+      "file": "sources/R05I_AS2_L34.jpg",
+      "printedSheet": "34",
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R05I_AS2_L9": {
+      "title": "АС.2 · лист 9",
+      "file": "sources/R05I_AS2_L9.jpg",
+      "printedSheet": "9",
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R05I_AS2_L31": {
+      "title": "АС.2 · лист 31",
+      "file": "sources/R05I_AS2_L31.jpg",
+      "printedSheet": "31",
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R05I_node_V": {
+      "title": "АС.2 · л.56 · узел В",
+      "file": "sources/R05I_node_V.jpg",
+      "printedSheet": "56",
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R05I_AS2_L8": {
+      "title": "АС.2 · лист 8",
+      "file": "sources/R05I_AS2_L8.jpg",
+      "printedSheet": "8",
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R05I_L15": {
+      "title": "АС.2 · лист 15",
+      "file": "sources/R05I_L15.jpg",
+      "printedSheet": "15",
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R05I_L54": {
+      "title": "АС.2 · лист 54",
+      "file": "sources/R05I_L54.jpg",
+      "printedSheet": "54",
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R05I_AS2_L23": {
+      "title": "АС.2 · лист 23",
+      "file": "sources/R05I_AS2_L23.jpg",
+      "printedSheet": "23",
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R05I_AS2_L28": {
+      "title": "АС.2 · лист 28",
+      "file": "sources/R05I_AS2_L28.jpg",
+      "printedSheet": "28",
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R05I_AS2_L4": {
+      "title": "АС.2 · лист 4",
+      "file": "sources/R05I_AS2_L4.jpg",
+      "printedSheet": "4",
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R05I_AS2_L5": {
+      "title": "АС.2 · лист 5",
+      "file": "sources/R05I_AS2_L5.jpg",
+      "printedSheet": "5",
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R05I_L11_floor": {
+      "title": "АС.2 · л.11 · примыкание пола",
+      "file": "sources/R05I_L11_floor.jpg",
+      "printedSheet": "11",
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R05I_L53": {
+      "title": "АС.2 · лист 53",
+      "file": "sources/R05I_L53.jpg",
+      "printedSheet": "53",
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R05I_AS2_L39": {
+      "title": "АС.2 · лист 39",
+      "file": "sources/R05I_AS2_L39.jpg",
+      "printedSheet": "39",
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R05I_B1_bearing": {
+      "title": "АС.2 · л.24 · опирание Б1",
+      "file": "sources/R05I_B1_bearing.jpg",
+      "printedSheet": "24",
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R05I_AS2_L25": {
+      "title": "АС.2 · лист 25",
+      "file": "sources/R05I_AS2_L25.jpg",
+      "printedSheet": "25",
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R05I_B1_profile": {
+      "title": "АС.2 · л.24 · сечение Б1",
+      "file": "sources/R05I_B1_profile.jpg",
+      "printedSheet": "24",
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R05I_AS2_L21": {
+      "title": "АС.2 · лист 21",
+      "file": "sources/R05I_AS2_L21.jpg",
+      "printedSheet": "21",
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R05I_plate_and_cleat": {
+      "title": "АС.2 · л.56 · опорный лист и уголок",
+      "file": "sources/R05I_plate_and_cleat.jpg",
+      "printedSheet": "56",
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R05I_L47": {
+      "title": "АС.2 · лист 47",
+      "file": "sources/R05I_L47.jpg",
+      "printedSheet": "47",
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R05I_MU4framing": {
+      "title": "АС.2 · л.24 · обрамление МУ4",
+      "file": "sources/R05I_MU4framing.jpg",
+      "printedSheet": "24",
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R05I_AS2_L37": {
+      "title": "АС.2 · лист 37",
+      "file": "sources/R05I_AS2_L37.jpg",
+      "printedSheet": "37",
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R05I_AS2_L32": {
+      "title": "АС.2 · лист 32",
+      "file": "sources/R05I_AS2_L32.jpg",
+      "printedSheet": "32",
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R05I_AS2_L35": {
+      "title": "АС.2 · лист 35",
+      "file": "sources/R05I_AS2_L35.jpg",
+      "printedSheet": "35",
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R05I_node_A": {
+      "title": "АС.2 · л.56 · узел А",
+      "file": "sources/R05I_node_A.jpg",
+      "printedSheet": "56",
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R05I_AS2_L30": {
+      "title": "АС.2 · лист 30",
+      "file": "sources/R05I_AS2_L30.jpg",
+      "printedSheet": "30",
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R05I_L57": {
+      "title": "АС.2 · лист 57",
+      "file": "sources/R05I_L57.jpg",
+      "printedSheet": "57",
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R05I_node_B": {
+      "title": "АС.2 · л.56 · узел Б",
+      "file": "sources/R05I_node_B.jpg",
+      "printedSheet": "56",
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R05I_AS2_L33": {
+      "title": "АС.2 · лист 33",
+      "file": "sources/R05I_AS2_L33.jpg",
+      "printedSheet": "33",
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R05I_node_OP": {
+      "title": "АС.2 · л.56 · опирание 8–8",
+      "file": "sources/R05I_node_OP.jpg",
+      "printedSheet": "56",
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R05I_L48": {
+      "title": "АС.2 · лист 48",
+      "file": "sources/R05I_L48.jpg",
+      "printedSheet": "48",
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R05I_AS2_L20": {
+      "title": "АС.2 · лист 20",
+      "file": "sources/R05I_AS2_L20.jpg",
+      "printedSheet": "20",
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R05I_AS2_L36": {
+      "title": "АС.2 · лист 36",
+      "file": "sources/R05I_AS2_L36.jpg",
+      "printedSheet": "36",
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R05I_AS2_L24": {
+      "title": "АС.2 · лист 24",
+      "file": "sources/R05I_AS2_L24.jpg",
+      "printedSheet": "24",
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R05I_L3": {
+      "title": "АС.2 · лист 3",
+      "file": "sources/R05I_L3.jpg",
+      "printedSheet": "3",
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R05I_AS2_L29": {
+      "title": "АС.2 · лист 29",
+      "file": "sources/R05I_AS2_L29.jpg",
+      "printedSheet": "29",
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R05I_L18": {
+      "title": "АС.2 · лист 18",
+      "file": "sources/R05I_L18.jpg",
+      "printedSheet": "18",
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R05I_AS2_L26": {
+      "title": "АС.2 · лист 26",
+      "file": "sources/R05I_AS2_L26.jpg",
+      "printedSheet": "26",
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R05I_node_G": {
+      "title": "АС.2 · л.56 · узел Г",
+      "file": "sources/R05I_node_G.jpg",
+      "printedSheet": "56",
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R05I_L55": {
+      "title": "АС.2 · лист 55",
+      "file": "sources/R05I_L55.jpg",
+      "printedSheet": "55",
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R02_AR9": {
+      "title": "АР · л.9 · подоснова R02",
+      "file": "sources/R02_AR9.svg",
+      "printedSheet": "9",
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R02_AC98": {
+      "title": "S08 · л.98 · PDF108 · подоснова R02",
+      "file": "sources/R02_AC98.svg",
+      "printedSheet": "98",
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R02_AC22": {
+      "title": "S08 · л.22 · PDF23 · подоснова R02",
+      "file": "sources/R02_AC22.svg",
+      "printedSheet": "22",
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R02_AS399": {
+      "title": "S08 / PDF 49 · подоснова R02",
+      "file": "sources/R02_AS399.svg",
+      "printedSheet": null,
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R02_AS116": {
+      "title": "S08 / PDF 126 · подоснова R02",
+      "file": "sources/R02_AS116.svg",
+      "printedSheet": null,
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R02_AS117": {
+      "title": "S08 / PDF 127 · подоснова R02",
+      "file": "sources/R02_AS117.svg",
+      "printedSheet": null,
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R07_L11": {
+      "title": "АС.2 · лист 11 по штампу · PDF-стр. 12",
+      "file": "sources/R07_L11.jpg",
+      "printedSheet": "11",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 12,
+      "pageFile": "drawing-pages/e5a3b410804822b717a333453e3c3cdd6a7567c4c96b1a223d23b661abc84d64.webp"
+    },
+    "R07_L12": {
+      "title": "АС.2 · лист 12 по штампу · PDF-стр. 13",
+      "file": "sources/R07_L12.jpg",
+      "printedSheet": "12",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 13,
+      "pageFile": "drawing-pages/37e37871ef3eb4bf7c6f83a080a2496b5a899de823a094971d3d7e2d2911da05.webp"
+    },
+    "R07_L13": {
+      "title": "АС.2 · лист 13 по штампу · PDF-стр. 14",
+      "file": "sources/R07_L13.jpg",
+      "printedSheet": "13",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 14,
+      "pageFile": "drawing-pages/68f510a63c8a690b98394b4e4cbd13cfc0a9e2acc9ac94c84bec5ba24c9f6ac8.webp"
+    },
+    "R07_L14": {
+      "title": "АС.2 · лист 14 по штампу · PDF-стр. 15",
+      "file": "sources/R07_L14.jpg",
+      "printedSheet": "14",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 15,
+      "pageFile": "drawing-pages/884091dc7169d1dcccc4d63d2073955bd35e4d40b03337f3de75caa877929ac1.webp"
+    },
+    "R07_L15": {
+      "title": "АС.2 · лист 15 по штампу · PDF-стр. 16",
+      "file": "sources/R07_L15.jpg",
+      "printedSheet": "15",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 16,
+      "pageFile": "drawing-pages/9774dea7341a1278b811b36949f2550b1616c6cfa9ca0cbbb8bbede7e6323647.webp"
+    },
+    "R07_L16": {
+      "title": "АС.2 · лист 16 по штампу · PDF-стр. 17",
+      "file": "sources/R07_L16.jpg",
+      "printedSheet": "16",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 17,
+      "pageFile": "drawing-pages/ca5cb14e498558b713f530cbf56d848ad631774fa6f1fac49485a2061fb753fd.webp"
+    },
+    "R07_L17": {
+      "title": "АС.2 · лист 17 по штампу · PDF-стр. 18",
+      "file": "sources/R07_L17.jpg",
+      "printedSheet": "17",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 18,
+      "pageFile": "drawing-pages/1a29b4f271ea7403934370c962d512dd570edaf28b2aea945f14582ab36a0cf0.webp"
+    },
+    "R07_L18": {
+      "title": "АС.2 · лист 18 по штампу · PDF-стр. 19",
+      "file": "sources/R07_L18.jpg",
+      "printedSheet": "18",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 19,
+      "pageFile": "drawing-pages/be973f5c7751a2a20a6d55951d1887e968d60c32e659542d7c5b287ecc1b62cb.webp"
+    },
+    "R07_L19": {
+      "title": "АС.2 · лист 19 по штампу · PDF-стр. 20",
+      "file": "sources/R07_L19.jpg",
+      "printedSheet": "19",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 20,
+      "pageFile": "drawing-pages/913c4ceb2cf89174db0527321c5e47b7439cf7d557868bfe1c9d55bae8d04ac4.webp"
+    },
+    "R07_L79": {
+      "title": "АС.2 · лист 79 по штампу · PDF-стр. 89",
+      "file": "sources/R07_L79.jpg",
+      "printedSheet": "79",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 89,
+      "pageFile": "drawing-pages/6cd25c686a284be7c7b523dcd2d4df7fa1fd4493c93d22a6b3607271ee12c3b5.webp"
+    },
+    "R07_L80": {
+      "title": "АС.2 · лист 80 по штампу · PDF-стр. 90",
+      "file": "sources/R07_L80.jpg",
+      "printedSheet": "80",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 90,
+      "pageFile": "drawing-pages/0598881676312c6683acd7ebf10502c35a87ce4dea56e8d3eb50fb244c06f848.webp"
+    },
+    "R07_L81": {
+      "title": "АС.2 · лист 81 по штампу · PDF-стр. 91",
+      "file": "sources/R07_L81.jpg",
+      "printedSheet": "81",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 91,
+      "pageFile": "drawing-pages/23b8d989ef3bd5645cf89e75a564769b2cad64858694270b783f8d5aba3135ee.webp"
+    },
+    "R07_L82": {
+      "title": "АС.2 · лист 82 по штампу · PDF-стр. 92",
+      "file": "sources/R07_L82.jpg",
+      "printedSheet": "82",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 92,
+      "pageFile": "drawing-pages/2cf0affd8e0e352aed9caa288f5372c87c919309c8167310e5661c8ad849bd33.webp"
+    },
+    "R07_L83": {
+      "title": "АС.2 · лист 83 по штампу · PDF-стр. 93",
+      "file": "sources/R07_L83.jpg",
+      "printedSheet": "83",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 93,
+      "pageFile": "drawing-pages/be682a0f73043da6268946d4d6491e86af062236a8e0cb528039ee3a123fbbb3.webp"
+    },
+    "R07_L84": {
+      "title": "АС.2 · лист 84 по штампу · PDF-стр. 94",
+      "file": "sources/R07_L84.jpg",
+      "printedSheet": "84",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 94,
+      "pageFile": "drawing-pages/817514e2df76b012e55e0d15aeb7b10361e36e678ba91fe324bde9e8cfe86b72.webp"
+    },
+    "R07_L85": {
+      "title": "АС.2 · лист 85 по штампу · PDF-стр. 95",
+      "file": "sources/R07_L85.jpg",
+      "printedSheet": "85",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 95,
+      "pageFile": "drawing-pages/71f07a0d0815635f24f1b073013b509fc6676647c7ac3e8e2c6d32cc61774361.webp"
+    },
+    "R07_L86": {
+      "title": "АС.2 · лист 86 по штампу · PDF-стр. 96",
+      "file": "sources/R07_L86.jpg",
+      "printedSheet": "86",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 96,
+      "pageFile": "drawing-pages/6b9d1f50413217f9d0a1c3ab7d1ea7aa85a0b623632036ceac69db557a90070f.webp"
+    },
+    "R07_L99": {
+      "title": "АС.2 · лист 99 по штампу · PDF-стр. 109",
+      "file": "sources/R07_L99.jpg",
+      "printedSheet": "99",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 109,
+      "pageFile": "drawing-pages/078bf0c13bc2aa5c10748fec516d13074980b06a09263cc8c242479d4a931b83.webp"
+    },
+    "R07_L100": {
+      "title": "АС.2 · лист 100 по штампу · PDF-стр. 110",
+      "file": "sources/R07_L100.jpg",
+      "printedSheet": "100",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 110,
+      "pageFile": "drawing-pages/4a4d711c017bf04e4297e0d580ef9841d96eaf8f0b41b0ea1f49a13c522d46fc.webp"
+    },
+    "R07_L101": {
+      "title": "АС.2 · лист 101 по штампу · PDF-стр. 111",
+      "file": "sources/R07_L101.jpg",
+      "printedSheet": "101",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 111,
+      "pageFile": "drawing-pages/940541f485f860eac783da2085fdf3101379482b4debf7683be5ff10a6417dff.webp"
+    },
+    "R07_L102": {
+      "title": "АС.2 · лист 102 по штампу · PDF-стр. 112",
+      "file": "sources/R07_L102.jpg",
+      "printedSheet": "102",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 112,
+      "pageFile": "drawing-pages/58b865e8f112601d3e4a725a7f2c08a028cd0861b2ed5557d07f8c3971f74d33.webp"
+    },
+    "R07_L103": {
+      "title": "АС.2 · лист 103 по штампу · PDF-стр. 113",
+      "file": "sources/R07_L103.jpg",
+      "printedSheet": "103",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 113,
+      "pageFile": "drawing-pages/e0a03d719a8096e8efa9788befe83f859c799856d353c7ed685adfcbeee563b2.webp"
+    },
+    "R07_L104": {
+      "title": "АС.2 · лист 104 по штампу · PDF-стр. 114",
+      "file": "sources/R07_L104.jpg",
+      "printedSheet": "104",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 114,
+      "pageFile": "drawing-pages/17774766e7b4d4e63eece29501c82ea8a0610e2f6bad6830b8599ab0112c0674.webp"
+    },
+    "R07_L105": {
+      "title": "АС.2 · лист 105 по штампу · PDF-стр. 115",
+      "file": "sources/R07_L105.jpg",
+      "printedSheet": "105",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 115,
+      "pageFile": "drawing-pages/99e186dffbf3e43b8a3425458dfc6ceec661abf5a075881afdff51aed410c527.webp"
+    },
+    "R08_AR_10": {
+      "title": "АР · л.10 по штампу · PDF 3",
+      "file": "sources/R08_AR_10.jpg",
+      "printedSheet": "10",
+      "pdf": "documents/AR_08_09_10_reconfirmed.pdf",
+      "pdfPage": 3,
+      "pageFile": "drawing-pages/845d7d25b68c0f2f55bc3c470180fe24380edd8204f738041fc9e0e7180d8c53.webp"
+    },
+    "R08_AR_8": {
+      "title": "АР · л.8 по штампу · PDF 1",
+      "file": "sources/R08_AR_8.jpg",
+      "printedSheet": "8",
+      "pdf": "documents/AR_08_09_10_reconfirmed.pdf",
+      "pdfPage": 1,
+      "pageFile": "drawing-pages/ef3aa1367c12a652545810f9bf29602a6e2b23b3fdaaacb8f5119dadd2f2bb9e.webp"
+    },
+    "R08_AR_9": {
+      "title": "АР · л.9 по штампу · PDF 2",
+      "file": "sources/R08_AR_9.jpg",
+      "printedSheet": "9",
+      "pdf": "documents/AR_08_09_10_reconfirmed.pdf",
+      "pdfPage": 2,
+      "pageFile": "drawing-pages/aa304e8514082172365bd811507ee3a337c2deb10b8797b3428ad03ae4b5660b.webp"
+    },
+    "R08_AS_11": {
+      "title": "АС.2 · л.11 по штампу · PDF 12",
+      "file": "sources/R08_AS_11.jpg",
+      "printedSheet": "11",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 12,
+      "pageFile": "drawing-pages/e5a3b410804822b717a333453e3c3cdd6a7567c4c96b1a223d23b661abc84d64.webp"
+    },
+    "R08_AS_12": {
+      "title": "АС.2 · л.12 по штампу · PDF 13",
+      "file": "sources/R08_AS_12.jpg",
+      "printedSheet": "12",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 13,
+      "pageFile": "drawing-pages/37e37871ef3eb4bf7c6f83a080a2496b5a899de823a094971d3d7e2d2911da05.webp"
+    },
+    "R08_AS_13": {
+      "title": "АС.2 · л.13 по штампу · PDF 14",
+      "file": "sources/R08_AS_13.jpg",
+      "printedSheet": "13",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 14,
+      "pageFile": "drawing-pages/68f510a63c8a690b98394b4e4cbd13cfc0a9e2acc9ac94c84bec5ba24c9f6ac8.webp"
+    },
+    "R08_AS_144": {
+      "title": "АС.2 · л.144 по штампу · PDF 154",
+      "file": "sources/R08_AS_144.jpg",
+      "printedSheet": "144",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 154,
+      "pageFile": "drawing-pages/e22019794d7611fc3d192712a54bdd06245042ed561b4e6659e3aac49e35a41d.webp"
+    },
+    "R08_AS_145": {
+      "title": "АС.2 · л.145 по штампу · PDF 155",
+      "file": "sources/R08_AS_145.jpg",
+      "printedSheet": "145",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 155,
+      "pageFile": "drawing-pages/4fd4a403529727a42c7c0084c997c94931af218358d6723d1747d544dc48e0c4.webp"
+    },
+    "R08_AS_146": {
+      "title": "АС.2 · л.146 по штампу · PDF 156",
+      "file": "sources/R08_AS_146.jpg",
+      "printedSheet": "146",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 156,
+      "pageFile": "drawing-pages/b3cf8b0a0966786a7f2b8220c0bba4f7c92ebea7e55480707bd8b6cea75d7523.webp"
+    },
+    "R08_AS_147": {
+      "title": "АС.2 · л.147 по штампу · PDF 157",
+      "file": "sources/R08_AS_147.jpg",
+      "printedSheet": "147",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 157,
+      "pageFile": "drawing-pages/4a341471dde1e97313fa409e8079e12144a24fb36441856922b58c3c56324fa4.webp"
+    },
+    "R08_AS_44": {
+      "title": "АС.2 · л.44 по штампу · PDF 54",
+      "file": "sources/R08_AS_44.jpg",
+      "printedSheet": "44",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 54,
+      "pageFile": "drawing-pages/fd1c19d2110c97cc8ec10d8a7688c6a2e30d87c5ff5b01f4724aee2f660ba514.webp"
+    },
+    "R08_AS_45": {
+      "title": "АС.2 · л.45 по штампу · PDF 55",
+      "file": "sources/R08_AS_45.jpg",
+      "printedSheet": "45",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 55,
+      "pageFile": "drawing-pages/be7e76aca5cac1b51d216801ffbc32be9f5959de9c1c3aac97314f7f8f5dd6af.webp"
+    },
+    "R08_AS_46": {
+      "title": "АС.2 · л.46 по штампу · PDF 56",
+      "file": "sources/R08_AS_46.jpg",
+      "printedSheet": "46",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 56,
+      "pageFile": "drawing-pages/45b1ade21ded0390f374b1a88830689226687d0765e8d4f919bc6a85fea136a2.webp"
+    },
+    "R08_AS_89": {
+      "title": "АС.2 · л.89 по штампу · PDF 99",
+      "file": "sources/R08_AS_89.jpg",
+      "printedSheet": "89",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 99,
+      "pageFile": "drawing-pages/b5632cd6477612facb7b45f6496d23f6f24ca2c922ad09948661527cb5d735bc.webp"
+    },
+    "R08_AS_90": {
+      "title": "АС.2 · л.90 по штампу · PDF 100",
+      "file": "sources/R08_AS_90.jpg",
+      "printedSheet": "90",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 100,
+      "pageFile": "drawing-pages/4d036945f10b4a42c0213d80947b6ad39d0d91df93dc1c2abaa284e185f93fd4.webp"
+    },
+    "R08_AS_91": {
+      "title": "АС.2 · л.91 по штампу · PDF 101",
+      "file": "sources/R08_AS_91.jpg",
+      "printedSheet": "91",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 101,
+      "pageFile": "drawing-pages/30b3727730ac4017337c1054da15731f7aa14122e6ac42f5b202c7cfcd3e73d0.webp"
+    },
+    "R08_AS_92": {
+      "title": "АС.2 · л.92 по штампу · PDF 102",
+      "file": "sources/R08_AS_92.jpg",
+      "printedSheet": "92",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 102,
+      "pageFile": "drawing-pages/e6e0ff4daa5c9de1744bb9797a1bc6c92c2734035cdda10fc3213bef2638cff2.webp"
+    },
+    "R08_AS_93": {
+      "title": "АС.2 · л.93 по штампу · PDF 103",
+      "file": "sources/R08_AS_93.jpg",
+      "printedSheet": "93",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 103,
+      "pageFile": "drawing-pages/1f692b9b89c2818a83db580f6570d25a16a8edae947fe16bb8a6f99c493ab199.webp"
+    },
+    "R09L_AS2_140": {
+      "title": "АС.2 · лист140 / PDF150 · рамы оборудования",
+      "file": "sources/R09L_AS2_140.png",
+      "printedSheet": "140",
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R09L_AS2_141": {
+      "title": "АС.2 · лист141 / PDF151 · рамы оборудования",
+      "file": "sources/R09L_AS2_141.png",
+      "printedSheet": "141",
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R09L_AS2_142": {
+      "title": "АС.2 · лист142 / PDF152 · рамы оборудования",
+      "file": "sources/R09L_AS2_142.png",
+      "printedSheet": "142",
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R09L_AS2_143": {
+      "title": "АС.2 · лист143 / PDF153 · рамы оборудования",
+      "file": "sources/R09L_AS2_143.png",
+      "printedSheet": "143",
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R10L_STAIR_L60": {
+      "title": "АС.2 · Л-1 · лист 60 / PDF 70",
+      "file": "sources/R10L_STAIR_L60.jpg",
+      "printedSheet": "60",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 70,
+      "pageFile": "drawing-pages/dd42f00b559893152fae184c646f0a95eac02989ec6f184c44fdf97bffec35b4.webp"
+    },
+    "R10L_STAIR_L61": {
+      "title": "АС.2 · Л-1 · лист 61 / PDF 71",
+      "file": "sources/R10L_STAIR_L61.jpg",
+      "printedSheet": "61",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 71,
+      "pageFile": "drawing-pages/f548c33777599d93ae796869bbfb576abcb411cdfdf6055021ac35bcd53e9971.webp"
+    },
+    "R10L_STAIR_L62": {
+      "title": "АС.2 · Л-1 · лист 62 / PDF 72",
+      "file": "sources/R10L_STAIR_L62.jpg",
+      "printedSheet": "62",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 72,
+      "pageFile": "drawing-pages/fc952ecca13a68add7b24b946e6b6c9d15eb20103fe075fd8209f710eab814bd.webp"
+    },
+    "R10L_STAIR_L63": {
+      "title": "АС.2 · Л-1 · лист 63 / PDF 73",
+      "file": "sources/R10L_STAIR_L63.jpg",
+      "printedSheet": "63",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 73,
+      "pageFile": "drawing-pages/74538788b2f19ff96907f456eacf31febc01839c736f90275b02cbe2af9e8079.webp"
+    },
+    "R10L_STAIR_L67": {
+      "title": "АС.2 · Л-1 · лист 67 / PDF 77",
+      "file": "sources/R10L_STAIR_L67.jpg",
+      "printedSheet": "67",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 77,
+      "pageFile": "drawing-pages/1a8f3d6ce7a6d27ab5dfb4e071890238c09b103344f05abb692fe26a87196a25.webp"
+    },
+    "R10L_STAIR_L68": {
+      "title": "АС.2 · Л-1 · лист 68 / PDF 78",
+      "file": "sources/R10L_STAIR_L68.jpg",
+      "printedSheet": "68",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 78,
+      "pageFile": "drawing-pages/9a3a2d8b962c27e9718c0da0967638c5b609a7d702c09c3373702874cdc4653c.webp"
+    },
+    "R10L_TN_7_55": {
+      "title": "ТехноНИКОЛЬ · техлист7.55 · 12.2025 · номинальный размер дорожки",
+      "file": "sources/R10L_TN_7_55.png",
+      "printedSheet": "7.55",
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R10L_ROOF_MU399": {
+      "title": "АС.2 л.39.9 · МУ кровли",
+      "file": "sources/R10L_ROOF_MU399.png",
+      "printedSheet": "39.9",
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R10L_ROOF_MU22": {
+      "title": "АС.2 л.22 · МУ кровли",
+      "file": "sources/R10L_ROOF_MU22.png",
+      "printedSheet": "22",
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R10L_GOST_5915_70": {
+      "title": "ГОСТ5915-70 · таблица М10 · официальное издание2010",
+      "file": "sources/R10L_GOST_5915_70.png",
+      "printedSheet": null,
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R10L_GOST_11371_78": {
+      "title": "ГОСТ11371-78 · шайба12 · таблица размеров",
+      "file": "sources/R10L_GOST_11371_78.png",
+      "printedSheet": null,
+      "pdf": null,
+      "pdfPage": null,
+      "pageFile": null
+    },
+    "R10L_AS2_148": {
+      "title": "АС.2 · лист148 / PDF158 · пол и ремонт",
+      "file": "sources/R10L_AS2_148.png",
+      "printedSheet": "148",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 158,
+      "pageFile": "drawing-pages/dfa3cb1b37d9499f719341bd08f4d83a2106cb781e3275b50c4d9e4bbc456a50.webp"
+    },
+    "R10L_AS2_149": {
+      "title": "АС.2 · лист149 / PDF159 · пол и ремонт",
+      "file": "sources/R10L_AS2_149.png",
+      "printedSheet": "149",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 159,
+      "pageFile": "drawing-pages/42852154c4c67ffa421943f4f78cb9fbc61f1c7e1d9b087fd6c9a7c6c97b069d.webp"
+    },
+    "R10L_AS2_150": {
+      "title": "АС.2 · лист150 / PDF160 · пол и ремонт",
+      "file": "sources/R10L_AS2_150.png",
+      "printedSheet": "150",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 160,
+      "pageFile": "drawing-pages/b5269da7548c8be5a68068f2ace466016c99572d578b6681b7b718937fc8611c.webp"
+    },
+    "R10L_AS2_151": {
+      "title": "АС.2 · лист151 / PDF161 · пол и ремонт",
+      "file": "sources/R10L_AS2_151.png",
+      "printedSheet": "151",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 161,
+      "pageFile": "drawing-pages/c0b473c066d9423c6735d5d57908217f0bc79ad96ec760b346ea1a045f83c4e5.webp"
+    },
+    "R10L_AS2_152": {
+      "title": "АС.2 · лист152 / PDF162 · пол и ремонт",
+      "file": "sources/R10L_AS2_152.png",
+      "printedSheet": "152",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 162,
+      "pageFile": "drawing-pages/3099fa8886a415a26664a333d3f1435d2aea07441646ca9cd15c0c73e8bbc813.webp"
+    },
+    "R10L_ROOF_AS2_L39_1": {
+      "title": "АС.2 л.39.1 / PDF41 — кровельные МУ и Б1",
+      "file": "sources/R10L_ROOF_AS2_L39_1.jpg",
+      "printedSheet": "39.1",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 41,
+      "pageFile": "drawing-pages/29dd49dfdd7fd5ade027a2b2eb5186984df2d2e753c536a5ccdb4ce731201d94.webp"
+    },
+    "R10L_ROOF_AS2_L39_2": {
+      "title": "АС.2 л.39.2 / PDF42 — кровельные МУ и Б1",
+      "file": "sources/R10L_ROOF_AS2_L39_2.jpg",
+      "printedSheet": "39.2",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 42,
+      "pageFile": "drawing-pages/b3745c2546efdcae122f8e41fc1c1cdb49929e7a631765b4218531300cb03b27.webp"
+    },
+    "R10L_ROOF_AS2_L39_3": {
+      "title": "АС.2 л.39.3 / PDF43 — кровельные МУ и Б1",
+      "file": "sources/R10L_ROOF_AS2_L39_3.jpg",
+      "printedSheet": "39.3",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 43,
+      "pageFile": "drawing-pages/45fc25f43d1e2d8f1bc6ece5e1c4368eec2d6140df3e3a246272983d818f3ebd.webp"
+    },
+    "R10L_ROOF_AS2_L39_4": {
+      "title": "АС.2 л.39.4 / PDF44 — кровельные МУ и Б1",
+      "file": "sources/R10L_ROOF_AS2_L39_4.jpg",
+      "printedSheet": "39.4",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 44,
+      "pageFile": "drawing-pages/e92e4a13f9ea1a58a5f4430d24b95460d3e341361f4b0d2aada46657a48a7db1.webp"
+    },
+    "R10L_ROOF_AS2_L39_5": {
+      "title": "АС.2 л.39.5 / PDF45 — кровельные МУ и Б1",
+      "file": "sources/R10L_ROOF_AS2_L39_5.jpg",
+      "printedSheet": "39.5",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 45,
+      "pageFile": "drawing-pages/c6ce52f519b164c67f818f40dbf34167ae9ea5dbb7989483b9466a6c29c193c2.webp"
+    },
+    "R10L_ROOF_AS2_L39_6": {
+      "title": "АС.2 л.39.6 / PDF46 — кровельные МУ и Б1",
+      "file": "sources/R10L_ROOF_AS2_L39_6.jpg",
+      "printedSheet": "39.6",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 46,
+      "pageFile": "drawing-pages/28a94d2cbb9c576981da24a7f6c8a112e4d3b6a43eba2af3e742c2d84cce23bd.webp"
+    },
+    "R10L_ROOF_AS2_L39_7": {
+      "title": "АС.2 л.39.7 / PDF47 — кровельные МУ и Б1",
+      "file": "sources/R10L_ROOF_AS2_L39_7.jpg",
+      "printedSheet": "39.7",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 47,
+      "pageFile": "drawing-pages/5e0d69ff3794d5db248b1a0e49b45b3e7c944e3b762ed86c59c72c42312fa5f0.webp"
+    },
+    "R10L_ROOF_AS2_L39_8": {
+      "title": "АС.2 л.39.8 / PDF48 — кровельные МУ и Б1",
+      "file": "sources/R10L_ROOF_AS2_L39_8.jpg",
+      "printedSheet": "39.8",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 48,
+      "pageFile": "drawing-pages/81f1b52c886b1a65bc19755d5234ffd295545d240af00a02acf823d72f773dba.webp"
+    },
+    "R10L_ROOF_OPENINGS_22": {
+      "title": "АС.2 PDF23 · источники отверстий МУ",
+      "file": "sources/R10L_ROOF_OPENINGS_22.jpg",
+      "printedSheet": "22",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 23,
+      "pageFile": "drawing-pages/db4313a85f8d6f9ef663f254855f2f457ebfe139a9ab2129add5dadc2b6a4ad1.webp"
+    },
+    "R10L_ROOF_OPENINGS_38": {
+      "title": "АС.2 PDF38 · источники отверстий МУ",
+      "file": "sources/R10L_ROOF_OPENINGS_38.jpg",
+      "printedSheet": null,
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 38,
+      "pageFile": "drawing-pages/211e2263143aca71b50b557edcd4b527355756fd76dd8db6a1cea9815a44a697.webp"
+    },
+    "R10L_ROOF_OPENINGS_39": {
+      "title": "АС.2 PDF39 · источники отверстий МУ",
+      "file": "sources/R10L_ROOF_OPENINGS_39.jpg",
+      "printedSheet": null,
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 39,
+      "pageFile": "drawing-pages/ed9c88ffda1f33cb61fb77acd3ebd5283a740246a309fcf94706e2f1c2326793.webp"
+    },
+    "R10L_ROOF_OPENINGS_41": {
+      "title": "АС.2 PDF41 · источники отверстий МУ",
+      "file": "sources/R10L_ROOF_OPENINGS_41.jpg",
+      "printedSheet": null,
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 41,
+      "pageFile": "drawing-pages/29dd49dfdd7fd5ade027a2b2eb5186984df2d2e753c536a5ccdb4ce731201d94.webp"
+    },
+    "R10L_ROOF_OPENINGS_42": {
+      "title": "АС.2 PDF42 · источники отверстий МУ",
+      "file": "sources/R10L_ROOF_OPENINGS_42.jpg",
+      "printedSheet": null,
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 42,
+      "pageFile": "drawing-pages/b3745c2546efdcae122f8e41fc1c1cdb49929e7a631765b4218531300cb03b27.webp"
+    },
+    "R10L_ROOF_OPENINGS_43": {
+      "title": "АС.2 PDF43 · источники отверстий МУ",
+      "file": "sources/R10L_ROOF_OPENINGS_43.jpg",
+      "printedSheet": null,
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 43,
+      "pageFile": "drawing-pages/45fc25f43d1e2d8f1bc6ece5e1c4368eec2d6140df3e3a246272983d818f3ebd.webp"
+    },
+    "R10L_ROOF_OPENINGS_44": {
+      "title": "АС.2 PDF44 · источники отверстий МУ",
+      "file": "sources/R10L_ROOF_OPENINGS_44.jpg",
+      "printedSheet": null,
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 44,
+      "pageFile": "drawing-pages/e92e4a13f9ea1a58a5f4430d24b95460d3e341361f4b0d2aada46657a48a7db1.webp"
+    },
+    "R10L_ROOF_OPENINGS_45": {
+      "title": "АС.2 PDF45 · источники отверстий МУ",
+      "file": "sources/R10L_ROOF_OPENINGS_45.jpg",
+      "printedSheet": null,
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 45,
+      "pageFile": "drawing-pages/c6ce52f519b164c67f818f40dbf34167ae9ea5dbb7989483b9466a6c29c193c2.webp"
+    },
+    "R10L_ROOF_OPENINGS_46": {
+      "title": "АС.2 PDF46 · источники отверстий МУ",
+      "file": "sources/R10L_ROOF_OPENINGS_46.jpg",
+      "printedSheet": "39.6",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 46,
+      "pageFile": "drawing-pages/28a94d2cbb9c576981da24a7f6c8a112e4d3b6a43eba2af3e742c2d84cce23bd.webp"
+    },
+    "R10L_ROOF_OPENINGS_47": {
+      "title": "АС.2 PDF47 · источники отверстий МУ",
+      "file": "sources/R10L_ROOF_OPENINGS_47.jpg",
+      "printedSheet": null,
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 47,
+      "pageFile": "drawing-pages/5e0d69ff3794d5db248b1a0e49b45b3e7c944e3b762ed86c59c72c42312fa5f0.webp"
+    },
+    "R10L_ROOF_OPENINGS_48": {
+      "title": "АС.2 PDF48 · источники отверстий МУ",
+      "file": "sources/R10L_ROOF_OPENINGS_48.jpg",
+      "printedSheet": "39.8",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 48,
+      "pageFile": "drawing-pages/81f1b52c886b1a65bc19755d5234ffd295545d240af00a02acf823d72f773dba.webp"
+    },
+    "NAV_AS2_PDF67": {
+      "title": "АС.2 л.55–57 / PDF65–67; p.floor реального родителя · основание навигации",
+      "file": "sources/AS2_PDF67.png",
+      "printedSheet": "55",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 67,
+      "pageFile": "drawing-pages/ad1bfdd03e3e0e031a32f280329d4ef7b502ef7341b94a05cfe75602b98e2fa6.webp"
+    },
+    "NAV_AS2_PDF79": {
+      "title": "АС.2 л.69 / PDF79, Пп-1 и отверстие700×700 · основание навигации",
+      "file": "sources/AS2_PDF79.png",
+      "printedSheet": "69",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 79,
+      "pageFile": "drawing-pages/05e4a37032bc268694cdf31eae2e9b90f869a7190d370eb713cb6b370b5d37b9.webp"
+    },
+    "NAV_AS2_PDF66": {
+      "title": "АС.2 л.11,51,53–56 / PDF12,61,63–66 · основание навигации",
+      "file": "sources/AS2_PDF66.png",
+      "printedSheet": "11",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 66,
+      "pageFile": "drawing-pages/5290e308386d114ef202b3443c3c8dab810106f75ab050087695656b213a9fce.webp"
+    },
+    "NAV_AS2_PDF81": {
+      "title": "АС.2 л.71–72 / PDF81–82 · основание навигации",
+      "file": "sources/AS2_PDF81.png",
+      "printedSheet": "71",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 81,
+      "pageFile": "drawing-pages/b31e2c031cf1e61fa3f4f3e34f2ee51c7724deab0fa7d1f71d26a2b56701fcb7.webp"
+    },
+    "NAV_AS2_PDF89": {
+      "title": "АС.2 л.79 / PDF89, планы и разрез шахты · основание навигации",
+      "file": "sources/AS2_PDF89.png",
+      "printedSheet": "79",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 89,
+      "pageFile": "drawing-pages/6cd25c686a284be7c7b523dcd2d4df7fa1fd4493c93d22a6b3607271ee12c3b5.webp"
+    },
+    "NAV_AS2_PDF90": {
+      "title": "АС.2 л.79–80 / PDF89–90 · основание навигации",
+      "file": "sources/AS2_PDF90.png",
+      "printedSheet": "79",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 90,
+      "pageFile": "drawing-pages/0598881676312c6683acd7ebf10502c35a87ce4dea56e8d3eb50fb244c06f848.webp"
+    },
+    "NAV_AS2_PDF91": {
+      "title": "АС.2 л.21,79,81–82 / PDF22,89,91–92 · основание навигации",
+      "file": "sources/AS2_PDF91.png",
+      "printedSheet": "21",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 91,
+      "pageFile": "drawing-pages/23b8d989ef3bd5645cf89e75a564769b2cad64858694270b783f8d5aba3135ee.webp"
+    },
+    "NAV_AS2_PDF12": {
+      "title": "АС.2 л.11–13,16–19 / PDF12–14,17–20; АР л.10 · основание навигации",
+      "file": "sources/AS2_PDF12.png",
+      "printedSheet": "11",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 12,
+      "pageFile": "drawing-pages/e5a3b410804822b717a333453e3c3cdd6a7567c4c96b1a223d23b661abc84d64.webp"
+    },
+    "NAV_AS2_PDF157": {
+      "title": "АС.2 л.90,147 / PDF100,157; p.sample_only / export_main · основание навигации",
+      "file": "sources/AS2_PDF157.png",
+      "printedSheet": "90",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 157,
+      "pageFile": "drawing-pages/4a341471dde1e97313fa409e8079e12144a24fb36441856922b58c3c56324fa4.webp"
+    },
+    "NAV_AS2_PDF154": {
+      "title": "АС.2 л.140–141 и144 / PDF150–151,154 · основание навигации",
+      "file": "sources/AS2_PDF154.png",
+      "printedSheet": "140",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 154,
+      "pageFile": "drawing-pages/e22019794d7611fc3d192712a54bdd06245042ed561b4e6659e3aac49e35a41d.webp"
+    },
+    "NAV_AS2_PDF151": {
+      "title": "АС.2 л.141 и145 / PDF151,155 · основание навигации",
+      "file": "sources/AS2_PDF151.png",
+      "printedSheet": "141",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 151,
+      "pageFile": "drawing-pages/3403fd62109e1be921d539b311b446c337dadc270517df2a1bfb075a0cfbf0a3.webp"
+    },
+    "NAV_AS2_PDF153": {
+      "title": "АС.2 л.142–143,145–146 / PDF152–153,155–156 · основание навигации",
+      "file": "sources/AS2_PDF153.png",
+      "printedSheet": "142",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 153,
+      "pageFile": "drawing-pages/726358491412097e71f82e13f6766a6c3884dcf7ba497fa337f154d18055625a.webp"
+    },
+    "NAV_AS2_PDF155": {
+      "title": "АС.2 л.145–146 / PDF155–156, фрагменты4/5 · основание навигации",
+      "file": "sources/AS2_PDF155.png",
+      "printedSheet": "145",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 155,
+      "pageFile": "drawing-pages/4fd4a403529727a42c7c0084c997c94931af218358d6723d1747d544dc48e0c4.webp"
+    },
+    "NAV_AS2_PDF100": {
+      "title": "АС.2 л.90 / PDF100, план фрагмента1 и сечения · основание навигации",
+      "file": "sources/AS2_PDF100.png",
+      "printedSheet": "90",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 100,
+      "pageFile": "drawing-pages/4d036945f10b4a42c0213d80947b6ad39d0d91df93dc1c2abaa284e185f93fd4.webp"
+    },
+    "NAV_AS2_PDF94": {
+      "title": "АС.2 л.83–84 / PDF93–94, собственные базы0,000/+3,600/+7,200 · основание навигации",
+      "file": "sources/AS2_PDF94.png",
+      "printedSheet": "83",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 94,
+      "pageFile": "drawing-pages/817514e2df76b012e55e0d15aeb7b10361e36e678ba91fe324bde9e8cfe86b72.webp"
+    },
+    "NAV_AS2_PDF21": {
+      "title": "Собственный p.level / p.floor / level_basis сохранённой записи; АС.2 л.20–22 · основание навигации",
+      "file": "sources/AS2_PDF21.png",
+      "printedSheet": "20",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 21,
+      "pageFile": "drawing-pages/ad5ff38466df43a486c49606b6ebc6c24afa48a7fc766f01e307ce5857979cc6.webp"
+    },
+    "ALBUM_AS2_PLACE_45": {
+      "title": "АС.2 · размещение · лист45 / PDF55",
+      "file": "sources/ALBUM_AS2_PLACE_45.png",
+      "printedSheet": "45",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 55,
+      "pageFile": "drawing-pages/be7e76aca5cac1b51d216801ffbc32be9f5959de9c1c3aac97314f7f8f5dd6af.webp"
+    },
+    "ALBUM_AS2_PLACE_46": {
+      "title": "АС.2 · размещение · лист46 / PDF56",
+      "file": "sources/ALBUM_AS2_PLACE_46.png",
+      "printedSheet": "46",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 56,
+      "pageFile": "drawing-pages/45b1ade21ded0390f374b1a88830689226687d0765e8d4f919bc6a85fea136a2.webp"
+    },
+    "ALBUM_AS2_PLACE_55": {
+      "title": "АС.2 · размещение · лист55 / PDF65",
+      "file": "sources/ALBUM_AS2_PLACE_55.png",
+      "printedSheet": "55",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfPage": 65,
+      "pageFile": "drawing-pages/87faccaae71579c8abf0b3afff8c324eca8a616e188e7ffa1748f016cfa5fd04.webp"
+    }
+  },
+  "files": {
+    "drawing-pages/34ef61583baca209df16f35008ef338ac08ce988d5fe415f016eaef19e95c2fe.webp": {
+      "sha256": "34ef61583baca209df16f35008ef338ac08ce988d5fe415f016eaef19e95c2fe",
+      "bytes": 218674,
+      "storage": "drawing-pages/34ef61583baca209df16f35008ef338ac08ce988d5fe415f016eaef19e95c2fe.webp",
+      "storedBytes": 218674,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 5,
+      "width": 3200,
+      "height": 2261
+    },
+    "drawing-pages/cb2032458825617a784d0e2263bc9978f6df3c8dbb6bef1c321d9e06044e5853.webp": {
+      "sha256": "cb2032458825617a784d0e2263bc9978f6df3c8dbb6bef1c321d9e06044e5853",
+      "bytes": 181768,
+      "storage": "drawing-pages/cb2032458825617a784d0e2263bc9978f6df3c8dbb6bef1c321d9e06044e5853.webp",
+      "storedBytes": 181768,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 6,
+      "width": 3200,
+      "height": 2261
+    },
+    "drawing-pages/ed5e6f51dcbadc29a58b519677d8494cf566cc678eaf1866304f4cf80d0a36e5.webp": {
+      "sha256": "ed5e6f51dcbadc29a58b519677d8494cf566cc678eaf1866304f4cf80d0a36e5",
+      "bytes": 240146,
+      "storage": "drawing-pages/ed5e6f51dcbadc29a58b519677d8494cf566cc678eaf1866304f4cf80d0a36e5.webp",
+      "storedBytes": 240146,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 9,
+      "width": 3200,
+      "height": 2261
+    },
+    "drawing-pages/48a67b0502168620d3b67c1611890b2b3bd58d19fc9d9d2238ec69445f3a5d41.webp": {
+      "sha256": "48a67b0502168620d3b67c1611890b2b3bd58d19fc9d9d2238ec69445f3a5d41",
+      "bytes": 229692,
+      "storage": "drawing-pages/48a67b0502168620d3b67c1611890b2b3bd58d19fc9d9d2238ec69445f3a5d41.webp",
+      "storedBytes": 229692,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 10,
+      "width": 3200,
+      "height": 2261
+    },
+    "drawing-pages/e5a3b410804822b717a333453e3c3cdd6a7567c4c96b1a223d23b661abc84d64.webp": {
+      "sha256": "e5a3b410804822b717a333453e3c3cdd6a7567c4c96b1a223d23b661abc84d64",
+      "bytes": 453062,
+      "storage": "drawing-pages/e5a3b410804822b717a333453e3c3cdd6a7567c4c96b1a223d23b661abc84d64.webp",
+      "storedBytes": 453062,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 12,
+      "width": 3200,
+      "height": 2261
+    },
+    "drawing-pages/ad5ff38466df43a486c49606b6ebc6c24afa48a7fc766f01e307ce5857979cc6.webp": {
+      "sha256": "ad5ff38466df43a486c49606b6ebc6c24afa48a7fc766f01e307ce5857979cc6",
+      "bytes": 270296,
+      "storage": "drawing-pages/ad5ff38466df43a486c49606b6ebc6c24afa48a7fc766f01e307ce5857979cc6.webp",
+      "storedBytes": 270296,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 21,
+      "width": 3200,
+      "height": 2261
+    },
+    "drawing-pages/4ef53692b16004f662d448fd0b2ebf77e474c55a9a39b5067abe052955c5351e.webp": {
+      "sha256": "4ef53692b16004f662d448fd0b2ebf77e474c55a9a39b5067abe052955c5351e",
+      "bytes": 268976,
+      "storage": "drawing-pages/4ef53692b16004f662d448fd0b2ebf77e474c55a9a39b5067abe052955c5351e.webp",
+      "storedBytes": 268976,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 22,
+      "width": 3200,
+      "height": 2261
+    },
+    "drawing-pages/db4313a85f8d6f9ef663f254855f2f457ebfe139a9ab2129add5dadc2b6a4ad1.webp": {
+      "sha256": "db4313a85f8d6f9ef663f254855f2f457ebfe139a9ab2129add5dadc2b6a4ad1",
+      "bytes": 256750,
+      "storage": "drawing-pages/db4313a85f8d6f9ef663f254855f2f457ebfe139a9ab2129add5dadc2b6a4ad1.webp",
+      "storedBytes": 256750,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 23,
+      "width": 3200,
+      "height": 2261
+    },
+    "drawing-pages/ce09d7e4b09bc84962f91743ccff882674ad7125af9296832bc9ae0559be6733.webp": {
+      "sha256": "ce09d7e4b09bc84962f91743ccff882674ad7125af9296832bc9ae0559be6733",
+      "bytes": 216176,
+      "storage": "drawing-pages/ce09d7e4b09bc84962f91743ccff882674ad7125af9296832bc9ae0559be6733.webp",
+      "storedBytes": 216176,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 24,
+      "width": 3200,
+      "height": 2264
+    },
+    "drawing-pages/6fe980c8505558731bbe982c6f6a79697f7504b703d27a2019c38985c32a3760.webp": {
+      "sha256": "6fe980c8505558731bbe982c6f6a79697f7504b703d27a2019c38985c32a3760",
+      "bytes": 252634,
+      "storage": "drawing-pages/6fe980c8505558731bbe982c6f6a79697f7504b703d27a2019c38985c32a3760.webp",
+      "storedBytes": 252634,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 25,
+      "width": 3200,
+      "height": 1509
+    },
+    "drawing-pages/f1827a421ceb1a61d2ec634534fb843b5943d18ac0bd6d6dc8850470f47151fd.webp": {
+      "sha256": "f1827a421ceb1a61d2ec634534fb843b5943d18ac0bd6d6dc8850470f47151fd",
+      "bytes": 305250,
+      "storage": "drawing-pages/f1827a421ceb1a61d2ec634534fb843b5943d18ac0bd6d6dc8850470f47151fd.webp",
+      "storedBytes": 305250,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 26,
+      "width": 3200,
+      "height": 2264
+    },
+    "drawing-pages/31d3859921be5c6e27a1b90ffebb846c3308db68511c57decff5321554f4f6fb.webp": {
+      "sha256": "31d3859921be5c6e27a1b90ffebb846c3308db68511c57decff5321554f4f6fb",
+      "bytes": 270718,
+      "storage": "drawing-pages/31d3859921be5c6e27a1b90ffebb846c3308db68511c57decff5321554f4f6fb.webp",
+      "storedBytes": 270718,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 27,
+      "width": 3200,
+      "height": 2264
+    },
+    "drawing-pages/51e8b70f554cb612264ba3c7aa5ed0c0a641248d27c75ced5aeedcc3833943fd.webp": {
+      "sha256": "51e8b70f554cb612264ba3c7aa5ed0c0a641248d27c75ced5aeedcc3833943fd",
+      "bytes": 365152,
+      "storage": "drawing-pages/51e8b70f554cb612264ba3c7aa5ed0c0a641248d27c75ced5aeedcc3833943fd.webp",
+      "storedBytes": 365152,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 28,
+      "width": 3200,
+      "height": 2264
+    },
+    "drawing-pages/83cfc0d2a74177cebb60b931b730f5479187c23fc432af7607151c285cc81bc4.webp": {
+      "sha256": "83cfc0d2a74177cebb60b931b730f5479187c23fc432af7607151c285cc81bc4",
+      "bytes": 300448,
+      "storage": "drawing-pages/83cfc0d2a74177cebb60b931b730f5479187c23fc432af7607151c285cc81bc4.webp",
+      "storedBytes": 300448,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 29,
+      "width": 3200,
+      "height": 2264
+    },
+    "drawing-pages/b7aea4c998ba4a56870ce4e310f239d67a704c5b2915150ae279f9be24eb028e.webp": {
+      "sha256": "b7aea4c998ba4a56870ce4e310f239d67a704c5b2915150ae279f9be24eb028e",
+      "bytes": 325960,
+      "storage": "drawing-pages/b7aea4c998ba4a56870ce4e310f239d67a704c5b2915150ae279f9be24eb028e.webp",
+      "storedBytes": 325960,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 30,
+      "width": 3200,
+      "height": 2264
+    },
+    "drawing-pages/6adeac46a4eba86ba886799be6f42b176b33a6adfe39f943b48ebdb14f5307aa.webp": {
+      "sha256": "6adeac46a4eba86ba886799be6f42b176b33a6adfe39f943b48ebdb14f5307aa",
+      "bytes": 321330,
+      "storage": "drawing-pages/6adeac46a4eba86ba886799be6f42b176b33a6adfe39f943b48ebdb14f5307aa.webp",
+      "storedBytes": 321330,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 31,
+      "width": 3200,
+      "height": 2264
+    },
+    "drawing-pages/0ccd9627930bd1b30cf08090e9435a8331d248a09420534011a06c02ea2807cc.webp": {
+      "sha256": "0ccd9627930bd1b30cf08090e9435a8331d248a09420534011a06c02ea2807cc",
+      "bytes": 267992,
+      "storage": "drawing-pages/0ccd9627930bd1b30cf08090e9435a8331d248a09420534011a06c02ea2807cc.webp",
+      "storedBytes": 267992,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 32,
+      "width": 3200,
+      "height": 2264
+    },
+    "drawing-pages/fc624bd24e7e8ba84d384342de686753231b54e6849c5e052457490f9e276566.webp": {
+      "sha256": "fc624bd24e7e8ba84d384342de686753231b54e6849c5e052457490f9e276566",
+      "bytes": 264700,
+      "storage": "drawing-pages/fc624bd24e7e8ba84d384342de686753231b54e6849c5e052457490f9e276566.webp",
+      "storedBytes": 264700,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 33,
+      "width": 3200,
+      "height": 2264
+    },
+    "drawing-pages/017c6bc3e0978e3822f3950540759691918bca7157daf78a70085407459dca7f.webp": {
+      "sha256": "017c6bc3e0978e3822f3950540759691918bca7157daf78a70085407459dca7f",
+      "bytes": 266760,
+      "storage": "drawing-pages/017c6bc3e0978e3822f3950540759691918bca7157daf78a70085407459dca7f.webp",
+      "storedBytes": 266760,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 34,
+      "width": 3200,
+      "height": 2264
+    },
+    "drawing-pages/2818ae1059d09d918c5e8c21f07fa4505d211c229423ab1c2995a233a52fb10a.webp": {
+      "sha256": "2818ae1059d09d918c5e8c21f07fa4505d211c229423ab1c2995a233a52fb10a",
+      "bytes": 309962,
+      "storage": "drawing-pages/2818ae1059d09d918c5e8c21f07fa4505d211c229423ab1c2995a233a52fb10a.webp",
+      "storedBytes": 309962,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 35,
+      "width": 3200,
+      "height": 2264
+    },
+    "drawing-pages/eb32c55ae4e1c47194da892310fcc5920ef45372984d7deccbc90fff7dc0b4a1.webp": {
+      "sha256": "eb32c55ae4e1c47194da892310fcc5920ef45372984d7deccbc90fff7dc0b4a1",
+      "bytes": 259072,
+      "storage": "drawing-pages/eb32c55ae4e1c47194da892310fcc5920ef45372984d7deccbc90fff7dc0b4a1.webp",
+      "storedBytes": 259072,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 36,
+      "width": 3200,
+      "height": 2264
+    },
+    "drawing-pages/96302517d925f633ecb55f961dd7dfbc1228442661c1c5a59afa9a5901d95ff3.webp": {
+      "sha256": "96302517d925f633ecb55f961dd7dfbc1228442661c1c5a59afa9a5901d95ff3",
+      "bytes": 262948,
+      "storage": "drawing-pages/96302517d925f633ecb55f961dd7dfbc1228442661c1c5a59afa9a5901d95ff3.webp",
+      "storedBytes": 262948,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 37,
+      "width": 3200,
+      "height": 2264
+    },
+    "drawing-pages/211e2263143aca71b50b557edcd4b527355756fd76dd8db6a1cea9815a44a697.webp": {
+      "sha256": "211e2263143aca71b50b557edcd4b527355756fd76dd8db6a1cea9815a44a697",
+      "bytes": 291110,
+      "storage": "drawing-pages/211e2263143aca71b50b557edcd4b527355756fd76dd8db6a1cea9815a44a697.webp",
+      "storedBytes": 291110,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 38,
+      "width": 3200,
+      "height": 2264
+    },
+    "drawing-pages/ed9c88ffda1f33cb61fb77acd3ebd5283a740246a309fcf94706e2f1c2326793.webp": {
+      "sha256": "ed9c88ffda1f33cb61fb77acd3ebd5283a740246a309fcf94706e2f1c2326793",
+      "bytes": 254266,
+      "storage": "drawing-pages/ed9c88ffda1f33cb61fb77acd3ebd5283a740246a309fcf94706e2f1c2326793.webp",
+      "storedBytes": 254266,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 39,
+      "width": 3200,
+      "height": 2264
+    },
+    "drawing-pages/fd1c19d2110c97cc8ec10d8a7688c6a2e30d87c5ff5b01f4724aee2f660ba514.webp": {
+      "sha256": "fd1c19d2110c97cc8ec10d8a7688c6a2e30d87c5ff5b01f4724aee2f660ba514",
+      "bytes": 342276,
+      "storage": "drawing-pages/fd1c19d2110c97cc8ec10d8a7688c6a2e30d87c5ff5b01f4724aee2f660ba514.webp",
+      "storedBytes": 342276,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 54,
+      "width": 3200,
+      "height": 2264
+    },
+    "drawing-pages/b31e2c031cf1e61fa3f4f3e34f2ee51c7724deab0fa7d1f71d26a2b56701fcb7.webp": {
+      "sha256": "b31e2c031cf1e61fa3f4f3e34f2ee51c7724deab0fa7d1f71d26a2b56701fcb7",
+      "bytes": 103380,
+      "storage": "drawing-pages/b31e2c031cf1e61fa3f4f3e34f2ee51c7724deab0fa7d1f71d26a2b56701fcb7.webp",
+      "storedBytes": 103380,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 81,
+      "width": 3200,
+      "height": 2263
+    },
+    "drawing-pages/2d9e0a2d8f7dd6207da2da3b999ea9df2491e576c731c29af15700d6c84e0b83.webp": {
+      "sha256": "2d9e0a2d8f7dd6207da2da3b999ea9df2491e576c731c29af15700d6c84e0b83",
+      "bytes": 211930,
+      "storage": "drawing-pages/2d9e0a2d8f7dd6207da2da3b999ea9df2491e576c731c29af15700d6c84e0b83.webp",
+      "storedBytes": 211930,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 82,
+      "width": 3200,
+      "height": 2263
+    },
+    "drawing-pages/2e54dede79eee75beebb936a54b3110ef883c76bf0787f537e7277c7f456d195.webp": {
+      "sha256": "2e54dede79eee75beebb936a54b3110ef883c76bf0787f537e7277c7f456d195",
+      "bytes": 131678,
+      "storage": "drawing-pages/2e54dede79eee75beebb936a54b3110ef883c76bf0787f537e7277c7f456d195.webp",
+      "storedBytes": 131678,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 83,
+      "width": 3200,
+      "height": 2263
+    },
+    "drawing-pages/d783fdb8583ad7595eac9118c58f097360cdae1265bff9136a78c339d1caaad2.webp": {
+      "sha256": "d783fdb8583ad7595eac9118c58f097360cdae1265bff9136a78c339d1caaad2",
+      "bytes": 160204,
+      "storage": "drawing-pages/d783fdb8583ad7595eac9118c58f097360cdae1265bff9136a78c339d1caaad2.webp",
+      "storedBytes": 160204,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 84,
+      "width": 3200,
+      "height": 2263
+    },
+    "drawing-pages/dbeb2747a641dc8b86a8fbd6300d10853a4b391ee306588fc03ac72ee4daea3f.webp": {
+      "sha256": "dbeb2747a641dc8b86a8fbd6300d10853a4b391ee306588fc03ac72ee4daea3f",
+      "bytes": 156382,
+      "storage": "drawing-pages/dbeb2747a641dc8b86a8fbd6300d10853a4b391ee306588fc03ac72ee4daea3f.webp",
+      "storedBytes": 156382,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 85,
+      "width": 3200,
+      "height": 2263
+    },
+    "drawing-pages/c2505c3935b06ed61b116fc970f5ac0bac9a21adee883698a624f5e4a0499db2.webp": {
+      "sha256": "c2505c3935b06ed61b116fc970f5ac0bac9a21adee883698a624f5e4a0499db2",
+      "bytes": 159068,
+      "storage": "drawing-pages/c2505c3935b06ed61b116fc970f5ac0bac9a21adee883698a624f5e4a0499db2.webp",
+      "storedBytes": 159068,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 86,
+      "width": 3200,
+      "height": 2263
+    },
+    "drawing-pages/3dd2bc13b46b2fadbdff7096e9e63f6cf3ac9286fb163cb355b68ba29c6705ff.webp": {
+      "sha256": "3dd2bc13b46b2fadbdff7096e9e63f6cf3ac9286fb163cb355b68ba29c6705ff",
+      "bytes": 156780,
+      "storage": "drawing-pages/3dd2bc13b46b2fadbdff7096e9e63f6cf3ac9286fb163cb355b68ba29c6705ff.webp",
+      "storedBytes": 156780,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 87,
+      "width": 3200,
+      "height": 2263
+    },
+    "drawing-pages/1b5f05c888245770de1e0f8aa69d688b5f7005bc01bc559d411624939dda1dad.webp": {
+      "sha256": "1b5f05c888245770de1e0f8aa69d688b5f7005bc01bc559d411624939dda1dad",
+      "bytes": 144942,
+      "storage": "drawing-pages/1b5f05c888245770de1e0f8aa69d688b5f7005bc01bc559d411624939dda1dad.webp",
+      "storedBytes": 144942,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 88,
+      "width": 3200,
+      "height": 2263
+    },
+    "drawing-pages/6cd25c686a284be7c7b523dcd2d4df7fa1fd4493c93d22a6b3607271ee12c3b5.webp": {
+      "sha256": "6cd25c686a284be7c7b523dcd2d4df7fa1fd4493c93d22a6b3607271ee12c3b5",
+      "bytes": 296930,
+      "storage": "drawing-pages/6cd25c686a284be7c7b523dcd2d4df7fa1fd4493c93d22a6b3607271ee12c3b5.webp",
+      "storedBytes": 296930,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 89,
+      "width": 3200,
+      "height": 2264
+    },
+    "drawing-pages/0598881676312c6683acd7ebf10502c35a87ce4dea56e8d3eb50fb244c06f848.webp": {
+      "sha256": "0598881676312c6683acd7ebf10502c35a87ce4dea56e8d3eb50fb244c06f848",
+      "bytes": 179166,
+      "storage": "drawing-pages/0598881676312c6683acd7ebf10502c35a87ce4dea56e8d3eb50fb244c06f848.webp",
+      "storedBytes": 179166,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 90,
+      "width": 3200,
+      "height": 2263
+    },
+    "drawing-pages/23b8d989ef3bd5645cf89e75a564769b2cad64858694270b783f8d5aba3135ee.webp": {
+      "sha256": "23b8d989ef3bd5645cf89e75a564769b2cad64858694270b783f8d5aba3135ee",
+      "bytes": 203180,
+      "storage": "drawing-pages/23b8d989ef3bd5645cf89e75a564769b2cad64858694270b783f8d5aba3135ee.webp",
+      "storedBytes": 203180,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 91,
+      "width": 3200,
+      "height": 2263
+    },
+    "drawing-pages/2cf0affd8e0e352aed9caa288f5372c87c919309c8167310e5661c8ad849bd33.webp": {
+      "sha256": "2cf0affd8e0e352aed9caa288f5372c87c919309c8167310e5661c8ad849bd33",
+      "bytes": 166654,
+      "storage": "drawing-pages/2cf0affd8e0e352aed9caa288f5372c87c919309c8167310e5661c8ad849bd33.webp",
+      "storedBytes": 166654,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 92,
+      "width": 3200,
+      "height": 2263
+    },
+    "drawing-pages/9d60711be66277e6786629c26592cac4f45e7093364635a16febc7b293283314.webp": {
+      "sha256": "9d60711be66277e6786629c26592cac4f45e7093364635a16febc7b293283314",
+      "bytes": 209556,
+      "storage": "drawing-pages/9d60711be66277e6786629c26592cac4f45e7093364635a16febc7b293283314.webp",
+      "storedBytes": 209556,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 129,
+      "width": 3200,
+      "height": 2264
+    },
+    "drawing-pages/3538cd98de9f85d138bccbde28d5a4af139fe5396c3ff8b431d8d0537aab0041.webp": {
+      "sha256": "3538cd98de9f85d138bccbde28d5a4af139fe5396c3ff8b431d8d0537aab0041",
+      "bytes": 153594,
+      "storage": "drawing-pages/3538cd98de9f85d138bccbde28d5a4af139fe5396c3ff8b431d8d0537aab0041.webp",
+      "storedBytes": 153594,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 130,
+      "width": 3200,
+      "height": 2264
+    },
+    "drawing-pages/3d37e5d5190d002a90989ff4581dfdf0803f6ab4a4437c4ff5685a6e82563abc.webp": {
+      "sha256": "3d37e5d5190d002a90989ff4581dfdf0803f6ab4a4437c4ff5685a6e82563abc",
+      "bytes": 201182,
+      "storage": "drawing-pages/3d37e5d5190d002a90989ff4581dfdf0803f6ab4a4437c4ff5685a6e82563abc.webp",
+      "storedBytes": 201182,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 131,
+      "width": 3200,
+      "height": 2264
+    },
+    "drawing-pages/b60f3a08d44181acab858ccd8dab67532dbf6c669cc073d6d4eb63f578bb26d8.webp": {
+      "sha256": "b60f3a08d44181acab858ccd8dab67532dbf6c669cc073d6d4eb63f578bb26d8",
+      "bytes": 342920,
+      "storage": "drawing-pages/b60f3a08d44181acab858ccd8dab67532dbf6c669cc073d6d4eb63f578bb26d8.webp",
+      "storedBytes": 342920,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 132,
+      "width": 3200,
+      "height": 2264
+    },
+    "drawing-pages/2ff873609e380dcbfbfeec76a8e2bb70f1ea7d2d2170a31ee24b9d3c5b20c22c.webp": {
+      "sha256": "2ff873609e380dcbfbfeec76a8e2bb70f1ea7d2d2170a31ee24b9d3c5b20c22c",
+      "bytes": 251238,
+      "storage": "drawing-pages/2ff873609e380dcbfbfeec76a8e2bb70f1ea7d2d2170a31ee24b9d3c5b20c22c.webp",
+      "storedBytes": 251238,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 133,
+      "width": 3200,
+      "height": 2264
+    },
+    "drawing-pages/475d0d6c45d5e46dcbda417d0c573789eb773aed7efe302b8054e3c6557d884e.webp": {
+      "sha256": "475d0d6c45d5e46dcbda417d0c573789eb773aed7efe302b8054e3c6557d884e",
+      "bytes": 150222,
+      "storage": "drawing-pages/475d0d6c45d5e46dcbda417d0c573789eb773aed7efe302b8054e3c6557d884e.webp",
+      "storedBytes": 150222,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 134,
+      "width": 3200,
+      "height": 2263
+    },
+    "drawing-pages/7dfd271150a31cd202942a7825dcaa4143fb8c1cfa556632ae8ddaee512f5abe.webp": {
+      "sha256": "7dfd271150a31cd202942a7825dcaa4143fb8c1cfa556632ae8ddaee512f5abe",
+      "bytes": 236936,
+      "storage": "drawing-pages/7dfd271150a31cd202942a7825dcaa4143fb8c1cfa556632ae8ddaee512f5abe.webp",
+      "storedBytes": 236936,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 135,
+      "width": 3200,
+      "height": 2264
+    },
+    "drawing-pages/04b4e43a4562371e84cec76f96b462f66af67314a770ae3172213a35717d8e78.webp": {
+      "sha256": "04b4e43a4562371e84cec76f96b462f66af67314a770ae3172213a35717d8e78",
+      "bytes": 218684,
+      "storage": "drawing-pages/04b4e43a4562371e84cec76f96b462f66af67314a770ae3172213a35717d8e78.webp",
+      "storedBytes": 218684,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 136,
+      "width": 3200,
+      "height": 2264
+    },
+    "drawing-pages/156fdcb71eccbb035f17125c24da6b659d4a83052f4d7abbf0622ea2dfd0358e.webp": {
+      "sha256": "156fdcb71eccbb035f17125c24da6b659d4a83052f4d7abbf0622ea2dfd0358e",
+      "bytes": 460904,
+      "storage": "drawing-pages/156fdcb71eccbb035f17125c24da6b659d4a83052f4d7abbf0622ea2dfd0358e.webp",
+      "storedBytes": 460904,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 137,
+      "width": 3200,
+      "height": 2264
+    },
+    "drawing-pages/0ef2e96ce141e36c0e0be46e304a55aad2f65701ce0684156dd0f034d6203988.webp": {
+      "sha256": "0ef2e96ce141e36c0e0be46e304a55aad2f65701ce0684156dd0f034d6203988",
+      "bytes": 130076,
+      "storage": "drawing-pages/0ef2e96ce141e36c0e0be46e304a55aad2f65701ce0684156dd0f034d6203988.webp",
+      "storedBytes": 130076,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 138,
+      "width": 3200,
+      "height": 2263
+    },
+    "drawing-pages/c6e8b0ac9299e7549f7b25c490629d74815cc1d8cb716a8c1030050652f71c29.webp": {
+      "sha256": "c6e8b0ac9299e7549f7b25c490629d74815cc1d8cb716a8c1030050652f71c29",
+      "bytes": 191550,
+      "storage": "drawing-pages/c6e8b0ac9299e7549f7b25c490629d74815cc1d8cb716a8c1030050652f71c29.webp",
+      "storedBytes": 191550,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 139,
+      "width": 3200,
+      "height": 2264
+    },
+    "drawing-pages/b76351e614436b3df76300908326dcc6e5474fb60b569d52ab9388ab56fa3323.webp": {
+      "sha256": "b76351e614436b3df76300908326dcc6e5474fb60b569d52ab9388ab56fa3323",
+      "bytes": 288926,
+      "storage": "drawing-pages/b76351e614436b3df76300908326dcc6e5474fb60b569d52ab9388ab56fa3323.webp",
+      "storedBytes": 288926,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 140,
+      "width": 3200,
+      "height": 2264
+    },
+    "drawing-pages/f6cb95a48a957aac3978b0eb90e5cc8550432603dbbefa2d4404df6841dbfcc5.webp": {
+      "sha256": "f6cb95a48a957aac3978b0eb90e5cc8550432603dbbefa2d4404df6841dbfcc5",
+      "bytes": 206614,
+      "storage": "drawing-pages/f6cb95a48a957aac3978b0eb90e5cc8550432603dbbefa2d4404df6841dbfcc5.webp",
+      "storedBytes": 206614,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 141,
+      "width": 3200,
+      "height": 2263
+    },
+    "drawing-pages/b72dc744222910edb9140062850ecf8442e113fe7fe5e2a328523bc9ed7bafb9.webp": {
+      "sha256": "b72dc744222910edb9140062850ecf8442e113fe7fe5e2a328523bc9ed7bafb9",
+      "bytes": 297354,
+      "storage": "drawing-pages/b72dc744222910edb9140062850ecf8442e113fe7fe5e2a328523bc9ed7bafb9.webp",
+      "storedBytes": 297354,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 142,
+      "width": 3200,
+      "height": 2261
+    },
+    "drawing-pages/9ffd8fbcf06bf5a3bceed6833d0878d1d2018779fe367520ec9ea689f515af81.webp": {
+      "sha256": "9ffd8fbcf06bf5a3bceed6833d0878d1d2018779fe367520ec9ea689f515af81",
+      "bytes": 254542,
+      "storage": "drawing-pages/9ffd8fbcf06bf5a3bceed6833d0878d1d2018779fe367520ec9ea689f515af81.webp",
+      "storedBytes": 254542,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 143,
+      "width": 3200,
+      "height": 2264
+    },
+    "drawing-pages/c4af5a125c8c28415fe8900b0fa813ad85125e177cf9fbd8e7c7ac8194a4d506.webp": {
+      "sha256": "c4af5a125c8c28415fe8900b0fa813ad85125e177cf9fbd8e7c7ac8194a4d506",
+      "bytes": 150234,
+      "storage": "drawing-pages/c4af5a125c8c28415fe8900b0fa813ad85125e177cf9fbd8e7c7ac8194a4d506.webp",
+      "storedBytes": 150234,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 144,
+      "width": 3200,
+      "height": 2263
+    },
+    "drawing-pages/65212bf3064ef5eb83865ab37d0a022ee5c77442dd13db924710f6fafd5ee5e1.webp": {
+      "sha256": "65212bf3064ef5eb83865ab37d0a022ee5c77442dd13db924710f6fafd5ee5e1",
+      "bytes": 262770,
+      "storage": "drawing-pages/65212bf3064ef5eb83865ab37d0a022ee5c77442dd13db924710f6fafd5ee5e1.webp",
+      "storedBytes": 262770,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 145,
+      "width": 3200,
+      "height": 1509
+    },
+    "drawing-pages/4b8c71714dcbc65b827d6a878fc19e19903e4cad45014e663c2a40cccf2c0c30.webp": {
+      "sha256": "4b8c71714dcbc65b827d6a878fc19e19903e4cad45014e663c2a40cccf2c0c30",
+      "bytes": 221206,
+      "storage": "drawing-pages/4b8c71714dcbc65b827d6a878fc19e19903e4cad45014e663c2a40cccf2c0c30.webp",
+      "storedBytes": 221206,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 146,
+      "width": 3200,
+      "height": 2264
+    },
+    "drawing-pages/650a13f71e38fcc7293fcf2da91fefcde3a182c213ae2364383fb7b3a654ace8.webp": {
+      "sha256": "650a13f71e38fcc7293fcf2da91fefcde3a182c213ae2364383fb7b3a654ace8",
+      "bytes": 181000,
+      "storage": "drawing-pages/650a13f71e38fcc7293fcf2da91fefcde3a182c213ae2364383fb7b3a654ace8.webp",
+      "storedBytes": 181000,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 147,
+      "width": 3200,
+      "height": 2264
+    },
+    "drawing-pages/d059d99fee8cebe6d50814a7a9eab0beaa0f1908eed849b4380c22af3567c57b.webp": {
+      "sha256": "d059d99fee8cebe6d50814a7a9eab0beaa0f1908eed849b4380c22af3567c57b",
+      "bytes": 276034,
+      "storage": "drawing-pages/d059d99fee8cebe6d50814a7a9eab0beaa0f1908eed849b4380c22af3567c57b.webp",
+      "storedBytes": 276034,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 148,
+      "width": 3200,
+      "height": 2264
+    },
+    "drawing-pages/fad6a5ad4359e4d91d6a2fe783b7d795bff70a5301e53de49790c2fda43d0474.webp": {
+      "sha256": "fad6a5ad4359e4d91d6a2fe783b7d795bff70a5301e53de49790c2fda43d0474",
+      "bytes": 162094,
+      "storage": "drawing-pages/fad6a5ad4359e4d91d6a2fe783b7d795bff70a5301e53de49790c2fda43d0474.webp",
+      "storedBytes": 162094,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 149,
+      "width": 3200,
+      "height": 2263
+    },
+    "drawing-pages/37e37871ef3eb4bf7c6f83a080a2496b5a899de823a094971d3d7e2d2911da05.webp": {
+      "sha256": "37e37871ef3eb4bf7c6f83a080a2496b5a899de823a094971d3d7e2d2911da05",
+      "bytes": 249096,
+      "storage": "drawing-pages/37e37871ef3eb4bf7c6f83a080a2496b5a899de823a094971d3d7e2d2911da05.webp",
+      "storedBytes": 249096,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 13,
+      "width": 3200,
+      "height": 2261
+    },
+    "drawing-pages/68f510a63c8a690b98394b4e4cbd13cfc0a9e2acc9ac94c84bec5ba24c9f6ac8.webp": {
+      "sha256": "68f510a63c8a690b98394b4e4cbd13cfc0a9e2acc9ac94c84bec5ba24c9f6ac8",
+      "bytes": 215970,
+      "storage": "drawing-pages/68f510a63c8a690b98394b4e4cbd13cfc0a9e2acc9ac94c84bec5ba24c9f6ac8.webp",
+      "storedBytes": 215970,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 14,
+      "width": 3200,
+      "height": 2264
+    },
+    "drawing-pages/884091dc7169d1dcccc4d63d2073955bd35e4d40b03337f3de75caa877929ac1.webp": {
+      "sha256": "884091dc7169d1dcccc4d63d2073955bd35e4d40b03337f3de75caa877929ac1",
+      "bytes": 185334,
+      "storage": "drawing-pages/884091dc7169d1dcccc4d63d2073955bd35e4d40b03337f3de75caa877929ac1.webp",
+      "storedBytes": 185334,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 15,
+      "width": 2262,
+      "height": 3200
+    },
+    "drawing-pages/9774dea7341a1278b811b36949f2550b1616c6cfa9ca0cbbb8bbede7e6323647.webp": {
+      "sha256": "9774dea7341a1278b811b36949f2550b1616c6cfa9ca0cbbb8bbede7e6323647",
+      "bytes": 154016,
+      "storage": "drawing-pages/9774dea7341a1278b811b36949f2550b1616c6cfa9ca0cbbb8bbede7e6323647.webp",
+      "storedBytes": 154016,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 16,
+      "width": 2262,
+      "height": 3200
+    },
+    "drawing-pages/ca5cb14e498558b713f530cbf56d848ad631774fa6f1fac49485a2061fb753fd.webp": {
+      "sha256": "ca5cb14e498558b713f530cbf56d848ad631774fa6f1fac49485a2061fb753fd",
+      "bytes": 415988,
+      "storage": "drawing-pages/ca5cb14e498558b713f530cbf56d848ad631774fa6f1fac49485a2061fb753fd.webp",
+      "storedBytes": 415988,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 17,
+      "width": 3200,
+      "height": 2261
+    },
+    "drawing-pages/1a29b4f271ea7403934370c962d512dd570edaf28b2aea945f14582ab36a0cf0.webp": {
+      "sha256": "1a29b4f271ea7403934370c962d512dd570edaf28b2aea945f14582ab36a0cf0",
+      "bytes": 263566,
+      "storage": "drawing-pages/1a29b4f271ea7403934370c962d512dd570edaf28b2aea945f14582ab36a0cf0.webp",
+      "storedBytes": 263566,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 18,
+      "width": 3200,
+      "height": 2261
+    },
+    "drawing-pages/be973f5c7751a2a20a6d55951d1887e968d60c32e659542d7c5b287ecc1b62cb.webp": {
+      "sha256": "be973f5c7751a2a20a6d55951d1887e968d60c32e659542d7c5b287ecc1b62cb",
+      "bytes": 415062,
+      "storage": "drawing-pages/be973f5c7751a2a20a6d55951d1887e968d60c32e659542d7c5b287ecc1b62cb.webp",
+      "storedBytes": 415062,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 19,
+      "width": 3200,
+      "height": 2264
+    },
+    "drawing-pages/913c4ceb2cf89174db0527321c5e47b7439cf7d557868bfe1c9d55bae8d04ac4.webp": {
+      "sha256": "913c4ceb2cf89174db0527321c5e47b7439cf7d557868bfe1c9d55bae8d04ac4",
+      "bytes": 358908,
+      "storage": "drawing-pages/913c4ceb2cf89174db0527321c5e47b7439cf7d557868bfe1c9d55bae8d04ac4.webp",
+      "storedBytes": 358908,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 20,
+      "width": 3200,
+      "height": 2261
+    },
+    "drawing-pages/be682a0f73043da6268946d4d6491e86af062236a8e0cb528039ee3a123fbbb3.webp": {
+      "sha256": "be682a0f73043da6268946d4d6491e86af062236a8e0cb528039ee3a123fbbb3",
+      "bytes": 210496,
+      "storage": "drawing-pages/be682a0f73043da6268946d4d6491e86af062236a8e0cb528039ee3a123fbbb3.webp",
+      "storedBytes": 210496,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 93,
+      "width": 3200,
+      "height": 2264
+    },
+    "drawing-pages/817514e2df76b012e55e0d15aeb7b10361e36e678ba91fe324bde9e8cfe86b72.webp": {
+      "sha256": "817514e2df76b012e55e0d15aeb7b10361e36e678ba91fe324bde9e8cfe86b72",
+      "bytes": 201632,
+      "storage": "drawing-pages/817514e2df76b012e55e0d15aeb7b10361e36e678ba91fe324bde9e8cfe86b72.webp",
+      "storedBytes": 201632,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 94,
+      "width": 3200,
+      "height": 2264
+    },
+    "drawing-pages/71f07a0d0815635f24f1b073013b509fc6676647c7ac3e8e2c6d32cc61774361.webp": {
+      "sha256": "71f07a0d0815635f24f1b073013b509fc6676647c7ac3e8e2c6d32cc61774361",
+      "bytes": 164034,
+      "storage": "drawing-pages/71f07a0d0815635f24f1b073013b509fc6676647c7ac3e8e2c6d32cc61774361.webp",
+      "storedBytes": 164034,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 95,
+      "width": 3200,
+      "height": 2263
+    },
+    "drawing-pages/6b9d1f50413217f9d0a1c3ab7d1ea7aa85a0b623632036ceac69db557a90070f.webp": {
+      "sha256": "6b9d1f50413217f9d0a1c3ab7d1ea7aa85a0b623632036ceac69db557a90070f",
+      "bytes": 178818,
+      "storage": "drawing-pages/6b9d1f50413217f9d0a1c3ab7d1ea7aa85a0b623632036ceac69db557a90070f.webp",
+      "storedBytes": 178818,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 96,
+      "width": 3200,
+      "height": 2263
+    },
+    "drawing-pages/078bf0c13bc2aa5c10748fec516d13074980b06a09263cc8c242479d4a931b83.webp": {
+      "sha256": "078bf0c13bc2aa5c10748fec516d13074980b06a09263cc8c242479d4a931b83",
+      "bytes": 223916,
+      "storage": "drawing-pages/078bf0c13bc2aa5c10748fec516d13074980b06a09263cc8c242479d4a931b83.webp",
+      "storedBytes": 223916,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 109,
+      "width": 3200,
+      "height": 2264
+    },
+    "drawing-pages/4a4d711c017bf04e4297e0d580ef9841d96eaf8f0b41b0ea1f49a13c522d46fc.webp": {
+      "sha256": "4a4d711c017bf04e4297e0d580ef9841d96eaf8f0b41b0ea1f49a13c522d46fc",
+      "bytes": 163680,
+      "storage": "drawing-pages/4a4d711c017bf04e4297e0d580ef9841d96eaf8f0b41b0ea1f49a13c522d46fc.webp",
+      "storedBytes": 163680,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 110,
+      "width": 3200,
+      "height": 2264
+    },
+    "drawing-pages/940541f485f860eac783da2085fdf3101379482b4debf7683be5ff10a6417dff.webp": {
+      "sha256": "940541f485f860eac783da2085fdf3101379482b4debf7683be5ff10a6417dff",
+      "bytes": 166140,
+      "storage": "drawing-pages/940541f485f860eac783da2085fdf3101379482b4debf7683be5ff10a6417dff.webp",
+      "storedBytes": 166140,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 111,
+      "width": 3200,
+      "height": 2263
+    },
+    "drawing-pages/58b865e8f112601d3e4a725a7f2c08a028cd0861b2ed5557d07f8c3971f74d33.webp": {
+      "sha256": "58b865e8f112601d3e4a725a7f2c08a028cd0861b2ed5557d07f8c3971f74d33",
+      "bytes": 261782,
+      "storage": "drawing-pages/58b865e8f112601d3e4a725a7f2c08a028cd0861b2ed5557d07f8c3971f74d33.webp",
+      "storedBytes": 261782,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 112,
+      "width": 3200,
+      "height": 2264
+    },
+    "drawing-pages/e0a03d719a8096e8efa9788befe83f859c799856d353c7ed685adfcbeee563b2.webp": {
+      "sha256": "e0a03d719a8096e8efa9788befe83f859c799856d353c7ed685adfcbeee563b2",
+      "bytes": 260834,
+      "storage": "drawing-pages/e0a03d719a8096e8efa9788befe83f859c799856d353c7ed685adfcbeee563b2.webp",
+      "storedBytes": 260834,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 113,
+      "width": 3200,
+      "height": 2264
+    },
+    "drawing-pages/17774766e7b4d4e63eece29501c82ea8a0610e2f6bad6830b8599ab0112c0674.webp": {
+      "sha256": "17774766e7b4d4e63eece29501c82ea8a0610e2f6bad6830b8599ab0112c0674",
+      "bytes": 210026,
+      "storage": "drawing-pages/17774766e7b4d4e63eece29501c82ea8a0610e2f6bad6830b8599ab0112c0674.webp",
+      "storedBytes": 210026,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 114,
+      "width": 3200,
+      "height": 2264
+    },
+    "drawing-pages/99e186dffbf3e43b8a3425458dfc6ceec661abf5a075881afdff51aed410c527.webp": {
+      "sha256": "99e186dffbf3e43b8a3425458dfc6ceec661abf5a075881afdff51aed410c527",
+      "bytes": 119708,
+      "storage": "drawing-pages/99e186dffbf3e43b8a3425458dfc6ceec661abf5a075881afdff51aed410c527.webp",
+      "storedBytes": 119708,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 115,
+      "width": 3200,
+      "height": 2264
+    },
+    "drawing-pages/845d7d25b68c0f2f55bc3c470180fe24380edd8204f738041fc9e0e7180d8c53.webp": {
+      "sha256": "845d7d25b68c0f2f55bc3c470180fe24380edd8204f738041fc9e0e7180d8c53",
+      "bytes": 280304,
+      "storage": "drawing-pages/845d7d25b68c0f2f55bc3c470180fe24380edd8204f738041fc9e0e7180d8c53.webp",
+      "storedBytes": 280304,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AR_08_09_10_reconfirmed.pdf",
+      "pdfSha256": "ef0e79649d9f474cdc71461ae66f2a5d0192b3ccc5612bdf7011931ac233625d",
+      "pdfPage": 3,
+      "width": 3200,
+      "height": 2261
+    },
+    "drawing-pages/ef3aa1367c12a652545810f9bf29602a6e2b23b3fdaaacb8f5119dadd2f2bb9e.webp": {
+      "sha256": "ef3aa1367c12a652545810f9bf29602a6e2b23b3fdaaacb8f5119dadd2f2bb9e",
+      "bytes": 517888,
+      "storage": "drawing-pages/ef3aa1367c12a652545810f9bf29602a6e2b23b3fdaaacb8f5119dadd2f2bb9e.webp",
+      "storedBytes": 517888,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AR_08_09_10_reconfirmed.pdf",
+      "pdfSha256": "ef0e79649d9f474cdc71461ae66f2a5d0192b3ccc5612bdf7011931ac233625d",
+      "pdfPage": 1,
+      "width": 3200,
+      "height": 2261
+    },
+    "drawing-pages/aa304e8514082172365bd811507ee3a337c2deb10b8797b3428ad03ae4b5660b.webp": {
+      "sha256": "aa304e8514082172365bd811507ee3a337c2deb10b8797b3428ad03ae4b5660b",
+      "bytes": 423566,
+      "storage": "drawing-pages/aa304e8514082172365bd811507ee3a337c2deb10b8797b3428ad03ae4b5660b.webp",
+      "storedBytes": 423566,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AR_08_09_10_reconfirmed.pdf",
+      "pdfSha256": "ef0e79649d9f474cdc71461ae66f2a5d0192b3ccc5612bdf7011931ac233625d",
+      "pdfPage": 2,
+      "width": 3200,
+      "height": 2261
+    },
+    "drawing-pages/e22019794d7611fc3d192712a54bdd06245042ed561b4e6659e3aac49e35a41d.webp": {
+      "sha256": "e22019794d7611fc3d192712a54bdd06245042ed561b4e6659e3aac49e35a41d",
+      "bytes": 341228,
+      "storage": "drawing-pages/e22019794d7611fc3d192712a54bdd06245042ed561b4e6659e3aac49e35a41d.webp",
+      "storedBytes": 341228,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 154,
+      "width": 3200,
+      "height": 2264
+    },
+    "drawing-pages/4fd4a403529727a42c7c0084c997c94931af218358d6723d1747d544dc48e0c4.webp": {
+      "sha256": "4fd4a403529727a42c7c0084c997c94931af218358d6723d1747d544dc48e0c4",
+      "bytes": 278344,
+      "storage": "drawing-pages/4fd4a403529727a42c7c0084c997c94931af218358d6723d1747d544dc48e0c4.webp",
+      "storedBytes": 278344,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 155,
+      "width": 3200,
+      "height": 2264
+    },
+    "drawing-pages/b3cf8b0a0966786a7f2b8220c0bba4f7c92ebea7e55480707bd8b6cea75d7523.webp": {
+      "sha256": "b3cf8b0a0966786a7f2b8220c0bba4f7c92ebea7e55480707bd8b6cea75d7523",
+      "bytes": 273870,
+      "storage": "drawing-pages/b3cf8b0a0966786a7f2b8220c0bba4f7c92ebea7e55480707bd8b6cea75d7523.webp",
+      "storedBytes": 273870,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 156,
+      "width": 3200,
+      "height": 2263
+    },
+    "drawing-pages/4a341471dde1e97313fa409e8079e12144a24fb36441856922b58c3c56324fa4.webp": {
+      "sha256": "4a341471dde1e97313fa409e8079e12144a24fb36441856922b58c3c56324fa4",
+      "bytes": 169962,
+      "storage": "drawing-pages/4a341471dde1e97313fa409e8079e12144a24fb36441856922b58c3c56324fa4.webp",
+      "storedBytes": 169962,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 157,
+      "width": 3200,
+      "height": 2264
+    },
+    "drawing-pages/be7e76aca5cac1b51d216801ffbc32be9f5959de9c1c3aac97314f7f8f5dd6af.webp": {
+      "sha256": "be7e76aca5cac1b51d216801ffbc32be9f5959de9c1c3aac97314f7f8f5dd6af",
+      "bytes": 189744,
+      "storage": "drawing-pages/be7e76aca5cac1b51d216801ffbc32be9f5959de9c1c3aac97314f7f8f5dd6af.webp",
+      "storedBytes": 189744,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 55,
+      "width": 3200,
+      "height": 2261
+    },
+    "drawing-pages/45b1ade21ded0390f374b1a88830689226687d0765e8d4f919bc6a85fea136a2.webp": {
+      "sha256": "45b1ade21ded0390f374b1a88830689226687d0765e8d4f919bc6a85fea136a2",
+      "bytes": 180662,
+      "storage": "drawing-pages/45b1ade21ded0390f374b1a88830689226687d0765e8d4f919bc6a85fea136a2.webp",
+      "storedBytes": 180662,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 56,
+      "width": 3200,
+      "height": 2261
+    },
+    "drawing-pages/b5632cd6477612facb7b45f6496d23f6f24ca2c922ad09948661527cb5d735bc.webp": {
+      "sha256": "b5632cd6477612facb7b45f6496d23f6f24ca2c922ad09948661527cb5d735bc",
+      "bytes": 247022,
+      "storage": "drawing-pages/b5632cd6477612facb7b45f6496d23f6f24ca2c922ad09948661527cb5d735bc.webp",
+      "storedBytes": 247022,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 99,
+      "width": 3200,
+      "height": 2264
+    },
+    "drawing-pages/4d036945f10b4a42c0213d80947b6ad39d0d91df93dc1c2abaa284e185f93fd4.webp": {
+      "sha256": "4d036945f10b4a42c0213d80947b6ad39d0d91df93dc1c2abaa284e185f93fd4",
+      "bytes": 228654,
+      "storage": "drawing-pages/4d036945f10b4a42c0213d80947b6ad39d0d91df93dc1c2abaa284e185f93fd4.webp",
+      "storedBytes": 228654,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 100,
+      "width": 3200,
+      "height": 1509
+    },
+    "drawing-pages/30b3727730ac4017337c1054da15731f7aa14122e6ac42f5b202c7cfcd3e73d0.webp": {
+      "sha256": "30b3727730ac4017337c1054da15731f7aa14122e6ac42f5b202c7cfcd3e73d0",
+      "bytes": 247642,
+      "storage": "drawing-pages/30b3727730ac4017337c1054da15731f7aa14122e6ac42f5b202c7cfcd3e73d0.webp",
+      "storedBytes": 247642,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 101,
+      "width": 3200,
+      "height": 2264
+    },
+    "drawing-pages/e6e0ff4daa5c9de1744bb9797a1bc6c92c2734035cdda10fc3213bef2638cff2.webp": {
+      "sha256": "e6e0ff4daa5c9de1744bb9797a1bc6c92c2734035cdda10fc3213bef2638cff2",
+      "bytes": 270930,
+      "storage": "drawing-pages/e6e0ff4daa5c9de1744bb9797a1bc6c92c2734035cdda10fc3213bef2638cff2.webp",
+      "storedBytes": 270930,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 102,
+      "width": 3200,
+      "height": 2264
+    },
+    "drawing-pages/1f692b9b89c2818a83db580f6570d25a16a8edae947fe16bb8a6f99c493ab199.webp": {
+      "sha256": "1f692b9b89c2818a83db580f6570d25a16a8edae947fe16bb8a6f99c493ab199",
+      "bytes": 193874,
+      "storage": "drawing-pages/1f692b9b89c2818a83db580f6570d25a16a8edae947fe16bb8a6f99c493ab199.webp",
+      "storedBytes": 193874,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 103,
+      "width": 3200,
+      "height": 1509
+    },
+    "drawing-pages/dd42f00b559893152fae184c646f0a95eac02989ec6f184c44fdf97bffec35b4.webp": {
+      "sha256": "dd42f00b559893152fae184c646f0a95eac02989ec6f184c44fdf97bffec35b4",
+      "bytes": 127428,
+      "storage": "drawing-pages/dd42f00b559893152fae184c646f0a95eac02989ec6f184c44fdf97bffec35b4.webp",
+      "storedBytes": 127428,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 70,
+      "width": 3200,
+      "height": 2263
+    },
+    "drawing-pages/f548c33777599d93ae796869bbfb576abcb411cdfdf6055021ac35bcd53e9971.webp": {
+      "sha256": "f548c33777599d93ae796869bbfb576abcb411cdfdf6055021ac35bcd53e9971",
+      "bytes": 131148,
+      "storage": "drawing-pages/f548c33777599d93ae796869bbfb576abcb411cdfdf6055021ac35bcd53e9971.webp",
+      "storedBytes": 131148,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 71,
+      "width": 3200,
+      "height": 2263
+    },
+    "drawing-pages/fc952ecca13a68add7b24b946e6b6c9d15eb20103fe075fd8209f710eab814bd.webp": {
+      "sha256": "fc952ecca13a68add7b24b946e6b6c9d15eb20103fe075fd8209f710eab814bd",
+      "bytes": 125372,
+      "storage": "drawing-pages/fc952ecca13a68add7b24b946e6b6c9d15eb20103fe075fd8209f710eab814bd.webp",
+      "storedBytes": 125372,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 72,
+      "width": 3200,
+      "height": 2263
+    },
+    "drawing-pages/74538788b2f19ff96907f456eacf31febc01839c736f90275b02cbe2af9e8079.webp": {
+      "sha256": "74538788b2f19ff96907f456eacf31febc01839c736f90275b02cbe2af9e8079",
+      "bytes": 108928,
+      "storage": "drawing-pages/74538788b2f19ff96907f456eacf31febc01839c736f90275b02cbe2af9e8079.webp",
+      "storedBytes": 108928,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 73,
+      "width": 3200,
+      "height": 2263
+    },
+    "drawing-pages/1a8f3d6ce7a6d27ab5dfb4e071890238c09b103344f05abb692fe26a87196a25.webp": {
+      "sha256": "1a8f3d6ce7a6d27ab5dfb4e071890238c09b103344f05abb692fe26a87196a25",
+      "bytes": 166088,
+      "storage": "drawing-pages/1a8f3d6ce7a6d27ab5dfb4e071890238c09b103344f05abb692fe26a87196a25.webp",
+      "storedBytes": 166088,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 77,
+      "width": 3200,
+      "height": 2263
+    },
+    "drawing-pages/9a3a2d8b962c27e9718c0da0967638c5b609a7d702c09c3373702874cdc4653c.webp": {
+      "sha256": "9a3a2d8b962c27e9718c0da0967638c5b609a7d702c09c3373702874cdc4653c",
+      "bytes": 166306,
+      "storage": "drawing-pages/9a3a2d8b962c27e9718c0da0967638c5b609a7d702c09c3373702874cdc4653c.webp",
+      "storedBytes": 166306,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 78,
+      "width": 3200,
+      "height": 2263
+    },
+    "drawing-pages/dfa3cb1b37d9499f719341bd08f4d83a2106cb781e3275b50c4d9e4bbc456a50.webp": {
+      "sha256": "dfa3cb1b37d9499f719341bd08f4d83a2106cb781e3275b50c4d9e4bbc456a50",
+      "bytes": 206336,
+      "storage": "drawing-pages/dfa3cb1b37d9499f719341bd08f4d83a2106cb781e3275b50c4d9e4bbc456a50.webp",
+      "storedBytes": 206336,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 158,
+      "width": 3200,
+      "height": 2264
+    },
+    "drawing-pages/42852154c4c67ffa421943f4f78cb9fbc61f1c7e1d9b087fd6c9a7c6c97b069d.webp": {
+      "sha256": "42852154c4c67ffa421943f4f78cb9fbc61f1c7e1d9b087fd6c9a7c6c97b069d",
+      "bytes": 429384,
+      "storage": "drawing-pages/42852154c4c67ffa421943f4f78cb9fbc61f1c7e1d9b087fd6c9a7c6c97b069d.webp",
+      "storedBytes": 429384,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 159,
+      "width": 3200,
+      "height": 2264
+    },
+    "drawing-pages/b5269da7548c8be5a68068f2ace466016c99572d578b6681b7b718937fc8611c.webp": {
+      "sha256": "b5269da7548c8be5a68068f2ace466016c99572d578b6681b7b718937fc8611c",
+      "bytes": 144850,
+      "storage": "drawing-pages/b5269da7548c8be5a68068f2ace466016c99572d578b6681b7b718937fc8611c.webp",
+      "storedBytes": 144850,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 160,
+      "width": 3200,
+      "height": 2264
+    },
+    "drawing-pages/c0b473c066d9423c6735d5d57908217f0bc79ad96ec760b346ea1a045f83c4e5.webp": {
+      "sha256": "c0b473c066d9423c6735d5d57908217f0bc79ad96ec760b346ea1a045f83c4e5",
+      "bytes": 239008,
+      "storage": "drawing-pages/c0b473c066d9423c6735d5d57908217f0bc79ad96ec760b346ea1a045f83c4e5.webp",
+      "storedBytes": 239008,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 161,
+      "width": 2262,
+      "height": 3200
+    },
+    "drawing-pages/3099fa8886a415a26664a333d3f1435d2aea07441646ca9cd15c0c73e8bbc813.webp": {
+      "sha256": "3099fa8886a415a26664a333d3f1435d2aea07441646ca9cd15c0c73e8bbc813",
+      "bytes": 220610,
+      "storage": "drawing-pages/3099fa8886a415a26664a333d3f1435d2aea07441646ca9cd15c0c73e8bbc813.webp",
+      "storedBytes": 220610,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 162,
+      "width": 3200,
+      "height": 2264
+    },
+    "drawing-pages/29dd49dfdd7fd5ade027a2b2eb5186984df2d2e753c536a5ccdb4ce731201d94.webp": {
+      "sha256": "29dd49dfdd7fd5ade027a2b2eb5186984df2d2e753c536a5ccdb4ce731201d94",
+      "bytes": 337352,
+      "storage": "drawing-pages/29dd49dfdd7fd5ade027a2b2eb5186984df2d2e753c536a5ccdb4ce731201d94.webp",
+      "storedBytes": 337352,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 41,
+      "width": 3200,
+      "height": 2264
+    },
+    "drawing-pages/b3745c2546efdcae122f8e41fc1c1cdb49929e7a631765b4218531300cb03b27.webp": {
+      "sha256": "b3745c2546efdcae122f8e41fc1c1cdb49929e7a631765b4218531300cb03b27",
+      "bytes": 315236,
+      "storage": "drawing-pages/b3745c2546efdcae122f8e41fc1c1cdb49929e7a631765b4218531300cb03b27.webp",
+      "storedBytes": 315236,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 42,
+      "width": 3200,
+      "height": 2264
+    },
+    "drawing-pages/45fc25f43d1e2d8f1bc6ece5e1c4368eec2d6140df3e3a246272983d818f3ebd.webp": {
+      "sha256": "45fc25f43d1e2d8f1bc6ece5e1c4368eec2d6140df3e3a246272983d818f3ebd",
+      "bytes": 306058,
+      "storage": "drawing-pages/45fc25f43d1e2d8f1bc6ece5e1c4368eec2d6140df3e3a246272983d818f3ebd.webp",
+      "storedBytes": 306058,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 43,
+      "width": 3200,
+      "height": 2264
+    },
+    "drawing-pages/e92e4a13f9ea1a58a5f4430d24b95460d3e341361f4b0d2aada46657a48a7db1.webp": {
+      "sha256": "e92e4a13f9ea1a58a5f4430d24b95460d3e341361f4b0d2aada46657a48a7db1",
+      "bytes": 329724,
+      "storage": "drawing-pages/e92e4a13f9ea1a58a5f4430d24b95460d3e341361f4b0d2aada46657a48a7db1.webp",
+      "storedBytes": 329724,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 44,
+      "width": 3200,
+      "height": 2264
+    },
+    "drawing-pages/c6ce52f519b164c67f818f40dbf34167ae9ea5dbb7989483b9466a6c29c193c2.webp": {
+      "sha256": "c6ce52f519b164c67f818f40dbf34167ae9ea5dbb7989483b9466a6c29c193c2",
+      "bytes": 309776,
+      "storage": "drawing-pages/c6ce52f519b164c67f818f40dbf34167ae9ea5dbb7989483b9466a6c29c193c2.webp",
+      "storedBytes": 309776,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 45,
+      "width": 3200,
+      "height": 2264
+    },
+    "drawing-pages/28a94d2cbb9c576981da24a7f6c8a112e4d3b6a43eba2af3e742c2d84cce23bd.webp": {
+      "sha256": "28a94d2cbb9c576981da24a7f6c8a112e4d3b6a43eba2af3e742c2d84cce23bd",
+      "bytes": 294854,
+      "storage": "drawing-pages/28a94d2cbb9c576981da24a7f6c8a112e4d3b6a43eba2af3e742c2d84cce23bd.webp",
+      "storedBytes": 294854,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 46,
+      "width": 3200,
+      "height": 2264
+    },
+    "drawing-pages/5e0d69ff3794d5db248b1a0e49b45b3e7c944e3b762ed86c59c72c42312fa5f0.webp": {
+      "sha256": "5e0d69ff3794d5db248b1a0e49b45b3e7c944e3b762ed86c59c72c42312fa5f0",
+      "bytes": 323520,
+      "storage": "drawing-pages/5e0d69ff3794d5db248b1a0e49b45b3e7c944e3b762ed86c59c72c42312fa5f0.webp",
+      "storedBytes": 323520,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 47,
+      "width": 3200,
+      "height": 2264
+    },
+    "drawing-pages/81f1b52c886b1a65bc19755d5234ffd295545d240af00a02acf823d72f773dba.webp": {
+      "sha256": "81f1b52c886b1a65bc19755d5234ffd295545d240af00a02acf823d72f773dba",
+      "bytes": 227990,
+      "storage": "drawing-pages/81f1b52c886b1a65bc19755d5234ffd295545d240af00a02acf823d72f773dba.webp",
+      "storedBytes": 227990,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 48,
+      "width": 3200,
+      "height": 2264
+    },
+    "drawing-pages/ad1bfdd03e3e0e031a32f280329d4ef7b502ef7341b94a05cfe75602b98e2fa6.webp": {
+      "sha256": "ad1bfdd03e3e0e031a32f280329d4ef7b502ef7341b94a05cfe75602b98e2fa6",
+      "bytes": 135214,
+      "storage": "drawing-pages/ad1bfdd03e3e0e031a32f280329d4ef7b502ef7341b94a05cfe75602b98e2fa6.webp",
+      "storedBytes": 135214,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 67,
+      "width": 3200,
+      "height": 2263
+    },
+    "drawing-pages/05e4a37032bc268694cdf31eae2e9b90f869a7190d370eb713cb6b370b5d37b9.webp": {
+      "sha256": "05e4a37032bc268694cdf31eae2e9b90f869a7190d370eb713cb6b370b5d37b9",
+      "bytes": 201842,
+      "storage": "drawing-pages/05e4a37032bc268694cdf31eae2e9b90f869a7190d370eb713cb6b370b5d37b9.webp",
+      "storedBytes": 201842,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 79,
+      "width": 3200,
+      "height": 2263
+    },
+    "drawing-pages/5290e308386d114ef202b3443c3c8dab810106f75ab050087695656b213a9fce.webp": {
+      "sha256": "5290e308386d114ef202b3443c3c8dab810106f75ab050087695656b213a9fce",
+      "bytes": 193060,
+      "storage": "drawing-pages/5290e308386d114ef202b3443c3c8dab810106f75ab050087695656b213a9fce.webp",
+      "storedBytes": 193060,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 66,
+      "width": 3200,
+      "height": 2264
+    },
+    "drawing-pages/3403fd62109e1be921d539b311b446c337dadc270517df2a1bfb075a0cfbf0a3.webp": {
+      "sha256": "3403fd62109e1be921d539b311b446c337dadc270517df2a1bfb075a0cfbf0a3",
+      "bytes": 239336,
+      "storage": "drawing-pages/3403fd62109e1be921d539b311b446c337dadc270517df2a1bfb075a0cfbf0a3.webp",
+      "storedBytes": 239336,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 151,
+      "width": 3200,
+      "height": 2264
+    },
+    "drawing-pages/726358491412097e71f82e13f6766a6c3884dcf7ba497fa337f154d18055625a.webp": {
+      "sha256": "726358491412097e71f82e13f6766a6c3884dcf7ba497fa337f154d18055625a",
+      "bytes": 210418,
+      "storage": "drawing-pages/726358491412097e71f82e13f6766a6c3884dcf7ba497fa337f154d18055625a.webp",
+      "storedBytes": 210418,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 153,
+      "width": 3200,
+      "height": 2263
+    },
+    "drawing-pages/87faccaae71579c8abf0b3afff8c324eca8a616e188e7ffa1748f016cfa5fd04.webp": {
+      "sha256": "87faccaae71579c8abf0b3afff8c324eca8a616e188e7ffa1748f016cfa5fd04",
+      "bytes": 305318,
+      "storage": "drawing-pages/87faccaae71579c8abf0b3afff8c324eca8a616e188e7ffa1748f016cfa5fd04.webp",
+      "storedBytes": 305318,
+      "compressed": false,
+      "contentType": "image/webp",
+      "pdf": "documents/AS2_last_full.pdf",
+      "pdfSha256": "7bdae14400054eaacc5ef5b59fc1ff18ea85cd4e2b510e44dc443f600896bb77",
+      "pdfPage": 65,
+      "width": 3200,
+      "height": 2263
+    }
+  }
+}
