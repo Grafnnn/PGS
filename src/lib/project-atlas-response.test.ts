@@ -7,6 +7,7 @@ import manifest from "@/assets/project-models/troitsk-b24-atlas-3-2.manifest.jso
 import drawings from "@/assets/project-models/troitsk-b24-atlas-3-2.drawings.json";
 import { projectAtlasAssetResponse } from "@/lib/project-atlas-response";
 import { adaptProjectAtlasDrawings } from "@/lib/project-atlas-drawing-adapter";
+import { adaptProjectAtlasPerformance } from "@/lib/project-atlas-performance-adapter";
 
 const base = "https://pgs.local/model-assets/troitsk-b24-atlas-3-2/";
 const get = (name: string, headers?: Record<string, string>) => projectAtlasAssetResponse(new Request(base + name, { headers }), name.split("/"));
@@ -44,7 +45,7 @@ describe("Atlas runtime delivery", () => {
     const response = await get("assets/album.js", { "accept-encoding": encoding });
     expect(response.headers.has("content-encoding")).toBe(false);
     const stored = await readFile(`src/assets/project-models/troitsk-b24-atlas-3-2/${manifest.files["assets/album.js"].storage}`);
-    expect(await response.text()).toBe(adaptProjectAtlasDrawings(gunzipSync(stored).toString()));
+    expect(await response.text()).toBe(adaptProjectAtlasPerformance(adaptProjectAtlasDrawings(gunzipSync(stored).toString())));
   });
   it("permits only atlas resources and a local worker, never app API requests or parent access", async () => {
     const response = await get("index.html");
