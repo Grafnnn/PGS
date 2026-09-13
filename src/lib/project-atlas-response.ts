@@ -10,6 +10,8 @@ import { adaptProjectAtlasDrawings, atlasConfirmedDrawingLinks, atlasDrawingRend
 import { atlasDrawingPage } from "@/lib/project-atlas-drawing-viewer";
 import { atlasControlsStyles, atlasGestureController, atlasPointerBindings } from "@/lib/project-atlas-controls";
 import { adaptProjectAtlasPerformance, adaptProjectAtlasWorkerBundle, adaptProjectAtlasWorker, atlasRenderController } from "@/lib/project-atlas-performance-adapter";
+import { adaptProjectAtlasNavigation, adaptProjectAtlasSelectionBundle, adaptProjectAtlasSelectionWorker, atlasNavigationRuntime, atlasDrawingContextFlow } from "@/lib/project-atlas-navigation-adapter";
+import { atlasNavigationStyles } from "@/lib/project-atlas-navigation-styles";
 
 const unzip = promisify(gunzip);
 const zip = promisify(gzip);
@@ -23,17 +25,19 @@ const integration = `<style id="pgs-atlas-layout">
 @media(min-width:801px){body.nav-collapsed #album{grid-template-columns:minmax(0,1fr)}}
 ${atlasDrawingStyles}
 ${atlasControlsStyles}
+${atlasNavigationStyles}
 </style><script id="pgs-atlas-integration">
 if(!location.hash||location.hash.startsWith('#module='))history.replaceState(null,'',location.pathname+location.search+'#node/building');
 document.title='Троицк · 3D Атлас 3.2';
 window.addEventListener('keydown',function(event){
-  if(event.key==='Escape'&&!event.defaultPrevented&&parent!==window){
+  if(event.key==='Escape'&&!event.defaultPrevented){
+    if(window.PGS_ATLAS_CONSUME_ESCAPE?.(event))return;
     const innerDialog=document.querySelector('dialog[open],#drawingPanel:not([hidden])');
-    if(!innerDialog)parent.postMessage({type:'pgs:project-model-close'},'*');
+    if(!innerDialog&&parent!==window)parent.postMessage({type:'pgs:project-model-close'},'*');
   }
 });
 </script>`;
-const adapterRevision = createHash("sha256").update(integration + atlasDrawingRenderer + atlasConfirmedDrawingLinks + atlasGestureController + atlasPointerBindings + atlasRenderController + adaptProjectAtlasPerformance.toString() + adaptProjectAtlasWorker.toString()).digest("hex").slice(0, 16);
+const adapterRevision = createHash("sha256").update(integration + atlasDrawingRenderer + atlasConfirmedDrawingLinks + atlasGestureController + atlasPointerBindings + atlasRenderController + atlasNavigationRuntime + atlasDrawingContextFlow + adaptProjectAtlasNavigation.toString() + adaptProjectAtlasSelectionBundle.toString() + adaptProjectAtlasSelectionWorker.toString() + adaptProjectAtlasPerformance.toString() + adaptProjectAtlasWorker.toString()).digest("hex").slice(0, 16);
 
 export function projectAtlasContentSecurityPolicy(origin: string) {
   const locations = [...new Set([origin, "https://pgs-frankfurt.onrender.com"])].map((host) => host + prefix).join(" ");
@@ -86,7 +90,7 @@ export async function projectAtlasAssetResponse(request: Request, segments: stri
       const original = (await unzip(bytes)).toString("utf8");
       bytes = Buffer.from(entry
         ? original.replace("<script>", integration + "<script>").replace('src="assets/album.js"', `src="assets/album.js?pgs=${adapterRevision}"`).replace('src="assets/worker_bundle.js"', `src="assets/worker_bundle.js?pgs=${adapterRevision}"`)
-        : workerScript ? adaptProjectAtlasWorkerBundle(original) : adaptProjectAtlasPerformance(adaptProjectAtlasDrawings(original)));
+        : workerScript ? adaptProjectAtlasSelectionBundle(adaptProjectAtlasWorkerBundle(original)) : adaptProjectAtlasNavigation(adaptProjectAtlasPerformance(adaptProjectAtlasDrawings(original))));
       if (compressed) bytes = await zip(bytes);
     } else if (asset.compressed && !compressed) bytes = await unzip(bytes);
     if (asset.compressed && compressed) headers.set("Content-Encoding", "gzip");
