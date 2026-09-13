@@ -1,0 +1,355 @@
+{
+  "sourceManifestSha256": "0b90daba4cb11f4f2e4155525f515b0b7d69d1a6e499141053b6c5fabd7fc601",
+  "recoveredObjects": 189,
+  "groups": [
+    {
+      "ids": [
+        "DR1_F",
+        "DR2_F",
+        "DR3_F",
+        "DR4_F"
+      ],
+      "ownBodyNodes": [],
+      "sourceKeys": [
+        "R08_AR_9"
+      ],
+      "evidence": "АР л.9, PDF 2: точка схождения линий уклонов / ВВ"
+    },
+    {
+      "ids": [
+        "VS34_PR_ZONE",
+        "VS35_PR_ZONE",
+        "VS34_BR",
+        "VS34_INS",
+        "VS34_RIM",
+        "VS35_BR",
+        "VS35_INS",
+        "VS35_RIM"
+      ],
+      "ownBodyNodes": [],
+      "sourceKeys": [
+        "R02_AS116",
+        "R02_AS117"
+      ],
+      "evidence": "S08: АС.2 изм от 03.07.26, л.116 (PDF 126); узел ПР2 л.117 (PDF 127)"
+    },
+    {
+      "ids": [
+        "VS42_PR_ZONE",
+        "VS42_BR",
+        "VS42_INS",
+        "VS42_RIM"
+      ],
+      "ownBodyNodes": [],
+      "sourceKeys": [
+        "R02_AS117"
+      ],
+      "evidence": "S08: АС.2 изм от 03.07.26, л.117 (PDF 127); узел ПР1 л.117 (PDF 127)"
+    },
+    {
+      "ids": [
+        "VS44_PR_ZONE",
+        "VS44_BR",
+        "VS44_INS",
+        "VS44_RIM"
+      ],
+      "ownBodyNodes": [],
+      "sourceKeys": [
+        "R02_AS117"
+      ],
+      "evidence": "S08: АС.2 изм от 03.07.26, л.117 (PDF 127); узел ПР2 л.117 (PDF 127)"
+    },
+    {
+      "ids": [
+        "VS40_BR",
+        "VS40_INS",
+        "VS40_CAP",
+        "VS41_BR",
+        "VS41_INS",
+        "VS41_CAP"
+      ],
+      "ownBodyNodes": [],
+      "sourceKeys": [
+        "R02_AC98",
+        "R02_AS116"
+      ],
+      "evidence": "S08: АС.2 изм от 03.07.26, л.98 (PDF 108); л.116 (PDF 126). Привязка R01 сохранена."
+    },
+    {
+      "ids": [
+        "VS43_BR",
+        "VS43_INS",
+        "VS43_CAP"
+      ],
+      "ownBodyNodes": [],
+      "sourceKeys": [
+        "R02_AC98",
+        "R02_AS117"
+      ],
+      "evidence": "S08: АС.2 изм от 03.07.26, л.98 (PDF 108); л.117 (PDF 127). Привязка R01 сохранена."
+    },
+    {
+      "ids": [
+        "MU55",
+        "MU55_R1_01",
+        "MU55_R1_02",
+        "MU55_R1_03",
+        "MU55_R3_01",
+        "MU55_R3_02",
+        "MU55_R3_03",
+        "MU55_R2_01",
+        "MU55_R2_02",
+        "MU55_R2_03",
+        "MU55_R2_04",
+        "MU55_R2_05",
+        "MU55_R4_01",
+        "MU55_R4_02",
+        "MU55_R4_03",
+        "MU55_R4_04",
+        "MU55_R4_05",
+        "MU55_R7_B1",
+        "MU55_R7_B2",
+        "MU55_R8_B1",
+        "MU55_R8_B2",
+        "MU55_R7_T1",
+        "MU55_R7_T2",
+        "MU55_R8_T1",
+        "MU55_R8_T2"
+      ],
+      "ownBodyNodes": [
+        "body:MU55"
+      ],
+      "sourceKeys": [
+        "R02_AS399",
+        "R02_AC22"
+      ],
+      "evidence": "S08: АС.2 изм от 03.07.26, л.39.9 (PDF 49); привязка по л.22 (PDF 23) и системе координат R01"
+    },
+    {
+      "ids": [
+        "L1_WALL_F1_WEST",
+        "L1_WALL_F1_EAST",
+        "L1_WALL_F1_NORTH",
+        "L1_M1_LS01",
+        "L1_M1_LS02",
+        "L1_M1_LS03",
+        "L1_M1_LS04",
+        "L1_M1_LS05",
+        "L1_M1_LS06",
+        "L1_M1_LS07",
+        "L1_M1_LS08",
+        "L1_M1_LS09",
+        "L1_M1_LS10",
+        "L1_M1_LS11",
+        "L1_M2_LS01",
+        "L1_M2_LS02",
+        "L1_M2_LS03",
+        "L1_M2_LS04",
+        "L1_M2_LS05",
+        "L1_M2_LS06",
+        "L1_M2_LS07",
+        "L1_M2_LS08",
+        "L1_M2_LS09",
+        "L1_M2_LS10",
+        "L1_M2_LS11",
+        "L1_МБ1_F1_01_OP1",
+        "L1_МБ1_F1_01_OP2",
+        "L1_МБ2_F1_01_OP1",
+        "L1_МБ2_F1_01_OP2",
+        "L1_МБ1_F1_02_OP1",
+        "L1_МБ1_F1_02_OP2",
+        "L1_ПР1_F1_1",
+        "L1_ПР1_F1_2",
+        "L1_ПР2_F1",
+        "L1_WALL_F2_WEST",
+        "L1_WALL_F2_EAST",
+        "L1_WALL_F2_NORTH",
+        "L1_M3_LS01",
+        "L1_M3_LS02",
+        "L1_M3_LS03",
+        "L1_M3_LS04",
+        "L1_M3_LS05",
+        "L1_M3_LS06",
+        "L1_M3_LS07",
+        "L1_M3_LS08",
+        "L1_M3_LS09",
+        "L1_M3_LS10",
+        "L1_M3_LS11",
+        "L1_M4_LS01",
+        "L1_M4_LS02",
+        "L1_M4_LS03",
+        "L1_M4_LS04",
+        "L1_M4_LS05",
+        "L1_M4_LS06",
+        "L1_M4_LS07",
+        "L1_M4_LS08",
+        "L1_M4_LS09",
+        "L1_M4_LS10",
+        "L1_M4_LS11",
+        "L1_МБ1_F2_03_OP1",
+        "L1_МБ1_F2_03_OP2",
+        "L1_МБ2_F2_02_OP1",
+        "L1_МБ2_F2_02_OP2",
+        "L1_МБ1_F2_04_OP1",
+        "L1_МБ1_F2_04_OP2",
+        "L1_ПР1_F2_1",
+        "L1_ПР1_F2_2",
+        "L1_WALL_F3_WEST",
+        "L1_WALL_F3_EAST",
+        "L1_WALL_F3_NORTH",
+        "L1_WALL_F3_SOUTH",
+        "L1_M5_LS01",
+        "L1_M5_LS02",
+        "L1_M5_LS03",
+        "L1_M5_LS04",
+        "L1_M5_LS05",
+        "L1_M5_LS06",
+        "L1_M5_LS07",
+        "L1_M5_LS08",
+        "L1_M5_LS09",
+        "L1_M5_LS10",
+        "L1_M5_LS11",
+        "L1_M5_LS12",
+        "L1_M5_LS13",
+        "L1_M6_LS01",
+        "L1_M6_LS02",
+        "L1_M6_LS03",
+        "L1_M6_LS04",
+        "L1_M6_LS05",
+        "L1_M6_LS06",
+        "L1_M6_LS07",
+        "L1_M6_LS08",
+        "L1_M6_LS09",
+        "L1_M6_LS10",
+        "L1_M6_LS11",
+        "L1_M6_LS12",
+        "L1_M6_LS13",
+        "L1_МБ1_F3_05_OP1",
+        "L1_МБ1_F3_05_OP2",
+        "L1_МБ2_F3_03_OP1",
+        "L1_МБ2_F3_03_OP2",
+        "L1_МБ1_F3_06_OP1",
+        "L1_МБ1_F3_06_OP2",
+        "L1_МБ3_F3_01_OP1",
+        "L1_МБ3_F3_01_OP2",
+        "L1_ПР1_F3_1",
+        "L1_ПР1_F3_2",
+        "L1_WALL_RF_WEST",
+        "L1_WALL_RF_EAST",
+        "L1_WALL_RF_NORTH",
+        "L1_WALL_RF_SOUTH",
+        "L1_PARAPET",
+        "L1_ПР3_RF"
+      ],
+      "ownBodyNodes": [],
+      "sourceKeys": [
+        "ALBUM_AS2_PLACE_55"
+      ],
+      "evidence": "АС.2, лист 55 по штампу; PDF 65"
+    },
+    {
+      "ids": [
+        "L1_ЛП1_F1",
+        "L1_ЛП1_DECK"
+      ],
+      "ownBodyNodes": [
+        "body:L1_ЛП1_F1"
+      ],
+      "sourceKeys": [
+        "R10L_STAIR_L60"
+      ],
+      "evidence": "АС.2, лист 60 по штампу; PDF 70"
+    },
+    {
+      "ids": [
+        "L1_МБ1_F1_01",
+        "L1_МБ1_F1_02",
+        "L1_МБ2_F1_01",
+        "L1_МБ1_F2_03",
+        "L1_МБ1_F2_04",
+        "L1_МБ2_F2_02",
+        "L1_МБ1_F3_05",
+        "L1_МБ1_F3_06",
+        "L1_МБ2_F3_03",
+        "L1_МБ3_F3_01"
+      ],
+      "ownBodyNodes": [],
+      "sourceKeys": [
+        "R04_L57"
+      ],
+      "evidence": "АС.2, лист 57 по штампу; PDF 67"
+    },
+    {
+      "ids": [
+        "L1_ЛП2_F2",
+        "L1_ЛП2_DECK"
+      ],
+      "ownBodyNodes": [
+        "body:L1_ЛП2_F2"
+      ],
+      "sourceKeys": [
+        "R10L_STAIR_L61"
+      ],
+      "evidence": "АС.2, лист 61 по штампу; PDF 71"
+    },
+    {
+      "ids": [
+        "L1_ЛП3_F3",
+        "L1_ЛП3_DECK"
+      ],
+      "ownBodyNodes": [
+        "body:L1_ЛП3_F3"
+      ],
+      "sourceKeys": [
+        "R10L_STAIR_L62"
+      ],
+      "evidence": "АС.2, лист 62 по штампу; PDF 72"
+    },
+    {
+      "ids": [
+        "L1_ЛП4_F3",
+        "L1_ЛП4_DECK"
+      ],
+      "ownBodyNodes": [
+        "body:L1_ЛП4_F3"
+      ],
+      "sourceKeys": [
+        "R10L_STAIR_L63"
+      ],
+      "evidence": "АС.2, лист 63 по штампу; PDF 73"
+    },
+    {
+      "ids": [
+        "L1_Пп-1_RF"
+      ],
+      "ownBodyNodes": [],
+      "sourceKeys": [
+        "NAV_AS2_PDF79"
+      ],
+      "evidence": "АС.2, лист 69 по штампу; PDF 79"
+    },
+    {
+      "ids": [
+        "L1_Фп-1",
+        "L1_PREP"
+      ],
+      "ownBodyNodes": [
+        "body:L1_Фп-1"
+      ],
+      "sourceKeys": [
+        "R04_L47"
+      ],
+      "evidence": "АС.2, лист 47 по штампу; PDF 57"
+    },
+    {
+      "ids": [
+        "L1_С-1-4"
+      ],
+      "ownBodyNodes": [],
+      "sourceKeys": [
+        "R04_L53"
+      ],
+      "evidence": "АС.2, лист 53 по штампу; PDF 63"
+    }
+  ]
+}

@@ -1,33 +1,28 @@
 import { readFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
 import path from "node:path";
 import { promisify } from "node:util";
 import { gzip, gunzip } from "node:zlib";
 import manifest from "@/assets/project-models/troitsk-b24-atlas-3-2.manifest.json";
+import drawings from "@/assets/project-models/troitsk-b24-atlas-3-2.drawings.json";
 import { acceptsProjectModelGzip } from "@/lib/project-model-embed";
+import { adaptProjectAtlasDrawings, atlasConfirmedDrawingLinks, atlasDrawingRenderer, atlasDrawingStyles } from "@/lib/project-atlas-drawing-adapter";
+import { atlasDrawingPage } from "@/lib/project-atlas-drawing-viewer";
 
 const unzip = promisify(gunzip);
 const zip = promisify(gzip);
 const root = "src/assets/project-models/troitsk-b24-atlas-3-2";
 const prefix = "/model-assets/troitsk-b24-atlas-3-2/";
 type Asset = (typeof manifest.files)[keyof typeof manifest.files];
-const assets: Record<string, Asset> = manifest.files;
+const assets: Record<string, Asset> = { ...manifest.files, ...drawings.files };
 
-// Adapter only: the frozen geometry, scripts and drawings remain byte-identical.
+// Adapter only: all stored source bytes, geometry and drawings stay unchanged.
 const integration = `<style id="pgs-atlas-layout">
 @media(min-width:801px){body.nav-collapsed #album{grid-template-columns:minmax(0,1fr)}}
-#drawingResource>a[download]{display:inline-flex;align-items:center;min-height:44px;padding:10px 14px;background:white;border:1px solid #dbe4e8;border-radius:3px}
+${atlasDrawingStyles}
 </style><script id="pgs-atlas-integration">
 if(!location.hash||location.hash.startsWith('#module='))history.replaceState(null,'',location.pathname+location.search+'#node/building');
 document.title='Троицк · 3D Атлас 3.2';
-// Native PDF plugins cannot run in an opaque-origin sandbox; offer the original file instead.
-const drawingResource=document.getElementById('drawingResource');
-function preparePdfDownload(){
-  const link=drawingResource&&drawingResource.querySelector('a[href*=".pdf"]');
-  if(!link||link.hasAttribute('download'))return;
-  link.setAttribute('download','');link.removeAttribute('target');link.textContent='Скачать полный PDF';
-  const preview=drawingResource.querySelector('iframe');if(preview)preview.remove();
-}
-if(drawingResource)new MutationObserver(preparePdfDownload).observe(drawingResource,{childList:true});
 window.addEventListener('keydown',function(event){
   if(event.key==='Escape'&&!event.defaultPrevented&&parent!==window){
     const innerDialog=document.querySelector('dialog[open],#drawingPanel:not([hidden])');
@@ -35,6 +30,7 @@ window.addEventListener('keydown',function(event){
   }
 });
 </script>`;
+const adapterRevision = createHash("sha256").update(integration + atlasDrawingRenderer + atlasConfirmedDrawingLinks).digest("hex").slice(0, 16);
 
 export function projectAtlasContentSecurityPolicy(origin: string) {
   const locations = [...new Set([origin, "https://pgs-frankfurt.onrender.com"])].map((host) => host + prefix).join(" ");
@@ -43,16 +39,30 @@ export function projectAtlasContentSecurityPolicy(origin: string) {
 
 export async function projectAtlasAssetResponse(request: Request, segments: string[]) {
   const name = segments.join("/");
+  if (segments.length === 1 && name === "drawing.html") {
+    const url = new URL(request.url), page = atlasDrawingPage(url);
+    if (!page) return new Response("Drawing not found", { status: 404 });
+    const headers = new Headers({
+      "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, no-cache", ETag: page.etag,
+      "Content-Security-Policy": projectAtlasContentSecurityPolicy(url.origin), "X-Frame-Options": "SAMEORIGIN",
+      "Referrer-Policy": "no-referrer", "X-Content-Type-Options": "nosniff", "X-Robots-Tag": "noindex, nofollow"
+    });
+    return new Response(request.headers.get("if-none-match") === page.etag ? null : page.html, {
+      status: request.headers.get("if-none-match") === page.etag ? 304 : 200, headers
+    });
+  }
   // User paths select a manifest entry, never a filesystem path or a project record.
   if (segments.some((segment) => !segment || /[\\/\x00-\x1f]/.test(segment) || segment === "." || segment === "..") || !Object.prototype.hasOwnProperty.call(assets, name)) {
     return new Response("Atlas asset not found", { status: 404 });
   }
   const asset = assets[name];
   const entry = name === "index.html";
+  const drawingScript = name === "assets/album.js";
+  const adapted = entry || drawingScript;
   const headers = new Headers({
     "Content-Type": asset.contentType,
-    "Cache-Control": entry ? "public, no-cache" : "public, max-age=31536000, immutable",
-    ETag: `W/"${asset.sha256}${entry ? "-pgs-v1" : ""}"`,
+    "Cache-Control": adapted ? "public, no-cache" : "public, max-age=31536000, immutable",
+    ETag: `W/"${asset.sha256}${adapted ? "-pgs-" + adapterRevision : ""}"`,
     Vary: "Accept-Encoding",
     "Access-Control-Allow-Origin": "*",
     "Referrer-Policy": "no-referrer",
@@ -68,9 +78,11 @@ export async function projectAtlasAssetResponse(request: Request, segments: stri
   try {
     let bytes = await readFile(path.join(process.cwd(), root, asset.storage));
     const compressed = acceptsProjectModelGzip(request.headers.get("accept-encoding"));
-    if (entry) {
-      const html = (await unzip(bytes)).toString("utf8");
-      bytes = Buffer.from(html.replace("<script>", integration + "<script>"));
+    if (adapted) {
+      const original = (await unzip(bytes)).toString("utf8");
+      bytes = Buffer.from(entry
+        ? original.replace("<script>", integration + "<script>").replace('src="assets/album.js"', `src="assets/album.js?pgs=${adapterRevision}"`)
+        : adaptProjectAtlasDrawings(original));
       if (compressed) bytes = await zip(bytes);
     } else if (asset.compressed && !compressed) bytes = await unzip(bytes);
     if (asset.compressed && compressed) headers.set("Content-Encoding", "gzip");

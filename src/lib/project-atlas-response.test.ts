@@ -4,7 +4,9 @@ import { gunzipSync } from "node:zlib";
 import { runInNewContext } from "node:vm";
 import { describe, expect, it, vi } from "vitest";
 import manifest from "@/assets/project-models/troitsk-b24-atlas-3-2.manifest.json";
+import drawings from "@/assets/project-models/troitsk-b24-atlas-3-2.drawings.json";
 import { projectAtlasAssetResponse } from "@/lib/project-atlas-response";
+import { adaptProjectAtlasDrawings } from "@/lib/project-atlas-drawing-adapter";
 
 const base = "https://pgs.local/model-assets/troitsk-b24-atlas-3-2/";
 const get = (name: string, headers?: Record<string, string>) => projectAtlasAssetResponse(new Request(base + name, { headers }), name.split("/"));
@@ -25,7 +27,7 @@ describe("Atlas runtime delivery", () => {
     }
     const response = await get("index.html");
     const html = await response.text();
-    for (const [, name] of html.matchAll(/(?:src|href)="([^"]+)"/g)) expect(manifest.files).toHaveProperty(name);
+    for (const [, name] of html.matchAll(/(?:src|href)="([^"]+)"/g)) expect(manifest.files).toHaveProperty(name.split("?")[0]);
   }, 30_000);
 
   it.each(["gzip", "br, gzip", "GZIP;q=0.5", "*"])("compresses the entry as one gzip member: %s", async (encoding) => {
@@ -35,13 +37,14 @@ describe("Atlas runtime delivery", () => {
     expect(response.headers.get("content-encoding")).toBe("gzip");
     expect(html).toContain('id="pgs-atlas-integration"');
     expect(html).toContain('id="canvas"');
-    expect(html).toContain('src="assets/album.js"');
+    expect(html).toMatch(/src="assets\/album\.js\?pgs=[a-f0-9]+"/);
     expect(response.headers.has("set-cookie")).toBe(false);
   });
   it.each(["identity", "br", "gzip;q=0", "gzip;q=0, *;q=1"])("honors identity encoding: %s", async (encoding) => {
     const response = await get("assets/album.js", { "accept-encoding": encoding });
     expect(response.headers.has("content-encoding")).toBe(false);
-    expect(createHash("sha256").update(await response.text()).digest("hex")).toBe(manifest.files["assets/album.js"].sha256);
+    const stored = await readFile(`src/assets/project-models/troitsk-b24-atlas-3-2/${manifest.files["assets/album.js"].storage}`);
+    expect(await response.text()).toBe(adaptProjectAtlasDrawings(gunzipSync(stored).toString()));
   });
   it("permits only atlas resources and a local worker, never app API requests or parent access", async () => {
     const response = await get("index.html");
@@ -74,6 +77,12 @@ describe("Atlas runtime delivery", () => {
     const first = await get("assets/core.js");
     expect((await get("assets/core.js", { "if-none-match": first.headers.get("etag")! })).status).toBe(304);
     expect((await get("index.html", { "if-none-match": 'W/"troitsk-building-24-r10"' })).status).toBe(200);
+    expect((await get("index.html", { "if-none-match": `W/"${manifest.files["index.html"].sha256}-pgs-v1"` })).status).toBe(200);
+    const entry = await get("index.html");
+    expect((await get("index.html", { "if-none-match": entry.headers.get("etag")! })).status).toBe(304);
+    const script = await get("assets/album.js");
+    expect(script.headers.get("cache-control")).toBe("public, no-cache");
+    expect(script.headers.get("etag")).not.toBe(`W/"${manifest.files["assets/album.js"].sha256}"`);
   });
   it("supports PDF byte ranges and rejects unsatisfiable ranges", async () => {
     const name = Object.keys(manifest.files).find((name) => name.endsWith(".pdf"))!;
@@ -86,19 +95,46 @@ describe("Atlas runtime delivery", () => {
     expect((await get(name, { range: "bytes=-0" })).status).toBe(416);
     expect((await get(name, { range: "bytes=-100" })).status).toBe(206);
   });
-  it("replaces unsupported sandbox PDF previews with an explicit download", async () => {
-    const html = await (await get("index.html")).text();
-    expect(html).toContain("body.nav-collapsed #album{grid-template-columns:minmax(0,1fr)}");
-    const script = html.match(/<script id="pgs-atlas-integration">([\s\S]*?)<\/script>/)![1];
-    const link = { hasAttribute: () => false, setAttribute: vi.fn(), removeAttribute: vi.fn(), textContent: "" };
-    const iframe = { remove: vi.fn() };
-    const resource = { querySelector: (selector: string) => selector === "iframe" ? iframe : link };
-    let onMutation = () => {};
-    class Observer { constructor(callback: () => void) { onMutation = callback; } observe() {} }
-    runInNewContext(script, { location: { hash: "#node/building" }, document: { title: "", getElementById: () => resource }, window: { addEventListener: vi.fn() }, MutationObserver: Observer });
-    onMutation();
-    expect(link.setAttribute).toHaveBeenCalledWith("download", "");
-    expect(link.textContent).toBe("Скачать полный PDF");
-    expect(iframe.remove).toHaveBeenCalled();
+  it("serves the exact PDF page in a sandboxed image viewer without a native PDF plugin", async () => {
+    const url = base + "drawing.html?source=R05S_N_024&view=page";
+    const response = await projectAtlasAssetResponse(new Request(url), ["drawing.html"]);
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toContain("text/html");
+    expect(response.headers.get("content-security-policy")).toContain("connect-src 'none'");
+    expect(response.headers.get("content-security-policy")).not.toContain("allow-same-origin");
+    const html = await response.text();
+    expect(html).toContain("PDF, страница 24");
+    expect(html).toContain("Лист 23");
+    expect(html).toContain(drawings.sources.R05S_N_024.pageFile);
+    expect(html).not.toContain("<iframe");
+    expect(html).toContain('href="documents/AS2_last_full.pdf" download');
+    expect((await projectAtlasAssetResponse(new Request(url, { headers: { "if-none-match": response.headers.get("etag")! } }), ["drawing.html"])).status).toBe(304);
+    for (const query of ["", "?source=__proto__", "?source=../../.env", "?source=R04_node_OP&view=page"]) {
+      expect((await projectAtlasAssetResponse(new Request(base + "drawing.html" + query), ["drawing.html"])).status).toBe(404);
+    }
+    const imageOnly = await projectAtlasAssetResponse(new Request(base + "drawing.html?source=R04_node_OP"), ["drawing.html"]);
+    expect(imageOnly.status).toBe(200);
+    expect(await imageOnly.text()).toContain('src="sources/R04_node_OP.jpg"');
+  });
+  it("keeps derived pages traceable to each exact registered PDF and validates their bytes", async () => {
+    expect(Object.keys(drawings.sources)).toHaveLength(237);
+    expect(Object.values(drawings.sources).filter(s => s.pageFile)).toHaveLength(149);
+    expect(Object.keys(drawings.files)).toHaveLength(116);
+    for (const [name, file] of Object.entries(drawings.files)) {
+      expect(file.pdfSha256).toBe(manifest.files[file.pdf as keyof typeof manifest.files].sha256);
+      const response = await get(name);
+      expect(response.status).toBe(200);
+      expect(response.headers.get("content-type")).toBe("image/webp");
+      const bytes = Buffer.from(await response.arrayBuffer());
+      expect(createHash("sha256").update(bytes).digest("hex")).toBe(file.sha256);
+      expect(bytes.length).toBe(file.bytes);
+      expect(file.pdfPage).toBeGreaterThan(0);
+      expect(Math.max(file.width, file.height)).toBeGreaterThanOrEqual(3200);
+    }
+    const files: Record<string, { pdf: string; pdfPage: number }> = drawings.files;
+    for (const source of Object.values(drawings.sources)) if (source.pageFile) {
+      expect(files[source.pageFile].pdf).toBe(source.pdf);
+      expect(files[source.pageFile].pdfPage).toBe(source.pdfPage);
+    }
   });
 });
