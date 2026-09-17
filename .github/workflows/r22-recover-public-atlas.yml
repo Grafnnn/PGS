@@ -1,0 +1,54 @@
+name: R22 Recover Public Atlas
+on:
+  push:
+    branches: [recovery/r22-full-atlas]
+    paths: [.github/workflows/r22-recover-public-atlas.yml]
+permissions:
+  contents: read
+jobs:
+  recover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 7f49f3aa94303e3dd956ade165e4f7380fabff3d
+          persist-credentials: false
+      - name: Recover frozen public runtime with per-file verification
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path, PurePosixPath
+          import json, gzip, hashlib, shutil
+          src=Path('src/assets/project-models')
+          mf=src/'troitsk-b24-atlas-3-2.manifest.json'
+          meta=json.loads(mf.read_text())
+          assert meta['geometryBlocks']==562
+          assert meta['activePhysicalObjects']==10412
+          assert meta['sourceManifestSha256']=='0b90daba4cb11f4f2e4155525f515b0b7d69d1a6e499141053b6c5fabd7fc601'
+          out=Path('recovered_public_atlas');out.mkdir()
+          rows=[]
+          for name,rec in meta['files'].items():
+              p=PurePosixPath(name)
+              assert not p.is_absolute() and '..' not in p.parts
+              stored=(src/'troitsk-b24-atlas-3-2'/rec['storage']).read_bytes()
+              assert len(stored)==rec['storedBytes'], name
+              raw=gzip.decompress(stored) if rec['compressed'] else stored
+              assert len(raw)==rec['bytes'], name
+              digest=hashlib.sha256(raw).hexdigest()
+              assert digest==rec['sha256'], name
+              dest=out/'runtime'/name;dest.parent.mkdir(parents=True,exist_ok=True);dest.write_bytes(raw)
+              rows.append({'path':name,'bytes':len(raw),'sha256':digest})
+          assert len([r for r in rows if r['path'].startswith('blocks/')])==562
+          shutil.copyfile(mf,out/'SOURCE_RUNTIME_MANIFEST.json')
+          report={'status':'PASS','source_commit':'7f49f3aa94303e3dd956ade165e4f7380fabff3d','runtime_files_verified':len(rows),'geometry_blocks':562,'declared_active_physical_objects':10412,'original_source_zip_reconstructed':False,'files':rows}
+          (out/'RECOVERY_VERIFICATION.json').write_text(json.dumps(report,ensure_ascii=False,indent=2))
+          print(json.dumps({k:v for k,v in report.items() if k!='files'}))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: troitsk-r22-public-base-verified
+          path: recovered_public_atlas/
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 6
