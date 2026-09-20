@@ -7,7 +7,7 @@ RUN pnpm install --frozen-lockfile
 
 FROM node:22-alpine AS builder
 WORKDIR /app
-RUN apk add --no-cache openssl ca-certificates
+RUN apk add --no-cache openssl ca-certificates unzip
 RUN corepack enable && corepack prepare pnpm@11.5.3 --activate
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
