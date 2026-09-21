@@ -5,22 +5,25 @@ import { createGunzip } from "node:zlib";
 import { acceptsProjectModelGzip } from "@/lib/project-model-embed";
 
 export const ATLAS_R25_PREFIX = "/model-assets/troitsk-r25v5/";
-const root = path.join(process.cwd(), "src/assets/project-models/troitsk-r25v5");
+type AtlasVersion = "v5" | "v8";
 type Asset = { pack: string; offset: number; storedBytes: number; bytes: number; compressed: boolean; sha256: string; contentType: string };
-let indexPromise: Promise<{ files: Record<string, Asset> }> | undefined;
-function loadIndex() {
+const indexes = new Map<AtlasVersion, Promise<{ files: Record<string, Asset> }>>();
+function loadIndex(version: AtlasVersion, root: string) {
   // Load the index only, not the 600MB release, and keep it out of the JS build bundle.
-  return indexPromise ??= readFile(path.join(root, "index.json"), "utf8").then(JSON.parse).catch((error) => {
-    indexPromise = undefined;
+  if (!indexes.has(version)) indexes.set(version, readFile(path.join(root, "index.json"), "utf8").then(JSON.parse).catch((error) => {
+    indexes.delete(version);
     throw error;
-  });
+  }));
+  return indexes.get(version)!;
 }
 
-export async function projectAtlasR25Response(request: Request, segments: string[]) {
+export async function projectAtlasR25Response(request: Request, segments: string[], version: AtlasVersion = "v5") {
+  const prefix = `/model-assets/troitsk-r25${version}/`;
+  const root = path.join(process.cwd(), `src/assets/project-models/troitsk-r25${version}`);
   if (segments.some(s => !s || s === "." || s === ".." || /[\\/\x00-\x1f]/.test(s))) return new Response("Not found", { status: 404 });
   const name = segments.join("/");
   try {
-    const { files } = await loadIndex();
+    const { files } = await loadIndex(version, root);
     if (!Object.hasOwn(files, name)) return new Response("Not found", { status: 404 });
     const asset = files[name];
     const headers = new Headers({
@@ -30,12 +33,12 @@ export async function projectAtlasR25Response(request: Request, segments: string
       "Access-Control-Allow-Origin": "*", "Referrer-Policy": "no-referrer",
       "X-Content-Type-Options": "nosniff", "X-Robots-Tag": "noindex, nofollow"
     });
-    const locations = [...new Set([new URL(request.url).origin, "https://pgs-frankfurt.onrender.com"])].map(host => host + ATLAS_R25_PREFIX).join(" ");
+    const locations = [...new Set([new URL(request.url).origin, "https://pgs-frankfurt.onrender.com"])].map(host => host + prefix).join(" ");
     if (name.endsWith(".html") || name === "service-worker.js") {
       headers.set("Content-Security-Policy", `default-src 'none'; script-src 'unsafe-inline' ${locations}; style-src 'unsafe-inline' ${locations}; img-src data: blob: ${locations}; worker-src blob: ${locations}; connect-src ${locations}; frame-src blob: ${locations}; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'self'`);
       headers.set("X-Frame-Options", "SAMEORIGIN");
     }
-    if (name === "service-worker.js") headers.set("Service-Worker-Allowed", ATLAS_R25_PREFIX);
+    if (name === "service-worker.js") headers.set("Service-Worker-Allowed", prefix);
     if (name.endsWith(".svg")) headers.set("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; sandbox");
     if (request.headers.get("if-none-match") === headers.get("etag")) return new Response(null, { status: 304, headers });
     let start = 0, end = asset.storedBytes - 1, status = 200;
