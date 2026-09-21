@@ -4,8 +4,8 @@ import { getProject3dModel, getPublicProject3dModel, getProject3dPresentation, p
 afterEach(() => vi.unstubAllEnvs());
 
 describe("project 3D model registry", () => {
-  it("resolves Atlas R25v5 and exposes a stable explicitly published URL", () => {
-    expect(getProject3dModel({ id: "cmteg9g33000for4oc06rko5a" })).toMatchObject({ revision: "R25v5", slug: "troitsk-building-24-atlas-r25v5", assetBaseUrl: "/model-assets/troitsk-r25v5/" });
+  it("resolves Atlas R25v8 and exposes a stable explicitly published URL", () => {
+    expect(getProject3dModel({ id: "cmteg9g33000for4oc06rko5a" })).toMatchObject({ revision: "R25v8", slug: "troitsk-building-24-atlas-r25v8", assetBaseUrl: "/model-assets/troitsk-r25v8/" });
     expect(getPublicProject3dModel("troitsk-building-24")).toBe(getProject3dModel({ id: "cmteg9g33000for4oc06rko5a" }));
     expect(getPublicProject3dModel("troitsk-building-24")?.publicUrl).toBe("/models/troitsk-building-24#node/building");
     expect(getPublicProject3dModel("cmteg9g33000for4oc06rko5a")).toBeNull();
@@ -30,7 +30,7 @@ describe("project 3D presentation", () => {
   it("keeps actual project models on the authenticated API even in development", () => {
     vi.stubEnv("NODE_ENV", "development");
     expect(getProject3dPresentation({ id: "cmteg9g33000for4oc06rko5a" })).toMatchObject({
-      url: "/api/projects/cmteg9g33000for4oc06rko5a/model-viewer?v=R25v5&embed=monolith-v1#node/building",
+      url: "/api/projects/cmteg9g33000for4oc06rko5a/model-viewer?v=R25v8&embed=monolith-v1#node/building",
       isPreview: false
     });
   });
@@ -41,7 +41,7 @@ describe("project 3D presentation", () => {
     expect(getProject3dPresentation({ id: "project-demo" })).toMatchObject({
       url: "/design-contest/model?embed=monolith-v1#module=master&view=overview",
       isPreview: true,
-      model: { slug: "troitsk-building-24-atlas-r25v5" }
+      model: { slug: "troitsk-building-24-atlas-r25v8" }
     });
     expect(getProject3dPresentation({ id: "unrelated-project" })).toBeNull();
   });
