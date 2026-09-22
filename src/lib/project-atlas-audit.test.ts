@@ -9,14 +9,17 @@ const source=async(name:string)=>(await get('assets/'+name)).text();
 describe('Atlas audit regressions',()=>{
   it('synchronizes both isolation actions, including while tools are hidden',async()=>{
     const js=await source('view-settings.js');
-    const fragment=js.slice(js.indexOf('const s=api.summary();for('),js.indexOf('if(panel.hidden)return;'));
+    const fragment=js.slice(js.indexOf('const isolated=api.isIsolated();'),js.indexOf('if(panel.hidden)return;const s=api.summary();')+'if(panel.hidden)return;const s=api.summary();'.length);
     expect(fragment).toContain("['isolate','r23Isolate']");
     const buttons:Record<string,{textContent:string}>={isolate:{textContent:'stale'},r23Isolate:{textContent:'stale'}};
     for(const isolated of [true,false]){
-      vm.runInNewContext(fragment,{$:(id:string)=>buttons[id],api:{summary:()=>({isolated})}});
+      const summary=vi.fn();
+      vm.runInNewContext('(function(){'+fragment+'})();',{$:(id:string)=>buttons[id],panel:{hidden:true},api:{isIsolated:()=>isolated,summary}});
+      expect(summary).not.toHaveBeenCalled();
       expect(buttons.isolate.textContent).toBe(isolated?'Вернуть окружение':'Изолировать');
       expect(buttons.r23Isolate.textContent).toBe(buttons.isolate.textContent);
     }
+    expect(await source('atlas-engine.js')).toContain('isIsolated:()=>isolated');
   });
   it('clears query, result buttons and pending debounce on scope reset',async()=>{
     const settings=await source('view-settings.js'),engine=await source('atlas-engine.js'),prototype=await source('prototype.js');

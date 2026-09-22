@@ -4,6 +4,7 @@ function replace(source, old, next, count = 1) {
 }
 
 export function patchEngine(source) {
+  source = replace(source, 'selectedId:()=>selection,', 'selectedId:()=>selection,isIsolated:()=>isolated,');
   source = replace(source, "scope=s;$('search').value='';", "scope=s;V.resetSearch();");
   source = replace(source, "$('modal').classList.add('open');", "openDrawingModal();", 3);
   source = replace(source, "let modalZoom=1;function zoomDrawing", "let modalZoom=1;function resetDrawingView(){modalZoom=1;$('drawingImg').style.width='100%';$('drawingImg').style.maxWidth='1600px';$('modal').scrollTop=0;$('modal').scrollLeft=0;}\nfunction openDrawingModal(){$('modal').classList.add('open');resetDrawingView();}\nfunction zoomDrawing");
@@ -12,7 +13,7 @@ export function patchEngine(source) {
 
 export function patchSettings(source) {
   source = replace(source, "function search(){if(!api)return;", "function resetSearch(){clearTimeout(searchTimer);searchTimer=0;$('search').value='';$('viewSearchResults').replaceChildren();$('r23SearchCount').textContent='';}\n function search(){clearTimeout(searchTimer);searchTimer=0;if(!api)return;");
-  source = replace(source, "if(panel.hidden)return;const s=api.summary();", "const s=api.summary();for(const id of ['isolate','r23Isolate']){const b=$(id),label=s.isolated?'Вернуть окружение':'Изолировать';if(b&&b.textContent!==label)b.textContent=label;}if(panel.hidden)return;");
+  source = replace(source, "if(panel.hidden)return;const s=api.summary();", "const isolated=api.isIsolated();for(const id of ['isolate','r23Isolate']){const b=$(id),label=isolated?'Вернуть окружение':'Изолировать';if(b&&b.textContent!==label)b.textContent=label;}if(panel.hidden)return;const s=api.summary();");
   return replace(source, 'open,toast,sync,download,attach(a)', 'open,toast,sync,resetSearch,download,attach(a)');
 }
 
