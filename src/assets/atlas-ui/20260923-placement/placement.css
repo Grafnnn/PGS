@@ -1,0 +1,7 @@
+body.atlas-prototype #right .engineering-placement{font-size:13px;line-height:1.45;margin:0 0 10px}
+body.atlas-prototype #right .engineering-placement dl{margin:0}
+body.atlas-prototype #right .engineering-placement dt{font-size:11px;color:var(--muted);margin:6px 0 1px}
+body.atlas-prototype #right .engineering-placement dd{margin:0;font-weight:500;overflow-wrap:anywhere}
+body.atlas-prototype #right section.element-notes{margin:0 0 12px;padding:8px 0;border-top:1px solid var(--line)}
+body.atlas-prototype #right section.element-notes h3{font-size:11px;line-height:1.45;font-weight:600;color:var(--muted);margin:0 0 8px;letter-spacing:0}
+body.atlas-prototype #right section.element-notes #objectWarning{background:transparent;border:0;padding:0;margin:0;color:var(--ink);font-size:13px;line-height:1.45}

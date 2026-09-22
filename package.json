@@ -7,11 +7,11 @@
     "node": "22.x"
   },
   "scripts": {
-    "dev": "node scripts/prepare-atlas-r25v5.mjs && node scripts/prepare-atlas-r25v5.mjs v8 && node scripts/prepare-atlas-ui.mjs && node scripts/prepare-atlas-source-recovery.mjs && node scripts/prepare-atlas-boot.mjs && node scripts/prepare-atlas-card.mjs && node scripts/prepare-atlas-card-fix.mjs && node scripts/prepare-atlas-compact.mjs && next dev",
-    "build": "node scripts/prepare-atlas-r25v5.mjs && node scripts/prepare-atlas-r25v5.mjs v8 && node scripts/prepare-atlas-ui.mjs && node scripts/prepare-atlas-source-recovery.mjs && node scripts/prepare-atlas-boot.mjs && node scripts/prepare-atlas-card.mjs && node scripts/prepare-atlas-card-fix.mjs && node scripts/prepare-atlas-compact.mjs && next build",
+    "dev": "node scripts/prepare-atlas-r25v5.mjs && node scripts/prepare-atlas-r25v5.mjs v8 && node scripts/prepare-atlas-ui.mjs && node scripts/prepare-atlas-source-recovery.mjs && node scripts/prepare-atlas-boot.mjs && node scripts/prepare-atlas-card.mjs && node scripts/prepare-atlas-card-fix.mjs && node scripts/prepare-atlas-compact.mjs && node scripts/prepare-atlas-placement.mjs && next dev",
+    "build": "node scripts/prepare-atlas-r25v5.mjs && node scripts/prepare-atlas-r25v5.mjs v8 && node scripts/prepare-atlas-ui.mjs && node scripts/prepare-atlas-source-recovery.mjs && node scripts/prepare-atlas-boot.mjs && node scripts/prepare-atlas-card.mjs && node scripts/prepare-atlas-card-fix.mjs && node scripts/prepare-atlas-compact.mjs && node scripts/prepare-atlas-placement.mjs && next build",
     "start": "next start",
     "lint": "next lint",
-    "test": "node scripts/prepare-atlas-r25v5.mjs && node scripts/prepare-atlas-r25v5.mjs v8 && node scripts/prepare-atlas-ui.mjs && node scripts/prepare-atlas-source-recovery.mjs && node scripts/prepare-atlas-boot.mjs && node scripts/prepare-atlas-card.mjs && node scripts/prepare-atlas-card-fix.mjs && node scripts/prepare-atlas-compact.mjs && vitest run",
+    "test": "node scripts/prepare-atlas-r25v5.mjs && node scripts/prepare-atlas-r25v5.mjs v8 && node scripts/prepare-atlas-ui.mjs && node scripts/prepare-atlas-source-recovery.mjs && node scripts/prepare-atlas-boot.mjs && node scripts/prepare-atlas-card.mjs && node scripts/prepare-atlas-card-fix.mjs && node scripts/prepare-atlas-compact.mjs && node scripts/prepare-atlas-placement.mjs && vitest run",
     "db:up": "docker compose up -d db",
     "db:down": "docker compose down",
     "db:reset": "prisma migrate reset",

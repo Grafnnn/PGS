@@ -5,8 +5,8 @@ import { createGunzip } from "node:zlib";
 import { acceptsProjectModelGzip } from "@/lib/project-model-embed";
 
 export const ATLAS_R25_PREFIX = "/model-assets/troitsk-r25v5/";
-type AtlasVersion = "v5" | "v8" | "v8-ui1" | "v8-ui2" | "v8-ui3" | "v8-ui4" | "v8-ui5" | "v8-ui6";
-type Asset = { source?: "v8" | "v8-ui1" | "v8-ui2" | "v8-ui3" | "v8-ui4" | "v8-ui5"; pack: string; offset: number; storedBytes: number; bytes: number; compressed: boolean; sha256: string; contentType: string };
+type AtlasVersion = "v5" | "v8" | "v8-ui1" | "v8-ui2" | "v8-ui3" | "v8-ui4" | "v8-ui5" | "v8-ui6" | "v8-ui7";
+type Asset = { source?: "v8" | "v8-ui1" | "v8-ui2" | "v8-ui3" | "v8-ui4" | "v8-ui5" | "v8-ui6"; pack: string; offset: number; storedBytes: number; bytes: number; compressed: boolean; sha256: string; contentType: string };
 const indexes = new Map<AtlasVersion, Promise<{ files: Record<string, Asset> }>>();
 function loadIndex(version: AtlasVersion, root: string) {
   // Load the index only, not the 600MB release, and keep it out of the JS build bundle.
@@ -66,7 +66,8 @@ export async function projectAtlasR25Response(request: Request, segments: string
       "v8-ui1": ["v8"], "v8-ui2": ["v8", "v8-ui1"],
       "v8-ui3": ["v8", "v8-ui1", "v8-ui2"], "v8-ui4": ["v8", "v8-ui1", "v8-ui2", "v8-ui3"],
       "v8-ui5": ["v8", "v8-ui1", "v8-ui2", "v8-ui3", "v8-ui4"],
-      "v8-ui6": ["v8", "v8-ui1", "v8-ui2", "v8-ui3", "v8-ui4", "v8-ui5"]
+      "v8-ui6": ["v8", "v8-ui1", "v8-ui2", "v8-ui3", "v8-ui4", "v8-ui5"],
+      "v8-ui7": ["v8", "v8-ui1", "v8-ui2", "v8-ui3", "v8-ui4", "v8-ui5", "v8-ui6"]
     };
     const inherited = asset.source && ancestors[version]?.includes(asset.source);
     const packRoot = inherited
