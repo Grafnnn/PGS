@@ -19,14 +19,14 @@ type ProjectIdentity = {
 };
 
 const troitskBuilding24Model: Project3dModel = {
-  slug: "troitsk-building-24-atlas-r25v8-ui2",
+  slug: "troitsk-building-24-atlas-r25v8-ui3",
   title: "3D Атлас здания 24",
   subtitle: "Здание, чертежи и каталог: 2 760 пакетов, 10 412 физических объектов",
-  revision: "R25v8-ui2",
+  revision: "R25v8-ui3",
   updatedAt: "22.09.2026",
   disclaimer: "Координационный атлас. 47 позиций без подтверждённого размещения; 4 исторических профиля не восстановлены. Первичное подтверждение источника 2566 неполное. Не исполнительная съёмка и не утверждение рабочей документации.",
-  assetPath: "src/assets/project-models/troitsk-r25v8-ui2",
-  assetBaseUrl: "/model-assets/troitsk-r25v8-ui2/",
+  assetPath: "src/assets/project-models/troitsk-r25v8-ui3",
+  assetBaseUrl: "/model-assets/troitsk-r25v8-ui3/",
   publicUrl: "/models/troitsk-building-24#node/building"
 };
 

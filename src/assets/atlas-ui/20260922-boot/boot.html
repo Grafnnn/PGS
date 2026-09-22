@@ -1,0 +1,7 @@
+<style>
+html:not([data-atlas-boot="ready"]) body > :not(#atlasBoot),html:not([data-atlas-boot="ready"]) body > :not(#atlasBoot) *{visibility:hidden!important;pointer-events:none!important}
+#atlasBoot{position:fixed;inset:0;z-index:2147483647;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:24px;text-align:center;background:#f3f7f8;color:#193642;font:14px/1.5 system-ui,sans-serif}
+#atlasBoot strong{font-size:22px;font-weight:600}#atlasBoot p{max-width:360px;margin:0}#atlasBoot a{color:#167b8e;padding:12px 20px;border:1px solid #b5cbd3;border-radius:6px;text-decoration:none}
+html[data-atlas-boot="ready"] #atlasBoot{display:none}
+</style>
+<section id="atlasBoot" role="status" aria-live="polite"><strong>3D Атлас · Троицк</strong><p id="atlasBootMessage">Открываем Атлас…</p><a href="index.html">Повторить загрузку</a><noscript><style>#atlasBootMessage{display:none}</style><p>Для работы с Атласом включите JavaScript и повторите загрузку.</p></noscript></section>
