@@ -5,8 +5,8 @@ import { createGunzip } from "node:zlib";
 import { acceptsProjectModelGzip } from "@/lib/project-model-embed";
 
 export const ATLAS_R25_PREFIX = "/model-assets/troitsk-r25v5/";
-type AtlasVersion = "v5" | "v8" | "v8-ui1";
-type Asset = { source?: "v8"; pack: string; offset: number; storedBytes: number; bytes: number; compressed: boolean; sha256: string; contentType: string };
+type AtlasVersion = "v5" | "v8" | "v8-ui1" | "v8-ui2";
+type Asset = { source?: "v8" | "v8-ui1"; pack: string; offset: number; storedBytes: number; bytes: number; compressed: boolean; sha256: string; contentType: string };
 const indexes = new Map<AtlasVersion, Promise<{ files: Record<string, Asset> }>>();
 function loadIndex(version: AtlasVersion, root: string) {
   // Load the index only, not the 600MB release, and keep it out of the JS build bundle.
@@ -62,8 +62,10 @@ export async function projectAtlasR25Response(request: Request, segments: string
     headers.set("Content-Length", String(asset.compressed && !encoded ? asset.bytes : Math.max(0, end - start + 1)));
     if (request.method === "HEAD" || !asset.storedBytes) return new Response(null, { status, headers });
     // The UI release reuses sealed V8 packs without copying engineering payloads.
-    const packRoot = version === "v8-ui1" && asset.source === "v8"
-      ? path.join(process.cwd(), "src/assets/project-models/troitsk-r25v8") : root;
+    const inherited = (version === "v8-ui1" || version === "v8-ui2")
+      && (asset.source === "v8" || (version === "v8-ui2" && asset.source === "v8-ui1"));
+    const packRoot = inherited
+      ? path.join(process.cwd(), `src/assets/project-models/troitsk-r25${asset.source}`) : root;
     const file = await open(path.join(packRoot, asset.pack), "r");
     const input = file.createReadStream({ start: asset.offset + start, end: asset.offset + end, autoClose: true });
     let body: Readable = input;
