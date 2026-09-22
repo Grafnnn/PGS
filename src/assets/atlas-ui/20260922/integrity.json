@@ -1,0 +1,90 @@
+{
+  "sourceRevision": "20260922-3",
+  "files": [
+    {
+      "path": "assets/atlas-engine.js",
+      "bytes": 116509,
+      "sha256": "f29fa70948130115597ff8d41589c82809f179d0bcff1894d7939ca883df8b27"
+    },
+    {
+      "path": "assets/atlas-mark-v3.png",
+      "bytes": 714699,
+      "sha256": "6aa077221cc0a9691cf3a1bcc8af28c3072f09eaff8360e1625f5e6acdfd6f0f"
+    },
+    {
+      "path": "assets/icons/LICENSE",
+      "bytes": 1071,
+      "sha256": "b5b1f1da112d18ea2147decfd48ddc1bf2b5aeb6c265381579340e95b15a2bb2"
+    },
+    {
+      "path": "assets/prototype-icons.js",
+      "bytes": 17018,
+      "sha256": "f97e9b9ac1c49c599eaa8ac38487876ba54a84a7083343a574753ac45cf78813"
+    },
+    {
+      "path": "assets/prototype-pages.css",
+      "bytes": 3624,
+      "sha256": "000e31622b8b9f2086f5f1cabdccd10375e8b952d7f5849aaaaaa723252473d7"
+    },
+    {
+      "path": "assets/prototype.css",
+      "bytes": 25921,
+      "sha256": "182873b61867f382b3a226aa5ca246cc6f76f0598e887ad50298e061f98b4c29"
+    },
+    {
+      "path": "assets/prototype.js",
+      "bytes": 15875,
+      "sha256": "c9a7fded670e4ef08cf36c4a056346e3ac71e7a9a109db3d0a29d9db2519bc71"
+    },
+    {
+      "path": "assets/view-settings.js",
+      "bytes": 23744,
+      "sha256": "f8830ca4200bc0cd9abffe8ef26af9a6ab23dae653c1fec4ec966caa3250930f"
+    },
+    {
+      "path": "auxiliary.html",
+      "bytes": 1061,
+      "sha256": "3e2d01748fa283a0616f9e0ed36bf1fce1c33579a7796bf17dae7bba3fdb9b05"
+    },
+    {
+      "path": "catalogue-model.html",
+      "bytes": 4314,
+      "sha256": "29a465a61b33ab35bc07ce037658009d85144583058ee71d0c25f3d83266ff43"
+    },
+    {
+      "path": "catalogue.html",
+      "bytes": 2724,
+      "sha256": "529c145b8e8fea3cd352de48e4f7da635b3a51ed0350b7267cb1155ac59d1c64"
+    },
+    {
+      "path": "DOCUMENTS.html",
+      "bytes": 4702,
+      "sha256": "faee27513b050f290584f11ce3a0e95aed35c5a435130c3ae89263e857c9ee3a"
+    },
+    {
+      "path": "HISTORY_MATERIALS.html",
+      "bytes": 3383,
+      "sha256": "d7f639a5dbf635cde66b6104ebac3b1c4f4d1e5b1241cc4b6ecac8b980308287"
+    },
+    {
+      "path": "index.html",
+      "bytes": 36878,
+      "sha256": "41e6b3c83c24e05f95b9b308e303ba36947f405a9db78bcb34543efaf05175e8"
+    },
+    {
+      "path": "library.html",
+      "bytes": 3182,
+      "sha256": "5b21fcc12df22218995b47bb0767391513c643e21b64be391e3729b04b5e0255"
+    },
+    {
+      "path": "R25_UPDATE_LOG.html",
+      "bytes": 16090,
+      "sha256": "38e7f03a8d449060580dace62233e636e125a7d7efefd91c899f85bb43fdd6ba"
+    },
+    {
+      "path": "UNPLACED.html",
+      "bytes": 25080,
+      "sha256": "c98cad0d2b89a7d281b9ba31f9247e70d17ebda3335ece04e8c2694d02112ec6"
+    }
+  ]
+}
