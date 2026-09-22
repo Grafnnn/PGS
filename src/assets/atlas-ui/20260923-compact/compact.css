@@ -1,0 +1,36 @@
+/* One role scale across navigation, tools and the inspector; no global scaling. */
+body.atlas-prototype{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;font-size:13px;line-height:1.45}
+body.atlas-prototype :is(button,input,select,textarea,summary,kbd){font-family:inherit}
+body.atlas-prototype :is(button,input,select,textarea){font-size:12px;line-height:1.4}
+body.atlas-prototype :is(#left,#right,#viewSettings,.atlas-dialog,.project-resources,.search-popover){font-size:13px;line-height:1.45;letter-spacing:0}
+body.atlas-prototype :is(#left .navigation-heading h1,#right #selectedName,.r23-menu-head b,.atlas-dialog h2,.popover-title){font-size:18px;line-height:1.35;font-weight:600;letter-spacing:0}
+body.atlas-prototype #right #selectedName{margin-bottom:12px}
+body.atlas-prototype :is(.atlas-dialog h3,.atlas-project strong){font-size:13px;line-height:1.45;font-weight:600}
+body.atlas-prototype :is(#albumTreeItems .album-node,.search-popover .r23-result,.project-resources a,#right .album-source,#right #objectWarning,#right .props b,.engineering-card dd){font-size:13px;line-height:1.45;letter-spacing:0}
+body.atlas-prototype :is(.tools button,.stage-actions button,#right .actions button,#right #drawing,#search,#viewSettings label,#viewSettings select,.modalbar button,.modalbar a,#projectHelp){font-size:12px;line-height:1.4;letter-spacing:0}
+body.atlas-prototype :is(small,.eyebrow,.element-state,.element-context small,.engineering-card dt,#right .props span,#right .album-source small,#drawingCaption,#r23SearchCount,.navigation-footnote,#left .kpis span,.status,.global-search kbd){font-size:11px;line-height:1.45;letter-spacing:0}
+body.atlas-prototype .global-search kbd{font-family:inherit;font-weight:400}
+body.atlas-prototype #right .engineering-card{margin:0;padding:0;border:0;font-size:13px}
+body.atlas-prototype #right details{margin:0;padding:0;border:0;border-top:1px solid var(--line)}
+body.atlas-prototype #right details>summary{box-sizing:border-box;display:flex;align-items:center;gap:8px;min-height:36px;margin:0;padding:8px 0;font-size:11px;line-height:1.45;font-weight:600;color:var(--muted);letter-spacing:0;list-style:none;cursor:pointer}
+body.atlas-prototype #right details>summary::-webkit-details-marker{display:none}
+body.atlas-prototype #right details>summary::marker{content:''}
+body.atlas-prototype #right details>summary::before{content:'›';display:inline-block;flex:0 0 8px;font-size:14px;line-height:1;transform:none}
+body.atlas-prototype #right details[open]>summary::before{transform:rotate(90deg)}
+body.atlas-prototype #right details>dl{margin:0 0 12px}
+body.atlas-prototype .passport-extra-notes p{margin:8px 0;font-size:13px;line-height:1.45;overflow-wrap:anywhere}
+body.atlas-prototype #right .actions{grid-template-columns:repeat(2,minmax(0,1fr));margin-bottom:12px}
+body.atlas-prototype #right #drawing{margin:8px 0 10px;min-height:42px}
+body.atlas-prototype :is(#left summary,#viewSettings summary){font-size:12px;font-weight:600;line-height:1.45;letter-spacing:0}
+body.atlas-prototype .atlas-dialog{font-size:13px;line-height:1.45}
+@media(max-width:850px){
+ body.atlas-prototype #right details>summary{min-height:44px}
+ body.atlas-prototype :is(button,#right .actions button,#right #drawing,#left summary,#viewSettings summary,.project-resources a){min-height:44px}
+ body.atlas-prototype #right #selectedName{font-size:17px}
+ body.atlas-prototype .tools{max-width:calc(100% - 12px);padding:3px}
+ body.atlas-prototype .tools button{padding:8px 6px}
+ body.atlas-prototype .tools #viewSettingsToggle{font-size:12px}
+ body.atlas-prototype .header-actions :is(#projectMenu,#themeToggle){width:44px}
+ body.atlas-prototype .atlas-project{padding-left:8px}
+ body.atlas-prototype .stage-actions button{padding:7px}
+}
