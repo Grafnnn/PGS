@@ -71,7 +71,7 @@ describe("ProjectCommandCenter", () => {
     expect(html).not.toContain("OPENAI_API_KEY");
   });
 
-  it("publishes the Troitsk Atlas R25v8 from the project command center", () => {
+  it("publishes the Troitsk Atlas V11 from the project command center", () => {
     const bundle = getProjectBundle("project-demo");
     const html = renderToStaticMarkup(
       createElement(ProjectCommandCenter, {
@@ -92,8 +92,9 @@ describe("ProjectCommandCenter", () => {
     );
 
     expect(html).toContain("3D Атлас здания 24");
-    expect(html).toContain("2 760 пакетов");
-    expect(html).toContain("R25v8");
+    expect(html).toContain("2 950 типов");
+    expect(html).toContain("10 397 активных элементов");
+    expect(html).toContain("V11");
     expect(html).toContain("Открыть 3D-модель");
     expect(html).not.toContain("<iframe");
   });
