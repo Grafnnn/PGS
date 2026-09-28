@@ -6,7 +6,7 @@ import {gzipSync, gunzipSync} from 'node:zlib';
 execFileSync(process.execPath,['scripts/prepare-atlas-r25v5.mjs','v11'],{stdio:'inherit'});
 const root='src/assets/project-models/troitsk-r25v11';
 const index=JSON.parse(await readFile(`${root}/index.json`,'utf8'));
-if(index.pgsPatch==='verified-drawing-links-v4') process.exit(0);
+if(index.pgsPatch==='verified-drawing-links-v5') process.exit(0);
 const read=async name=>{
   const f=index.files[name], pack=await readFile(`${root}/${f.pack}`);
   const stored=pack.subarray(f.offset,f.offset+f.storedBytes);
@@ -36,7 +36,9 @@ card=replaceOnce(card,
   'const links = ((o.albumRecord && o.albumRecord.sources) || []).filter',
   'const assigned = window.__FULL_ATLAS.sourceLinks(o);\n    const links = assigned.filter');
 append(file,Buffer.from(card));
-const engine=(await read('assets/atlas-engine.js')).toString();
+let engine=(await read('assets/atlas-engine.js')).toString();
+// Navigation may still be nested or already moved when asynchronous metadata resolves.
+engine=replaceOnce(engine,"$('left').insertBefore(reviewControls,$('studyNavigation'));","$('studyNavigation').before(reviewControls);");
 append('assets/atlas-engine.js',Buffer.from(replaceOnce(engine,
   'sourceAvailability:()=>albumSources,',
   'sourceAvailability:()=>albumSources,sourceLinks:o=>albumLinks(o),')));
@@ -54,6 +56,7 @@ append('assets/prototype.css',Buffer.from(replaceOnce(css,breakpoint,'@media (ma
 const release=JSON.parse((await read('CURRENT_RELEASE.json')).toString());
 release.pgsRuntimeFix='Route alternate-sheet PDF buttons through the same verified package links as anchors.';
 release.pgsRecoveryFix='Reuse the supplied source-recovery registry in element cards and the drawing library; no new engineering assignments.';
+release.pgsStartupFix='Insert review controls beside the current navigation node regardless of metadata/prototype loading order.';
 release.pgsLayoutFix='Use existing compact toolbar mode through 1400px to avoid overlapping labels with the inspector open.';
 append('CURRENT_RELEASE.json',Buffer.from(JSON.stringify(release,null,2)));
 const manifest=JSON.parse((await read('MANIFEST.json')).toString());
@@ -62,6 +65,6 @@ append('MANIFEST.json',Buffer.from(JSON.stringify(manifest)));
 const pack=Buffer.concat(chunks);
 await writeFile(`${root}/part-12.bin`,pack);
 index.packs['part-12.bin']={bytes:pack.length,sha256:sha(pack)};
-index.pgsPatch='verified-drawing-links-v4';
+index.pgsPatch='verified-drawing-links-v5';
 await writeFile(`${root}/index.json`,JSON.stringify(index));
 console.log('Atlas V11: verified drawing links and compact toolbar prepared');
