@@ -5,7 +5,7 @@ import { createGunzip } from "node:zlib";
 import { acceptsProjectModelGzip } from "@/lib/project-model-embed";
 
 export const ATLAS_R25_PREFIX = "/model-assets/troitsk-r25v5/";
-type AtlasVersion = "v5" | "v8" | "v8-ui1" | "v8-ui2" | "v8-ui3" | "v8-ui4" | "v8-ui5" | "v8-ui6" | "v8-ui7" | "v8-ui8";
+type AtlasVersion = "v5" | "v8" | "v8-ui1" | "v8-ui2" | "v8-ui3" | "v8-ui4" | "v8-ui5" | "v8-ui6" | "v8-ui7" | "v8-ui8" | "v11";
 type Asset = { source?: "v8" | "v8-ui1" | "v8-ui2" | "v8-ui3" | "v8-ui4" | "v8-ui5" | "v8-ui6" | "v8-ui7"; pack: string; offset: number; storedBytes: number; bytes: number; compressed: boolean; sha256: string; contentType: string };
 const indexes = new Map<AtlasVersion, Promise<{ files: Record<string, Asset> }>>();
 function loadIndex(version: AtlasVersion, root: string) {
