@@ -14,6 +14,28 @@ function decode(text:string,key:string) {
 }
 
 describe('sealed V11 website delivery',()=>{
+  it('starts whether navigation is nested or has already been moved by the UI',async()=>{
+    const engine=await (await get('assets/atlas-engine.js')).text();
+    expect(engine).not.toContain("$('left').insertBefore(reviewControls,$('studyNavigation'))");
+    const insertion=engine.match(/\$\('studyNavigation'\)\.before\(reviewControls\);/)?.[0];
+    expect(insertion).toBeDefined();
+    for(const parent of ['atlas-navigation','left','reviewBlock']) {
+      const children:unknown[]=[];
+      const controls={id:'review-controls'};
+      const navigation={parent,before(node:unknown){children.splice(children.indexOf(navigation),0,node);}};
+      children.push(navigation);
+      vm.runInNewContext(insertion!,{$:(id:string)=>id==='studyNavigation'?navigation:null,reviewControls:controls},{timeout:1000});
+      expect(children).toEqual([controls,navigation]);
+    }
+  });
+  it('uses a fresh immutable URL and matching CSP for the startup repair',async()=>{
+    const prefix='https://pgs.local/model-assets/troitsk-r25v11-ui1/';
+    const html=await projectAtlasR25Response(new Request(prefix+'index.html',{method:'HEAD'}),['index.html'],'v11-ui1');
+    expect(html.status).toBe(200);
+    expect(html.headers.get('content-security-policy')).toContain(prefix);
+    const script=await projectAtlasR25Response(new Request(prefix+'assets/atlas-engine.js'),['assets','atlas-engine.js'],'v11-ui1');
+    expect(await script.text()).toContain("$('studyNavigation').before(reviewControls)");
+  });
   it('identifies the source and preserves known limitations',async()=>{
     const release=await (await get('CURRENT_RELEASE.json')).json();
     expect(release).toMatchObject({release:'V11',geometryChangedFromSuppliedV11:false,elementAssignmentsChanged:false,newEngineeringApproval:false});

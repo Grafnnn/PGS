@@ -1,8 +1,8 @@
 # Atlas V11 publication audit
 
 Date: 2026-09-28. Source: the supplied 2026-09-27 V11 website release.
-Public alias remains `/models/troitsk-building-24`; asset prefix is
-`/model-assets/troitsk-r25v11/`. Publication of the web model and its drawings
+Public alias remains `/models/troitsk-building-24`; the repaired asset prefix is
+`/model-assets/troitsk-r25v11-ui1/`. Publication of the web model and its drawings
 in the public Grafnnn/PGS GitHub Release was explicitly confirmed by the owner.
 
 ## Integrity and scope
@@ -58,4 +58,15 @@ source's 47 unplaced positions and coverage limitations remain explicit.
 Historical archive-only links remain marked as archive references. A valid
 source path does not by itself certify the underlying design or placement.
 
-CI and production deployment must pass before declaring V11 online.
+## First production-load finding
+
+PR #250 passed CI #523 (1,215 tests) and main CI #524, but its production browser
+check found a startup race. The original engine inserted controls into `#left`
+assuming `#studyNavigation` was already a direct child; the initial HTML nests
+it inside navigation. Metadata can resolve before the UI moves that node.
+The repair inserts beside the node in its current parent and covers all three
+parent states. A new immutable URL prefix prevents browsers reusing the old
+engine from cache. No geometry or assignment changes accompany this repair.
+
+The startup repair must pass CI and a fresh production browser check before
+declaring V11 online.

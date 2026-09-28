@@ -5,7 +5,7 @@ afterEach(() => vi.unstubAllEnvs());
 
 describe("project 3D model registry", () => {
   it("resolves Atlas V11 and exposes a stable explicitly published URL", () => {
-    expect(getProject3dModel({ id: "cmteg9g33000for4oc06rko5a" })).toMatchObject({ revision: "V11", slug: "troitsk-building-24-atlas-v11", assetBaseUrl: "/model-assets/troitsk-r25v11/" });
+    expect(getProject3dModel({ id: "cmteg9g33000for4oc06rko5a" })).toMatchObject({ revision: "V11", slug: "troitsk-building-24-atlas-v11", assetBaseUrl: "/model-assets/troitsk-r25v11-ui1/" });
     expect(getPublicProject3dModel("troitsk-building-24")).toBe(getProject3dModel({ id: "cmteg9g33000for4oc06rko5a" }));
     expect(getPublicProject3dModel("troitsk-building-24")?.publicUrl).toBe("/models/troitsk-building-24#node/building");
     expect(getPublicProject3dModel("cmteg9g33000for4oc06rko5a")).toBeNull();

@@ -26,7 +26,7 @@ const troitskBuilding24Model: Project3dModel = {
   updatedAt: "28.09.2026",
   disclaimer: "Координационный атлас. 47 позиций без подтверждённого размещения; 4 исторических профиля не восстановлены. Первичное подтверждение источника 2566 неполное. Не исполнительная съёмка и не утверждение рабочей документации.",
   assetPath: "src/assets/project-models/troitsk-r25v11",
-  assetBaseUrl: "/model-assets/troitsk-r25v11/",
+  assetBaseUrl: "/model-assets/troitsk-r25v11-ui1/",
   publicUrl: "/models/troitsk-building-24#node/building"
 };
 

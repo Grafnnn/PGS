@@ -5,7 +5,7 @@ import { createGunzip } from "node:zlib";
 import { acceptsProjectModelGzip } from "@/lib/project-model-embed";
 
 export const ATLAS_R25_PREFIX = "/model-assets/troitsk-r25v5/";
-type AtlasVersion = "v5" | "v8" | "v8-ui1" | "v8-ui2" | "v8-ui3" | "v8-ui4" | "v8-ui5" | "v8-ui6" | "v8-ui7" | "v8-ui8" | "v11";
+type AtlasVersion = "v5" | "v8" | "v8-ui1" | "v8-ui2" | "v8-ui3" | "v8-ui4" | "v8-ui5" | "v8-ui6" | "v8-ui7" | "v8-ui8" | "v11" | "v11-ui1";
 type Asset = { source?: "v8" | "v8-ui1" | "v8-ui2" | "v8-ui3" | "v8-ui4" | "v8-ui5" | "v8-ui6" | "v8-ui7"; pack: string; offset: number; storedBytes: number; bytes: number; compressed: boolean; sha256: string; contentType: string };
 const indexes = new Map<AtlasVersion, Promise<{ files: Record<string, Asset> }>>();
 function loadIndex(version: AtlasVersion, root: string) {
@@ -19,7 +19,9 @@ function loadIndex(version: AtlasVersion, root: string) {
 
 export async function projectAtlasR25Response(request: Request, segments: string[], version: AtlasVersion = "v5") {
   const prefix = `/model-assets/troitsk-r25${version}/`;
-  const root = path.join(process.cwd(), `src/assets/project-models/troitsk-r25${version}`);
+  // Fresh immutable URL for the V11 startup repair; reuse its verified packs on disk.
+  const diskVersion = version === "v11-ui1" ? "v11" : version;
+  const root = path.join(process.cwd(), `src/assets/project-models/troitsk-r25${diskVersion}`);
   if (segments.some(s => !s || s === "." || s === ".." || /[\\/\x00-\x1f]/.test(s))) return new Response("Not found", { status: 404 });
   const name = segments.join("/");
   try {
