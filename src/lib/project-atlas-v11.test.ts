@@ -32,6 +32,7 @@ describe('sealed V11 website delivery',()=>{
     const prefix='https://pgs.local/model-assets/troitsk-r25v11-ui1/';
     const html=await projectAtlasR25Response(new Request(prefix+'index.html',{method:'HEAD'}),['index.html'],'v11-ui1');
     expect(html.status).toBe(200);
+    expect(html.headers.get('cache-control')).toBe('public, no-cache');
     expect(html.headers.get('content-security-policy')).toContain(prefix);
     const script=await projectAtlasR25Response(new Request(prefix+'assets/atlas-engine.js'),['assets','atlas-engine.js'],'v11-ui1');
     expect(await script.text()).toContain("$('studyNavigation').before(reviewControls)");
@@ -84,6 +85,18 @@ describe('sealed V11 website delivery',()=>{
     expect(html.headers.has('set-cookie')).toBe(false);
     expect((await get('../.env')).status).toBe(404);
     expect((await get('engineering/sources/AS2_changes.pdf')).status).toBe(404);
+  });
+  it('preserves immutable data, conditional requests and invalid-range protection',async()=>{
+    const json=await get('CURRENT_RELEASE.json',{method:'HEAD'});
+    expect(await json.text()).toBe('');
+    expect(json.headers.get('cache-control')).toContain('immutable');
+    expect((await get('CURRENT_RELEASE.json',{headers:{'if-none-match':json.headers.get('etag')!}})).status).toBe(304);
+    const invalid=await get('albums/AS2_changes.pdf',{headers:{range:'bytes=999999999999-'}});
+    expect(invalid.status).toBe(416);
+    expect(invalid.headers.get('content-range')).toMatch(/^bytes \*\/\d+$/);
+    const sw=await get('service-worker.js',{method:'HEAD'});
+    expect(sw.headers.get('cache-control')).toBe('public, no-cache');
+    expect(sw.headers.get('service-worker-allowed')).toBe('/model-assets/troitsk-r25v11/');
   });
   it('maps alternate-sheet PDF buttons before opening a new tab',async()=>{
     const card=await (await get('assets/atlas-card.js')).text();
