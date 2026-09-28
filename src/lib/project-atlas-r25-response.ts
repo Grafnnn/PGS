@@ -4,9 +4,9 @@ import { Readable } from "node:stream";
 import { createGunzip } from "node:zlib";
 import { acceptsProjectModelGzip } from "@/lib/project-model-embed";
 
-export const ATLAS_R25_PREFIX = "/model-assets/troitsk-r25v5/";
-type AtlasVersion = "v5" | "v8" | "v8-ui1" | "v8-ui2" | "v8-ui3" | "v8-ui4" | "v8-ui5" | "v8-ui6" | "v8-ui7" | "v8-ui8" | "v11" | "v11-ui1";
-type Asset = { source?: "v8" | "v8-ui1" | "v8-ui2" | "v8-ui3" | "v8-ui4" | "v8-ui5" | "v8-ui6" | "v8-ui7"; pack: string; offset: number; storedBytes: number; bytes: number; compressed: boolean; sha256: string; contentType: string };
+export const ATLAS_R25_PREFIX = "/model-assets/troitsk-r25v11-ui1/";
+type AtlasVersion = "v11" | "v11-ui1";
+type Asset = { pack: string; offset: number; storedBytes: number; bytes: number; compressed: boolean; sha256: string; contentType: string };
 const indexes = new Map<AtlasVersion, Promise<{ files: Record<string, Asset> }>>();
 function loadIndex(version: AtlasVersion, root: string) {
   // Load the index only, not the 600MB release, and keep it out of the JS build bundle.
@@ -17,7 +17,7 @@ function loadIndex(version: AtlasVersion, root: string) {
   return indexes.get(version)!;
 }
 
-export async function projectAtlasR25Response(request: Request, segments: string[], version: AtlasVersion = "v5") {
+export async function projectAtlasR25Response(request: Request, segments: string[], version: AtlasVersion = "v11-ui1") {
   const prefix = `/model-assets/troitsk-r25${version}/`;
   // Fresh immutable URL for the V11 startup repair; reuse its verified packs on disk.
   const diskVersion = version === "v11-ui1" ? "v11" : version;
@@ -30,7 +30,7 @@ export async function projectAtlasR25Response(request: Request, segments: string
     const asset = files[name];
     const headers = new Headers({
       "Content-Type": asset.contentType,
-      "Cache-Control": name === "service-worker.js" ? "public, no-cache" : "public, max-age=31536000, immutable",
+      "Cache-Control": name === "service-worker.js" || name.endsWith(".html") ? "public, no-cache" : "public, max-age=31536000, immutable",
       "ETag": `"${asset.sha256}"`, "Vary": "Accept-Encoding",
       "Access-Control-Allow-Origin": "*", "Referrer-Policy": "no-referrer",
       "X-Content-Type-Options": "nosniff", "X-Robots-Tag": "noindex, nofollow"
@@ -63,19 +63,7 @@ export async function projectAtlasR25Response(request: Request, segments: string
     if (encoded) headers.set("Content-Encoding", "gzip");
     headers.set("Content-Length", String(asset.compressed && !encoded ? asset.bytes : Math.max(0, end - start + 1)));
     if (request.method === "HEAD" || !asset.storedBytes) return new Response(null, { status, headers });
-    // The UI release reuses sealed V8 packs without copying engineering payloads.
-    const ancestors: Partial<Record<AtlasVersion, string[]>> = {
-      "v8-ui1": ["v8"], "v8-ui2": ["v8", "v8-ui1"],
-      "v8-ui3": ["v8", "v8-ui1", "v8-ui2"], "v8-ui4": ["v8", "v8-ui1", "v8-ui2", "v8-ui3"],
-      "v8-ui5": ["v8", "v8-ui1", "v8-ui2", "v8-ui3", "v8-ui4"],
-      "v8-ui6": ["v8", "v8-ui1", "v8-ui2", "v8-ui3", "v8-ui4", "v8-ui5"],
-      "v8-ui7": ["v8", "v8-ui1", "v8-ui2", "v8-ui3", "v8-ui4", "v8-ui5", "v8-ui6"],
-      "v8-ui8": ["v8", "v8-ui1", "v8-ui2", "v8-ui3", "v8-ui4", "v8-ui5", "v8-ui6", "v8-ui7"]
-    };
-    const inherited = asset.source && ancestors[version]?.includes(asset.source);
-    const packRoot = inherited
-      ? path.join(process.cwd(), `src/assets/project-models/troitsk-r25${asset.source}`) : root;
-    const file = await open(path.join(packRoot, asset.pack), "r");
+    const file = await open(path.join(root, asset.pack), "r");
     const input = file.createReadStream({ start: asset.offset + start, end: asset.offset + end, autoClose: true });
     let body: Readable = input;
     if (asset.compressed && !encoded) {
