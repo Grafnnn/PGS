@@ -4,8 +4,8 @@ import {gunzipSync} from 'node:zlib';
 import {readFile} from 'node:fs/promises';
 import {projectAtlasR25Response} from './project-atlas-r25-response';
 
-const base='https://pgs.local/model-assets/troitsk-r25v11/';
-const get=(name:string, init?:RequestInit)=>projectAtlasR25Response(new Request(base+name,init),name.split('/'),'v11');
+const base='https://pgs.local/model-assets/troitsk-r25v11-5/';
+const get=(name:string, init?:RequestInit)=>projectAtlasR25Response(new Request(base+name,init),name.split('/'),'v11-5');
 type Source={image?:string;pdf_url?:string;pdf_page?:number;printed_sheet?:string};
 function decode(text:string,key:string) {
   const window:Record<string,string>={};
@@ -13,7 +13,7 @@ function decode(text:string,key:string) {
   return JSON.parse(gunzipSync(Buffer.from(window[key],'base64')).toString());
 }
 
-describe('sealed V11 website delivery',()=>{
+describe('sealed V11.5 website delivery',()=>{
   it('starts whether navigation is nested or has already been moved by the UI',async()=>{
     const engine=await (await get('assets/atlas-engine.js')).text();
     expect(engine).not.toContain("$('left').insertBefore(reviewControls,$('studyNavigation'))");
@@ -29,36 +29,38 @@ describe('sealed V11 website delivery',()=>{
     }
   });
   it('uses a fresh immutable URL and matching CSP for the startup repair',async()=>{
-    const prefix='https://pgs.local/model-assets/troitsk-r25v11-ui1/';
-    const html=await projectAtlasR25Response(new Request(prefix+'index.html',{method:'HEAD'}),['index.html'],'v11-ui1');
+    const prefix='https://pgs.local/model-assets/troitsk-r25v11-5/';
+    const html=await projectAtlasR25Response(new Request(prefix+'index.html',{method:'HEAD'}),['index.html'],'v11-5');
     expect(html.status).toBe(200);
     expect(html.headers.get('cache-control')).toBe('public, no-cache');
     expect(html.headers.get('content-security-policy')).toContain(prefix);
-    const script=await projectAtlasR25Response(new Request(prefix+'assets/atlas-engine.js'),['assets','atlas-engine.js'],'v11-ui1');
+    const script=await projectAtlasR25Response(new Request(prefix+'assets/atlas-engine.js'),['assets','atlas-engine.js'],'v11-5');
     expect(await script.text()).toContain("$('studyNavigation').before(reviewControls)");
   });
   it('identifies the source and preserves known limitations',async()=>{
     const release=await (await get('CURRENT_RELEASE.json')).json();
-    expect(release).toMatchObject({release:'V11',geometryChangedFromSuppliedV11:false,elementAssignmentsChanged:false,newEngineeringApproval:false});
-    expect(release.sourceArchiveSha256).toBe('c28af9ec92f5abd68febddc05bc3ad9a7398a62c6e35586f78c1c0e35fbbeac9');
-    expect(release.drawingExcerpts).toHaveLength(3);
+    expect(release).toMatchObject({release:'V11_5',geometryChangedFromSuppliedRelease:false,elementAssignmentsChanged:false,newEngineeringApproval:false,elements:10703,rebarOnDemand:1463,sources:329});
+    expect(release.sourceTreeSha256).toBe('0de2bdaa0ec71d369de84d6fffb5644fce3280e4828d50c9273c458c68a24b3c');
+    expect(release.restoredPublicExcerpt.sha256).toBe('2afa4d7c3b1bb2fed48d3de1be3bc6e75add72b15b306ca4bd08db6eced6349f');
     expect(release.limitations.join(' ')).toContain('47');
-    const index=JSON.parse(await readFile('src/assets/project-models/troitsk-r25v11/index.json','utf8'));
-    expect(Object.keys(index.files)).toHaveLength(4351);
-    expect(index.archiveSha256).toBe('1efa1c3087b19e9bb7aa85493323c016c82b029531d9d5e437221f667b03e3f8');
+    const index=JSON.parse(await readFile('src/assets/project-models/troitsk-r25v11-5/index.json','utf8'));
+    expect(Object.keys(index.files)).toHaveLength(4419);
+    expect(index.archiveSha256).toBe('4fcc856890de6159e3fafa8349183733581bb8b726a7e79eae5057dc59a6cdfd');
   });
-  it('keeps all 280 drawing previews and PDF targets inside the published release',async()=>{
+  it('keeps all 329 drawing previews and PDF targets inside the published release',async()=>{
     const library=decode(await (await get('data/library.js')).text(),'ATLAS_LIBRARY_GZIP');
     const recovery=await (await get('assets/source-recovery/registry.json')).json();
     const sources:Record<string,Source>={...library.sources,...recovery.sources};
-    expect(Object.keys(sources)).toHaveLength(280);
-    const window:{AtlasPackageLinks?:{map:(s:string)=>{href:string}|null}}={};
-    const document={currentScript:{src:base+'assets/package-links.js'},baseURI:base+'index.html',addEventListener(){},querySelectorAll(){return [];}};
+    expect(Object.keys(sources)).toHaveLength(329);
+    const window:{AtlasPackageLinks?:{map:(s:string)=>{href?:string;arc?:boolean}|null}}={};
+    const document={readyState:'loading',currentScript:{src:base+'assets/package-links.js'},baseURI:base+'index.html',addEventListener(){},querySelectorAll(){return [];}};
     vm.runInNewContext(await (await get('assets/package-links.js')).text(),{window,document,URL},{timeout:10000});
     const targets=new Set<string>();
     for(const source of Object.values(sources)) for(const raw of [source.image,source.pdf_url]) {
       if(!raw)continue;
-      const url=new URL(window.AtlasPackageLinks!.map(raw)?.href||raw,document.baseURI);
+      const mapped=window.AtlasPackageLinks!.map(raw);
+      expect(mapped?.arc,raw).not.toBe(true);
+      const url=new URL(mapped?.href||raw,document.baseURI);
       expect(url.href.startsWith(base),raw).toBe(true);
       targets.add(decodeURIComponent(url.pathname.slice(new URL(base).pathname.length)));
       if(raw===source.pdf_url) expect(Number(new URLSearchParams(url.hash.slice(1)).get('page'))).toBe(source.pdf_page);
@@ -66,6 +68,10 @@ describe('sealed V11 website delivery',()=>{
     for(const name of targets) expect((await get(name,{method:'HEAD'})).status,name).toBe(200);
     for(const record of library.records) for(const source of record.sources||[]) expect(sources[source.key],record.key).toBeDefined();
     for(const group of recovery.groups) for(const key of group.sources) expect(sources[key]).toBeDefined();
+    const metadata=decode(await (await get('data/metadata-light.js')).text(),'ATLAS_METADATA_GZIP');
+    for(const object of metadata.objects) for(const link of object.sourceKeys||object.albumRecord?.sources||[]) expect(sources[link.key],object.id).toBeDefined();
+    const split=window.AtlasPackageLinks!.map('albums/АР_полный.pdf#page=100');
+    expect(split?.href).toBe(base+'albums/AR_polnyy_chast2.pdf#page=24');
   });
   it('uses the actual opened sheet number in both library and model metadata',async()=>{
     const expected={66:'56',67:'57',90:'80',91:'81',94:'84',153:'143',154:'144',157:'147'};
@@ -75,7 +81,7 @@ describe('sealed V11 website delivery',()=>{
     }
   });
   it('serves a PDF byte range and enforces public asset isolation',async()=>{
-    const pdf=await get('albums/AS2_changes.pdf',{headers:{range:'bytes=0-7'}});
+    const pdf=await get('drawings/AS2_changes.pdf',{headers:{range:'bytes=0-7'}});
     expect(pdf.status).toBe(206);expect(pdf.headers.get('content-type')).toBe('application/pdf');
     expect(await pdf.text()).toMatch(/^%PDF-/);
     const html=await get('index.html',{method:'HEAD'});
@@ -91,17 +97,19 @@ describe('sealed V11 website delivery',()=>{
     expect(await json.text()).toBe('');
     expect(json.headers.get('cache-control')).toContain('immutable');
     expect((await get('CURRENT_RELEASE.json',{headers:{'if-none-match':json.headers.get('etag')!}})).status).toBe(304);
-    const invalid=await get('albums/AS2_changes.pdf',{headers:{range:'bytes=999999999999-'}});
+    const invalid=await get('drawings/AS2_changes.pdf',{headers:{range:'bytes=999999999999-'}});
     expect(invalid.status).toBe(416);
     expect(invalid.headers.get('content-range')).toMatch(/^bytes \*\/\d+$/);
     const sw=await get('service-worker.js',{method:'HEAD'});
     expect(sw.headers.get('cache-control')).toBe('public, no-cache');
-    expect(sw.headers.get('service-worker-allowed')).toBe('/model-assets/troitsk-r25v11/');
+    expect(sw.headers.get('service-worker-allowed')).toBe('/model-assets/troitsk-r25v11-5/');
   });
   it('maps alternate-sheet PDF buttons before opening a new tab',async()=>{
     const card=await (await get('assets/atlas-card.js')).text();
     expect(card).toContain('window.AtlasPackageLinks.map(href)');
-    expect(card).toContain("window.open(mapped ? mapped.href : href, '_blank', 'noopener')");
+    expect(card).toContain("window.open(mapped && mapped.href ? mapped.href : href, '_blank', 'noopener')");
+    expect(card).toContain('if (mapped && mapped.arc) return');
+    expect(card).toContain('openPackagePdf(plan.href)');
     expect(card).not.toContain("window.open(s.pdf_url.split('#')[0]");
   });
   it('reuses verified recovery links in cards and library without replacing original links',async()=>{

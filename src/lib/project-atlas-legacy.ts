@@ -3,7 +3,7 @@ import { getPublicProject3dModel } from "@/lib/project-3d-model";
 export const LEGACY_ATLAS_RELEASES = [
   "troitsk-b24-r10", "troitsk-b24-atlas-3-2", "troitsk-r25v5", "troitsk-r25v7", "troitsk-r25v8",
   ...Array.from({ length: 8 }, (_, i) => `troitsk-r25v8-ui${i + 1}`),
-  "troitsk-r25v11"
+  "troitsk-r25v11", "troitsk-r25v11-ui1"
 ];
 
 const currentPrefix = getPublicProject3dModel("troitsk-building-24")!.assetBaseUrl!;
