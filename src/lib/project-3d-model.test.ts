@@ -5,7 +5,7 @@ afterEach(() => vi.unstubAllEnvs());
 
 describe("project 3D model registry", () => {
   it("resolves Atlas V11 and exposes a stable explicitly published URL", () => {
-    expect(getProject3dModel({ id: "cmteg9g33000for4oc06rko5a" })).toMatchObject({ revision: "V11.5", slug: "troitsk-building-24-atlas-v11-5", assetBaseUrl: "/model-assets/troitsk-r25v11-5/" });
+    expect(getProject3dModel({ id: "cmteg9g33000for4oc06rko5a" })).toMatchObject({ revision: "V12.1", slug: "troitsk-building-24-atlas-v12-1", assetBaseUrl: "/model-assets/troitsk-r25v12-1/" });
     expect(getPublicProject3dModel("troitsk-building-24")).toBe(getProject3dModel({ id: "cmteg9g33000for4oc06rko5a" }));
     expect(getPublicProject3dModel("troitsk-building-24")?.publicUrl).toBe("/models/troitsk-building-24#node/building");
     expect(getPublicProject3dModel("cmteg9g33000for4oc06rko5a")).toBeNull();
@@ -30,7 +30,7 @@ describe("project 3D presentation", () => {
   it("keeps actual project models on the authenticated API even in development", () => {
     vi.stubEnv("NODE_ENV", "development");
     expect(getProject3dPresentation({ id: "cmteg9g33000for4oc06rko5a" })).toMatchObject({
-      url: "/api/projects/cmteg9g33000for4oc06rko5a/model-viewer?v=V11.5&embed=monolith-v1#node/building",
+      url: "/api/projects/cmteg9g33000for4oc06rko5a/model-viewer?v=V12.1&embed=monolith-v1#node/building",
       isPreview: false
     });
   });
@@ -41,7 +41,7 @@ describe("project 3D presentation", () => {
     expect(getProject3dPresentation({ id: "project-demo" })).toMatchObject({
       url: "/design-contest/model?embed=monolith-v1#module=master&view=overview",
       isPreview: true,
-      model: { slug: "troitsk-building-24-atlas-v11-5" }
+      model: { slug: "troitsk-building-24-atlas-v12-1" }
     });
     expect(getProject3dPresentation({ id: "unrelated-project" })).toBeNull();
   });

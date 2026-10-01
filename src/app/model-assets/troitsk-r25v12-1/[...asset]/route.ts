@@ -4,7 +4,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export function GET(request: Request, { params }: { params: { asset: string[] } }) {
-  return projectAtlasR25Response(request, params.asset, "v11-5");
+  return projectAtlasR25Response(request, params.asset, "v12-1");
 }
 
 export const HEAD = GET;
