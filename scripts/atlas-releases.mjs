@@ -1,8 +1,8 @@
 const releases = {
-  "v11-5": { release: "V11_5", files: 4419, bytes: 318764758, sha256: "4fcc856890de6159e3fafa8349183733581bb8b726a7e79eae5057dc59a6cdfd" }
+  "v12-1": { release: "V12_1", files: 4459, bytes: 321096315, sha256: "affee12d6b29122615ba535cb9d46d3062f4bd3ef07e23af7585a2e066f6ee2d" }
 };
 
-export function atlasRelease(version = "v11-5") {
+export function atlasRelease(version = "v12-1") {
   if (!Object.hasOwn(releases, version)) throw new Error("Unknown Atlas release");
   const entry = releases[version];
   const directory = `TROITSK_B24_ATLAS_${entry.release}`;

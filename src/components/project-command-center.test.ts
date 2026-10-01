@@ -93,8 +93,8 @@ describe("ProjectCommandCenter", () => {
 
     expect(html).toContain("3D Атлас здания 24");
     expect(html).toContain("2 950 типов");
-    expect(html).toContain("10 703 активных элемента");
-    expect(html).toContain("V11.5");
+    expect(html).toContain("10 942 активных элемента");
+    expect(html).toContain("V12.1");
     expect(html).toContain("Открыть 3D-модель");
     expect(html).not.toContain("<iframe");
   });
