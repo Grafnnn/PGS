@@ -5,7 +5,7 @@ import { NextRequest } from "next/server";
 import { middleware } from "@/middleware";
 import { LEGACY_ATLAS_RELEASES, legacyAtlasDestination, legacyAtlasWorker } from "./project-atlas-legacy";
 
-const current = "/model-assets/troitsk-r25v12-10/";
+const current = "/model-assets/troitsk-r25v12-11/";
 const old = "/model-assets/troitsk-r25v8-ui8/";
 const url = (path: string) => new URL(path, "https://pgs.local");
 
@@ -25,9 +25,9 @@ describe("legacy atlas links", () => {
   });
   it("packages only the current release, without old public assets or routes", async () => {
     const pkg = JSON.parse(await readFile("package.json", "utf8"));
-    expect(pkg.scripts.build).toBe("node scripts/prepare-atlas-r25v5.mjs v12-10 && next build");
-    expect(pkg.scripts.test).toBe("node scripts/prepare-atlas-r25v5.mjs v12-10 && vitest run");
-    expect(await readdir("src/app/model-assets")).toEqual(["troitsk-r25v12-10"]);
+    expect(pkg.scripts.build).toBe("node scripts/prepare-atlas-r25v5.mjs v12-11 && next build");
+    expect(pkg.scripts.test).toBe("node scripts/prepare-atlas-r25v5.mjs v12-11 && vitest run");
+    expect(await readdir("src/app/model-assets")).toEqual(["troitsk-r25v12-11"]);
     expect((await readdir("public")).includes("model-assets")).toBe(false);
   });
   it.each([
