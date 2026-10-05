@@ -4,8 +4,8 @@ import { Readable } from "node:stream";
 import { createGunzip } from "node:zlib";
 import { acceptsProjectModelGzip } from "@/lib/project-model-embed";
 
-export const ATLAS_R25_PREFIX = "/model-assets/troitsk-r25v12-10/";
-type AtlasVersion = "v12-10";
+export const ATLAS_R25_PREFIX = "/model-assets/troitsk-r25v12-11/";
+type AtlasVersion = "v12-11";
 type Asset = { pack: string; offset: number; storedBytes: number; bytes: number; compressed: boolean; sha256: string; contentType: string };
 const indexes = new Map<AtlasVersion, Promise<{ files: Record<string, Asset> }>>();
 function loadIndex(version: AtlasVersion, root: string) {
@@ -17,7 +17,7 @@ function loadIndex(version: AtlasVersion, root: string) {
   return indexes.get(version)!;
 }
 
-export async function projectAtlasR25Response(request: Request, segments: string[], version: AtlasVersion = "v12-10") {
+export async function projectAtlasR25Response(request: Request, segments: string[], version: AtlasVersion = "v12-11") {
   const prefix = `/model-assets/troitsk-r25${version}/`;
   const root = path.join(process.cwd(), `src/assets/project-models/troitsk-r25${version}`);
   if (segments.some(s => !s || s === "." || s === ".." || /[\\/\x00-\x1f]/.test(s))) return new Response("Not found", { status: 404 });
