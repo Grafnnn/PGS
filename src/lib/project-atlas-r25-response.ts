@@ -5,7 +5,11 @@ import { createGunzip } from "node:zlib";
 import { acceptsProjectModelGzip } from "@/lib/project-model-embed";
 
 export const ATLAS_R25_PREFIX = "/model-assets/troitsk-r25v12-11/";
-type AtlasVersion = "v12-11";
+type AtlasVersion = "v12-11" | "dou200-r1-21";
+const atlasDirectories: Record<AtlasVersion, string> = {
+  "v12-11": "troitsk-r25v12-11",
+  "dou200-r1-21": "dou200-r1-21"
+};
 type Asset = { pack: string; offset: number; storedBytes: number; bytes: number; compressed: boolean; sha256: string; contentType: string };
 const indexes = new Map<AtlasVersion, Promise<{ files: Record<string, Asset> }>>();
 function loadIndex(version: AtlasVersion, root: string) {
@@ -18,8 +22,10 @@ function loadIndex(version: AtlasVersion, root: string) {
 }
 
 export async function projectAtlasR25Response(request: Request, segments: string[], version: AtlasVersion = "v12-11") {
-  const prefix = `/model-assets/troitsk-r25${version}/`;
-  const root = path.join(process.cwd(), `src/assets/project-models/troitsk-r25${version}`);
+  const directory = atlasDirectories[version];
+  if (!directory) return new Response("Not found", { status: 404 });
+  const prefix = `/model-assets/${directory}/`;
+  const root = path.join(process.cwd(), `src/assets/project-models/${directory}`);
   if (segments.some(s => !s || s === "." || s === ".." || /[\\/\x00-\x1f]/.test(s))) return new Response("Not found", { status: 404 });
   const name = segments.join("/");
   try {

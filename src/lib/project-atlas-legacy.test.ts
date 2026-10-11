@@ -23,15 +23,15 @@ describe("legacy atlas links", () => {
     "START_HERE.html", "albums/AS2_last_full.pdf", "assets/prototype.js", "CURRENT_RELEASE.json", "images/drawing.png"])("replaces every retired resource with the current entry: %s", (name) => {
     expect(legacyAtlasDestination(url(old + name))!.pathname).toBe(current + "index.html");
   });
-  it("packages only the current release, without old public assets or routes", async () => {
+  it("packages both current projects, without old public assets or routes", async () => {
     const pkg = JSON.parse(await readFile("package.json", "utf8"));
-    expect(pkg.scripts.build).toBe("node scripts/prepare-atlas-r25v5.mjs v12-11 && next build");
-    expect(pkg.scripts.test).toBe("node scripts/prepare-atlas-r25v5.mjs v12-11 && vitest run");
-    expect(await readdir("src/app/model-assets")).toEqual(["troitsk-r25v12-11"]);
+    expect(pkg.scripts.build).toBe("node scripts/prepare-public-atlases.mjs && next build");
+    expect(pkg.scripts.test).toBe("node scripts/prepare-public-atlases.mjs && vitest run");
+    expect((await readdir("src/app/model-assets")).sort()).toEqual(["dou200-r1-21", "troitsk-r25v12-11"]);
     expect((await readdir("public")).includes("model-assets")).toBe(false);
   });
   it.each([
-    current + "index.html", "/model-assets/other-project/index.html", "/api/projects/1/model-viewer",
+    current + "index.html", "/model-assets/dou200-r1-21/index.html", "/model-assets/other-project/index.html", "/api/projects/1/model-viewer",
     "/projects", old + "service-worker.js", old + "%00.html",
     old + "a%5Cindex.html", old + "%zz.html"
   ])("does not redirect the current release, private routes or unsafe paths: %s", (path) => {

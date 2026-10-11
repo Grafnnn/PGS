@@ -32,9 +32,23 @@ const troitskBuilding24Model: Project3dModel = {
 
 const TROITSK_PROJECT_ID = "cmteg9g33000for4oc06rko5a";
 
+const dou200Model: Project3dModel = {
+  slug: "dou200-atlas-r1-21",
+  title: "3D Атлас ДОУ 200 мест",
+  subtitle: "Здание, чертежи и каталог: 5 624 карточки, 14 391 тело в мире",
+  revision: "R1.21",
+  updatedAt: "11.10.2026",
+  disclaimer: "Координационный атлас-кандидат. Статусы неподтверждённой геометрии, неполных данных и конфликтов сохранены. Не инженерная приёмка и не утверждение рабочей документации.",
+  assetPath: "src/assets/project-models/dou200-r1-21",
+  assetBaseUrl: "/model-assets/dou200-r1-21/",
+  publicUrl: "/models/dou200#node/building"
+};
+
 // Explicit publication allowlist. Never resolve arbitrary project IDs on a public route.
 export function getPublicProject3dModel(slug: string): Project3dModel | null {
-  return slug === "troitsk-building-24" ? troitskBuilding24Model : null;
+  if (slug === "troitsk-building-24") return troitskBuilding24Model;
+  if (slug === "dou200") return dou200Model;
+  return null;
 }
 
 function normalizeProjectIdentity(project: ProjectIdentity) {

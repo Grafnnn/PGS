@@ -19,6 +19,15 @@ describe("Atlas V11 publication", () => {
     expect(mocks.find).not.toHaveBeenCalled();
     expect(mocks.readFile).not.toHaveBeenCalled();
   });
+  it("publishes DOU200 under its own anonymous alias without changing Troitsk", async () => {
+    const response = await GET(new Request("https://pgs.local/models/dou200"), { params: { slug: "dou200" } });
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toBe("/model-assets/dou200-r1-21/index.html");
+    expect(response.headers.has("set-cookie")).toBe(false);
+    expect(mocks.access).not.toHaveBeenCalled();
+    expect(mocks.find).not.toHaveBeenCalled();
+    expect(mocks.readFile).not.toHaveBeenCalled();
+  });
   it.each(["other-project", "cmteg9g33000for4oc06rko5a", "..", "%2e%2e", "troitsk-building-24/../../.env"])("rejects unpublished identifiers: %s", async (slug) => {
     expect((await GET(new Request("https://pgs.local/models/invalid"), { params: { slug } })).status).toBe(404);
   });
