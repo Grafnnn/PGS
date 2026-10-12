@@ -3,10 +3,11 @@ import { runInNewContext } from "node:vm";
 import { describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { middleware } from "@/middleware";
-import { LEGACY_ATLAS_RELEASES, legacyAtlasDestination, legacyAtlasWorker } from "./project-atlas-legacy";
+import { LEGACY_ATLAS_RELEASES, LEGACY_DOU_ATLAS_RELEASES, legacyAtlasDestination, legacyAtlasWorker } from "./project-atlas-legacy";
 
 const current = "/model-assets/troitsk-r25v12-11/";
 const old = "/model-assets/troitsk-r25v8-ui8/";
+const currentDou = "/model-assets/dou200-r1-23/";
 const url = (path: string) => new URL(path, "https://pgs.local");
 
 describe("legacy atlas links", () => {
@@ -23,30 +24,42 @@ describe("legacy atlas links", () => {
     "START_HERE.html", "albums/AS2_last_full.pdf", "assets/prototype.js", "CURRENT_RELEASE.json", "images/drawing.png"])("replaces every retired resource with the current entry: %s", (name) => {
     expect(legacyAtlasDestination(url(old + name))!.pathname).toBe(current + "index.html");
   });
+  it.each(LEGACY_DOU_ATLAS_RELEASES)("redirects retired %s only to DOU200, keeping query and hash", (release) => {
+    for (const suffix of ["", "/", "/index.html", "/library.html", "/catalogue.html", "/albums/2025_N252-R-GP_chast2.pdf", "/assets/atlas-status.js"]) {
+      const source = url(`/model-assets/${release}${suffix}?q=roof#source`);
+      const target = legacyAtlasDestination(source)!;
+      expect(target.pathname).toBe(currentDou + "index.html");
+      expect(target.search).toBe(source.search);
+      expect(target.hash).toBe(source.hash);
+    }
+  });
   it("packages both current projects, without old public assets or routes", async () => {
     const pkg = JSON.parse(await readFile("package.json", "utf8"));
     expect(pkg.scripts.build).toBe("node scripts/prepare-public-atlases.mjs && next build");
     expect(pkg.scripts.test).toBe("node scripts/prepare-public-atlases.mjs && vitest run");
-    expect((await readdir("src/app/model-assets")).sort()).toEqual(["dou200-r1-21", "troitsk-r25v12-11"]);
+    expect((await readdir("src/app/model-assets")).sort()).toEqual(["dou200-r1-23", "troitsk-r25v12-11"]);
     expect((await readdir("public")).includes("model-assets")).toBe(false);
   });
   it.each([
-    current + "index.html", "/model-assets/dou200-r1-21/index.html", "/model-assets/other-project/index.html", "/api/projects/1/model-viewer",
+    current + "index.html", "/model-assets/dou200-r1-23/index.html", "/model-assets/other-project/index.html", "/api/projects/1/model-viewer",
     "/projects", old + "service-worker.js", old + "%00.html",
-    old + "a%5Cindex.html", old + "%zz.html"
+    old + "a%5Cindex.html", old + "%zz.html", "/model-assets/dou200-r1-21/%00.html",
+    "/model-assets/dou200-r1-21/a%5Cindex.html", "/model-assets/dou200-r1-21/%zz.html"
   ])("does not redirect the current release, private routes or unsafe paths: %s", (path) => {
     expect(legacyAtlasDestination(url(path))).toBeNull();
   });
   it("returns uncached GET/HEAD redirects, without sessions or open redirects", () => {
-    for (const method of ["GET", "HEAD"]) {
-      const response = middleware(new NextRequest(url(old + "index.html?next=https://elsewhere.test"), { method }));
+    for (const prefix of [old, "/model-assets/dou200-r1-21/"]) for (const method of ["GET", "HEAD"]) {
+      const response = middleware(new NextRequest(url(prefix + "index.html?next=https://elsewhere.test"), { method }));
       expect(response.status).toBe(307);
       expect(response.headers.get("cache-control")).toBe("no-store");
       expect(new URL(response.headers.get("location")!).origin).toBe("https://pgs.local");
       expect(response.headers.has("set-cookie")).toBe(false);
     }
-    const response = middleware(new NextRequest(url(old + "index.html"), { method: "POST" }));
-    expect(response.headers.get("x-middleware-next")).toBe("1");
+    for (const prefix of [old, "/model-assets/dou200-r1-21/"]) {
+      const response = middleware(new NextRequest(url(prefix + "index.html"), { method: "POST" }));
+      expect(response.headers.get("x-middleware-next")).toBe("1");
+    }
   });
   it("retires only the requested legacy worker and migrates its pages, not other clients", async () => {
     const listeners: Record<string, (event: { waitUntil: (p: Promise<unknown>) => void }) => void> = {};
@@ -75,5 +88,26 @@ describe("legacy atlas links", () => {
     const response = middleware(new NextRequest(url(old + "service-worker.js")));
     expect(response.headers.get("cache-control")).toBe("no-store");
     expect(response.headers.get("content-type")).toContain("javascript");
+  });
+  it("retires the old DOU worker without moving Troitsk or current DOU clients", async () => {
+    const retired = "/model-assets/dou200-r1-21/";
+    const listeners: Record<string, (event: { waitUntil(p: Promise<unknown>): void }) => void> = {};
+    const own = { url: url(retired + "library.html?q=roof#source").href, navigate: vi.fn() };
+    const others = [current, currentDou, "/projects/"].map((prefix) => ({ url: url(prefix + "index.html").href, navigate: vi.fn() }));
+    const unregister = vi.fn();
+    runInNewContext(legacyAtlasWorker(url(retired + "service-worker.js"))!, {
+      URL, Response, self: { location: url(retired), skipWaiting() {}, registration: { unregister },
+        clients: { claim() {}, matchAll: async () => [own, ...others] },
+        addEventListener: (name: string, fn: typeof listeners[string]) => { listeners[name] = fn; } }
+    });
+    let pending: Promise<unknown> = Promise.resolve();
+    listeners.activate({ waitUntil(p) { pending = p; } }); await pending;
+    expect(own.navigate).toHaveBeenCalledWith(url(currentDou + "index.html?q=roof#source").href);
+    for (const other of others) expect(other.navigate).not.toHaveBeenCalled();
+    expect(unregister).toHaveBeenCalledOnce();
+    const response = middleware(new NextRequest(url(retired + "service-worker.js")));
+    expect(response.status).toBe(200);
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(response.headers.has("set-cookie")).toBe(false);
   });
 });

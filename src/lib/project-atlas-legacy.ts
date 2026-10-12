@@ -6,22 +6,27 @@ export const LEGACY_ATLAS_RELEASES = [
   "troitsk-r25v11", "troitsk-r25v11-ui1", "troitsk-r25v11-5", "troitsk-r25v12-1", "troitsk-r25v12-8", "troitsk-r25v12-10"
 ];
 
-const currentPrefix = getPublicProject3dModel("troitsk-building-24")!.assetBaseUrl!;
+export const LEGACY_DOU_ATLAS_RELEASES = ["dou200-r1-21"];
+const troitskPrefix = getPublicProject3dModel("troitsk-building-24")!.assetBaseUrl!;
+const douPrefix = getPublicProject3dModel("dou200")!.assetBaseUrl!;
 
 function legacyPath(url: URL) {
   let pathname: string;
   try { pathname = decodeURIComponent(url.pathname); } catch { return null; }
   const match = /^\/model-assets\/([^/]+)(?:\/(.*))?$/.exec(pathname);
-  if (!match || !LEGACY_ATLAS_RELEASES.includes(match[1])) return null;
+  if (!match) return null;
+  const currentPrefix = LEGACY_ATLAS_RELEASES.includes(match[1]) ? troitskPrefix
+    : LEGACY_DOU_ATLAS_RELEASES.includes(match[1]) ? douPrefix : null;
+  if (!currentPrefix) return null;
   const name = match[2] || "";
   if (name && name.split("/").some(part => !part || part === "." || part === ".." || /[\\\x00-\x1f]/.test(part))) return null;
-  return { prefix: `/model-assets/${match[1]}/`, name };
+  return { prefix: `/model-assets/${match[1]}/`, name, currentPrefix };
 }
 
 export function legacyAtlasDestination(url: URL): URL | null {
   const legacy = legacyPath(url);
   if (!legacy || legacy.name === "service-worker.js") return null;
-  const target = new URL(currentPrefix + "index.html", url.origin);
+  const target = new URL(legacy.currentPrefix + "index.html", url.origin);
   target.search = url.search;
   target.hash = url.hash;
   return target;
@@ -32,7 +37,7 @@ export function legacyAtlasWorker(url: URL): string | null {
   if (legacy?.name !== "service-worker.js") return null;
   // Retire only the old atlas registration. Never erase PGS caches or sessions.
   return `"use strict";
-const OLD=${JSON.stringify(legacy.prefix)}, CURRENT=${JSON.stringify(currentPrefix)};
+const OLD=${JSON.stringify(legacy.prefix)}, CURRENT=${JSON.stringify(legacy.currentPrefix)};
 function destination(value) {
   const url=new URL(value);
   if(url.origin!==self.location.origin||!url.pathname.startsWith(OLD))return null;

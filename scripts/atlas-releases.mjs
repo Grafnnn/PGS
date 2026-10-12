@@ -1,6 +1,6 @@
 const releases = {
   "v12-11": { release: "V12_11", files: 4480, bytes: 321337615, sha256: "4444d0edfd4a519686cfe6bb20bc6ee3d93c8a10acf9fa3ed656199cd9bcf33c" },
-  "dou200-r1-21": { release: "DOU200_R1_21", directory: "DOU200_ATLAS_R1_21", tag: "atlas-dou200-r1-21", assetDirectory: "dou200-r1-21", files: 5959, bytes: 284363594, sha256: "a4ba23ddc8a7628f4ed6f7087541c2023301affd9d61d332d41e2fad09bf2468" }
+  "dou200-r1-23": { release: "DOU200_R1_23", directory: "DOU200_ATLAS_R1_23", tag: "atlas-dou200-r1-23", assetDirectory: "dou200-r1-23", files: 6262, bytes: 287404098, sha256: "47e7258af3aa020fe0c8837969f4ce056a398c924fc7cd77a8685ec2d630470c" }
 };
 
 export function atlasRelease(version = "v12-11") {
