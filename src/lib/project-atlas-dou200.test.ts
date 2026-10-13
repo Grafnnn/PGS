@@ -5,10 +5,10 @@ import { gunzipSync } from "node:zlib";
 import { projectAtlasR25Response } from "./project-atlas-r25-response";
 import { getPublicProject3dModel, getProject3dModel } from "./project-3d-model";
 import { legacyAtlasDestination, legacyAtlasWorker } from "./project-atlas-legacy";
-import { GET, HEAD } from "@/app/model-assets/dou200-r1-23/[...asset]/route";
+import { GET, HEAD } from "@/app/model-assets/dou200-r1-24/[...asset]/route";
 
-const base = "https://pgs.local/model-assets/dou200-r1-23/";
-const get = (name: string, init?: RequestInit) => projectAtlasR25Response(new Request(base + name, init), name.split("/"), "dou200-r1-23");
+const base = "https://pgs.local/model-assets/dou200-r1-24/";
+const get = (name: string, init?: RequestInit) => projectAtlasR25Response(new Request(base + name, init), name.split("/"), "dou200-r1-24");
 function decode(text: string, key: string) {
   const window: Record<string, string> = {};
   runInNewContext(text, { window }, { timeout: 10000 });
@@ -17,7 +17,7 @@ function decode(text: string, key: string) {
 
 describe("independent DOU200 public website", () => {
   it("keeps project aliases, roots and revisions separate", () => {
-    expect(getPublicProject3dModel("dou200")).toMatchObject({ revision: "R1.23", assetBaseUrl: "/model-assets/dou200-r1-23/" });
+    expect(getPublicProject3dModel("dou200")).toMatchObject({ revision: "R1.24", assetBaseUrl: "/model-assets/dou200-r1-24/" });
     expect(getPublicProject3dModel("troitsk-building-24")).toMatchObject({ revision: "V12.11", assetBaseUrl: "/model-assets/troitsk-r25v12-11/" });
     expect(getProject3dModel({ id: "cmteg9g33000for4oc06rko5a" })?.revision).toBe("V12.11");
     expect(getProject3dModel({ name: "ДОУ 200" })).toBeNull(); // No inferred private project assignment.
@@ -35,20 +35,20 @@ describe("independent DOU200 public website", () => {
   });
   it("retains the author website unchanged and records candidate limitations", async () => {
     const release = await (await get("CURRENT_RELEASE.json")).json();
-    expect(release).toMatchObject({ projectId: "dou-200", revision: "R1.23", suppliedFiles: 6260, geometryChangedFromSuppliedRelease: false, elementAssignmentsChanged: false, newEngineeringApproval: false, sourceCandidate: true, sourceAccepted: false });
-    expect(release.sourceTreeSha256).toBe("39d7961e60c5a26795082ea208d6c4b9517fae9e404654875a81b90a8a931bd9");
-    const index = JSON.parse(await readFile("src/assets/project-models/dou200-r1-23/index.json", "utf8"));
-    expect(Object.keys(index.files)).toHaveLength(6262);
-    expect(index.archiveSha256).toBe("47e7258af3aa020fe0c8837969f4ce056a398c924fc7cd77a8685ec2d630470c");
+    expect(release).toMatchObject({ projectId: "dou-200", revision: "R1.24", suppliedFiles: 6269, geometryChangedFromSuppliedRelease: false, elementAssignmentsChanged: false, newEngineeringApproval: false, sourceCandidate: true, sourceAccepted: false });
+    expect(release.sourceTreeSha256).toBe("28e2ac974eb84ee646d34dc56a590fb516a219000592960f8d7a99d56e971040");
+    const index = JSON.parse(await readFile("src/assets/project-models/dou200-r1-24/index.json", "utf8"));
+    expect(Object.keys(index.files)).toHaveLength(6271);
+    expect(index.archiveSha256).toBe("a316f42ec3d7a1e329cc52ce3c92210b1736039cc9afad62beaacbb90643ed68");
     const configWindow: Record<string, any> = {};
     runInNewContext(await (await get("project/config.js")).text(), { window: configWindow }, { timeout: 1000 });
     expect(configWindow.ATLAS_PROJECT.project_id).toBe("dou-200");
     expect(configWindow.ATLAS_PROJECT.title.object).toBe("ДОУ 200 мест");
     const metadata = decode(await (await get("data/metadata-light.js")).text(), "ATLAS_METADATA_GZIP");
     const library = decode(await (await get("data/library.js")).text(), "ATLAS_LIBRARY_GZIP");
-    expect(metadata.objects).toHaveLength(15967);
-    expect(library.records).toHaveLength(30083);
-    expect(Object.keys(library.sources)).toHaveLength(744);
+    expect(metadata.objects).toHaveLength(15990);
+    expect(library.records).toHaveLength(30108);
+    expect(Object.keys(library.sources)).toHaveLength(749);
     for (const record of library.records) for (const source of record.sources || []) expect(library.sources[source.key], record.key).toBeDefined();
   });
   it("preserves PDF ranges and prevents assets crossing between projects", async () => {
@@ -62,7 +62,7 @@ describe("independent DOU200 public website", () => {
   });
   it("scopes the service worker and cache to DOU200", async () => {
     const worker = await get("service-worker.js");
-    expect(worker.headers.get("service-worker-allowed")).toBe("/model-assets/dou200-r1-23/");
+    expect(worker.headers.get("service-worker-allowed")).toBe("/model-assets/dou200-r1-24/");
     const text = await worker.text();
     expect(text).toContain("url.pathname.startsWith(ROOT.pathname)");
     expect(text).toContain("n.startsWith(PREFIX)");
@@ -114,6 +114,6 @@ describe("independent DOU200 public website", () => {
       if (result.href) expect(result.href).toContain(base);
       if (result.kind === "album") expect(result.exact).toBe(false);
     }
-    expect(counts).toEqual({ pdf: 484, album: 64, none: 196 });
+    expect(counts).toEqual({ pdf: 486, album: 64, none: 199 });
   });
 });

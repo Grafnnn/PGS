@@ -33,14 +33,14 @@ const troitskBuilding24Model: Project3dModel = {
 const TROITSK_PROJECT_ID = "cmteg9g33000for4oc06rko5a";
 
 const dou200Model: Project3dModel = {
-  slug: "dou200-atlas-r1-23",
+  slug: "dou200-atlas-r1-24",
   title: "3D Атлас ДОУ 200 мест",
-  subtitle: "Здание, чертежи и каталог: 5 925 карточек, 14 714 тел в мире",
-  revision: "R1.23",
-  updatedAt: "12.10.2026",
+  subtitle: "Здание, чертежи и каталог: 5 934 карточки, 14 737 тел в мире",
+  revision: "R1.24",
+  updatedAt: "13.10.2026",
   disclaimer: "Координационный атлас-кандидат. Статусы неподтверждённой геометрии, неполных данных и конфликтов сохранены. Не инженерная приёмка и не утверждение рабочей документации.",
-  assetPath: "src/assets/project-models/dou200-r1-23",
-  assetBaseUrl: "/model-assets/dou200-r1-23/",
+  assetPath: "src/assets/project-models/dou200-r1-24",
+  assetBaseUrl: "/model-assets/dou200-r1-24/",
   publicUrl: "/models/dou200#node/building"
 };
 

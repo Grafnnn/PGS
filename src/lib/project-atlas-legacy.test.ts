@@ -7,7 +7,7 @@ import { LEGACY_ATLAS_RELEASES, LEGACY_DOU_ATLAS_RELEASES, legacyAtlasDestinatio
 
 const current = "/model-assets/troitsk-r25v12-11/";
 const old = "/model-assets/troitsk-r25v8-ui8/";
-const currentDou = "/model-assets/dou200-r1-23/";
+const currentDou = "/model-assets/dou200-r1-24/";
 const url = (path: string) => new URL(path, "https://pgs.local");
 
 describe("legacy atlas links", () => {
@@ -37,11 +37,11 @@ describe("legacy atlas links", () => {
     const pkg = JSON.parse(await readFile("package.json", "utf8"));
     expect(pkg.scripts.build).toBe("node scripts/prepare-public-atlases.mjs && next build");
     expect(pkg.scripts.test).toBe("node scripts/prepare-public-atlases.mjs && vitest run");
-    expect((await readdir("src/app/model-assets")).sort()).toEqual(["dou200-r1-23", "troitsk-r25v12-11"]);
+    expect((await readdir("src/app/model-assets")).sort()).toEqual(["dou200-r1-24", "troitsk-r25v12-11"]);
     expect((await readdir("public")).includes("model-assets")).toBe(false);
   });
   it.each([
-    current + "index.html", "/model-assets/dou200-r1-23/index.html", "/model-assets/other-project/index.html", "/api/projects/1/model-viewer",
+    current + "index.html", currentDou + "index.html", "/model-assets/other-project/index.html", "/api/projects/1/model-viewer",
     "/projects", old + "service-worker.js", old + "%00.html",
     old + "a%5Cindex.html", old + "%zz.html", "/model-assets/dou200-r1-21/%00.html",
     "/model-assets/dou200-r1-21/a%5Cindex.html", "/model-assets/dou200-r1-21/%zz.html"
@@ -49,14 +49,14 @@ describe("legacy atlas links", () => {
     expect(legacyAtlasDestination(url(path))).toBeNull();
   });
   it("returns uncached GET/HEAD redirects, without sessions or open redirects", () => {
-    for (const prefix of [old, "/model-assets/dou200-r1-21/"]) for (const method of ["GET", "HEAD"]) {
+    for (const prefix of [old, ...LEGACY_DOU_ATLAS_RELEASES.map(release => `/model-assets/${release}/`)]) for (const method of ["GET", "HEAD"]) {
       const response = middleware(new NextRequest(url(prefix + "index.html?next=https://elsewhere.test"), { method }));
       expect(response.status).toBe(307);
       expect(response.headers.get("cache-control")).toBe("no-store");
       expect(new URL(response.headers.get("location")!).origin).toBe("https://pgs.local");
       expect(response.headers.has("set-cookie")).toBe(false);
     }
-    for (const prefix of [old, "/model-assets/dou200-r1-21/"]) {
+    for (const prefix of [old, ...LEGACY_DOU_ATLAS_RELEASES.map(release => `/model-assets/${release}/`)]) {
       const response = middleware(new NextRequest(url(prefix + "index.html"), { method: "POST" }));
       expect(response.headers.get("x-middleware-next")).toBe("1");
     }
@@ -89,11 +89,11 @@ describe("legacy atlas links", () => {
     expect(response.headers.get("cache-control")).toBe("no-store");
     expect(response.headers.get("content-type")).toContain("javascript");
   });
-  it("retires the old DOU worker without moving Troitsk or current DOU clients", async () => {
-    const retired = "/model-assets/dou200-r1-21/";
+  it.each(LEGACY_DOU_ATLAS_RELEASES)("retires %s worker without moving Troitsk or other DOU clients", async (release) => {
+    const retired = `/model-assets/${release}/`;
     const listeners: Record<string, (event: { waitUntil(p: Promise<unknown>): void }) => void> = {};
     const own = { url: url(retired + "library.html?q=roof#source").href, navigate: vi.fn() };
-    const others = [current, currentDou, "/projects/"].map((prefix) => ({ url: url(prefix + "index.html").href, navigate: vi.fn() }));
+    const others = [current, currentDou, "/projects/", ...LEGACY_DOU_ATLAS_RELEASES.filter(name => name !== release).map(name => `/model-assets/${name}/`)].map((prefix) => ({ url: url(prefix + "index.html").href, navigate: vi.fn() }));
     const unregister = vi.fn();
     runInNewContext(legacyAtlasWorker(url(retired + "service-worker.js"))!, {
       URL, Response, self: { location: url(retired), skipWaiting() {}, registration: { unregister },

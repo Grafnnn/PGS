@@ -22,7 +22,7 @@ describe("Atlas V11 publication", () => {
   it("publishes DOU200 under its own anonymous alias without changing Troitsk", async () => {
     const response = await GET(new Request("https://pgs.local/models/dou200"), { params: { slug: "dou200" } });
     expect(response.status).toBe(307);
-    expect(response.headers.get("location")).toBe("/model-assets/dou200-r1-23/index.html");
+    expect(response.headers.get("location")).toBe("/model-assets/dou200-r1-24/index.html");
     expect(response.headers.has("set-cookie")).toBe(false);
     expect(mocks.access).not.toHaveBeenCalled();
     expect(mocks.find).not.toHaveBeenCalled();
