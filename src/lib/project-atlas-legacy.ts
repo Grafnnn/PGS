@@ -6,7 +6,7 @@ export const LEGACY_ATLAS_RELEASES = [
   "troitsk-r25v11", "troitsk-r25v11-ui1", "troitsk-r25v11-5", "troitsk-r25v12-1", "troitsk-r25v12-8", "troitsk-r25v12-10"
 ];
 
-export const LEGACY_DOU_ATLAS_RELEASES = ["dou200-r1-21"];
+export const LEGACY_DOU_ATLAS_RELEASES = ["dou200-r1-21", "dou200-r1-23"];
 const troitskPrefix = getPublicProject3dModel("troitsk-building-24")!.assetBaseUrl!;
 const douPrefix = getPublicProject3dModel("dou200")!.assetBaseUrl!;
 
