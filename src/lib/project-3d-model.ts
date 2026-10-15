@@ -19,28 +19,28 @@ type ProjectIdentity = {
 };
 
 const troitskBuilding24Model: Project3dModel = {
-  slug: "troitsk-building-24-atlas-v12-11",
+  slug: "troitsk-building-24-atlas-v12-13",
   title: "3D Атлас здания 24",
   subtitle: "Здание, чертежи и каталог: 2 950 типов, 11 004 активных элемента",
-  revision: "V12.11",
-  updatedAt: "05.10.2026",
+  revision: "V12.13",
+  updatedAt: "15.10.2026",
   disclaimer: "Координационный атлас. 47 позиций без подтверждённого размещения. Армирование загружается отдельно по запросу. Не исполнительная съёмка и не утверждение рабочей документации.",
-  assetPath: "src/assets/project-models/troitsk-r25v12-11",
-  assetBaseUrl: "/model-assets/troitsk-r25v12-11/",
+  assetPath: "src/assets/project-models/troitsk-r25v12-13",
+  assetBaseUrl: "/model-assets/troitsk-r25v12-13/",
   publicUrl: "/models/troitsk-building-24#node/building"
 };
 
 const TROITSK_PROJECT_ID = "cmteg9g33000for4oc06rko5a";
 
 const dou200Model: Project3dModel = {
-  slug: "dou200-atlas-r1-24",
+  slug: "dou200-atlas-r1-27",
   title: "3D Атлас ДОУ 200 мест",
-  subtitle: "Здание, чертежи и каталог: 5 934 карточки, 14 737 тел в мире",
-  revision: "R1.24",
-  updatedAt: "13.10.2026",
+  subtitle: "Здание, чертежи и каталог: 5 954 карточки, 15 726 тел в мире",
+  revision: "R1.27",
+  updatedAt: "15.10.2026",
   disclaimer: "Координационный атлас-кандидат. Статусы неподтверждённой геометрии, неполных данных и конфликтов сохранены. Не инженерная приёмка и не утверждение рабочей документации.",
-  assetPath: "src/assets/project-models/dou200-r1-24",
-  assetBaseUrl: "/model-assets/dou200-r1-24/",
+  assetPath: "src/assets/project-models/dou200-r1-27",
+  assetBaseUrl: "/model-assets/dou200-r1-27/",
   publicUrl: "/models/dou200#node/building"
 };
 

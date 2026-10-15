@@ -5,9 +5,9 @@ import { NextRequest } from "next/server";
 import { middleware } from "@/middleware";
 import { LEGACY_ATLAS_RELEASES, LEGACY_DOU_ATLAS_RELEASES, legacyAtlasDestination, legacyAtlasWorker } from "./project-atlas-legacy";
 
-const current = "/model-assets/troitsk-r25v12-11/";
+const current = "/model-assets/troitsk-r25v12-13/";
 const old = "/model-assets/troitsk-r25v8-ui8/";
-const currentDou = "/model-assets/dou200-r1-24/";
+const currentDou = "/model-assets/dou200-r1-27/";
 const url = (path: string) => new URL(path, "https://pgs.local");
 
 describe("legacy atlas links", () => {
@@ -37,7 +37,7 @@ describe("legacy atlas links", () => {
     const pkg = JSON.parse(await readFile("package.json", "utf8"));
     expect(pkg.scripts.build).toBe("node scripts/prepare-public-atlases.mjs && next build");
     expect(pkg.scripts.test).toBe("node scripts/prepare-public-atlases.mjs && vitest run");
-    expect((await readdir("src/app/model-assets")).sort()).toEqual(["dou200-r1-24", "troitsk-r25v12-11"]);
+    expect((await readdir("src/app/model-assets")).sort()).toEqual(["dou200-r1-27", "troitsk-r25v12-13"]);
     expect((await readdir("public")).includes("model-assets")).toBe(false);
   });
   it.each([
