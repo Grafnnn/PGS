@@ -12,7 +12,7 @@ describe("Atlas V11 publication", () => {
   it("preserves the public alias without sessions or project lookups", async () => {
     const response = await GET(new Request("https://pgs.local/models/troitsk-building-24"), { params: { slug: "troitsk-building-24" } });
     expect(response.status).toBe(307);
-    expect(response.headers.get("location")).toBe("/model-assets/troitsk-r25v12-11/index.html");
+    expect(response.headers.get("location")).toBe("/model-assets/troitsk-r25v12-13/index.html");
     expect(response.headers.get("cache-control")).toBe("no-store");
     expect(response.headers.has("set-cookie")).toBe(false);
     expect(mocks.access).not.toHaveBeenCalled();
@@ -22,7 +22,7 @@ describe("Atlas V11 publication", () => {
   it("publishes DOU200 under its own anonymous alias without changing Troitsk", async () => {
     const response = await GET(new Request("https://pgs.local/models/dou200"), { params: { slug: "dou200" } });
     expect(response.status).toBe(307);
-    expect(response.headers.get("location")).toBe("/model-assets/dou200-r1-24/index.html");
+    expect(response.headers.get("location")).toBe("/model-assets/dou200-r1-27/index.html");
     expect(response.headers.has("set-cookie")).toBe(false);
     expect(mocks.access).not.toHaveBeenCalled();
     expect(mocks.find).not.toHaveBeenCalled();
@@ -43,7 +43,7 @@ describe("Atlas V11 publication", () => {
     mocks.find.mockResolvedValue({ id: "cmteg9g33000for4oc06rko5a" });
     const response = await privateGET(new Request("https://pgs.local/api/model?embed=monolith-v1"), { params: { projectId: "cmteg9g33000for4oc06rko5a" } });
     expect(response.status).toBe(307);
-    expect(response.headers.get("location")).toBe("/model-assets/troitsk-r25v12-11/index.html?embed=monolith-v1");
+    expect(response.headers.get("location")).toBe("/model-assets/troitsk-r25v12-13/index.html?embed=monolith-v1");
     expect(mocks.access).toHaveBeenCalledWith("cmteg9g33000for4oc06rko5a", "view");
   });
 });

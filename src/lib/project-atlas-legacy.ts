@@ -3,10 +3,10 @@ import { getPublicProject3dModel } from "@/lib/project-3d-model";
 export const LEGACY_ATLAS_RELEASES = [
   "troitsk-b24-r10", "troitsk-b24-atlas-3-2", "troitsk-r25v5", "troitsk-r25v7", "troitsk-r25v8",
   ...Array.from({ length: 8 }, (_, i) => `troitsk-r25v8-ui${i + 1}`),
-  "troitsk-r25v11", "troitsk-r25v11-ui1", "troitsk-r25v11-5", "troitsk-r25v12-1", "troitsk-r25v12-8", "troitsk-r25v12-10"
+  "troitsk-r25v11", "troitsk-r25v11-ui1", "troitsk-r25v11-5", "troitsk-r25v12-1", "troitsk-r25v12-8", "troitsk-r25v12-10", "troitsk-r25v12-11", "troitsk-r25v12-12"
 ];
 
-export const LEGACY_DOU_ATLAS_RELEASES = ["dou200-r1-21", "dou200-r1-23"];
+export const LEGACY_DOU_ATLAS_RELEASES = ["dou200-r1-7", "dou200-r1-21", "dou200-r1-23", "dou200-r1-24", "dou200-r1-25", "dou200-r1-26"];
 const troitskPrefix = getPublicProject3dModel("troitsk-building-24")!.assetBaseUrl!;
 const douPrefix = getPublicProject3dModel("dou200")!.assetBaseUrl!;
 
