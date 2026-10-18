@@ -18,8 +18,8 @@ function decode(text: string, key: string) {
 describe("independent DOU200 public website", () => {
   it("keeps project aliases, roots and revisions separate", () => {
     expect(getPublicProject3dModel("dou200")).toMatchObject({ revision: "R1.27", assetBaseUrl: "/model-assets/dou200-r1-27/" });
-    expect(getPublicProject3dModel("troitsk-building-24")).toMatchObject({ revision: "V12.13", assetBaseUrl: "/model-assets/troitsk-r25v12-13/" });
-    expect(getProject3dModel({ id: "cmteg9g33000for4oc06rko5a" })?.revision).toBe("V12.13");
+    expect(getPublicProject3dModel("troitsk-building-24")).toMatchObject({ revision: "V12.15", assetBaseUrl: "/model-assets/troitsk-r25v12-15/" });
+    expect(getProject3dModel({ id: "cmteg9g33000for4oc06rko5a" })?.revision).toBe("V12.15");
     expect(getProject3dModel({ name: "ДОУ 200" })).toBeNull(); // No inferred private project assignment.
     expect(legacyAtlasDestination(new URL(base + "index.html"))).toBeNull();
     expect(legacyAtlasWorker(new URL(base + "service-worker.js"))).toBeNull();
@@ -57,8 +57,8 @@ describe("independent DOU200 public website", () => {
     expect(await pdf.text()).toMatch(/^%PDF-/);
     const invalid = await get("albums/2025N252-R-AR-1.13.pdf", { headers: { range: "bytes=999999999999-" } });
     expect(invalid.status).toBe(416);
-    for (const name of ["../troitsk-r25v12-13/index.html", "drawings/AS2_changes.pdf", ".env", "ids/index.json", "qa/index.html"]) expect((await get(name)).status, name).toBe(404);
-    const troitskConfig = await projectAtlasR25Response(new Request("https://pgs.local/model-assets/troitsk-r25v12-13/project/config.js"), ["project", "config.js"], "v12-13");
+    for (const name of ["../troitsk-r25v12-15/index.html", "drawings/AS2_changes.pdf", ".env", "ids/index.json", "qa/index.html"]) expect((await get(name)).status, name).toBe(404);
+    const troitskConfig = await projectAtlasR25Response(new Request("https://pgs.local/model-assets/troitsk-r25v12-15/project/config.js"), ["project", "config.js"], "v12-15");
     expect(troitskConfig.status).toBe(200);
     expect(await troitskConfig.text()).toContain("project_id: 'troitsk-b24'");
   });
@@ -74,7 +74,7 @@ describe("independent DOU200 public website", () => {
     const listeners: Record<string, (event: { waitUntil(p: Promise<unknown>): void }) => void> = {};
     const prefix = String(self.ATLAS_OFFLINE_PREFIX || "atlas-default-");
     const ownCache = prefix + encodeURIComponent(new URL(base).pathname) + "-old";
-    const otherCache = "atlas-default-" + encodeURIComponent("/model-assets/troitsk-r25v12-13/") + "-old";
+    const otherCache = "atlas-default-" + encodeURIComponent("/model-assets/troitsk-r25v12-15/") + "-old";
     const removeCache = vi.fn();
     runInNewContext(text, {
       URL, importScripts() {}, caches: { keys: async () => [ownCache, otherCache], delete: removeCache },
