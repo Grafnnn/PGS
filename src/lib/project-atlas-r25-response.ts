@@ -4,10 +4,10 @@ import { Readable } from "node:stream";
 import { createGunzip } from "node:zlib";
 import { acceptsProjectModelGzip } from "@/lib/project-model-embed";
 
-export const ATLAS_R25_PREFIX = "/model-assets/troitsk-r25v12-13/";
-type AtlasVersion = "v12-13" | "dou200-r1-27";
+export const ATLAS_R25_PREFIX = "/model-assets/troitsk-r25v12-15/";
+type AtlasVersion = "v12-15" | "dou200-r1-27";
 const atlasDirectories: Record<AtlasVersion, string> = {
-  "v12-13": "troitsk-r25v12-13",
+  "v12-15": "troitsk-r25v12-15",
   "dou200-r1-27": "dou200-r1-27"
 };
 type Asset = { pack: string; offset: number; storedBytes: number; bytes: number; compressed: boolean; sha256: string; contentType: string };
@@ -21,7 +21,7 @@ function loadIndex(version: AtlasVersion, root: string) {
   return indexes.get(version)!;
 }
 
-export async function projectAtlasR25Response(request: Request, segments: string[], version: AtlasVersion = "v12-13") {
+export async function projectAtlasR25Response(request: Request, segments: string[], version: AtlasVersion = "v12-15") {
   const directory = atlasDirectories[version];
   if (!directory) return new Response("Not found", { status: 404 });
   const prefix = `/model-assets/${directory}/`;
