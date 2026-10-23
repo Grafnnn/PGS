@@ -4,8 +4,8 @@ import {gunzipSync} from 'node:zlib';
 import {readFile} from 'node:fs/promises';
 import {projectAtlasR25Response} from './project-atlas-r25-response';
 
-const base='https://pgs.local/model-assets/troitsk-r25v12-16/';
-const get=(name:string, init?:RequestInit)=>projectAtlasR25Response(new Request(base+name,init),name.split('/'),'v12-16');
+const base='https://pgs.local/model-assets/troitsk-r25v12-18/';
+const get=(name:string, init?:RequestInit)=>projectAtlasR25Response(new Request(base+name,init),name.split('/'),'v12-18');
 type Source={image?:string;pdf_url?:string;pdf_page?:number;printed_sheet?:string};
 const ovParts = [[1,16],[17,31],[32,60],[61,110],[111,158],[159,222]];
 function decode(text:string,key:string) {
@@ -14,7 +14,23 @@ function decode(text:string,key:string) {
   return JSON.parse(gunzipSync(Buffer.from(window[key],'base64')).toString());
 }
 
-describe('sealed V12.16 website delivery',()=>{
+describe('sealed V12.18 website delivery',()=>{
+  it('publishes the supplied construction progress plan without inventing server records',async()=>{
+    const window:any={};
+    for(const name of ['project/config.js','data/progress_items.js','data/progress_plan.js','assets/progress-core.js']) {
+      vm.runInNewContext(await (await get(name)).text(),{window},{timeout:10000});
+    }
+    expect(window.ATLAS_PROJECT.core_version).toBe('1.0.18');
+    expect(window.AtlasProgress.config()).toMatchObject({enabled:true,project_id:'troitsk-b24',slug:'troitsk-building-24'});
+    const published=window.AtlasProgress.published();
+    expect(Object.keys(published.items)).toHaveLength(20840);
+    expect(published.bodyIds).toHaveLength(10961);
+    expect(published.plan.stages).toHaveLength(14);
+    expect(window.AtlasProgress.planCheck(published.plan)).toEqual({errors:[],warnings:[]});
+    expect(published.journal).toEqual([]);
+    expect((await get('PROGRESS.html',{method:'HEAD'})).status).toBe(200);
+    expect((await get('assets/progress-sync.js',{method:'HEAD'})).status).toBe(200);
+  });
   it('starts whether navigation is nested or has already been moved by the UI',async()=>{
     const engine=await (await get('assets/atlas-engine.js')).text();
     expect(engine).not.toContain("$('left').insertBefore(reviewControls,$('studyNavigation'))");
@@ -33,23 +49,23 @@ describe('sealed V12.16 website delivery',()=>{
     }
   });
   it('uses a fresh immutable URL and matching CSP for the startup repair',async()=>{
-    const prefix='https://pgs.local/model-assets/troitsk-r25v12-16/';
-    const html=await projectAtlasR25Response(new Request(prefix+'index.html',{method:'HEAD'}),['index.html'],'v12-16');
+    const prefix='https://pgs.local/model-assets/troitsk-r25v12-18/';
+    const html=await projectAtlasR25Response(new Request(prefix+'index.html',{method:'HEAD'}),['index.html'],'v12-18');
     expect(html.status).toBe(200);
     expect(html.headers.get('cache-control')).toBe('public, no-cache');
     expect(html.headers.get('content-security-policy')).toContain(prefix);
-    const script=await projectAtlasR25Response(new Request(prefix+'assets/atlas-engine.js'),['assets','atlas-engine.js'],'v12-16');
+    const script=await projectAtlasR25Response(new Request(prefix+'assets/atlas-engine.js'),['assets','atlas-engine.js'],'v12-18');
     expect(await script.text()).toContain("e.parentNode===$('left')?e:null");
   });
   it('identifies the source and preserves known limitations',async()=>{
     const release=await (await get('CURRENT_RELEASE.json')).json();
-    expect(release).toMatchObject({release:'V12_16',geometryChangedFromSuppliedRelease:false,elementAssignmentsChanged:false,newEngineeringApproval:false,elements:10795,rebarOnDemand:13325,sources:396,nodes:559});
-    expect(release.sourceTreeSha256).toBe('7ad7152032cc90f729c281baa9c26c390d22ba2b2a5590146a463cf87a493f23');
+    expect(release).toMatchObject({release:'V12_18',geometryChangedFromSuppliedRelease:false,elementAssignmentsChanged:false,newEngineeringApproval:false,elements:10795,rebarOnDemand:13325,sources:396,nodes:559});
+    expect(release.sourceTreeSha256).toBe('5c8acf1ec95b5524e18923b765e9d4b46da3c0c2e570fba1cecbbe18def1cf15');
     expect(release.restoredPublicExcerpt.sha256).toBe('2afa4d7c3b1bb2fed48d3de1be3bc6e75add72b15b306ca4bd08db6eced6349f');
     expect(release.limitations.join(' ')).toContain('47');
-    const index=JSON.parse(await readFile('src/assets/project-models/troitsk-r25v12-16/index.json','utf8'));
-    expect(Object.keys(index.files)).toHaveLength(4566);
-    expect(index.archiveSha256).toBe('5c7da828e1269f44320ec3edf4ef6d8fe9a2bc7a67be845f3b5249f3a1f76bc4');
+    const index=JSON.parse(await readFile('src/assets/project-models/troitsk-r25v12-18/index.json','utf8'));
+    expect(Object.keys(index.files)).toHaveLength(4661);
+    expect(index.archiveSha256).toBe('329b84daa82dbd74b1b7153dc0ccb891a3f27dbab9f1f0a9d3cd22eac7c407f5');
   });
   it('keeps all 396 drawing previews and PDF targets inside the published release',async()=>{
     const library=decode(await (await get('data/library.js')).text(),'ATLAS_LIBRARY_GZIP');
@@ -116,7 +132,7 @@ describe('sealed V12.16 website delivery',()=>{
     }
     const release:any={};
     vm.runInNewContext(await (await get('data/release-info.js')).text(),{window:release},{timeout:1000});
-    expect(release.ATLAS_RELEASE).toMatchObject({release:'3D_ATLAS_V12_16',mu_rebar_section:'Армирование и узлы МУ · 52'});
+    expect(release.ATLAS_RELEASE).toMatchObject({release:'3D_ATLAS_V12_18',mu_rebar_section:'Армирование и узлы МУ · 52'});
   });
   it('delivers all 559 unique nodes with resolvable element references',async()=>{
     const data=decode(await (await get('data/nodes.js')).text(),'ATLAS_NODES_GZIP');
@@ -162,7 +178,7 @@ describe('sealed V12.16 website delivery',()=>{
     expect(invalid.headers.get('content-range')).toMatch(/^bytes \*\/\d+$/);
     const sw=await get('service-worker.js',{method:'HEAD'});
     expect(sw.headers.get('cache-control')).toBe('public, no-cache');
-    expect(sw.headers.get('service-worker-allowed')).toBe('/model-assets/troitsk-r25v12-16/');
+    expect(sw.headers.get('service-worker-allowed')).toBe('/model-assets/troitsk-r25v12-18/');
   });
   it('maps alternate-sheet PDF buttons before opening a new tab',async()=>{
     const card=await (await get('assets/atlas-card.js')).text();

@@ -19,14 +19,14 @@ type ProjectIdentity = {
 };
 
 const troitskBuilding24Model: Project3dModel = {
-  slug: "troitsk-building-24-atlas-v12-16",
+  slug: "troitsk-building-24-atlas-v12-18",
   title: "3D Атлас здания 24",
   subtitle: "Здание, чертежи и каталог: 2 950 типов, 10 795 элементов здания",
-  revision: "V12.16",
-  updatedAt: "19.10.2026",
+  revision: "V12.18",
+  updatedAt: "23.10.2026",
   disclaimer: "Координационный атлас. 47 позиций без подтверждённого размещения. Армирование загружается отдельно по запросу. Не исполнительная съёмка и не утверждение рабочей документации.",
-  assetPath: "src/assets/project-models/troitsk-r25v12-16",
-  assetBaseUrl: "/model-assets/troitsk-r25v12-16/",
+  assetPath: "src/assets/project-models/troitsk-r25v12-18",
+  assetBaseUrl: "/model-assets/troitsk-r25v12-18/",
   publicUrl: "/models/troitsk-building-24#node/building"
 };
 
