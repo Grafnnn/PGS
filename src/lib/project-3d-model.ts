@@ -44,10 +44,23 @@ const dou200Model: Project3dModel = {
   publicUrl: "/models/dou200#node/building"
 };
 
+const zagoryankaModel: Project3dModel = {
+  slug: "zagoryanka-1500-atlas-r1-0",
+  title: "3D Атлас Загорянка",
+  subtitle: "Коллектор Ø1500 · К26–К25: 99 записей реестра, 34 тела модели",
+  revision: "R1.0",
+  updatedAt: "19.11.2026",
+  disclaimer: "Развёрнутый продольный профиль. Плановое положение трассы и колодцев не подтверждено. Локальные тела и позиции только в реестре сохранены. Не исполнительная съёмка и не инженерная приёмка.",
+  assetPath: "src/assets/project-models/zagoryanka-1500-r1-0",
+  assetBaseUrl: "/model-assets/zagoryanka-1500-r1-0/",
+  publicUrl: "/models/zagoryanka-1500#node/building"
+};
+
 // Explicit publication allowlist. Never resolve arbitrary project IDs on a public route.
 export function getPublicProject3dModel(slug: string): Project3dModel | null {
   if (slug === "troitsk-building-24") return troitskBuilding24Model;
   if (slug === "dou200") return dou200Model;
+  if (slug === "zagoryanka-1500") return zagoryankaModel;
   return null;
 }
 

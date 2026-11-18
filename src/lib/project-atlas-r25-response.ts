@@ -5,10 +5,11 @@ import { createGunzip } from "node:zlib";
 import { acceptsProjectModelGzip } from "@/lib/project-model-embed";
 
 export const ATLAS_R25_PREFIX = "/model-assets/troitsk-r25v12-18/";
-type AtlasVersion = "v12-18" | "dou200-r1-27";
+type AtlasVersion = "v12-18" | "dou200-r1-27" | "zagoryanka-1500-r1-0";
 const atlasDirectories: Record<AtlasVersion, string> = {
   "v12-18": "troitsk-r25v12-18",
-  "dou200-r1-27": "dou200-r1-27"
+  "dou200-r1-27": "dou200-r1-27",
+  "zagoryanka-1500-r1-0": "zagoryanka-1500-r1-0"
 };
 type Asset = { pack: string; offset: number; storedBytes: number; bytes: number; compressed: boolean; sha256: string; contentType: string };
 const indexes = new Map<AtlasVersion, Promise<{ files: Record<string, Asset> }>>();
