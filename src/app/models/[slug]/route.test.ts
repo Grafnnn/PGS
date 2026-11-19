@@ -37,6 +37,15 @@ describe("Atlas V11 publication", () => {
     expect(mocks.find).not.toHaveBeenCalled();
     expect(mocks.readFile).not.toHaveBeenCalled();
   });
+  it("publishes Goluboe without project access or database reads", async () => {
+    const response = await GET(new Request("https://pgs.local/models/goluboe-vodovod"), { params: { slug: "goluboe-vodovod" } });
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toBe("/model-assets/goluboe-vodovod-r1-1/index.html");
+    expect(response.headers.has("set-cookie")).toBe(false);
+    expect(mocks.access).not.toHaveBeenCalled();
+    expect(mocks.find).not.toHaveBeenCalled();
+    expect(mocks.readFile).not.toHaveBeenCalled();
+  });
   it.each(["other-project", "cmteg9g33000for4oc06rko5a", "..", "%2e%2e", "troitsk-building-24/../../.env"])("rejects unpublished identifiers: %s", async (slug) => {
     expect((await GET(new Request("https://pgs.local/models/invalid"), { params: { slug } })).status).toBe(404);
   });

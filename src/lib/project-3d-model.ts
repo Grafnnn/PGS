@@ -56,11 +56,24 @@ const zagoryankaModel: Project3dModel = {
   publicUrl: "/models/zagoryanka-1500#node/building"
 };
 
+const goluboeModel: Project3dModel = {
+  slug: "goluboe-vodovod-atlas-r1-1",
+  title: "3D Атлас Голубое",
+  subtitle: "Водовод до ВЗУ: 144 записи реестра, 37 элементов сцены, 6 PDF",
+  revision: "R1.1",
+  updatedAt: "19.11.2026",
+  disclaimer: "Модель по ПД 19/26-2026. Расхождения со ЗнП № 10 сохранены в замечаниях и заключении; оригинал ЗнП не входит в пакет. Не инженерная приёмка и не исполнительная съёмка.",
+  assetPath: "src/assets/project-models/goluboe-vodovod-r1-1",
+  assetBaseUrl: "/model-assets/goluboe-vodovod-r1-1/",
+  publicUrl: "/models/goluboe-vodovod#node/building"
+};
+
 // Explicit publication allowlist. Never resolve arbitrary project IDs on a public route.
 export function getPublicProject3dModel(slug: string): Project3dModel | null {
   if (slug === "troitsk-building-24") return troitskBuilding24Model;
   if (slug === "dou200") return dou200Model;
   if (slug === "zagoryanka-1500") return zagoryankaModel;
+  if (slug === "goluboe-vodovod") return goluboeModel;
   return null;
 }
 

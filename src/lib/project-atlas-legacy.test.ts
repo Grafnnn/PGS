@@ -37,7 +37,7 @@ describe("legacy atlas links", () => {
     const pkg = JSON.parse(await readFile("package.json", "utf8"));
     expect(pkg.scripts.build).toBe("node scripts/prepare-public-atlases.mjs && next build");
     expect(pkg.scripts.test).toBe("node scripts/prepare-public-atlases.mjs && vitest run");
-    expect((await readdir("src/app/model-assets")).sort()).toEqual(["dou200-r1-27", "troitsk-r25v12-18", "zagoryanka-1500-r1-0"]);
+    expect((await readdir("src/app/model-assets")).sort()).toEqual(["dou200-r1-27", "goluboe-vodovod-r1-1", "troitsk-r25v12-18", "zagoryanka-1500-r1-0"]);
     expect((await readdir("public")).includes("model-assets")).toBe(false);
   });
   it.each([
