@@ -70,6 +70,7 @@ type UserContext = {
 type Props = {
   projectId: string;
   reports: DailyReport[];
+  focusedReportId?: string | null;
   scheduleItems: ScheduleItem[];
   budgetItems?: BudgetItem[];
   documents?: ProjectDocument[];
@@ -341,7 +342,7 @@ async function responseError(response: Response, fallback: string) {
   return body.error ?? fallback;
 }
 
-export function ReportsWorkflow({ projectId, reports, scheduleItems, budgetItems = emptyBudgetItems, documents = emptyProjectDocuments, currentUser, currentUserLoaded, onReportsChange, onScheduleItemsChange, onDocumentsChange }: Props) {
+export function ReportsWorkflow({ projectId, reports, focusedReportId, scheduleItems, budgetItems = emptyBudgetItems, documents = emptyProjectDocuments, currentUser, currentUserLoaded, onReportsChange, onScheduleItemsChange, onDocumentsChange }: Props) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [form, setForm] = useState<ReportForm>(() => emptyReport(currentUser?.name));
@@ -369,10 +370,12 @@ export function ReportsWorkflow({ projectId, reports, scheduleItems, budgetItems
   const [correctionReason, setCorrectionReason] = useState("");
   const photoObjectUrls = useRef(new Set<string>());
   const photoPreparationVersion = useRef(0);
+  const focusedReportRef = useRef<HTMLElement>(null);
 
   const role = currentUser?.role;
   const canEdit = role === "OWNER" || role === "ADMIN" || role === "MANAGER";
   const canApprove = role === "OWNER" || role === "ADMIN";
+  const focusedReportVisible = Boolean(focusedReportId && reports.some((report) => report.id === focusedReportId));
   const selectedExecutive = executiveReports.find((item) => item.id === selectedExecutiveId) ?? executiveReports[0] ?? null;
   const sortedReports = useMemo(() => [...reports].sort((a, b) => b.date.localeCompare(a.date)), [reports]);
   const activeReport = editingId ? reports.find((item) => item.id === editingId) ?? null : null;
@@ -476,6 +479,16 @@ export function ReportsWorkflow({ projectId, reports, scheduleItems, budgetItems
   useEffect(() => {
     void loadDailyReports();
   }, [loadDailyReports]);
+
+  useEffect(() => {
+    if (!focusedReportVisible || !dailyReportsLoaded) return;
+    const frame = requestAnimationFrame(() => {
+      const report = focusedReportRef.current;
+      report?.focus({ preventScroll: true });
+      report?.scrollIntoView({ block: "nearest" });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [focusedReportId, focusedReportVisible, dailyReportsLoaded]);
 
   useEffect(() => {
     void loadWorkforce();
@@ -1415,7 +1428,7 @@ export function ReportsWorkflow({ projectId, reports, scheduleItems, budgetItems
 
       <div className="daily-report-list">
         {!dailyReportsLoaded && busy === "daily-load" ? <div className="reports-empty">Загружаю рапорты со стройплощадки...</div> : sortedReports.length ? sortedReports.map((item) => (
-          <article className="daily-report-row" key={item.id}>
+          <article className="daily-report-row" key={item.id} ref={item.id === focusedReportId ? focusedReportRef : undefined} tabIndex={item.id === focusedReportId ? -1 : undefined}>
             <div className="daily-report-row-main">
               <div><strong>{new Date(item.date).toLocaleDateString("ru-RU")} · {dailyReportWorkScopeLabel(item.workScopes, item.workCategory || "Смена")}</strong><span>{item.author} · {item.workers} рабочих / {item.engineers} ИТР</span></div>
               <div className="daily-report-badges"><span className={`badge ${(item.phase ?? "closed") === "open" ? "blue" : "gray"}`}>{(item.phase ?? "closed") === "open" ? "Смена открыта" : "Факт внесён"}</span><span className={`badge ${tone(item.status)}`}>{dailyReportStatusLabel(item.status)}</span></div>

@@ -16,6 +16,7 @@ type Props = {
   icon: React.ReactNode;
   views: ProjectModuleView[];
   initialView?: string;
+  selection?: { view: string; onChange: (view: string) => void };
   className?: string;
 };
 
@@ -25,16 +26,19 @@ export function ProjectModuleWorkspace({
   icon,
   views,
   initialView,
+  selection,
   className = ""
 }: Props) {
   const defaultView = initialView && views.some((view) => view.id === initialView)
     ? initialView
     : views[0]?.id ?? "";
-  const [activeView, setActiveView] = useState(defaultView);
+  const [internalView, setInternalView] = useState(defaultView);
+  const activeView = selection?.view ?? internalView;
+  const setActiveView = selection?.onChange ?? setInternalView;
   const bodyRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    setActiveView(defaultView);
+    setInternalView(defaultView);
   }, [defaultView, moduleKey]);
 
   const selected = useMemo(
