@@ -17,5 +17,5 @@ export default async function ProjectPage({ params, searchParams }: { params: { 
     notFound();
   }
 
-  return <ProjectWorkspace createdFromOnboarding={searchParams?.created === "1"} initialBundle={bundle} initialTab={searchParams?.tab} initialReportsView={searchParams?.view === "journal" ? "journal" : "reports"} />;
+  return <ProjectWorkspace createdFromOnboarding={searchParams?.created === "1"} initialBundle={bundle} initialTab={searchParams?.tab} initialView={searchParams?.view} />;
 }

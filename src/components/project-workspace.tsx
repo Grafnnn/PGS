@@ -153,21 +153,21 @@ export function ProjectWorkspace({
   initialBundle,
   createdFromOnboarding = false,
   initialTab,
-  initialReportsView = "reports"
+  initialView
 }: {
   initialBundle: Bundle;
   createdFromOnboarding?: boolean;
   initialTab?: string;
-  initialReportsView?: "reports" | "journal";
+  initialView?: string;
 }) {
-  const [activeTab, setActiveTabState] = useState<ProjectTab>(() => resolveProjectTab(initialTab));
+  const [activeTab, setActiveTabState] = useState<ProjectTab>(() => resolveProjectTab(initialTab, initialView));
   const [budgetItems, setBudgetItems] = useState(initialBundle.budgetItems);
   const [scheduleItems, setScheduleItems] = useState(initialBundle.scheduleItems);
   const [materials, setMaterials] = useState(initialBundle.materials);
   const [procurementRequests, setProcurementRequests] = useState(initialBundle.procurementRequests);
   const [payments, setPayments] = useState(initialBundle.payments);
   const [reports, setReports] = useState(initialBundle.dailyReports);
-  const [reportsView, setReportsView] = useState<string>(initialReportsView);
+  const [reportsView, setReportsView] = useState("reports");
   const [focusedReportId, setFocusedReportId] = useState<string | null>(null);
   const [risks, setRisks] = useState(initialBundle.risks);
   const [aiPrompt, setAiPrompt] = useState("Что сейчас самое важное по проекту?");
@@ -217,8 +217,9 @@ export function ProjectWorkspace({
     const nextTab = tab as ProjectTab;
     setActiveTabState(nextTab);
     const url = new URL(window.location.href);
-    if (resolveProjectTab(url.searchParams.get("tab")) !== nextTab) {
+    if (resolveProjectTab(url.searchParams.get("tab"), url.searchParams.get("view")) !== nextTab) {
       url.searchParams.set("tab", nextTab);
+      if (url.searchParams.get("view") === "journal") url.searchParams.delete("view");
       window.history.pushState({ tab: nextTab }, "", url);
     }
     window.requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "smooth" }));
@@ -227,8 +228,8 @@ export function ProjectWorkspace({
 
   useEffect(() => {
     const syncFromHistory = () => {
-      const tab = new URL(window.location.href).searchParams.get("tab");
-      setActiveTabState(resolveProjectTab(tab));
+      const { searchParams } = new URL(window.location.href);
+      setActiveTabState(resolveProjectTab(searchParams.get("tab"), searchParams.get("view")));
     };
     window.addEventListener("popstate", syncFromHistory);
     return () => window.removeEventListener("popstate", syncFromHistory);
@@ -327,6 +328,17 @@ export function ProjectWorkspace({
     audit: { key: "audit", label: "События аудита", value: String(auditEvents.length), tone: auditEvents.length ? "info" : "neutral" }
   };
   const activeProjectTab = activeTab as ProjectTab;
+  const workJournal = <WorkProductionJournal
+    projectId={initialBundle.project.id}
+    reports={reports}
+    canExport={Boolean(currentUser?.authenticated && currentUser.role && currentUser.role !== "VIEWER")}
+    standalone={activeTab === "Журнал работ"}
+    onOpenReport={(reportId) => {
+      setFocusedReportId(reportId);
+      setReportsView("reports");
+      navigateProjectTab("Рапорты");
+    }}
+  />;
   const contextualAiScenario = aiScenarioForProjectTab[activeProjectTab];
   const sectionSignals = projectSectionGuides[activeProjectTab].signalKeys.map((key) => signalCatalog[key]);
   const sectionPriorities = [
@@ -1513,6 +1525,10 @@ export function ProjectWorkspace({
         ]} />
       )}
 
+      {activeTab === "Журнал работ" && (
+        <div className="project-module-view-body" data-view="journal">{workJournal}</div>
+      )}
+
       {activeTab === "Рапорты" && (
         <ProjectModuleWorkspace moduleKey="reports" title="Рапорты и производственный факт" icon={<ClipboardList size={18} />} selection={{ view: reportsView, onChange: (view) => {
           setFocusedReportId(null);
@@ -1531,15 +1547,7 @@ export function ProjectWorkspace({
             onScheduleItemsChange={(updatedItems) => setScheduleItems((current) => current.map((item) => updatedItems.find((updated) => updated.id === item.id) ?? item))}
             onDocumentsChange={setDocuments}
           /> },
-          { id: "journal", label: "Журнал работ", content: <WorkProductionJournal
-            projectId={initialBundle.project.id}
-            reports={reports}
-            canExport={Boolean(currentUser?.authenticated && currentUser.role && currentUser.role !== "VIEWER")}
-            onOpenReport={(reportId) => {
-              setFocusedReportId(reportId);
-              setReportsView("reports");
-            }}
-          /> },
+          { id: "journal", label: "Журнал работ", content: workJournal },
           { id: "operations", label: "Производственный факт", description: "Сводка факта, смен и отклонений по площадке.", content: <FieldOperationsWorkspace
               project={initialBundle.project}
               budgetItems={budgetItems}

@@ -26,6 +26,7 @@ import {
   LayoutGrid,
   ListChecks,
   MessageSquareText,
+  NotebookText,
   Package,
   ReceiptText,
   Search,
@@ -56,6 +57,7 @@ export const projectTabs = [
   "Исполнение",
   "Площадка",
   "Рапорты",
+  "Журнал работ",
   "Риски",
   "Документы",
   "RFI / Согласования",
@@ -70,7 +72,8 @@ export const projectTabs = [
 
 export type ProjectTab = (typeof projectTabs)[number];
 
-export function resolveProjectTab(tab?: string | null): ProjectTab {
+export function resolveProjectTab(tab?: string | null, view?: string | null): ProjectTab {
+  if (tab === "Рапорты" && view === "journal") return "Журнал работ";
   return projectTabs.includes(tab as ProjectTab) ? tab as ProjectTab : projectTabs[0];
 }
 
@@ -98,7 +101,7 @@ export const projectTabGroups: ReadonlyArray<ProjectTabGroup> = [
     label: "Производство",
     description: "График, полевой ввод и утверждённый факт",
     icon: <CalendarRange size={18} />,
-    tabs: ["График", "Площадка", "Рапорты", "Исполнение"]
+    tabs: ["График", "Площадка", "Рапорты", "Журнал работ", "Исполнение"]
   },
   {
     id: "resources",
@@ -168,6 +171,7 @@ const tabMeta: Record<ProjectTab, { icon: React.ReactNode; hint: string; label?:
   Исполнение: { icon: <Building2 size={16} />, hint: "Подрядчики и фронты" },
   Площадка: { icon: <HardHat size={16} />, label: "Полевой режим", hint: "Offline-запись и синхронизация" },
   Рапорты: { icon: <ClipboardList size={16} />, hint: "Факт, фото и прогресс графика" },
+  "Журнал работ": { icon: <NotebookText size={16} />, hint: "Выполненные работы по датам" },
   Риски: { icon: <AlertTriangle size={16} />, hint: "Отклонения и меры" },
   Документы: { icon: <FileText size={16} />, hint: "Файлы и версии" },
   "RFI / Согласования": { icon: <MessageSquareText size={16} />, hint: "Запросы и ответы" },
