@@ -5,7 +5,7 @@ import { useId, useMemo, useState, type FormEvent } from "react";
 import { dailyReportCompletedWorksFromOutputs } from "@/lib/daily-report-work-outputs";
 import { dailyReportStatusLabel } from "@/lib/daily-reports";
 import type { DailyReport } from "@/lib/types";
-import { parseProductionJournalPeriod, productionJournalDays, type ProductionJournalFilters } from "@/lib/work-production-journal";
+import { parseProductionJournalPeriod, productionJournalDays, productionJournalWorkOptions, type ProductionJournalFilters } from "@/lib/work-production-journal";
 import styles from "./work-production-journal.module.css";
 
 const dayLabel = new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "long", timeZone: "UTC" });
@@ -29,10 +29,10 @@ type Props = {
   onOpenReport: (reportId: string) => void;
 };
 
-function JournalShift({ report, onOpenReport }: { report: DailyReport; onOpenReport: Props["onOpenReport"] }) {
+function JournalShift({ report, workOnly, onOpenReport }: { report: DailyReport; workOnly: boolean; onOpenReport: Props["onOpenReport"] }) {
   const outputs = report.workOutputs ?? [];
   const completed = report.completedWorks.trim();
-  const showNarrative = completed && completed !== dailyReportCompletedWorksFromOutputs(outputs);
+  const showNarrative = !workOnly && completed && completed !== dailyReportCompletedWorksFromOutputs(outputs);
   const facts = [
     { label: "Погода", value: report.weather },
     { label: "Техника", value: report.equipment },
@@ -46,10 +46,10 @@ function JournalShift({ report, onOpenReport }: { report: DailyReport; onOpenRep
     <article className={styles.shift}>
       <header className={styles.shiftHeader}>
         <strong>{report.author}</strong>
-        <span className={styles.shiftStats}>
+        {!workOnly && <span className={styles.shiftStats}>
           Рабочие: {number.format(report.workers)} · ИТР: {number.format(report.engineers)}
           {report.shiftHours !== undefined ? ` · ${number.format(report.shiftHours)} ч` : ""}
-        </span>
+        </span>}
         <span className={`badge ${statusTone[report.status]}`}>{dailyReportStatusLabel(report.status)}</span>
       </header>
       {showNarrative ? <p className={styles.narrative}>{completed}</p> : null}
@@ -63,7 +63,7 @@ function JournalShift({ report, onOpenReport }: { report: DailyReport; onOpenRep
           ))}
         </ul>
       ) : !completed ? <p className={styles.muted}>Факт работ не указан.</p> : null}
-      {facts.length > 0 ? (
+      {!workOnly && facts.length > 0 ? (
         <details className={styles.details}>
           <summary><ChevronDown size={15} aria-hidden="true" />Детали смены</summary>
           <dl>
@@ -95,7 +95,9 @@ export function WorkProductionJournal({ projectId, reports, canExport, standalon
   const [invalidPeriod, setInvalidPeriod] = useState(false);
 
   const allDays = useMemo(() => productionJournalDays(reports), [reports]);
-  const filtered = Boolean(period.from || period.to || period.query);
+  const workOptions = useMemo(() => productionJournalWorkOptions(allDays), [allDays]);
+  const workOnly = Boolean(period.work);
+  const filtered = Boolean(period.from || period.to || period.query || period.work);
   const unapplied = from !== (period.from ?? "") || to !== (period.to ?? "") || search.trim() !== (period.query ?? "");
   const days = useMemo(() => filtered ? productionJournalDays(reports, period) : allDays, [allDays, filtered, period, reports]);
   const reportCount = days.reduce((count, day) => count + day.reports.length, 0);
@@ -103,6 +105,7 @@ export function WorkProductionJournal({ projectId, reports, canExport, standalon
   if (period.from) exportQuery.set("from", period.from);
   if (period.to) exportQuery.set("to", period.to);
   if (period.query) exportQuery.set("q", period.query);
+  if (period.work) exportQuery.set("work", period.work);
   const query = exportQuery.toString();
   const exportHref = `/api/projects/${encodeURIComponent(projectId)}/work-production-journal/export${query ? `?${query}` : ""}`;
 
@@ -110,14 +113,14 @@ export function WorkProductionJournal({ projectId, reports, canExport, standalon
     event.preventDefault();
     const nextPeriod = parseProductionJournalPeriod(from, to);
     setInvalidPeriod(!nextPeriod);
-    if (nextPeriod) setPeriod({ ...nextPeriod, query: search.trim() });
+    if (nextPeriod) setPeriod({ ...nextPeriod, work: period.work, query: search.trim() });
   }
 
-  function clearFilters() {
+  function selectWork(work: string) {
     setSearch("");
     setFrom("");
     setTo("");
-    setPeriod({});
+    setPeriod(work ? { work } : {});
     setInvalidPeriod(false);
   }
 
@@ -129,18 +132,25 @@ export function WorkProductionJournal({ projectId, reports, canExport, standalon
           <p>Закрытые смены автоматически появляются здесь после отправки рапорта.</p>
         </div>
         {canExport ? (
-          <a className="button secondary" href={exportHref}><Download size={16} aria-hidden="true" />Скачать Excel</a>
+          <a className="button secondary" href={exportHref}><Download size={16} aria-hidden="true" />{workOnly ? "Скачать Excel по работе" : "Скачать Excel"}</a>
         ) : null}
       </header>
       <div className={styles.toolbar}>
         <form className={styles.period} aria-label="Фильтр журнала" onSubmit={handleSubmit}>
-          <label className={`field ${styles.search}`}>
+          <label className={`field ${styles.workSelect}`}>
+            <span>Работа из рапортов</span>
+            <select disabled={!workOptions.length} value={period.work ?? ""} onChange={(event) => selectWork(event.target.value)}>
+              <option value="">{workOptions.length ? "Все работы" : "Нет работ с указанным объёмом"}</option>
+              {workOptions.map(({ value, label }) => <option key={value} value={value}>{label}</option>)}
+            </select>
+          </label>
+          {!workOnly && <label className={`field ${styles.search}`}>
             <span>Поиск по работам</span>
             <span className={styles.searchControl}>
               <Search size={15} aria-hidden="true" />
               <input type="search" placeholder="Название работы" value={search} maxLength={200} onChange={(event) => setSearch(event.target.value)} />
             </span>
-          </label>
+          </label>}
           <label className="field">
             <span>Дата начала</span>
             <input type="date" value={from} onChange={(event) => { setFrom(event.target.value); setInvalidPeriod(false); }} aria-invalid={invalidPeriod || undefined} aria-describedby={invalidPeriod ? errorId : undefined} />
@@ -151,7 +161,7 @@ export function WorkProductionJournal({ projectId, reports, canExport, standalon
           </label>
           <div className={styles.actions}>
             <button className="button primary" type="submit">Показать</button>
-            <button className="button secondary" onClick={clearFilters} type="button">Показать всё</button>
+            <button className="button secondary" onClick={() => selectWork("")} type="button">Показать всё</button>
           </div>
           {invalidPeriod ? <p className={styles.error} id={errorId} role="alert">Укажите корректные даты. Начало периода не может быть позже конца.</p> : null}
         </form>
@@ -172,7 +182,7 @@ export function WorkProductionJournal({ projectId, reports, canExport, standalon
                   <span>{weekdayLabel.format(date)}, {day.date.slice(0, 4)}</span>
                 </header>
                 <div className={styles.shifts}>
-                  {day.reports.map((report) => <JournalShift key={report.id} report={report} onOpenReport={onOpenReport} />)}
+                  {day.reports.map((report) => <JournalShift key={report.id} report={report} workOnly={workOnly} onOpenReport={onOpenReport} />)}
                 </div>
               </section>
             );

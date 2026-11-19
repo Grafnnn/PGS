@@ -23,23 +23,6 @@ export function buildWorkProductionJournalWorkbook(
   filters: ProductionJournalFilters
 ) {
   const shifts = days.flatMap(({ date, reports }) => reports.map((report) => ({ date, report })));
-  const journalRows = shifts.map(({ date, report }) => [
-    date,
-    report.workScopes?.length ? report.workScopes.map((scope) => scope.workName).join("\n") : report.workCategory ?? "",
-    report.completedWorks,
-    report.author,
-    dailyReportStatusLabel(report.status),
-    report.workers,
-    report.engineers,
-    report.shiftHours ?? "",
-    report.weather,
-    report.equipment,
-    report.materialsReceived,
-    report.materialsConsumed,
-    report.downtime,
-    report.issues,
-    report.id
-  ]);
   const outputRows = shifts.flatMap(({ date, report }) => (report.workOutputs ?? []).map((output) => [
     date,
     output.workName,
@@ -52,11 +35,30 @@ export function buildWorkProductionJournalWorkbook(
   ]));
 
   const workbook = XLSX.utils.book_new();
-  appendTable(workbook, "Журнал", [
-    "Дата", "Виды работ", "Выполненные работы", "Автор рапорта", "Статус рапорта",
-    "Рабочие, чел.", "ИТР, чел.", "Смена, ч", "Погода", "Техника",
-    "Материалы получены", "Материалы израсходованы", "Простои", "Замечания", "ID рапорта"
-  ], journalRows, [14, 32, 62, 28, 18, 15, 12, 12, 27, 32, 38, 38, 36, 38, 28]);
+  if (filters.work === undefined) {
+    const journalRows = shifts.map(({ date, report }) => [
+      date,
+      report.workScopes?.length ? report.workScopes.map((scope) => scope.workName).join("\n") : report.workCategory ?? "",
+      report.completedWorks,
+      report.author,
+      dailyReportStatusLabel(report.status),
+      report.workers,
+      report.engineers,
+      report.shiftHours ?? "",
+      report.weather,
+      report.equipment,
+      report.materialsReceived,
+      report.materialsConsumed,
+      report.downtime,
+      report.issues,
+      report.id
+    ]);
+    appendTable(workbook, "Журнал", [
+      "Дата", "Виды работ", "Выполненные работы", "Автор рапорта", "Статус рапорта",
+      "Рабочие, чел.", "ИТР, чел.", "Смена, ч", "Погода", "Техника",
+      "Материалы получены", "Материалы израсходованы", "Простои", "Замечания", "ID рапорта"
+    ], journalRows, [14, 32, 62, 28, 18, 15, 12, 12, 27, 32, 38, 38, 36, 38, 28]);
+  }
   appendTable(workbook, "Выработка", [
     "Дата", "Работа", "Объём", "Ед. изм.", "Трудозатраты, чел.-ч", "Профессия", "Автор рапорта", "ID рапорта"
   ], outputRows, [14, 56, 12, 12, 24, 25, 28, 28]);
@@ -65,7 +67,8 @@ export function buildWorkProductionJournalWorkbook(
     ["Журнал производства работ", projectName],
     ["Период с", filters.from ?? "Без ограничения"],
     ["Период по", filters.to ?? "Без ограничения"],
-    ...(filters.query ? [["Поиск", filters.query]] : []),
+    ...(filters.work !== undefined ? [["Работа", shifts[0]?.report.workOutputs?.[0]?.workName ?? filters.work]] : []),
+    ...(filters.work === undefined && filters.query ? [["Поиск", filters.query]] : []),
     ["Дней с записями", days.length],
     ["Рапортов", shifts.length]
   ]);
