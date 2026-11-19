@@ -5,10 +5,10 @@ import { gunzipSync } from "node:zlib";
 import { describe, expect, it } from "vitest";
 import { projectAtlasR25Response } from "./project-atlas-r25-response";
 import { getPublicProject3dModel, getProject3dModel } from "./project-3d-model";
-import { GET, HEAD } from "@/app/model-assets/goluboe-vodovod-r1-2/[...asset]/route";
+import { GET, HEAD } from "@/app/model-assets/goluboe-vodovod-r1-2-final154/[...asset]/route";
 
-const base = "https://pgs.local/model-assets/goluboe-vodovod-r1-2/";
-const get = (name: string, init?: RequestInit) => projectAtlasR25Response(new Request(base + name, init), name.split("/"), "goluboe-vodovod-r1-2");
+const base = "https://pgs.local/model-assets/goluboe-vodovod-r1-2-final154/";
+const get = (name: string, init?: RequestInit) => projectAtlasR25Response(new Request(base + name, init), name.split("/"), "goluboe-vodovod-r1-2-final154");
 function decode(text: string, key: string) {
   const window: Record<string, string> = {};
   runInNewContext(text, { window }, { timeout: 10000 });
@@ -17,7 +17,7 @@ function decode(text: string, key: string) {
 
 describe("independent Goluboe R1.2 publication", () => {
   it("adds a public allowlist entry without changing private assignments or neighbors", () => {
-    expect(getPublicProject3dModel("goluboe-vodovod")).toMatchObject({ revision: "R1.2", assetBaseUrl: "/model-assets/goluboe-vodovod-r1-2/" });
+    expect(getPublicProject3dModel("goluboe-vodovod")).toMatchObject({ revision: "R1.2", assetBaseUrl: "/model-assets/goluboe-vodovod-r1-2-final154/" });
     expect(getPublicProject3dModel("dou200")?.revision).toBe("R1.27");
     expect(getPublicProject3dModel("troitsk-building-24")?.revision).toBe("V12.18");
     expect(getPublicProject3dModel("zagoryanka-1500")?.revision).toBe("R1.0");
@@ -32,44 +32,45 @@ describe("independent Goluboe R1.2 publication", () => {
     expect(response.headers.get("content-security-policy")).toContain(base);
     expect(response.headers.get("content-security-policy")).not.toMatch(/troitsk|dou200|zagoryanka/);
     expect(response.headers.has("set-cookie")).toBe(false);
-    expect((await get("service-worker.js", { method: "HEAD" })).headers.get("service-worker-allowed")).toBe("/model-assets/goluboe-vodovod-r1-2/");
+    expect((await get("service-worker.js", { method: "HEAD" })).headers.get("service-worker-allowed")).toBe("/model-assets/goluboe-vodovod-r1-2-final154/");
   });
   it("retains every supplied byte and all six PDFs", async () => {
     const release = await (await get("CURRENT_RELEASE.json")).json();
-    expect(release).toMatchObject({ release: "GOLUBOE_VODOVOD_R1_2", projectId: "goluboe-vodovod", revision: "R1.2", suppliedFiles: 320,
-      sourceArchiveSha256: "f1e8faf270f2f7905a3187dc36b2792df16e1401f731e349b5a25be96f0ee669",
-      sourceTreeSha256: "d5d03875c06fa561fb8fa5d374d9040d687f20b2d2a4f52f1a29c01e4bae6da6",
-      suppliedManifestSha256: "b5eee4ba87cf8023a04bda16851594932c67876d550001d3d7331568e27316d7",
+    expect(release).toMatchObject({ release: "GOLUBOE_VODOVOD_R1_2_FINAL154", projectId: "goluboe-vodovod", revision: "R1.2", suppliedFiles: 321,
+      sourceArchiveSha256: "f60e553651333c23796a5cc6fc7859feccc03713874453ac242686c5f8e00dee",
+      sourceTreeSha256: "96bce23bde1c21850e72ff87a7d3ae3878dbf65bfb810da7bd53b360b3ab2c60",
+      suppliedManifestSha256: "660bdacc42344e701f21e6c82ddf147c1f5cbc1bd5fd92313acf26757fc1c346",
       geometryChangedFromSuppliedRelease: false, newEngineeringApproval: false, znpOriginalIncluded: false });
-    const index = JSON.parse(await readFile("src/assets/project-models/goluboe-vodovod-r1-2/index.json", "utf8"));
-    expect(Object.keys(index.files)).toHaveLength(322);
-    expect(index.archiveSha256).toBe("36c740734c9c00e25d5443ca56335b0fa5cda50ab5d112cb5f59eac56d506388");
+    const index = JSON.parse(await readFile("src/assets/project-models/goluboe-vodovod-r1-2-final154/index.json", "utf8"));
+    expect(Object.keys(index.files)).toHaveLength(323);
+    expect(index.archiveSha256).toBe("4ce41514369e3791856b7fcd73ea27a696f56c19b15204e88999ff23ca19db90");
     const manifest = await (await get("MANIFEST.json")).json();
-    expect(manifest.files).toHaveLength(321);
+    expect(manifest.files).toHaveLength(322);
     for (const file of manifest.files) {
       const bytes = Buffer.from(await (await get(file.path)).arrayBuffer());
       expect(bytes.length, file.path).toBe(file.bytes);
       expect(createHash("sha256").update(bytes).digest("hex"), file.path).toBe(file.sha256);
     }
     expect(manifest.files.filter((f: { path: string }) => f.path.endsWith(".pdf"))).toHaveLength(6);
-    expect(index.files["data/metadata-light.js"].sha256).toBe("ab20cc63d75fa1c523e9130353112e9410259065c107f60b110dd281f8102424");
+    expect(index.files["data/metadata-light.js"].sha256).toBe("8d4b8ae4af19f2802d6d6b68f0fbc45294cd6a3a791061fdd2cb4eae072ac07a");
   });
   it("preserves the scene, local geometry, issues and excavation menu", async () => {
     const window: Record<string, any> = {};
     for (const file of ["project/config.js", "project/texts.js", "data/release-info.js", "data/rd_remarks_final.js"])
       runInNewContext(await (await get(file)).text(), { window }, { timeout: 1000 });
     expect(window.ATLAS_PROJECT.storage.prefix).toBe("atlas:goluboe-vodovod:");
-    expect(window.ATLAS_RELEASE).toMatchObject({ release: "ATLAS_goluboe-vodovod_R1_2", registry_records: 263,
-      elements: 153, local_bodies: 40, bodies_total: 193, library_records: 277, remarks: 23, source_candidate: true, source_accepted: null });
+    expect(window.ATLAS_RELEASE).toMatchObject({ release: "ATLAS_goluboe-vodovod_R1_2", registry_records: 264,
+      elements: 154, local_bodies: 40, bodies_total: 194, library_records: 278, remarks: 23, source_candidate: true, source_accepted: null });
     expect(window.ATLAS_PROJECT.documents).toHaveLength(6);
     expect(window.ATLAS_REMARKS.items).toHaveLength(23);
     expect(window.ATLAS_REMARKS.items.find((r: { id: string }) => r.id === "Г-01").status).toBe("Открыто");
     expect(window.ATLAS_TEXTS.pages.menu.map((entry: { href: string }) => entry.href)).toContain("catalogue-model.html#id/NET-GOL-PD-POS-SHORING-ASSEMBLY");
     const metadata = decode(await (await get("data/metadata-light.js")).text(), "ATLAS_METADATA_GZIP");
-    expect(metadata.objects).toHaveLength(193);
-    expect(metadata.objects.filter((o: { worldAllowed: boolean }) => o.worldAllowed)).toHaveLength(153);
+    expect(metadata.objects).toHaveLength(194);
+    expect(metadata.objects.some((o: { renderId: string }) => o.renderId === "NET-V-SUPPORT-UP-2")).toBe(true);
+    expect(metadata.objects.filter((o: { worldAllowed: boolean }) => o.worldAllowed)).toHaveLength(154);
     const library = decode(await (await get("data/library.js")).text(), "ATLAS_LIBRARY_GZIP");
-    expect(library.records).toHaveLength(277);
+    expect(library.records).toHaveLength(278);
     expect(Object.keys(library.sources)).toHaveLength(66);
   });
   it("resolves PD sources to project-local PDF pages without inventing a ZnP file", async () => {
@@ -126,5 +127,22 @@ describe("independent Goluboe R1.2 publication", () => {
     }
     expect(views.up1.pipe).toBe(false);
     expect(views.up1.backfill).toHaveLength(0);
+  });
+  it("permits only project-local Goluboe fonts and serves valid WOFF2 without changing neighboring CSP", async () => {
+    const html = await get("index.html", { method: "HEAD" });
+    const policy = html.headers.get("content-security-policy")!;
+    expect(policy).toContain(`font-src ${base}`);
+    expect(policy.match(/font-src ([^;]+)/)?.[1]).not.toMatch(/\*|'self'|data:|blob:/);
+    const index = JSON.parse(await readFile("src/assets/project-models/goluboe-vodovod-r1-2-final154/index.json", "utf8"));
+    const fonts = Object.keys(index.files).filter(name => name.endsWith(".woff2"));
+    expect(fonts).toHaveLength(5);
+    for (const name of fonts) {
+      const response = await get(name);
+      expect(response.headers.get("content-type")).toBe("font/woff2");
+      expect(Buffer.from(await response.arrayBuffer()).subarray(0, 4).toString()).toBe("wOF2");
+    }
+    const other = await projectAtlasR25Response(new Request("https://pgs.local/model-assets/zagoryanka-1500-r1-0/index.html", { method: "HEAD" }), ["index.html"], "zagoryanka-1500-r1-0");
+    expect(other.status).toBe(200);
+    expect(other.headers.get("content-security-policy")).not.toContain("font-src");
   });
 });
