@@ -5,12 +5,14 @@ import { useId, useMemo, useState, type FormEvent } from "react";
 import { dailyReportCompletedWorksFromOutputs } from "@/lib/daily-report-work-outputs";
 import { dailyReportStatusLabel } from "@/lib/daily-reports";
 import type { DailyReport } from "@/lib/types";
-import { parseProductionJournalPeriod, productionJournalDays, productionJournalWorkOptions, type ProductionJournalFilters } from "@/lib/work-production-journal";
+import { parseProductionJournalPeriod, productionJournalDays, productionJournalVolumeTotals, productionJournalWorkOptions, type ProductionJournalFilters } from "@/lib/work-production-journal";
 import styles from "./work-production-journal.module.css";
 
 const dayLabel = new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "long", timeZone: "UTC" });
 const weekdayLabel = new Intl.DateTimeFormat("ru-RU", { weekday: "long", timeZone: "UTC" });
+const periodDateLabel = new Intl.DateTimeFormat("ru-RU", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "UTC" });
 const number = new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 3 });
+const volumeNumber = new Intl.NumberFormat("ru-RU", { maximumSignificantDigits: 15 });
 const plural = new Intl.PluralRules("ru-RU");
 const dayForms = { one: "день", few: "дня", many: "дней", other: "дней" };
 const shiftForms = { one: "рапорт", few: "рапорта", many: "рапортов", other: "рапорта" };
@@ -19,6 +21,13 @@ const statusTone = { draft: "gray", submitted: "yellow", checked: "blue", approv
 function counted(count: number, forms: typeof dayForms) {
   const category = plural.select(count);
   return `${number.format(count)} ${category === "one" || category === "few" || category === "many" ? forms[category] : forms.other}`;
+}
+
+function volumePeriodLabel({ from, to }: ProductionJournalFilters) {
+  if (from && to) return `С ${periodDateLabel.format(new Date(from))} по ${periodDateLabel.format(new Date(to))}`;
+  if (from) return `С ${periodDateLabel.format(new Date(from))}`;
+  if (to) return `По ${periodDateLabel.format(new Date(to))}`;
+  return "За всё время";
 }
 
 type Props = {
@@ -100,6 +109,7 @@ export function WorkProductionJournal({ projectId, reports, canExport, standalon
   const filtered = Boolean(period.from || period.to || period.query || period.work);
   const unapplied = from !== (period.from ?? "") || to !== (period.to ?? "") || search.trim() !== (period.query ?? "");
   const days = useMemo(() => filtered ? productionJournalDays(reports, period) : allDays, [allDays, filtered, period, reports]);
+  const volumeTotals = useMemo(() => workOnly ? productionJournalVolumeTotals(days) : [], [days, workOnly]);
   const reportCount = days.reduce((count, day) => count + day.reports.length, 0);
   const exportQuery = new URLSearchParams();
   if (period.from) exportQuery.set("from", period.from);
@@ -171,6 +181,21 @@ export function WorkProductionJournal({ projectId, reports, canExport, standalon
             : `${counted(days.length, dayForms)} · ${counted(reportCount, shiftForms)}`}
         </p>
       </div>
+      {workOnly && (
+        <section className={styles.volumeSummary} aria-label="Итого по работе" aria-live="polite">
+          <div>
+            <strong>Итого по работе</strong>
+            <p className={styles.muted}>{volumePeriodLabel(period)}</p>
+          </div>
+          {volumeTotals.length ? (
+            <ul className={styles.volumeTotals} aria-label="Объёмы по единицам измерения">
+              {volumeTotals.map(({ unit, quantity }) => (
+                <li key={unit}><strong>{volumeNumber.format(quantity)}</strong> <span>{unit}</span></li>
+              ))}
+            </ul>
+          ) : <p className={styles.muted}>Нет объёмов</p>}
+        </section>
+      )}
       {days.length ? (
         <div className={styles.register}>
           {days.map((day) => {
