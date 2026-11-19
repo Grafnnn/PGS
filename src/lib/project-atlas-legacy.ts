@@ -7,7 +7,7 @@ export const LEGACY_ATLAS_RELEASES = [
 ];
 
 export const LEGACY_DOU_ATLAS_RELEASES = ["dou200-r1-7", "dou200-r1-21", "dou200-r1-23", "dou200-r1-24", "dou200-r1-25", "dou200-r1-26"];
-export const LEGACY_GOLUBOE_ATLAS_RELEASES = ["goluboe-vodovod-r1-1", "goluboe-vodovod-r1-2", "goluboe-vodovod-r1-2-final154", "goluboe-vodovod-r1-2-excavations"];
+export const LEGACY_GOLUBOE_ATLAS_RELEASES = ["goluboe-vodovod-r1-1", "goluboe-vodovod-r1-2", "goluboe-vodovod-r1-2-final154", "goluboe-vodovod-r1-2-excavations", "goluboe-vodovod-r1-2-up1-profile"];
 const troitskPrefix = getPublicProject3dModel("troitsk-building-24")!.assetBaseUrl!;
 const douPrefix = getPublicProject3dModel("dou200")!.assetBaseUrl!;
 const goluboePrefix = getPublicProject3dModel("goluboe-vodovod")!.assetBaseUrl!;

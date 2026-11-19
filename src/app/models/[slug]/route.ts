@@ -19,6 +19,7 @@ export async function GET(request: Request, { params }: { params: { slug: string
     if (input.searchParams.get("pdPlan") === "1") target.searchParams.set("pdPlan", "1");
     const locate = input.searchParams.get("pdLocate");
     if (locate && ["kv1", "up1", "vzu"].includes(locate)) target.searchParams.set("pdLocate", locate);
+    if (locate === "up1" && input.searchParams.get("pdSoil") === "1") target.searchParams.set("pdSoil", "1");
     response.headers.set("location", target.pathname + target.search);
   }
   return response;

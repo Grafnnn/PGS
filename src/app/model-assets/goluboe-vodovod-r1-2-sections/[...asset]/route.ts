@@ -4,7 +4,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export function GET(request: Request, { params }: { params: { asset: string[] } }) {
-  return projectAtlasR25Response(request, params.asset, "goluboe-vodovod-r1-2-up1-profile");
+  return projectAtlasR25Response(request, params.asset, "goluboe-vodovod-r1-2-sections");
 }
 
 export const HEAD = GET;
