@@ -148,7 +148,7 @@ export function WorkProductionJournal({ projectId, reports, canExport, onOpenRep
           </label>
           <div className={styles.actions}>
             <button className="button primary" type="submit">Показать</button>
-            {search || from || to || filtered ? <button className="button secondary" onClick={clearFilters} type="button">Сбросить</button> : null}
+            <button className="button secondary" onClick={clearFilters} type="button">Показать всё</button>
           </div>
           {invalidPeriod ? <p className={styles.error} id={errorId} role="alert">Укажите корректные даты. Начало периода не может быть позже конца.</p> : null}
         </form>
