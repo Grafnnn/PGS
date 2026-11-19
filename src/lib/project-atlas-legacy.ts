@@ -7,8 +7,10 @@ export const LEGACY_ATLAS_RELEASES = [
 ];
 
 export const LEGACY_DOU_ATLAS_RELEASES = ["dou200-r1-7", "dou200-r1-21", "dou200-r1-23", "dou200-r1-24", "dou200-r1-25", "dou200-r1-26"];
+export const LEGACY_GOLUBOE_ATLAS_RELEASES = ["goluboe-vodovod-r1-1"];
 const troitskPrefix = getPublicProject3dModel("troitsk-building-24")!.assetBaseUrl!;
 const douPrefix = getPublicProject3dModel("dou200")!.assetBaseUrl!;
+const goluboePrefix = getPublicProject3dModel("goluboe-vodovod")!.assetBaseUrl!;
 
 function legacyPath(url: URL) {
   let pathname: string;
@@ -16,7 +18,8 @@ function legacyPath(url: URL) {
   const match = /^\/model-assets\/([^/]+)(?:\/(.*))?$/.exec(pathname);
   if (!match) return null;
   const currentPrefix = LEGACY_ATLAS_RELEASES.includes(match[1]) ? troitskPrefix
-    : LEGACY_DOU_ATLAS_RELEASES.includes(match[1]) ? douPrefix : null;
+    : LEGACY_DOU_ATLAS_RELEASES.includes(match[1]) ? douPrefix
+    : LEGACY_GOLUBOE_ATLAS_RELEASES.includes(match[1]) ? goluboePrefix : null;
   if (!currentPrefix) return null;
   const name = match[2] || "";
   if (name && name.split("/").some(part => !part || part === "." || part === ".." || /[\\\x00-\x1f]/.test(part))) return null;
