@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireProjectAccess } from "@/lib/project-route-guards";
 import { serializeDailyReport } from "@/lib/serializers";
-import { parseProductionJournalPeriod, productionJournalDays } from "@/lib/work-production-journal";
+import { parseProductionJournalPeriod, productionJournalDays, productionJournalWorkKey } from "@/lib/work-production-journal";
 import { buildWorkProductionJournalWorkbook } from "@/lib/work-production-journal-export";
 
 export const runtime = "nodejs";
@@ -16,6 +16,11 @@ export async function GET(request: Request, { params }: { params: { projectId: s
     const { searchParams } = new URL(request.url);
     const period = parseProductionJournalPeriod(searchParams.get("from") ?? "", searchParams.get("to") ?? "");
     if (!period) return NextResponse.json({ error: "Укажите корректный период журнала." }, { status: 400 });
+    const requestedWork = searchParams.get("work");
+    const work = requestedWork === null ? undefined : productionJournalWorkKey(requestedWork);
+    if (work !== undefined && !work) {
+      return NextResponse.json({ error: "Выберите корректную работу для выгрузки." }, { status: 400 });
+    }
 
     const date: Prisma.DateTimeFilter = {
       ...(period.from ? { gte: new Date(`${period.from}T00:00:00.000Z`) } : {}),
@@ -30,12 +35,13 @@ export async function GET(request: Request, { params }: { params: { projectId: s
     });
     if (!project) return NextResponse.json({ error: "Проект не найден." }, { status: 404 });
 
-    const filters = { ...period, query: searchParams.get("q")?.trim() };
+    const filters = { ...period, query: searchParams.get("q")?.trim(), work };
     const days = productionJournalDays(project.dailyReports.map((report) => serializeDailyReport(report)), filters);
     const workbook = buildWorkProductionJournalWorkbook(project.name, days, filters);
     const nameSlug = project.name.replace(/[^\p{L}\p{N}._-]+/gu, "-").replace(/^-+|-+$/g, "");
     const projectName = Array.from(nameSlug).slice(0, 70).join("");
-    const filename = projectName ? `PGS-журнал-${projectName}.xlsx` : "PGS-журнал.xlsx";
+    const prefix = work ? "PGS-журнал-одна-работа" : "PGS-журнал";
+    const filename = projectName ? `${prefix}-${projectName}.xlsx` : `${prefix}.xlsx`;
 
     return new NextResponse(new Uint8Array(workbook), {
       headers: {

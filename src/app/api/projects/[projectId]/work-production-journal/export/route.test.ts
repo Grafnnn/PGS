@@ -116,4 +116,58 @@ describe("production journal Excel export", () => {
     ]);
     expect(XLSX.utils.sheet_to_json(workbook.Sheets["Сводка"], { header: 1 })).toContainEqual(["Поиск", "ОКРАСКА"]);
   });
+
+  it("exports the exact work across dates without other work from a matching shift", async () => {
+    const [output] = shift.workOutputs;
+    mocks.findProject.mockResolvedValue({
+      name: "Строительство корпуса",
+      dailyReports: [
+        {
+          ...shift,
+          workOutputs: [
+            output,
+            { ...output, workName: "Монтаж арматуры на крыше", quantity: 50 },
+            { ...output, workName: "Подготовка опалубки", quantity: 10, unit: "м²" }
+          ]
+        },
+        {
+          ...shift,
+          id: "report-2",
+          date: new Date("2026-11-18T12:00:00Z"),
+          workOutputs: [{ ...output, quantity: 0.5 }]
+        },
+        { ...shift, id: "report-3", workOutputs: null },
+        { ...shift, id: "report-4", date: new Date("2026-11-17T12:00:00Z") }
+      ]
+    });
+    const url = new URL(exportUrl);
+    url.searchParams.set("from", "2026-11-18");
+    url.searchParams.set("work", "монтаж арматуры");
+
+    const response = await GET(new Request(url), { params });
+
+    expect(response.status).toBe(200);
+    const workbook = XLSX.read(await response.arrayBuffer());
+    expect(workbook.SheetNames).toEqual(["Выработка", "Сводка"]);
+    expect(XLSX.utils.sheet_to_json(workbook.Sheets["Выработка"])).toEqual([
+      expect.objectContaining({ "ID рапорта": "report-1", Дата: "2026-11-19", Работа: "Монтаж арматуры", Объём: 2.75, "Ед. изм.": "т" }),
+      expect.objectContaining({ "ID рапорта": "report-2", Дата: "2026-11-18", Работа: "Монтаж арматуры", Объём: 0.5, "Ед. изм.": "т" })
+    ]);
+    expect(XLSX.utils.sheet_to_json(workbook.Sheets["Сводка"], { header: 1 })).toContainEqual(["Работа", "Монтаж арматуры"]);
+  });
+
+  it("keeps an unmatched or invalid work selection from exporting the full journal", async () => {
+    mocks.findProject.mockResolvedValue({ name: "Строительство корпуса", dailyReports: [shift] });
+    const url = new URL(exportUrl);
+    url.searchParams.set("work", "  ");
+    expect((await GET(new Request(url), { params })).status).toBe(400);
+    expect(mocks.findProject).not.toHaveBeenCalled();
+
+    url.searchParams.set("work", "неизвестная работа");
+    const response = await GET(new Request(url), { params });
+    expect(response.status).toBe(200);
+    const workbook = XLSX.read(await response.arrayBuffer());
+    expect(workbook.SheetNames).toEqual(["Выработка", "Сводка"]);
+    expect(XLSX.utils.sheet_to_json(workbook.Sheets["Выработка"])).toEqual([]);
+  });
 });

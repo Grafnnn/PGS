@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { parseProductionJournalPeriod, productionJournalDays } from "@/lib/work-production-journal";
+import {
+  parseProductionJournalPeriod,
+  productionJournalDays,
+  productionJournalWorkKey,
+  productionJournalWorkOptions
+} from "@/lib/work-production-journal";
 import type { DailyReport } from "@/lib/types";
 
 const report: DailyReport = {
@@ -69,5 +74,36 @@ describe("production journal", () => {
       { date: "2026-11-18", reports: [narrative] }
     ]);
     expect(productionJournalDays(reports, { query: "подъём опор", to: "2026-11-18" })[0].reports).toEqual([narrative]);
+  });
+
+  it("offers actual work once and keeps only that work across dates, preserving recorded units", () => {
+    const template = report.workOutputs![0];
+    const concrete = { ...template, workName: "Устройство перекрытий", quantity: 2.5, unit: "м³" };
+    const otherWork = { ...template, workName: "Устройство перекрытий над подвалом", quantity: 12, unit: "м²" };
+    const historical = { ...template, workName: " УСТРОЙСТВО  ПЕРЕКРЫТИЙ ", quantity: 3, unit: "шт" };
+    const latest = { ...report, workOutputs: [concrete, otherWork] };
+    const earlier: DailyReport = { ...report, id: "previous", date: "2026-11-18", status: "approved", workOutputs: [historical] };
+    const narrativeOnly = { ...report, id: "narrative", date: "2026-11-17", workOutputs: [], completedWorks: concrete.workName, workCategory: "Монолит" };
+    const draft: DailyReport = { ...report, id: "draft", status: "draft", workOutputs: [{ ...template, workName: "Земляные работы" }] };
+    const reports = [latest, earlier, narrativeOnly, draft];
+    const work = productionJournalWorkKey(concrete.workName);
+
+    expect(productionJournalWorkOptions(productionJournalDays(reports))).toEqual([
+      { value: work, label: concrete.workName },
+      { value: productionJournalWorkKey(otherWork.workName), label: otherWork.workName }
+    ]);
+
+    const matches = productionJournalDays(reports, { work });
+    expect(matches.map((day) => [day.date, day.reports.map(({ workOutputs }) => workOutputs)])).toEqual([
+      ["2026-11-19", [[concrete]]],
+      ["2026-11-18", [[historical]]]
+    ]);
+    expect(latest.workOutputs).toEqual([concrete, otherWork]);
+    expect(productionJournalDays(reports, { work, from: "2026-11-19" })).toEqual(matches.slice(0, 1));
+    expect(productionJournalDays(reports, { work, query: "над подвалом" })).toEqual([]);
+    expect(productionJournalDays(reports, { work: "устройство" })).toEqual([]);
+    expect(productionJournalDays(reports, { work: " " })).toEqual([]);
+    expect(productionJournalDays(reports, { work: "" })).toEqual(productionJournalDays(reports));
+    expect(productionJournalWorkKey(" ПОДЪЁМ\n опор ")).toBe("подъем опор");
   });
 });

@@ -50,11 +50,20 @@
   min-width: 0;
 }
 
-.period input {
+.period input,
+.period select {
   width: 100%;
   min-width: 0;
   min-height: 36px;
   padding: 6px 8px;
+}
+
+.period .workSelect {
+  width: clamp(14rem, 27vw, 22rem);
+}
+
+.workSelect select {
+  text-overflow: ellipsis;
 }
 
 .period .search {
@@ -294,7 +303,8 @@
     width: 100%;
   }
 
-  .period .search {
+  .period .search,
+  .period .workSelect {
     grid-column: 1 / -1;
     width: 100%;
   }
