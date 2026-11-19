@@ -59,6 +59,7 @@ const QualityIssuesWorkspace = dynamic(() => import("@/components/quality-issues
 const QualityManagementWorkspace = dynamic(() => import("@/components/quality-management-workspace").then((m) => m.QualityManagementWorkspace), { loading: ModuleLoading });
 const ResourcesEquipmentWorkspace = dynamic(() => import("@/components/resources-equipment-workspace").then((m) => m.ResourcesEquipmentWorkspace), { loading: ModuleLoading });
 const ReportsWorkflow = dynamic(() => import("@/components/reports-workflow").then((m) => m.ReportsWorkflow), { loading: ModuleLoading });
+const WorkProductionJournal = dynamic(() => import("@/components/work-production-journal").then((m) => m.WorkProductionJournal), { loading: ModuleLoading });
 const RfiSubmittalsWorkspace = dynamic(() => import("@/components/rfi-submittals-workspace").then((m) => m.RfiSubmittalsWorkspace), { loading: ModuleLoading });
 const RiskExecutiveWorkspace = dynamic(() => import("@/components/risk-executive-workspace").then((m) => m.RiskExecutiveWorkspace), { loading: ModuleLoading });
 const ScheduleCashflowWorkspace = dynamic(() => import("@/components/schedule-cashflow-workspace").then((m) => m.ScheduleCashflowWorkspace), { loading: ModuleLoading });
@@ -151,11 +152,13 @@ function textFromCell(cell: React.ReactNode): string {
 export function ProjectWorkspace({
   initialBundle,
   createdFromOnboarding = false,
-  initialTab
+  initialTab,
+  initialReportsView = "reports"
 }: {
   initialBundle: Bundle;
   createdFromOnboarding?: boolean;
   initialTab?: string;
+  initialReportsView?: "reports" | "journal";
 }) {
   const [activeTab, setActiveTabState] = useState<ProjectTab>(() => resolveProjectTab(initialTab));
   const [budgetItems, setBudgetItems] = useState(initialBundle.budgetItems);
@@ -164,6 +167,8 @@ export function ProjectWorkspace({
   const [procurementRequests, setProcurementRequests] = useState(initialBundle.procurementRequests);
   const [payments, setPayments] = useState(initialBundle.payments);
   const [reports, setReports] = useState(initialBundle.dailyReports);
+  const [reportsView, setReportsView] = useState<string>(initialReportsView);
+  const [focusedReportId, setFocusedReportId] = useState<string | null>(null);
   const [risks, setRisks] = useState(initialBundle.risks);
   const [aiPrompt, setAiPrompt] = useState("Что сейчас самое важное по проекту?");
   const [aiScenarioLoading, setAiScenarioLoading] = useState<AiScenario | null>(null);
@@ -1509,18 +1514,31 @@ export function ProjectWorkspace({
       )}
 
       {activeTab === "Рапорты" && (
-        <ProjectModuleWorkspace moduleKey="reports" title="Рапорты и производственный факт" icon={<ClipboardList size={18} />} views={[
+        <ProjectModuleWorkspace moduleKey="reports" title="Рапорты и производственный факт" icon={<ClipboardList size={18} />} selection={{ view: reportsView, onChange: (view) => {
+          setFocusedReportId(null);
+          setReportsView(view);
+        } }} views={[
           { id: "reports", label: "Рапорты", description: "Создание, загрузка и журнал ежедневных рапортов.", content: <ReportsWorkflow
             currentUser={currentUser}
             currentUserLoaded={currentUserLoaded}
             projectId={initialBundle.project.id}
             reports={reports}
+            focusedReportId={focusedReportId}
             budgetItems={budgetItems}
             scheduleItems={scheduleItems}
             documents={documents}
             onReportsChange={setReports}
             onScheduleItemsChange={(updatedItems) => setScheduleItems((current) => current.map((item) => updatedItems.find((updated) => updated.id === item.id) ?? item))}
             onDocumentsChange={setDocuments}
+          /> },
+          { id: "journal", label: "Журнал работ", content: <WorkProductionJournal
+            projectId={initialBundle.project.id}
+            reports={reports}
+            canExport={Boolean(currentUser?.authenticated && currentUser.role && currentUser.role !== "VIEWER")}
+            onOpenReport={(reportId) => {
+              setFocusedReportId(reportId);
+              setReportsView("reports");
+            }}
           /> },
           { id: "operations", label: "Производственный факт", description: "Сводка факта, смен и отклонений по площадке.", content: <FieldOperationsWorkspace
               project={initialBundle.project}
