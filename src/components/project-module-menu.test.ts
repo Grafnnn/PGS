@@ -18,6 +18,8 @@ describe("ProjectModuleMenu", () => {
     expect(resolveProjectTab(undefined)).toBe("Обзор");
     expect(resolveProjectTab("")).toBe("Обзор");
     expect(resolveProjectTab("missing")).toBe("Обзор");
+    expect(resolveProjectTab("Рапорты", "journal")).toBe("Журнал работ");
+    expect(resolveProjectTab("График", "journal")).toBe("График");
     for (const tab of projectTabs) expect(resolveProjectTab(tab)).toBe(tab);
   });
   it("keeps every project section and its descriptive category in the complete catalogue", () => {
@@ -89,6 +91,16 @@ describe("ProjectModuleMenu", () => {
     expect(html).toContain('data-current="true"');
     expect(html).toContain('aria-current="page"');
     expect(html).not.toContain('data-project-all-modules="true"');
+  });
+
+  it("places the work journal alongside reports in the work menu and marks it as current", () => {
+    const html = renderToStaticMarkup(createElement(ProjectModuleMenu, {
+      activeTab: "Журнал работ", defaultOpen: "production", onSelect: () => undefined
+    }));
+
+    expect(html).toContain('id="project-domain-menu-production"');
+    expect(html).toMatch(/aria-current="page" class="active" data-current="true" data-project-module="Журнал работ"/);
+    expect(html).toContain("Выполненные работы по датам");
   });
 
   it("adds the project 3D model to the control menu when the model is available", () => {
@@ -166,7 +178,7 @@ describe("ProjectModuleMenu", () => {
     expect(new Set(groupedTabs).size).toBe(projectTabs.length);
     expect(new Set(groupedTabs)).toEqual(new Set(projectTabs));
     const navigationTabs = projectDomainGroups.flatMap((group) => group.tabs);
-    expect(navigationTabs).toHaveLength(26);
+    expect(navigationTabs).toHaveLength(projectTabs.length);
     expect(new Set(navigationTabs)).toEqual(new Set(projectTabs));
   });
 

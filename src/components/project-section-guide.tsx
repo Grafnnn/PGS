@@ -136,6 +136,12 @@ export const projectSectionGuides: Record<ProjectTab, ProjectSectionGuideConfig>
     signalKeys: ["reports", "delayed", "risks"],
     relatedTabs: ["Площадка", "График"]
   },
+  "Журнал работ": {
+    objective: "Найти выполненные работы и объёмы по датам",
+    question: "Какие работы выполнены за выбранный период?",
+    signalKeys: ["reports", "completion", "delayed"],
+    relatedTabs: ["Рапорты", "График"]
+  },
   Риски: {
     objective: "Сделать отклонения видимыми, назначить владельцев и сроки",
     question: "Какой риск сильнее всего влияет на срок, деньги или приемку?",

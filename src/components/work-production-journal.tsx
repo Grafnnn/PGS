@@ -25,6 +25,7 @@ type Props = {
   projectId: string;
   reports: DailyReport[];
   canExport: boolean;
+  standalone?: boolean;
   onOpenReport: (reportId: string) => void;
 };
 
@@ -82,7 +83,9 @@ function JournalShift({ report, onOpenReport }: { report: DailyReport; onOpenRep
   );
 }
 
-export function WorkProductionJournal({ projectId, reports, canExport, onOpenReport }: Props) {
+export function WorkProductionJournal({ projectId, reports, canExport, standalone = false, onOpenReport }: Props) {
+  const Title = standalone ? "h2" : "h3";
+  const DayTitle = standalone ? "h3" : "h4";
   const headingId = useId();
   const errorId = useId();
   const [search, setSearch] = useState("");
@@ -122,7 +125,7 @@ export function WorkProductionJournal({ projectId, reports, canExport, onOpenRep
     <section className={styles.journal} aria-labelledby={headingId}>
       <header className={styles.heading}>
         <div>
-          <h3 id={headingId}>Журнал производства работ</h3>
+          <Title className={styles.title} id={headingId}>Журнал производства работ</Title>
           <p>Закрытые смены автоматически появляются здесь после отправки рапорта.</p>
         </div>
         {canExport ? (
@@ -165,7 +168,7 @@ export function WorkProductionJournal({ projectId, reports, canExport, onOpenRep
             return (
               <section className={styles.day} key={day.date} aria-labelledby={`${headingId}-${day.date}`}>
                 <header className={styles.dayLabel}>
-                  <h4 id={`${headingId}-${day.date}`}><time dateTime={day.date}>{dayLabel.format(date)}</time></h4>
+                  <DayTitle className={styles.dayTitle} id={`${headingId}-${day.date}`}><time dateTime={day.date}>{dayLabel.format(date)}</time></DayTitle>
                   <span>{weekdayLabel.format(date)}, {day.date.slice(0, 4)}</span>
                 </header>
                 <div className={styles.shifts}>
