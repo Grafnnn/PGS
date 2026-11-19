@@ -7,5 +7,17 @@ export const dynamic = "force-dynamic";
 export async function GET(request: Request, { params }: { params: { slug: string } }) {
   const model = getPublicProject3dModel(params.slug);
   if (!model) return new Response("3D model not found", { status: 404 });
-  return projectModelResponse(request, model, "public");
+  const response = await projectModelResponse(request, model, "public");
+  if (params.slug === "goluboe-vodovod" && response.status === 307) {
+    const input = new URL(request.url);
+    const target = new URL(response.headers.get("location")!, input.origin);
+    const excavation = input.searchParams.get("pdExc");
+    if (excavation && ["kv1", "up1", "vzu"].includes(excavation)) {
+      target.searchParams.set("pdExc", excavation);
+      if (input.searchParams.get("pdCard") === "1") target.searchParams.set("pdCard", "1");
+    }
+    if (input.searchParams.get("pdPlan") === "1") target.searchParams.set("pdPlan", "1");
+    response.headers.set("location", target.pathname + target.search);
+  }
+  return response;
 }

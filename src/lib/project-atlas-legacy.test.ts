@@ -3,11 +3,12 @@ import { runInNewContext } from "node:vm";
 import { describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { middleware } from "@/middleware";
-import { LEGACY_ATLAS_RELEASES, LEGACY_DOU_ATLAS_RELEASES, legacyAtlasDestination, legacyAtlasWorker } from "./project-atlas-legacy";
+import { LEGACY_ATLAS_RELEASES, LEGACY_DOU_ATLAS_RELEASES, LEGACY_GOLUBOE_ATLAS_RELEASES, legacyAtlasDestination, legacyAtlasWorker } from "./project-atlas-legacy";
 
 const current = "/model-assets/troitsk-r25v12-18/";
 const old = "/model-assets/troitsk-r25v8-ui8/";
 const currentDou = "/model-assets/dou200-r1-27/";
+const currentGoluboe = "/model-assets/goluboe-vodovod-r1-2/";
 const url = (path: string) => new URL(path, "https://pgs.local");
 
 describe("legacy atlas links", () => {
@@ -37,11 +38,11 @@ describe("legacy atlas links", () => {
     const pkg = JSON.parse(await readFile("package.json", "utf8"));
     expect(pkg.scripts.build).toBe("node scripts/prepare-public-atlases.mjs && next build");
     expect(pkg.scripts.test).toBe("node scripts/prepare-public-atlases.mjs && vitest run");
-    expect((await readdir("src/app/model-assets")).sort()).toEqual(["dou200-r1-27", "goluboe-vodovod-r1-1", "troitsk-r25v12-18", "zagoryanka-1500-r1-0"]);
+    expect((await readdir("src/app/model-assets")).sort()).toEqual(["dou200-r1-27", "goluboe-vodovod-r1-2", "troitsk-r25v12-18", "zagoryanka-1500-r1-0"]);
     expect((await readdir("public")).includes("model-assets")).toBe(false);
   });
   it.each([
-    current + "index.html", currentDou + "index.html", "/model-assets/other-project/index.html", "/api/projects/1/model-viewer",
+    current + "index.html", currentDou + "index.html", currentGoluboe + "index.html", "/model-assets/other-project/index.html", "/api/projects/1/model-viewer",
     "/projects", old + "service-worker.js", old + "%00.html",
     old + "a%5Cindex.html", old + "%zz.html", "/model-assets/dou200-r1-21/%00.html",
     "/model-assets/dou200-r1-21/a%5Cindex.html", "/model-assets/dou200-r1-21/%zz.html"
@@ -60,6 +61,39 @@ describe("legacy atlas links", () => {
       const response = middleware(new NextRequest(url(prefix + "index.html"), { method: "POST" }));
       expect(response.headers.get("x-middleware-next")).toBe("1");
     }
+  });
+  it.each(LEGACY_GOLUBOE_ATLAS_RELEASES)("retires %s resources and worker only into Goluboe", async (release) => {
+    const prefix = `/model-assets/${release}/`;
+    for (const name of ["", "index.html", "library.html", "albums/old.pdf", "CURRENT_RELEASE.json"]) {
+      const source = url(prefix + name + "?pdExc=kv1#scope=BUILDING&id=NET-ROUTE");
+      const target = legacyAtlasDestination(source)!;
+      expect(target.pathname).toBe(currentGoluboe + "index.html");
+      expect(target.search).toBe(source.search);
+      expect(target.hash).toBe(source.hash);
+      for (const method of ["GET", "HEAD"]) {
+        const response = middleware(new NextRequest(source, { method }));
+        expect(response.status).toBe(307);
+        expect(response.headers.get("cache-control")).toBe("no-store");
+        expect(response.headers.has("set-cookie")).toBe(false);
+      }
+    }
+    const listeners: Record<string, (event: { waitUntil(p: Promise<unknown>): void }) => void> = {};
+    const own = { url: url(prefix + "index.html?pdExc=up1#source").href, navigate: vi.fn() };
+    const others = [current, currentDou, currentGoluboe, "/model-assets/zagoryanka-1500-r1-0/", "/projects/"].map(path => ({ url: url(path + "index.html").href, navigate: vi.fn() }));
+    const unregister = vi.fn();
+    runInNewContext(legacyAtlasWorker(url(prefix + "service-worker.js"))!, {
+      URL, Response, self: { location: url(prefix), skipWaiting() {}, registration: { unregister },
+        clients: { claim() {}, matchAll: async () => [own, ...others] },
+        addEventListener: (name: string, fn: typeof listeners[string]) => { listeners[name] = fn; } }
+    });
+    let pending: Promise<unknown> = Promise.resolve();
+    listeners.activate({ waitUntil(p) { pending = p; } }); await pending;
+    expect(own.navigate).toHaveBeenCalledWith(url(currentGoluboe + "index.html?pdExc=up1#source").href);
+    for (const other of others) expect(other.navigate).not.toHaveBeenCalled();
+    expect(unregister).toHaveBeenCalledOnce();
+    const worker = middleware(new NextRequest(url(prefix + "service-worker.js")));
+    expect(worker.status).toBe(200);
+    expect(worker.headers.get("cache-control")).toBe("no-store");
   });
   it("retires only the requested legacy worker and migrates its pages, not other clients", async () => {
     const listeners: Record<string, (event: { waitUntil: (p: Promise<unknown>) => void }) => void> = {};
