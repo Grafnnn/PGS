@@ -20,6 +20,17 @@ export async function GET(request: Request, { params }: { params: { slug: string
     const locate = input.searchParams.get("pdLocate");
     if (locate && ["kv1", "up1", "vzu"].includes(locate)) target.searchParams.set("pdLocate", locate);
     if (locate === "up1" && input.searchParams.get("pdSoil") === "1") target.searchParams.set("pdSoil", "1");
+    if (input.searchParams.get("pdProfile") === "1") {
+      target.searchParams.set("pdProfile", "1");
+      const [from, to] = ["pdFrom", "pdTo"].map(name => {
+        const value = input.searchParams.get(name)?.trim() ?? "";
+        return /^\d+(?:[.,]\d{1,3})?$/.test(value) ? Number(value.replace(",", ".")) : NaN;
+      });
+      if (Number.isFinite(from) && Number.isFinite(to) && from >= 0 && from < to && to <= 400) {
+        target.searchParams.set("pdFrom", String(from));
+        target.searchParams.set("pdTo", String(to));
+      }
+    }
     response.headers.set("location", target.pathname + target.search);
   }
   return response;

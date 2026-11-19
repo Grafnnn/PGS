@@ -5,10 +5,10 @@ import { gunzipSync } from "node:zlib";
 import { describe, expect, it } from "vitest";
 import { projectAtlasR25Response } from "./project-atlas-r25-response";
 import { getPublicProject3dModel, getProject3dModel } from "./project-3d-model";
-import { GET, HEAD } from "@/app/model-assets/goluboe-vodovod-r1-2-sections/[...asset]/route";
+import { GET, HEAD } from "@/app/model-assets/goluboe-vodovod-r1-2-profile-3d/[...asset]/route";
 
-const base = "https://pgs.local/model-assets/goluboe-vodovod-r1-2-sections/";
-const get = (name: string, init?: RequestInit) => projectAtlasR25Response(new Request(base + name, init), name.split("/"), "goluboe-vodovod-r1-2-sections");
+const base = "https://pgs.local/model-assets/goluboe-vodovod-r1-2-profile-3d/";
+const get = (name: string, init?: RequestInit) => projectAtlasR25Response(new Request(base + name, init), name.split("/"), "goluboe-vodovod-r1-2-profile-3d");
 function decode(text: string, key: string) {
   const window: Record<string, string> = {};
   runInNewContext(text, { window }, { timeout: 10000 });
@@ -17,7 +17,7 @@ function decode(text: string, key: string) {
 
 describe("independent Goluboe R1.2 publication", () => {
   it("adds a public allowlist entry without changing private assignments or neighbors", () => {
-    expect(getPublicProject3dModel("goluboe-vodovod")).toMatchObject({ revision: "R1.2", assetBaseUrl: "/model-assets/goluboe-vodovod-r1-2-sections/" });
+    expect(getPublicProject3dModel("goluboe-vodovod")).toMatchObject({ revision: "R1.2", assetBaseUrl: "/model-assets/goluboe-vodovod-r1-2-profile-3d/" });
     expect(getPublicProject3dModel("dou200")?.revision).toBe("R1.27");
     expect(getPublicProject3dModel("troitsk-building-24")?.revision).toBe("V12.18");
     expect(getPublicProject3dModel("zagoryanka-1500")?.revision).toBe("R1.0");
@@ -32,20 +32,20 @@ describe("independent Goluboe R1.2 publication", () => {
     expect(response.headers.get("content-security-policy")).toContain(base);
     expect(response.headers.get("content-security-policy")).not.toMatch(/troitsk|dou200|zagoryanka/);
     expect(response.headers.has("set-cookie")).toBe(false);
-    expect((await get("service-worker.js", { method: "HEAD" })).headers.get("service-worker-allowed")).toBe("/model-assets/goluboe-vodovod-r1-2-sections/");
+    expect((await get("service-worker.js", { method: "HEAD" })).headers.get("service-worker-allowed")).toBe("/model-assets/goluboe-vodovod-r1-2-profile-3d/");
   });
   it("retains every supplied byte and all six PDFs", async () => {
     const release = await (await get("CURRENT_RELEASE.json")).json();
-    expect(release).toMatchObject({ release: "GOLUBOE_VODOVOD_R1_2_SECTIONS", projectId: "goluboe-vodovod", revision: "R1.2", suppliedFiles: 324,
-      sourceArchiveSha256: "c12af241d8c5a531b90114758d84d5fe5b912e52b1b021240830ff89562ef223",
-      sourceTreeSha256: "dd9df357def9455b79a5eabd813b55a4f08a93e54fa304f36c07a906a729f1a3",
-      suppliedManifestSha256: "afdbe83ecae8458b0afcb2b0fccd6478ce6aaaafa5fb660b0f73b5ca98110f23",
+    expect(release).toMatchObject({ release: "GOLUBOE_VODOVOD_R1_2_PROFILE_3D", projectId: "goluboe-vodovod", revision: "R1.2", suppliedFiles: 326,
+      sourceArchiveSha256: "21ecc601029163bdf02e06406b65790387a37e6056e29bccbc093c84e1d13f2f",
+      sourceTreeSha256: "1e5c15d19407c3f9ab644e504d07c37dc800fa1c13a331b61d4c51d6136b1431",
+      suppliedManifestSha256: "36b6a9b0980e780045bbc6f6a620a6c538feb7e3b38eb19c8f46cb5146a6ff15",
       geometryChangedFromSuppliedRelease: false, newEngineeringApproval: false, znpOriginalIncluded: false });
-    const index = JSON.parse(await readFile("src/assets/project-models/goluboe-vodovod-r1-2-sections/index.json", "utf8"));
-    expect(Object.keys(index.files)).toHaveLength(326);
-    expect(index.archiveSha256).toBe("07813a7eb427fdd6dde7fff8c661615c9ee37cd2778d848a372e82d4d4131fe1");
+    const index = JSON.parse(await readFile("src/assets/project-models/goluboe-vodovod-r1-2-profile-3d/index.json", "utf8"));
+    expect(Object.keys(index.files)).toHaveLength(328);
+    expect(index.archiveSha256).toBe("71db660cfb08d32ebacf82dc31a3ab309e18dcdf1e3fab4a7772e7ac67541e6a");
     const manifest = await (await get("MANIFEST.json")).json();
-    expect(manifest.files).toHaveLength(325);
+    expect(manifest.files).toHaveLength(327);
     for (const file of manifest.files) {
       const bytes = Buffer.from(await (await get(file.path)).arrayBuffer());
       expect(bytes.length, file.path).toBe(file.bytes);
@@ -143,7 +143,7 @@ describe("independent Goluboe R1.2 publication", () => {
     }
     for (const id of rims) expect(window.ATLAS_PROJECT.reference_bodies).toContain(id.replace("-R12-VIEW-RIM-", "-"));
     const response = await get("project/plan-controls.js");
-    expect(createHash("sha256").update(await response.text()).digest("hex")).toBe("f0cd12da1b8a2f5e4f51d5febd65c75446a5cee46cb666c0d619493a808e61dc");
+    expect(createHash("sha256").update(await response.text()).digest("hex")).toBe("6298a3d675940bfb86c57a28faa398ad103fe48b7a1c71137134099d684c110b");
   });
   it("serves the supplied UP-1 profile and its contextual return/PDF links without changing source figures", async () => {
     const response = await get("project/profile-up1.html");
@@ -166,7 +166,7 @@ describe("independent Goluboe R1.2 publication", () => {
       expect(controls).toContain(value);
   });
   it.each([
-    ["profile-waterline.html", "485308ed15e2d494eb2a369f7b55770d92fb3e59d351769140a208ec557f2cc9", ["Продольный разрез водовода В1", "Начало, м", "Конец, м", "Конец интервала должен быть больше начала.", "Горизонтальный и вертикальный масштабы различаются", "линейной интерполяцией", "Знак ≈", "99,1 мм"]],
+    ["profile-waterline.html", "f102607075e1011141acb7da2bde56110e5598d6cf2d4893a8699bb9ce7b19da", ["Продольный разрез водовода В1", "Начало, м", "Конец, м", "Конец интервала должен быть больше начала.", "Горизонтальный и вертикальный масштабы различаются", "линейной интерполяцией", "Знак ≈", "99,1 мм"]],
     ["section-kv1.html", "c552cb4766108eb1d1c7de94004241e5feccf7d7be4c631dc399447150931977", ["Разрез колодца КВ‑1", "+200,599", "+200,500", "+200,000", "+199,860", "+199,760", "640 мм требует сверки с проектировщиком", "Толщина плиты 140 мм принята в модели", "Абсолютные отметки установки колодца в ТКР отсутствуют"]]
   ])("serves the exact supplied %s with its qualifications and local links", async (name, digest, markers) => {
     const response = await get(`project/${name}`);
@@ -187,7 +187,7 @@ describe("independent Goluboe R1.2 publication", () => {
     const policy = html.headers.get("content-security-policy")!;
     expect(policy).toContain(`font-src ${base}`);
     expect(policy.match(/font-src ([^;]+)/)?.[1]).not.toMatch(/\*|'self'|data:|blob:/);
-    const index = JSON.parse(await readFile("src/assets/project-models/goluboe-vodovod-r1-2-sections/index.json", "utf8"));
+    const index = JSON.parse(await readFile("src/assets/project-models/goluboe-vodovod-r1-2-profile-3d/index.json", "utf8"));
     const fonts = Object.keys(index.files).filter(name => name.endsWith(".woff2"));
     expect(fonts).toHaveLength(5);
     for (const name of fonts) {
@@ -198,5 +198,37 @@ describe("independent Goluboe R1.2 publication", () => {
     const other = await projectAtlasR25Response(new Request("https://pgs.local/model-assets/zagoryanka-1500-r1-0/index.html", { method: "HEAD" }), ["index.html"], "zagoryanka-1500-r1-0");
     expect(other.status).toBe(200);
     expect(other.headers.get("content-security-policy")).not.toContain("font-src");
+  });
+  it("loads the exact 3D profile plugins in order while preserving the source elevations", async () => {
+    const window: Record<string, any> = {};
+    const pins = {
+      "project/config.js": "de4a12461d58a90aa8e1c41dc99a092ec8f8cf9224c0b7fe43de069b167d03cd",
+      "project/profile-world-data.js": "b2bc0d1c06d5ed0aa45e2f0db7e29aa5f0678354881cb1418a0e9f183bbee219",
+      "project/profile-world-overlay.js": "76dd9158739c87c1ebc606a9ea810454a4b4f1c8aee697554f9dce4963f40c7a"
+    };
+    for (const [file, digest] of Object.entries(pins)) {
+      const response = await get(file);
+      expect(response.status).toBe(200);
+      const text = await response.text();
+      expect(createHash("sha256").update(text).digest("hex")).toBe(digest);
+      runInNewContext(text, { window }, { timeout: 1000 });
+    }
+    expect(window.ATLAS_PROJECT.plugins.find((p: { name: string }) => p.name === "pd_plan_controls").data.map((p: { src: string }) => p.src))
+      .toEqual(["project/profile-world-data.js", "project/profile-world-overlay.js", "project/plan-controls.js"]);
+    const data = window.ATLAS_PROFILE_WORLD;
+    expect(data.insideRadius).toBe(0.0991);
+    expect(data.route).toHaveLength(18);
+    expect(data.marks.map((p: { station: number }) => p.station)).toEqual([0, 21.5, 31, 60.5, 142.4, 292.1, 390, 400]);
+    expect(data.marks.map((p: { invert: number }) => p.invert)).toEqual([200.5, 200.39, 200.42, 200.5, 202.5, 206.5, 207.23, 207.3]);
+    expect(data.marks.filter((p: { ground?: number }) => Number.isFinite(p.ground)).map((p: { ground: number }) => p.ground)).toEqual([204.3, 203.8, 211.05]);
+    for (const mark of data.marks) expect(data.route.find((p: { station: number }) => p.station === mark.station)?.invert).toBe(mark.invert);
+    expect(data.well).toEqual({ station: 0, slabTop: 200, slabBottom: 199.86, beddingBottom: 199.76 });
+    expect(typeof window.ATLAS_PROFILE_OVERLAY.mount).toBe("function");
+    const controls = await (await get("project/plan-controls.js")).text();
+    for (const marker of ["Профиль в 3D", "Интервал профиля в 3D", "pdProfile", "pdFrom", "pdTo", "Конец должен быть больше начала.", "Переключитесь в 3D, чтобы видеть профиль."])
+      expect(controls).toContain(marker);
+    const section = await (await get("project/profile-waterline.html")).text();
+    expect(section).toContain("Показать профиль в 3D");
+    expect(section).toContain("pdFrom: first, pdTo: last");
   });
 });
