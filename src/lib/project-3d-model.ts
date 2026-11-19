@@ -57,14 +57,14 @@ const zagoryankaModel: Project3dModel = {
 };
 
 const goluboeModel: Project3dModel = {
-  slug: "goluboe-vodovod-atlas-r1-2-final154",
+  slug: "goluboe-vodovod-atlas-r1-2-excavations",
   title: "3D Атлас Голубое",
   subtitle: "Водовод до ВЗУ: 264 записи реестра, 154 элемента сцены, 6 PDF",
   revision: "R1.2",
   updatedAt: "19.11.2026",
   disclaimer: "Модель по ПД 19/26-2026. Расхождения со ЗнП № 10 сохранены в замечаниях и заключении; оригинал ЗнП не входит в пакет. Не инженерная приёмка и не исполнительная съёмка.",
-  assetPath: "src/assets/project-models/goluboe-vodovod-r1-2-final154",
-  assetBaseUrl: "/model-assets/goluboe-vodovod-r1-2-final154/",
+  assetPath: "src/assets/project-models/goluboe-vodovod-r1-2-excavations",
+  assetBaseUrl: "/model-assets/goluboe-vodovod-r1-2-excavations/",
   publicUrl: "/models/goluboe-vodovod#node/building"
 };
 
