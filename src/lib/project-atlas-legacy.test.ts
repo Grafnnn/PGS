@@ -8,7 +8,7 @@ import { LEGACY_ATLAS_RELEASES, LEGACY_DOU_ATLAS_RELEASES, LEGACY_GOLUBOE_ATLAS_
 const current = "/model-assets/troitsk-r25v12-18/";
 const old = "/model-assets/troitsk-r25v8-ui8/";
 const currentDou = "/model-assets/dou200-r1-27/";
-const currentGoluboe = "/model-assets/goluboe-vodovod-r1-2-final154/";
+const currentGoluboe = "/model-assets/goluboe-vodovod-r1-2-excavations/";
 const url = (path: string) => new URL(path, "https://pgs.local");
 
 describe("legacy atlas links", () => {
@@ -38,7 +38,7 @@ describe("legacy atlas links", () => {
     const pkg = JSON.parse(await readFile("package.json", "utf8"));
     expect(pkg.scripts.build).toBe("node scripts/prepare-public-atlases.mjs && next build");
     expect(pkg.scripts.test).toBe("node scripts/prepare-public-atlases.mjs && vitest run");
-    expect((await readdir("src/app/model-assets")).sort()).toEqual(["dou200-r1-27", "goluboe-vodovod-r1-2-final154", "troitsk-r25v12-18", "zagoryanka-1500-r1-0"]);
+    expect((await readdir("src/app/model-assets")).sort()).toEqual(["dou200-r1-27", "goluboe-vodovod-r1-2-excavations", "troitsk-r25v12-18", "zagoryanka-1500-r1-0"]);
     expect((await readdir("public")).includes("model-assets")).toBe(false);
   });
   it.each([
