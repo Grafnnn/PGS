@@ -1,3 +1,4 @@
+import { normalizeDailyReportWorkOutputUnit } from "@/lib/daily-report-work-outputs";
 import type { DailyReport } from "@/lib/types";
 
 export type ProductionJournalPeriod = {
@@ -44,6 +45,26 @@ export function productionJournalWorkOptions(days: readonly ProductionJournalDay
 
   return [...namesByKey].map(([value, label]) => ({ value, label }))
     .sort((left, right) => left.label.localeCompare(right.label, "ru-RU"));
+}
+
+export function productionJournalVolumeTotals(days: readonly ProductionJournalDay[]): { unit: string; quantity: number }[] {
+  const sums = new Map<string, { quantity: number; compensation: number }>();
+
+  for (const day of days) {
+    for (const report of day.reports) {
+      for (const output of report.workOutputs ?? []) {
+        const unit = normalizeDailyReportWorkOutputUnit(output.unit);
+        const current = sums.get(unit) ?? { quantity: 0, compensation: 0 };
+        const increment = output.quantity - current.compensation;
+        const quantity = current.quantity + increment;
+        sums.set(unit, { quantity, compensation: (quantity - current.quantity) - increment });
+      }
+    }
+  }
+
+  // Match Excel's numeric precision without rounding small values to a fixed number of decimal places.
+  return [...sums].map(([unit, { quantity }]) => ({ unit, quantity: Number(quantity.toPrecision(15)) }))
+    .sort((left, right) => left.unit.localeCompare(right.unit, "ru-RU"));
 }
 
 export function productionJournalDays(

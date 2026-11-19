@@ -94,6 +94,7 @@ describe("production journal Excel export", () => {
     expect(XLSX.utils.sheet_to_json(workbook.Sheets["Выработка"])).toEqual([
       expect.objectContaining({ "ID рапорта": "report-1", Объём: 2.75, "Ед. изм.": "т", "Трудозатраты, чел.-ч": 12 })
     ]);
+    expect(XLSX.utils.sheet_to_json(workbook.Sheets["Сводка"], { header: 1 })).not.toContainEqual(["Ед. изм.", "Общий объём"]);
   });
 
   it("exports and identifies the search results shown in the journal", async () => {
@@ -117,7 +118,7 @@ describe("production journal Excel export", () => {
     expect(XLSX.utils.sheet_to_json(workbook.Sheets["Сводка"], { header: 1 })).toContainEqual(["Поиск", "ОКРАСКА"]);
   });
 
-  it("exports the exact work across dates without other work from a matching shift", async () => {
+  it("exports the exact work and its totals by unit within the period or for all dates", async () => {
     const [output] = shift.workOutputs;
     mocks.findProject.mockResolvedValue({
       name: "Строительство корпуса",
@@ -126,6 +127,7 @@ describe("production journal Excel export", () => {
           ...shift,
           workOutputs: [
             output,
+            { ...output, quantity: 4, unit: "шт." },
             { ...output, workName: "Монтаж арматуры на крыше", quantity: 50 },
             { ...output, workName: "Подготовка опалубки", quantity: 10, unit: "м²" }
           ]
@@ -134,14 +136,16 @@ describe("production journal Excel export", () => {
           ...shift,
           id: "report-2",
           date: new Date("2026-11-18T12:00:00Z"),
-          workOutputs: [{ ...output, quantity: 0.5 }]
+          workOutputs: [{ ...output, quantity: 0.5, unit: "тонн" }]
         },
         { ...shift, id: "report-3", workOutputs: null },
-        { ...shift, id: "report-4", date: new Date("2026-11-17T12:00:00Z") }
+        { ...shift, id: "report-4", date: new Date("2026-11-17T12:00:00Z") },
+        { ...shift, id: "report-5", date: new Date("2026-11-20T12:00:00Z") }
       ]
     });
     const url = new URL(exportUrl);
     url.searchParams.set("from", "2026-11-18");
+    url.searchParams.set("to", "2026-11-19");
     url.searchParams.set("work", "монтаж арматуры");
 
     const response = await GET(new Request(url), { params });
@@ -151,9 +155,22 @@ describe("production journal Excel export", () => {
     expect(workbook.SheetNames).toEqual(["Выработка", "Сводка"]);
     expect(XLSX.utils.sheet_to_json(workbook.Sheets["Выработка"])).toEqual([
       expect.objectContaining({ "ID рапорта": "report-1", Дата: "2026-11-19", Работа: "Монтаж арматуры", Объём: 2.75, "Ед. изм.": "т" }),
+      expect.objectContaining({ "ID рапорта": "report-1", Дата: "2026-11-19", Работа: "Монтаж арматуры", Объём: 4, "Ед. изм.": "шт" }),
       expect.objectContaining({ "ID рапорта": "report-2", Дата: "2026-11-18", Работа: "Монтаж арматуры", Объём: 0.5, "Ед. изм.": "т" })
     ]);
-    expect(XLSX.utils.sheet_to_json(workbook.Sheets["Сводка"], { header: 1 })).toContainEqual(["Работа", "Монтаж арматуры"]);
+    const summary = XLSX.utils.sheet_to_json(workbook.Sheets["Сводка"], { header: 1 });
+    expect(summary).toContainEqual(["Работа", "Монтаж арматуры"]);
+    expect(summary).toContainEqual(["Ед. изм.", "Общий объём"]);
+    expect(summary.slice(-2)).toEqual(expect.arrayContaining([["т", 3.25], ["шт", 4]]));
+
+    url.searchParams.delete("from");
+    url.searchParams.delete("to");
+    const allTimeResponse = await GET(new Request(url), { params });
+
+    expect(allTimeResponse.status).toBe(200);
+    const allTimeWorkbook = XLSX.read(await allTimeResponse.arrayBuffer());
+    const allTimeSummary = XLSX.utils.sheet_to_json(allTimeWorkbook.Sheets["Сводка"], { header: 1 });
+    expect(allTimeSummary.slice(-2)).toEqual(expect.arrayContaining([["т", 8.75], ["шт", 4]]));
   });
 
   it("keeps an unmatched or invalid work selection from exporting the full journal", async () => {
@@ -169,5 +186,9 @@ describe("production journal Excel export", () => {
     const workbook = XLSX.read(await response.arrayBuffer());
     expect(workbook.SheetNames).toEqual(["Выработка", "Сводка"]);
     expect(XLSX.utils.sheet_to_json(workbook.Sheets["Выработка"])).toEqual([]);
+    expect(XLSX.utils.sheet_to_json(workbook.Sheets["Сводка"], { header: 1 }).slice(-2)).toEqual([
+      ["Ед. изм.", "Общий объём"],
+      ["Нет данных"]
+    ]);
   });
 });

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   parseProductionJournalPeriod,
   productionJournalDays,
+  productionJournalVolumeTotals,
   productionJournalWorkKey,
   productionJournalWorkOptions
 } from "@/lib/work-production-journal";
@@ -26,6 +27,29 @@ const report: DailyReport = {
 };
 
 describe("production journal", () => {
+  it("sums filtered volumes by unit across shifts, with or without dates", () => {
+    const base = { ...report.workOutputs![0], workName: "Демонтаж покрытия" };
+    const reports: DailyReport[] = [
+      { ...report, id: "latest-morning", workOutputs: [
+        { ...base, quantity: 0.1, unit: "м²" },
+        { ...base, quantity: 350, unit: "м³", workName: "Другая работа" }
+      ] },
+      { ...report, id: "latest-evening", workOutputs: [{ ...base, quantity: 0.2, unit: "м2" }] },
+      { ...report, id: "earlier", date: "2026-11-18", workOutputs: [{ ...base, quantity: 0.000004, unit: "м³" }] },
+      { ...report, id: "draft", status: "draft", workOutputs: [{ ...base, quantity: 10, unit: "м³" }] }
+    ];
+    const work = productionJournalWorkKey(base.workName);
+
+    expect(productionJournalVolumeTotals(productionJournalDays(reports, { work }))).toEqual([
+      { unit: "м²", quantity: 0.3 },
+      { unit: "м³", quantity: 0.000004 }
+    ]);
+    expect(productionJournalVolumeTotals(productionJournalDays(reports, { work, from: "2026-11-19", to: "2026-11-19" }))).toEqual([
+      { unit: "м²", quantity: 0.3 }
+    ]);
+    expect(productionJournalVolumeTotals(productionJournalDays(reports, { work, to: "2026-11-17" }))).toEqual([]);
+  });
+
   it("groups submitted facts by day, retains separate shifts and excludes open shifts and drafts", () => {
     const evening = { ...report, id: "evening", status: "checked", phase: "closed" } as const;
     const earlier = { ...report, id: "earlier", date: "2026-11-18", status: "approved" } as const;

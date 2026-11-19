@@ -1,6 +1,6 @@
 import * as XLSX from "xlsx";
 import { dailyReportStatusLabel } from "@/lib/daily-reports";
-import type { ProductionJournalDay, ProductionJournalFilters } from "@/lib/work-production-journal";
+import { productionJournalVolumeTotals, type ProductionJournalDay, type ProductionJournalFilters } from "@/lib/work-production-journal";
 
 function appendTable(
   workbook: XLSX.WorkBook,
@@ -63,7 +63,7 @@ export function buildWorkProductionJournalWorkbook(
     "Дата", "Работа", "Объём", "Ед. изм.", "Трудозатраты, чел.-ч", "Профессия", "Автор рапорта", "ID рапорта"
   ], outputRows, [14, 56, 12, 12, 24, 25, 28, 28]);
 
-  const summary = XLSX.utils.aoa_to_sheet([
+  const summaryRows: Array<Array<string | number>> = [
     ["Журнал производства работ", projectName],
     ["Период с", filters.from ?? "Без ограничения"],
     ["Период по", filters.to ?? "Без ограничения"],
@@ -71,7 +71,14 @@ export function buildWorkProductionJournalWorkbook(
     ...(filters.work === undefined && filters.query ? [["Поиск", filters.query]] : []),
     ["Дней с записями", days.length],
     ["Рапортов", shifts.length]
-  ]);
+  ];
+  if (filters.work !== undefined) {
+    const totals = productionJournalVolumeTotals(days);
+    summaryRows.push([], ["Ед. изм.", "Общий объём"]);
+    for (const { unit, quantity } of totals) summaryRows.push([unit, quantity]);
+    if (!totals.length) summaryRows.push(["Нет данных"]);
+  }
+  const summary = XLSX.utils.aoa_to_sheet(summaryRows);
   summary["!cols"] = [{ wch: 34 }, { wch: 64 }];
   XLSX.utils.book_append_sheet(workbook, summary, "Сводка");
   return XLSX.write(workbook, { type: "buffer", bookType: "xlsx" }) as Buffer;
