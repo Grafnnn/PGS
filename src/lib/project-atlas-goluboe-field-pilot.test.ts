@@ -4,11 +4,13 @@ import { describe, expect, it, vi } from "vitest";
 import { GET as alias } from "@/app/models/[slug]/route";
 import { GET, HEAD } from "@/app/model-assets/goluboe-vodovod-r1-2-field-pilot-01/[...asset]/route";
 import { GET as currentGET } from "@/app/model-assets/goluboe-vodovod-r1-2-field-pilot-02/[...asset]/route";
+import { GET as uxGET } from "@/app/model-assets/goluboe-vodovod-r1-2-field-pilot-02-ux-01/[...asset]/route";
 import { legacyAtlasDestination, legacyAtlasWorker } from "./project-atlas-legacy";
 
 const origin = "https://pgs.local";
 const prefix = "/model-assets/goluboe-vodovod-r1-2-field-pilot-01/";
 const current = "/model-assets/goluboe-vodovod-r1-2-field-pilot-02/";
+const ux = "/model-assets/goluboe-vodovod-r1-2-field-pilot-02-ux-01/";
 const primary = "/model-assets/goluboe-vodovod-r1-2-terrain-snapshot/";
 const slug = "goluboe-vodovod-field-pilot";
 const pathUrl = (name: string) => origin + prefix + name.split("/").map(encodeURIComponent).join("/");
@@ -27,7 +29,7 @@ describe("Goluboe field pilot publication", () => {
   ])("passes only pilot query parameters: %s", async (query, target) => {
     const r = await alias(new Request(origin + "/models/" + slug + "?" + query), { params: { slug } });
     expect(r.status).toBe(307);
-    expect(r.headers.get("location")).toBe(current + "index.html" + target);
+    expect(r.headers.get("location")).toBe(ux + "index.html" + target);
     expect(r.headers.has("set-cookie")).toBe(false);
   });
 
@@ -67,6 +69,34 @@ describe("Goluboe field pilot publication", () => {
     expect(await (await served("project/config.js")).text()).toContain(overlay);
     expect((await get(overlay)).status).toBe(404);
     for (const name of ["SHA256SUMS", "qa/report.json", "ПАСПОРТ_ПОСТАВКИ.json"]) expect((await served(name)).status).toBe(404);
+  });
+
+  it("serves the independently sealed UX release and isolates its cache", async () => {
+    const served = (name: string) => uxGET(new Request(origin + ux + name.split("/").map(encodeURIComponent).join("/")), {
+      params: { asset: name.split("/") }
+    });
+    const metadata = await served("MANIFEST.json");
+    expect(metadata.status).toBe(200);
+    const manifestText = await metadata.text();
+    expect(digest(manifestText)).toBe("64862d0b28d32c43469f3b1ef3a7c77590c41d6d976ec59bd1a74c486e2f67b5");
+    const manifest = JSON.parse(manifestText);
+    expect(manifest.files).toHaveLength(335);
+    for (const {path, bytes, sha256} of manifest.files) {
+      const response = await served(path);
+      expect(response.status, path).toBe(200);
+      const data = new Uint8Array(await response.arrayBuffer());
+      expect(data.byteLength, path).toBe(bytes);
+      expect(digest(data), path).toBe(sha256);
+    }
+    const worker = await served("service-worker.js");
+    expect(worker.headers.get("service-worker-allowed")).toBe(ux);
+    expect(worker.headers.get("content-security-policy")).not.toContain(current);
+    expect(digest(await worker.text())).toBe("9ae05e295372984a45d5b15990ff1449d393e8d07ca0a59955716ef139907259");
+    const self: Record<string, any> = {};
+    runInNewContext(await (await served("assets/offline-manifest.js")).text(), { self }, { timeout: 1000 });
+    expect(self.ATLAS_OFFLINE_VERSION).toBe("field-e58fc482c96a");
+    for (const name of ["SHA256SUMS", "ИТОГ_ПРОВЕРКИ.md", "qa/report.json"]) expect((await served(name)).status).toBe(404);
+    expect(legacyAtlasDestination(new URL(origin + ux + "index.html"))).toBeNull();
   });
 
   it("serves the sealed pilot, only its manifest files, and a scoped worker", async () => {
