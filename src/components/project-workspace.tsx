@@ -16,7 +16,7 @@ import type { AiInsightResponse, AiScenario } from "@/lib/project-intelligence-d
 import { buildInitialProjectReadiness } from "@/lib/project-onboarding-intelligence";
 import type { DocumentChecklistItem, PipelineAction, PipelineReadiness } from "@/lib/project-pipeline";
 import { buildExpenseAwareForecast, type ProjectExpenseSummary } from "@/lib/project-expenses";
-import { getProject3dModel, getProject3dPresentation } from "@/lib/project-3d-model";
+import { getProject3dModel, getProject3dPresentation, getProjectAtlasUrl } from "@/lib/project-3d-model";
 import type { AuditEvent, BudgetItem, DailyReport, Material, Payment, ProcurementRequest, Project, ProjectDocument, ProjectDocumentVersion, ProjectMember, Risk, ScheduleItem } from "@/lib/types";
 
 function ModuleLoading() {
@@ -272,6 +272,7 @@ export function ProjectWorkspace({
   const showOnboardingPanel = createdFromOnboarding || emptyOperationalBaseline;
   const project3dModel = getProject3dModel(initialBundle.project);
   const project3dPresentation = getProject3dPresentation(initialBundle.project);
+  const projectAtlasUrl = getProjectAtlasUrl(initialBundle.project.id);
   const project3dModelId = initialBundle.project.id;
   const openProject3dModel = useCallback((returnFocusTo?: HTMLElement | null) => {
     if (project3dModelId) openProjectModelViewer(project3dModelId, returnFocusTo);
@@ -964,6 +965,10 @@ export function ProjectWorkspace({
           </div>
         </div>}
         {activeTab === "Обзор" && <div className="page-header-actions">
+          {projectAtlasUrl && <a className="button secondary" href={projectAtlasUrl}>
+            <Box size={18} aria-hidden="true" />
+            3D Атлас
+          </a>}
           {project3dModel ? <button
             aria-label="Открыть 3D-модель проекта"
             className="button secondary"

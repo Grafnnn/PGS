@@ -56,6 +56,12 @@ const zagoryankaModel: Project3dModel = {
   publicUrl: "/models/zagoryanka-1500#node/building"
 };
 
+const ZAGORYANKA_PROJECT_ID = "cmwpge82t0002nqot69h6io2y";
+
+export function getProjectAtlasUrl(projectId: string): string | null {
+  return projectId === ZAGORYANKA_PROJECT_ID ? zagoryankaModel.publicUrl : null;
+}
+
 const goluboeModel: Project3dModel = {
   slug: "goluboe-vodovod-atlas-r1-2-terrain-snapshot",
   title: "3D Атлас Голубое",
