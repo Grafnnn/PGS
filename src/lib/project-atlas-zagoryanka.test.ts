@@ -4,7 +4,7 @@ import { runInNewContext } from "node:vm";
 import { gunzipSync } from "node:zlib";
 import { describe, expect, it } from "vitest";
 import { projectAtlasR25Response } from "./project-atlas-r25-response";
-import { getPublicProject3dModel, getProject3dModel } from "./project-3d-model";
+import { getPublicProject3dModel, getProject3dModel, getProjectAtlasUrl } from "./project-3d-model";
 import { GET, HEAD } from "@/app/model-assets/zagoryanka-1500-r1-0/[...asset]/route";
 
 const base = "https://pgs.local/model-assets/zagoryanka-1500-r1-0/";
@@ -22,6 +22,11 @@ describe("independent Zagoryanka R1.0 publication", () => {
     expect(getPublicProject3dModel("troitsk-building-24")?.revision).toBe("V12.18");
     expect(getProject3dModel({ id: "zagoryanka-1500" })).toBeNull();
     expect(getPublicProject3dModel("goluboe")).toBeNull();
+  });
+  it("links the Zagoryanka project card directly to its published atlas", () => {
+    expect(getProjectAtlasUrl("cmwpge82t0002nqot69h6io2y")).toBe("/models/zagoryanka-1500#node/building");
+    expect(getProjectAtlasUrl("zagoryanka-1500")).toBeNull();
+    expect(getProjectAtlasUrl("cmteg9g33000for4oc06rko5a")).toBeNull();
   });
   it("serves the anonymous entry with a project-scoped CSP and worker", async () => {
     expect(HEAD).toBe(GET);
