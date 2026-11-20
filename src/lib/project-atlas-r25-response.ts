@@ -5,13 +5,14 @@ import { createGunzip } from "node:zlib";
 import { acceptsProjectModelGzip } from "@/lib/project-model-embed";
 
 export const ATLAS_R25_PREFIX = "/model-assets/troitsk-r25v12-18/";
-type AtlasVersion = "v12-18" | "dou200-r1-27" | "zagoryanka-1500-r1-0" | "goluboe-vodovod-r1-2-terrain-snapshot" | "goluboe-vodovod-r1-2-field-pilot-01";
+type AtlasVersion = "v12-18" | "dou200-r1-27" | "zagoryanka-1500-r1-0" | "goluboe-vodovod-r1-2-terrain-snapshot" | "goluboe-vodovod-r1-2-field-pilot-01" | "goluboe-vodovod-r1-2-field-pilot-02";
 const atlasDirectories: Record<AtlasVersion, string> = {
   "v12-18": "troitsk-r25v12-18",
   "dou200-r1-27": "dou200-r1-27",
   "zagoryanka-1500-r1-0": "zagoryanka-1500-r1-0",
   "goluboe-vodovod-r1-2-terrain-snapshot": "goluboe-vodovod-r1-2-terrain-snapshot",
-  "goluboe-vodovod-r1-2-field-pilot-01": "goluboe-vodovod-r1-2-field-pilot-01"
+  "goluboe-vodovod-r1-2-field-pilot-01": "goluboe-vodovod-r1-2-field-pilot-01",
+  "goluboe-vodovod-r1-2-field-pilot-02": "goluboe-vodovod-r1-2-field-pilot-02"
 };
 type Asset = { pack: string; offset: number; storedBytes: number; bytes: number; compressed: boolean; sha256: string; contentType: string };
 const indexes = new Map<AtlasVersion, Promise<{ files: Record<string, Asset> }>>();
@@ -35,7 +36,7 @@ export async function projectAtlasR25Response(request: Request, segments: string
     const { files } = await loadIndex(version, root);
     if (!Object.hasOwn(files, name)) return new Response("Not found", { status: 404 });
     const asset = files[name];
-    const goluboeFonts = version === "goluboe-vodovod-r1-2-terrain-snapshot" || version === "goluboe-vodovod-r1-2-field-pilot-01";
+    const goluboeFonts = version === "goluboe-vodovod-r1-2-terrain-snapshot" || version === "goluboe-vodovod-r1-2-field-pilot-01" || version === "goluboe-vodovod-r1-2-field-pilot-02";
     const headers = new Headers({
       "Content-Type": goluboeFonts && name.startsWith("assets/fonts/") && name.endsWith(".woff2") ? "font/woff2" : asset.contentType,
       "Cache-Control": name === "service-worker.js" || name.endsWith(".html") ? "public, no-cache" : "public, max-age=31536000, immutable",
