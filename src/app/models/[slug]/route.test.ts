@@ -40,7 +40,7 @@ describe("Atlas V11 publication", () => {
   it("publishes Goluboe without project access or database reads", async () => {
     const response = await GET(new Request("https://pgs.local/models/goluboe-vodovod"), { params: { slug: "goluboe-vodovod" } });
     expect(response.status).toBe(307);
-    expect(response.headers.get("location")).toBe("/model-assets/goluboe-vodovod-r1-2-mobile-fit/index.html");
+    expect(response.headers.get("location")).toBe("/model-assets/goluboe-vodovod-r1-2-terrain-depth/index.html");
     expect(response.headers.has("set-cookie")).toBe(false);
     expect(mocks.access).not.toHaveBeenCalled();
     expect(mocks.find).not.toHaveBeenCalled();
@@ -49,19 +49,19 @@ describe("Atlas V11 publication", () => {
   it.each(["kv1", "up1", "vzu"])("retains the allowlisted Goluboe view %s on the permanent alias", async (view) => {
     const response = await GET(new Request(`https://pgs.local/models/goluboe-vodovod?pdExc=${view}&pdCard=1&next=https://elsewhere.test`), { params: { slug: "goluboe-vodovod" } });
     expect(response.status).toBe(307);
-    expect(response.headers.get("location")).toBe(`/model-assets/goluboe-vodovod-r1-2-mobile-fit/index.html?pdExc=${view}&pdCard=1`);
+    expect(response.headers.get("location")).toBe(`/model-assets/goluboe-vodovod-r1-2-terrain-depth/index.html?pdExc=${view}&pdCard=1`);
     expect(mocks.access).not.toHaveBeenCalled();
     expect(mocks.find).not.toHaveBeenCalled();
   });
   it.each(["kv1", "up1", "vzu"])("retains the safe general-scene locate flag %s", async (view) => {
     const response = await GET(new Request(`https://pgs.local/models/goluboe-vodovod?pdLocate=${view}&next=https://elsewhere.test`), { params: { slug: "goluboe-vodovod" } });
-    expect(response.headers.get("location")).toBe(`/model-assets/goluboe-vodovod-r1-2-mobile-fit/index.html?pdLocate=${view}`);
+    expect(response.headers.get("location")).toBe(`/model-assets/goluboe-vodovod-r1-2-terrain-depth/index.html?pdLocate=${view}`);
     expect(mocks.access).not.toHaveBeenCalled();
     expect(mocks.find).not.toHaveBeenCalled();
   });
   it.each(["other", "https://elsewhere.test", "../.env"])("rejects an unknown general-scene locate value %s", async (value) => {
     const response = await GET(new Request(`https://pgs.local/models/goluboe-vodovod?pdLocate=${encodeURIComponent(value)}&pdCard=1`), { params: { slug: "goluboe-vodovod" } });
-    expect(response.headers.get("location")).toBe("/model-assets/goluboe-vodovod-r1-2-mobile-fit/index.html");
+    expect(response.headers.get("location")).toBe("/model-assets/goluboe-vodovod-r1-2-terrain-depth/index.html");
   });
   it.each(["troitsk-building-24", "dou200", "zagoryanka-1500"])("does not retain Goluboe locate flags on %s", async (slug) => {
     const response = await GET(new Request(`https://pgs.local/models/${slug}?pdLocate=up1&pdSoil=1&pdExc=kv1&pdProfile=1&pdFrom=0&pdTo=45`), { params: { slug } });
@@ -69,11 +69,11 @@ describe("Atlas V11 publication", () => {
   });
   it("retains only the safe Goluboe plan flag and rejects an unknown excavation", async () => {
     const response = await GET(new Request("https://pgs.local/models/goluboe-vodovod?pdExc=other&pdCard=1&pdPlan=1&next=https://elsewhere.test"), { params: { slug: "goluboe-vodovod" } });
-    expect(response.headers.get("location")).toBe("/model-assets/goluboe-vodovod-r1-2-mobile-fit/index.html?pdPlan=1");
+    expect(response.headers.get("location")).toBe("/model-assets/goluboe-vodovod-r1-2-terrain-depth/index.html?pdPlan=1");
   });
   it("retains the soil overlay only for the general-scene UP-1 focus", async () => {
     const response = await GET(new Request("https://pgs.local/models/goluboe-vodovod?pdLocate=up1&pdSoil=1&next=https://elsewhere.test"), { params: { slug: "goluboe-vodovod" } });
-    expect(response.headers.get("location")).toBe("/model-assets/goluboe-vodovod-r1-2-mobile-fit/index.html?pdLocate=up1&pdSoil=1");
+    expect(response.headers.get("location")).toBe("/model-assets/goluboe-vodovod-r1-2-terrain-depth/index.html?pdLocate=up1&pdSoil=1");
   });
   it.each(["pdSoil=1", "pdLocate=kv1&pdSoil=1", "pdLocate=vzu&pdSoil=1", "pdExc=up1&pdSoil=1", "pdLocate=other&pdSoil=1", "pdLocate=up1&pdSoil=0", "pdLocate=up1&pdSoil=https://elsewhere.test"])("rejects unsupported soil context: %s", async (query) => {
     const response = await GET(new Request(`https://pgs.local/models/goluboe-vodovod?${query}`), { params: { slug: "goluboe-vodovod" } });
@@ -90,7 +90,7 @@ describe("Atlas V11 publication", () => {
     const query = new URLSearchParams({ pdProfile: "1", pdFrom: from, pdTo: to, next: "https://elsewhere.test" });
     const response = await GET(new Request(`https://pgs.local/models/goluboe-vodovod?${query}`), { params: { slug: "goluboe-vodovod" } });
     expect(response.status).toBe(307);
-    expect(response.headers.get("location")).toBe(`/model-assets/goluboe-vodovod-r1-2-mobile-fit/index.html?pdProfile=1&pdFrom=${expectedFrom}&pdTo=${expectedTo}`);
+    expect(response.headers.get("location")).toBe(`/model-assets/goluboe-vodovod-r1-2-terrain-depth/index.html?pdProfile=1&pdFrom=${expectedFrom}&pdTo=${expectedTo}`);
     expect(mocks.access).not.toHaveBeenCalled();
     expect(mocks.find).not.toHaveBeenCalled();
   });
@@ -101,15 +101,15 @@ describe("Atlas V11 publication", () => {
   ])("drops both malformed profile boundaries %s-%s, retaining only enabled mode", async (from, to) => {
     const query = new URLSearchParams({ pdProfile: "1", pdFrom: from, pdTo: to });
     const response = await GET(new Request(`https://pgs.local/models/goluboe-vodovod?${query}`), { params: { slug: "goluboe-vodovod" } });
-    expect(response.headers.get("location")).toBe("/model-assets/goluboe-vodovod-r1-2-mobile-fit/index.html?pdProfile=1");
+    expect(response.headers.get("location")).toBe("/model-assets/goluboe-vodovod-r1-2-terrain-depth/index.html?pdProfile=1");
   });
   it.each(["", "0", "other"])("does not retain distances without the exact profile flag %s", async (flag) => {
     const response = await GET(new Request(`https://pgs.local/models/goluboe-vodovod?pdProfile=${flag}&pdFrom=0&pdTo=45`), { params: { slug: "goluboe-vodovod" } });
-    expect(response.headers.get("location")).toBe("/model-assets/goluboe-vodovod-r1-2-mobile-fit/index.html");
+    expect(response.headers.get("location")).toBe("/model-assets/goluboe-vodovod-r1-2-terrain-depth/index.html");
   });
   it("preserves previously allowlisted soil and locate flags alongside profile mode", async () => {
     const response = await GET(new Request("https://pgs.local/models/goluboe-vodovod?pdLocate=up1&pdSoil=1&pdProfile=1&pdFrom=0&pdTo=45"), { params: { slug: "goluboe-vodovod" } });
-    expect(response.headers.get("location")).toBe("/model-assets/goluboe-vodovod-r1-2-mobile-fit/index.html?pdLocate=up1&pdSoil=1&pdProfile=1&pdFrom=0&pdTo=45");
+    expect(response.headers.get("location")).toBe("/model-assets/goluboe-vodovod-r1-2-terrain-depth/index.html?pdLocate=up1&pdSoil=1&pdProfile=1&pdFrom=0&pdTo=45");
   });
   it.each([401, 403])("keeps private project viewer protected: %s", async (status) => {
     mocks.access.mockResolvedValue({ response: new Response("Denied", { status }) });
