@@ -68,12 +68,24 @@ const goluboeModel: Project3dModel = {
   publicUrl: "/models/goluboe-vodovod#node/building"
 };
 
+const goluboeFieldPilot: Project3dModel = {
+  ...goluboeModel,
+  slug: "goluboe-vodovod-field-pilot",
+  title: "3D Атлас Голубое · полевой пилот",
+  subtitle: "Полевой комплект водовода, ПК0+00 – ПК0+45",
+  revision: "R1.2-field-1",
+  assetPath: "src/assets/project-models/goluboe-vodovod-r1-2-field-pilot-01",
+  assetBaseUrl: "/model-assets/goluboe-vodovod-r1-2-field-pilot-01/",
+  publicUrl: "/models/goluboe-vodovod-field-pilot"
+};
+
 // Explicit publication allowlist. Never resolve arbitrary project IDs on a public route.
 export function getPublicProject3dModel(slug: string): Project3dModel | null {
   if (slug === "troitsk-building-24") return troitskBuilding24Model;
   if (slug === "dou200") return dou200Model;
   if (slug === "zagoryanka-1500") return zagoryankaModel;
   if (slug === "goluboe-vodovod") return goluboeModel;
+  if (slug === goluboeFieldPilot.slug) return goluboeFieldPilot;
   return null;
 }
 
