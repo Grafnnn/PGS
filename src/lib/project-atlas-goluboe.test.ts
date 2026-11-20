@@ -5,10 +5,10 @@ import { gunzipSync } from "node:zlib";
 import { describe, expect, it } from "vitest";
 import { projectAtlasR25Response } from "./project-atlas-r25-response";
 import { getPublicProject3dModel, getProject3dModel } from "./project-3d-model";
-import { GET, HEAD } from "@/app/model-assets/goluboe-vodovod-r1-2-profile-3d/[...asset]/route";
+import { GET, HEAD } from "@/app/model-assets/goluboe-vodovod-r1-2-mobile-fit/[...asset]/route";
 
-const base = "https://pgs.local/model-assets/goluboe-vodovod-r1-2-profile-3d/";
-const get = (name: string, init?: RequestInit) => projectAtlasR25Response(new Request(base + name, init), name.split("/"), "goluboe-vodovod-r1-2-profile-3d");
+const base = "https://pgs.local/model-assets/goluboe-vodovod-r1-2-mobile-fit/";
+const get = (name: string, init?: RequestInit) => projectAtlasR25Response(new Request(base + name, init), name.split("/"), "goluboe-vodovod-r1-2-mobile-fit");
 function decode(text: string, key: string) {
   const window: Record<string, string> = {};
   runInNewContext(text, { window }, { timeout: 10000 });
@@ -17,7 +17,7 @@ function decode(text: string, key: string) {
 
 describe("independent Goluboe R1.2 publication", () => {
   it("adds a public allowlist entry without changing private assignments or neighbors", () => {
-    expect(getPublicProject3dModel("goluboe-vodovod")).toMatchObject({ revision: "R1.2", assetBaseUrl: "/model-assets/goluboe-vodovod-r1-2-profile-3d/" });
+    expect(getPublicProject3dModel("goluboe-vodovod")).toMatchObject({ revision: "R1.2", assetBaseUrl: "/model-assets/goluboe-vodovod-r1-2-mobile-fit/" });
     expect(getPublicProject3dModel("dou200")?.revision).toBe("R1.27");
     expect(getPublicProject3dModel("troitsk-building-24")?.revision).toBe("V12.18");
     expect(getPublicProject3dModel("zagoryanka-1500")?.revision).toBe("R1.0");
@@ -32,18 +32,21 @@ describe("independent Goluboe R1.2 publication", () => {
     expect(response.headers.get("content-security-policy")).toContain(base);
     expect(response.headers.get("content-security-policy")).not.toMatch(/troitsk|dou200|zagoryanka/);
     expect(response.headers.has("set-cookie")).toBe(false);
-    expect((await get("service-worker.js", { method: "HEAD" })).headers.get("service-worker-allowed")).toBe("/model-assets/goluboe-vodovod-r1-2-profile-3d/");
+    expect((await get("service-worker.js", { method: "HEAD" })).headers.get("service-worker-allowed")).toBe("/model-assets/goluboe-vodovod-r1-2-mobile-fit/");
   });
-  it("retains every supplied byte and all six PDFs", async () => {
+  it("records the exact responsive-only delta and retains all six PDFs", async () => {
     const release = await (await get("CURRENT_RELEASE.json")).json();
-    expect(release).toMatchObject({ release: "GOLUBOE_VODOVOD_R1_2_PROFILE_3D", projectId: "goluboe-vodovod", revision: "R1.2", suppliedFiles: 326,
+    expect(release).toMatchObject({ release: "GOLUBOE_VODOVOD_R1_2_MOBILE_FIT", projectId: "goluboe-vodovod", revision: "R1.2", suppliedFiles: 326,
       sourceArchiveSha256: "21ecc601029163bdf02e06406b65790387a37e6056e29bccbc093c84e1d13f2f",
-      sourceTreeSha256: "1e5c15d19407c3f9ab644e504d07c37dc800fa1c13a331b61d4c51d6136b1431",
+      upstreamSourceTreeSha256: "1e5c15d19407c3f9ab644e504d07c37dc800fa1c13a331b61d4c51d6136b1431",
+      sourceTreeSha256: "d074463af737cbcf29af87acfd7767036a4f5694f045ff875b941da8ec0442f8",
+      modifiedSuppliedFiles: ["assets/atlas-shell.css", "assets/offline-manifest.js", "project/profile-waterline.html"],
+      unchangedSuppliedFiles: 323, offlineVersion: "pkg-e1282708e5e4",
       suppliedManifestSha256: "36b6a9b0980e780045bbc6f6a620a6c538feb7e3b38eb19c8f46cb5146a6ff15",
       geometryChangedFromSuppliedRelease: false, newEngineeringApproval: false, znpOriginalIncluded: false });
-    const index = JSON.parse(await readFile("src/assets/project-models/goluboe-vodovod-r1-2-profile-3d/index.json", "utf8"));
+    const index = JSON.parse(await readFile("src/assets/project-models/goluboe-vodovod-r1-2-mobile-fit/index.json", "utf8"));
     expect(Object.keys(index.files)).toHaveLength(328);
-    expect(index.archiveSha256).toBe("71db660cfb08d32ebacf82dc31a3ab309e18dcdf1e3fab4a7772e7ac67541e6a");
+    expect(index.archiveSha256).toBe("8eb4bcda78abb786a57b7216a2971ed246d1ce540d7cc485aae92fd49f485f8a");
     const manifest = await (await get("MANIFEST.json")).json();
     expect(manifest.files).toHaveLength(327);
     for (const file of manifest.files) {
@@ -166,9 +169,9 @@ describe("independent Goluboe R1.2 publication", () => {
       expect(controls).toContain(value);
   });
   it.each([
-    ["profile-waterline.html", "f102607075e1011141acb7da2bde56110e5598d6cf2d4893a8699bb9ce7b19da", ["Продольный разрез водовода В1", "Начало, м", "Конец, м", "Конец интервала должен быть больше начала.", "Горизонтальный и вертикальный масштабы различаются", "линейной интерполяцией", "Знак ≈", "99,1 мм"]],
+    ["profile-waterline.html", "6c811a21e69e9a52be2a3c468e3c418387cc525be9e0fde82ae040cffb4cfa44", ["Продольный разрез водовода В1", "Начало, м", "Конец, м", "Конец интервала должен быть больше начала.", "Горизонтальный и вертикальный масштабы различаются", "линейной интерполяцией", "Знак ≈", "99,1 мм"]],
     ["section-kv1.html", "c552cb4766108eb1d1c7de94004241e5feccf7d7be4c631dc399447150931977", ["Разрез колодца КВ‑1", "+200,599", "+200,500", "+200,000", "+199,860", "+199,760", "640 мм требует сверки с проектировщиком", "Толщина плиты 140 мм принята в модели", "Абсолютные отметки установки колодца в ТКР отсутствуют"]]
-  ])("serves the exact supplied %s with its qualifications and local links", async (name, digest, markers) => {
+  ])("serves the sealed %s with its qualifications and local links", async (name, digest, markers) => {
     const response = await get(`project/${name}`);
     expect(response.status).toBe(200);
     expect(response.headers.get("content-type")).toBe("text/html; charset=utf-8");
@@ -182,12 +185,25 @@ describe("independent Goluboe R1.2 publication", () => {
       expect((await get(decodeURIComponent(url.pathname.slice(new URL(base).pathname.length)), { method: "HEAD" })).status).toBe(200);
     }
   });
+  it("keeps search tools at intrinsic width and wraps narrow profile labels with a fresh offline cache", async () => {
+    const css = await (await get("assets/atlas-shell.css")).text();
+    expect(createHash("sha256").update(css).digest("hex")).toBe("a989b4895d393a6235aef66aed455dc58de176bb140fde5ebe7dc2f1e4960d7a");
+    expect(css).toContain(".atlas-shell .as-tools { margin-left: 0; flex: 0 0 auto; }");
+    expect(await (await get("project/profile-waterline.html")).text()).toContain(".methods li{white-space:normal}");
+    const self: Record<string, any> = {};
+    const offline = await (await get("assets/offline-manifest.js")).text();
+    expect(createHash("sha256").update(offline).digest("hex")).toBe("4be84bac407462b277fb9f1e2cc8b7249f29e03ccb737a32a6252ad840024d3b");
+    runInNewContext(offline, { self }, { timeout: 1000 });
+    expect(self.ATLAS_OFFLINE_VERSION).toBe("pkg-e1282708e5e4");
+    for (const name of ["assets/atlas-shell.css", "project/profile-waterline.html"])
+      expect(self.ATLAS_OFFLINE_SIZES[name]).toBe(Buffer.byteLength(await (await get(name)).text()));
+  });
   it("permits only project-local Goluboe fonts and serves valid WOFF2 without changing neighboring CSP", async () => {
     const html = await get("index.html", { method: "HEAD" });
     const policy = html.headers.get("content-security-policy")!;
     expect(policy).toContain(`font-src ${base}`);
     expect(policy.match(/font-src ([^;]+)/)?.[1]).not.toMatch(/\*|'self'|data:|blob:/);
-    const index = JSON.parse(await readFile("src/assets/project-models/goluboe-vodovod-r1-2-profile-3d/index.json", "utf8"));
+    const index = JSON.parse(await readFile("src/assets/project-models/goluboe-vodovod-r1-2-mobile-fit/index.json", "utf8"));
     const fonts = Object.keys(index.files).filter(name => name.endsWith(".woff2"));
     expect(fonts).toHaveLength(5);
     for (const name of fonts) {
