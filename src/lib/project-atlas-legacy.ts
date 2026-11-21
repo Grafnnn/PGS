@@ -10,7 +10,8 @@ export const LEGACY_DOU_ATLAS_RELEASES = ["dou200-r1-7", "dou200-r1-21", "dou200
 export const LEGACY_GOLUBOE_ATLAS_RELEASES = ["goluboe-vodovod-r1-1", "goluboe-vodovod-r1-2", "goluboe-vodovod-r1-2-final154", "goluboe-vodovod-r1-2-excavations", "goluboe-vodovod-r1-2-up1-profile", "goluboe-vodovod-r1-2-sections", "goluboe-vodovod-r1-2-profile-3d", "goluboe-vodovod-r1-2-mobile-fit", "goluboe-vodovod-r1-2-terrain-depth"];
 const troitskPrefix = getPublicProject3dModel("troitsk-building-24")!.assetBaseUrl!;
 const douPrefix = getPublicProject3dModel("dou200")!.assetBaseUrl!;
-const goluboePrefix = getPublicProject3dModel("goluboe-vodovod")!.assetBaseUrl!;
+// Retired release links keep their snapshot independently of the main alias.
+const goluboeSnapshotPrefix = "/model-assets/goluboe-vodovod-r1-2-terrain-snapshot/";
 
 function legacyPath(url: URL) {
   let pathname: string;
@@ -19,7 +20,7 @@ function legacyPath(url: URL) {
   if (!match) return null;
   const currentPrefix = LEGACY_ATLAS_RELEASES.includes(match[1]) ? troitskPrefix
     : LEGACY_DOU_ATLAS_RELEASES.includes(match[1]) ? douPrefix
-    : LEGACY_GOLUBOE_ATLAS_RELEASES.includes(match[1]) ? goluboePrefix : null;
+    : LEGACY_GOLUBOE_ATLAS_RELEASES.includes(match[1]) ? goluboeSnapshotPrefix : null;
   if (!currentPrefix) return null;
   const name = match[2] || "";
   if (name && name.split("/").some(part => !part || part === "." || part === ".." || /[\\\x00-\x1f]/.test(part))) return null;
