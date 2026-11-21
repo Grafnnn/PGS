@@ -1,0 +1,34 @@
+{
+  "release": "GOLUBOE_VODOVOD_R1_9",
+  "projectId": "goluboe-vodovod",
+  "revision": "R1.9",
+  "publishedDate": "2026-11-21",
+  "sourceArchiveSha256": "6f44734eade603893e1fc41f50e519870701e2e1781e8ff2395d12729ffb4718",
+  "suppliedManifestSha256": "64e86a44d0a506c2f628fabda1e2f96050c86e4e815700e559ee892148a19bf1",
+  "sourceTreeSha256": "d0a3fb232dcefe5841460386ee7cd8efc8a517378a794847f8ddbbfca45d6b2e",
+  "suppliedFiles": 337,
+  "publicationModifiedFiles": [],
+  "upstreamSourceTreeSha256": "34df261306412871c2d2d9cbff763c95c0350155c77f5c1979b5589abf468418",
+  "upstreamManifestSha256": "f6650086a23eb7e9229e332e8c6f289df94d69ccc1ae7281c560cc84a2303486",
+  "changedFromUpstream": [
+    "assets/atlas-engine.js",
+    "assets/atlas-field.js",
+    "assets/offline-manifest.js",
+    "project/field-pilot-overlay.js",
+    "project/plan-controls.js",
+    "project/profile-waterline.html"
+  ],
+  "addedToUpstream": [],
+  "offlineVersion": "field-91e81891091d",
+  "workerSha256": "9ae05e295372984a45d5b15990ff1449d393e8d07ca0a59955716ef139907259",
+  "geometryChangedFromSuppliedRelease": false,
+  "newEngineeringApproval": false,
+  "znpOriginalIncluded": false,
+  "pdfs": 6,
+  "limitations": [
+    "The display-only underground view and field kit cover PK0+00 through PK0+45.",
+    "Model-derived values are not an as-built survey or engineering acceptance.",
+    "Display geometry and source documents are unchanged from R1.8.",
+    "Source qualifications and unavailable data remain visible."
+  ]
+}
