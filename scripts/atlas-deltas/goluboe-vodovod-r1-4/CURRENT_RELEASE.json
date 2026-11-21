@@ -1,0 +1,29 @@
+{
+  "release": "GOLUBOE_VODOVOD_R1_4",
+  "projectId": "goluboe-vodovod",
+  "revision": "R1.4",
+  "publishedDate": "2026-11-21",
+  "sourceArchiveSha256": "5b9e1b2ff3632ea3491ad291148dd13ae63301e4f182c51870bc9f8b5799d968",
+  "suppliedManifestSha256": "e6f9b8ff45d5c5b62317418057e30453d592963baa0c40cfaf5892baec8d6089",
+  "sourceTreeSha256": "5cf9166e9885b238668400298cb45c91ce806d1829431161e644fca884eccac5",
+  "suppliedFiles": 337,
+  "publicationModifiedFiles": [],
+  "upstreamSourceTreeSha256": "4820d30afa9aad4a4b7d465a465c9ccd60b82c73078730787d77c7352d0367c5",
+  "upstreamManifestSha256": "c967ddb475389106463e5bea52511f1fbf92cfef971aa4ac23c5c74de70f0442",
+  "changedFromUpstream": [
+    "assets/graphics-optimization-module.js",
+    "assets/offline-manifest.js"
+  ],
+  "addedToUpstream": [],
+  "offlineVersion": "field-e0fc8c9ac634",
+  "workerSha256": "9ae05e295372984a45d5b15990ff1449d393e8d07ca0a59955716ef139907259",
+  "geometryChangedFromSuppliedRelease": false,
+  "newEngineeringApproval": false,
+  "znpOriginalIncluded": false,
+  "pdfs": 6,
+  "limitations": [
+    "The display-only underground view and field kit cover PK0+00 through PK0+45.",
+    "Model-derived values are not an as-built survey or engineering acceptance.",
+    "Source qualifications and unavailable data remain visible."
+  ]
+}

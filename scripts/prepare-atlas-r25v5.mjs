@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { createReadStream, createWriteStream } from "node:fs";
-import { readFile, mkdtemp, rm } from "node:fs/promises";
+import { copyFile, readFile, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { Readable, Transform } from "node:stream";
@@ -10,7 +10,8 @@ import { promisify } from "node:util";
 import { atlasRelease } from "./atlas-releases.mjs";
 
 const release = atlasRelease(process.argv[2]);
-const { sha256: expected, url, root } = release;
+const archive = release.base ? atlasRelease(release.base) : release;
+const { root } = release;
 const run = promisify(execFile);
 async function hashFile(filename) {
   const hash = createHash("sha256");
@@ -20,7 +21,10 @@ async function hashFile(filename) {
 async function verifiedCache() {
   try {
     const index = JSON.parse(await readFile(path.join(root, "index.json"), "utf8"));
-    if (index.archiveSha256 !== expected || Object.keys(index.files).length !== release.files) return false;
+    const sealed = release.base
+      ? index.sourceManifestSha256 === release.manifestSha256
+      : index.archiveSha256 === archive.sha256;
+    if (!sealed || index.release !== release.release || Object.keys(index.files).length !== release.files) return false;
     for (const [name, pack] of Object.entries(index.packs)) {
       if (!/^part-\d+\.bin$/.test(name) || await hashFile(path.join(root, name)) !== pack.sha256) return false;
     }
@@ -32,19 +36,26 @@ if (await verifiedCache()) {
 } else {
   const temp = await mkdtemp(path.join(tmpdir(), `pgs-atlas-r25${release.version}-`));
   try {
-    console.log(`${release.release}: downloading sealed public source release`);
-    const response = await fetch(url, { signal: AbortSignal.timeout(15 * 60 * 1000) });
+    console.log(`${release.release}: downloading sealed public source ${archive.release}`);
+    const response = await fetch(archive.url, { signal: AbortSignal.timeout(15 * 60 * 1000) });
     if (!response.ok || !response.body) throw new Error(`Atlas download failed: ${response.status}`);
     const zip = path.join(temp, "release.zip"), hash = createHash("sha256");
     let bytes = 0;
     await pipeline(Readable.fromWeb(response.body), new Transform({ transform(chunk, encoding, callback) {
       bytes += chunk.length;
-      if (bytes > release.bytes) return callback(new Error("Atlas archive exceeds sealed size"));
+      if (bytes > archive.bytes) return callback(new Error("Atlas archive exceeds sealed size"));
       hash.update(chunk); callback(null, chunk);
     } }), createWriteStream(zip));
-    if (bytes !== release.bytes || hash.digest("hex") !== expected) throw new Error("Atlas archive integrity mismatch");
+    if (bytes !== archive.bytes || hash.digest("hex") !== archive.sha256) throw new Error("Atlas archive integrity mismatch");
     await run("unzip", ["-q", zip, "-d", path.join(temp, "source")], { maxBuffer: 1024 * 1024 });
-    const { stdout } = await run(process.execPath, ["scripts/package-atlas-r25v5.mjs", path.join(temp, "source", release.directory), release.version], { maxBuffer: 1024 * 1024 });
+    const source = path.join(temp, "source", archive.directory);
+    if (release.base) {
+      // Materialize a complete new release; no runtime cross-version asset requests.
+      for (const name of release.overlay) {
+        await copyFile(path.join("scripts", "atlas-deltas", release.version, name), path.join(source, name));
+      }
+    }
+    const { stdout } = await run(process.execPath, ["scripts/package-atlas-r25v5.mjs", source, release.version], { maxBuffer: 1024 * 1024 });
     console.log(stdout.trim());
     if (!await verifiedCache()) throw new Error("Atlas packaging integrity mismatch");
   } finally {
