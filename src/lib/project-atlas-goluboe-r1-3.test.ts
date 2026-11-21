@@ -3,26 +3,28 @@ import { runInNewContext } from "node:vm";
 import { describe, expect, it } from "vitest";
 import { GET, HEAD } from "@/app/model-assets/goluboe-vodovod-r1-3/[...asset]/route";
 import { GET as r14GET, HEAD as r14HEAD } from "@/app/model-assets/goluboe-vodovod-r1-4/[...asset]/route";
+import { GET as r15GET, HEAD as r15HEAD } from "@/app/model-assets/goluboe-vodovod-r1-5/[...asset]/route";
 import { GET as alias } from "@/app/models/[slug]/route";
 import { legacyAtlasDestination, legacyAtlasWorker } from "./project-atlas-legacy";
 
 const origin = "https://pgs.local";
 const r13 = "/model-assets/goluboe-vodovod-r1-3/";
 const r14 = "/model-assets/goluboe-vodovod-r1-4/";
+const r15 = "/model-assets/goluboe-vodovod-r1-5/";
 const snapshot = "/model-assets/goluboe-vodovod-r1-2-terrain-snapshot/";
 const priorPilot = "/model-assets/goluboe-vodovod-r1-2-field-pilot-02-ux-01/";
 const hash = (data: string | Uint8Array) => createHash("sha256").update(data).digest("hex");
 
-describe("Goluboe R1.3 and R1.4 publication", () => {
+describe("Goluboe R1.3 through R1.5 publication", () => {
   it("switches only the pilot alias while preserving immutable assets", async () => {
-    for (const prefix of [r13, r14, snapshot, priorPilot]) {
+    for (const prefix of [r13, r14, r15, snapshot, priorPilot]) {
       expect(legacyAtlasDestination(new URL(origin + prefix + "index.html"))).toBeNull();
       expect(legacyAtlasWorker(new URL(origin + prefix + "service-worker.js"))).toBeNull();
     }
     const slug = "goluboe-vodovod-field-pilot";
     const response = await alias(new Request(origin + "/models/" + slug + "?field=1&pk=21.5"), { params: { slug } });
     expect(response.status).toBe(307);
-    expect(response.headers.get("location")).toBe(r14 + "index.html?field=1&pk=21.5");
+    expect(response.headers.get("location")).toBe(r15 + "index.html?field=1&pk=21.5");
     const main = "goluboe-vodovod";
     const primary = await alias(new Request(origin + "/models/" + main), { params: { slug: main } });
     expect(primary.status).toBe(307);
@@ -34,6 +36,8 @@ describe("Goluboe R1.3 and R1.4 publication", () => {
       treeSha: "4820d30afa9aad4a4b7d465a465c9ccd60b82c73078730787d77c7352d0367c5", cache: "field-01319f828fba" },
     { release: r14, serve: r14GET, head: r14HEAD, manifestSha: "f6df69c6463f2decb7e3ebd50f5300ba506e2ff8aab966493f51781761459927",
       treeSha: "5cf9166e9885b238668400298cb45c91ce806d1829431161e644fca884eccac5", cache: "field-e0fc8c9ac634" },
+    { release: r15, serve: r15GET, head: r15HEAD, manifestSha: "b3e7edd1eeeed6a9955b8222a7fce192781e0dd9f40e9718ebbe9ed3f86b1388",
+      treeSha: "5413263cc8583341e43a846dfb0e6e80d8e9a0f1fefd7b4f9a1ae202fafe6a4a", cache: "field-0ed55a424c70" },
   ])("serves all 338 hashed items and isolates the worker for $release", async ({ release, serve, head, manifestSha, treeSha, cache }) => {
     const get = (name: string) => serve(
       new Request(origin + release + name.split("/").map(encodeURIComponent).join("/")), { params: { asset: name.split("/") } }
