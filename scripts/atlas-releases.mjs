@@ -11,6 +11,12 @@ const releases = {
     release: "GOLUBOE_VODOVOD_R1_4", directory: "GOLUBOE_VODOVOD_ATLAS_R1_4", assetDirectory: "goluboe-vodovod-r1-4", files: 339,
     base: "goluboe-vodovod-r1-3", manifestSha256: "f6df69c6463f2decb7e3ebd50f5300ba506e2ff8aab966493f51781761459927",
     overlay: ["assets/graphics-optimization-module.js", "assets/offline-manifest.js", "CURRENT_RELEASE.json", "MANIFEST.json"]
+  },
+  "goluboe-vodovod-r1-5": {
+    release: "GOLUBOE_VODOVOD_R1_5", directory: "GOLUBOE_VODOVOD_ATLAS_R1_5", assetDirectory: "goluboe-vodovod-r1-5", files: 339,
+    base: "goluboe-vodovod-r1-3", manifestSha256: "b3e7edd1eeeed6a9955b8222a7fce192781e0dd9f40e9718ebbe9ed3f86b1388",
+    overlay: ["assets/graphics-optimization-module.js", "assets/atlas-engine.js", "data/geometry_02.js", "assets/offline-manifest.js", "CURRENT_RELEASE.json", "MANIFEST.json"],
+    overlayFrom: { "assets/graphics-optimization-module.js": "goluboe-vodovod-r1-4" }
   }
 };
 
