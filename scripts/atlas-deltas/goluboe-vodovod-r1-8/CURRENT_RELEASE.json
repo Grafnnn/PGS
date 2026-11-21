@@ -1,0 +1,31 @@
+{
+  "release": "GOLUBOE_VODOVOD_R1_8",
+  "projectId": "goluboe-vodovod",
+  "revision": "R1.8",
+  "publishedDate": "2026-11-21",
+  "sourceArchiveSha256": "2aaeb9e0fbaad217cf4c13525baae9cb9e06e5ad1a9f1bc203e20510c8e9e86c",
+  "suppliedManifestSha256": "aa1c7e38e03c84362cd3b14a5a11d761f4825a179c19b19ee59145a0d0cfbf0a",
+  "sourceTreeSha256": "34df261306412871c2d2d9cbff763c95c0350155c77f5c1979b5589abf468418",
+  "suppliedFiles": 337,
+  "publicationModifiedFiles": [],
+  "upstreamSourceTreeSha256": "8f44c74a22cbf0ee433f98f21abb890e2ab54fd945ae6c510b4e2ba4251929a6",
+  "upstreamManifestSha256": "e5bc82605efbdc09ad25381948bed26b241c3820a09f1943fcb99a6847a7a438",
+  "changedFromUpstream": [
+    "assets/atlas-engine.js",
+    "assets/offline-manifest.js",
+    "project/config.js"
+  ],
+  "addedToUpstream": [],
+  "offlineVersion": "field-6804df33c9bc",
+  "workerSha256": "9ae05e295372984a45d5b15990ff1449d393e8d07ca0a59955716ef139907259",
+  "geometryChangedFromSuppliedRelease": false,
+  "newEngineeringApproval": false,
+  "znpOriginalIncluded": false,
+  "pdfs": 6,
+  "limitations": [
+    "The display-only underground view and field kit cover PK0+00 through PK0+45.",
+    "Model-derived values are not an as-built survey or engineering acceptance.",
+    "Display-only geometry is unchanged from R1.7.",
+    "Source qualifications and unavailable data remain visible."
+  ]
+}
