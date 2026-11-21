@@ -1,0 +1,32 @@
+{
+  "release": "GOLUBOE_VODOVOD_R1_7",
+  "projectId": "goluboe-vodovod",
+  "revision": "R1.7",
+  "publishedDate": "2026-11-21",
+  "sourceArchiveSha256": "42e797de09a563e51679c75d837c92f8f3f2ad4ab074cdf32ef2d57e908456c6",
+  "suppliedManifestSha256": "8a71eaf132f08ac3b555c4d49860a57aa3a0459acf95961609e3ddf7fb354ee3",
+  "sourceTreeSha256": "8f44c74a22cbf0ee433f98f21abb890e2ab54fd945ae6c510b4e2ba4251929a6",
+  "suppliedFiles": 337,
+  "publicationModifiedFiles": [],
+  "upstreamSourceTreeSha256": "a48eff118e55ccb85cab6f24825c5246532ad1609c1f50a190a1fd4325ec683b",
+  "upstreamManifestSha256": "5b1a5b31141fae560f5cf09a2b764b498501572cef188167c57cc0b54273b133",
+  "changedFromUpstream": [
+    "assets/offline-manifest.js",
+    "data/geometry_00.js",
+    "data/geometry_02.js",
+    "data/geometry_03.js"
+  ],
+  "addedToUpstream": [],
+  "offlineVersion": "field-922182d99d5f",
+  "workerSha256": "9ae05e295372984a45d5b15990ff1449d393e8d07ca0a59955716ef139907259",
+  "geometryChangedFromSuppliedRelease": false,
+  "newEngineeringApproval": false,
+  "znpOriginalIncluded": false,
+  "pdfs": 6,
+  "limitations": [
+    "The display-only underground view and field kit cover PK0+00 through PK0+45.",
+    "Model-derived values are not an as-built survey or engineering acceptance.",
+    "Seven geometry records have display mesh refinements only; no engineering geometry changes.",
+    "Source qualifications and unavailable data remain visible."
+  ]
+}
