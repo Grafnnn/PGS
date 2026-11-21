@@ -1,0 +1,32 @@
+{
+  "release": "V12_20",
+  "label": "V12.20",
+  "sourceDate": "2026-11-22",
+  "publishedDate": "2026-11-22",
+  "sourceTreeSha256": "e25beceabb6fca766e4ce30456974ad0eda402d6b8156e8e3d1ec5dc59cf9293",
+  "suppliedFiles": 4670,
+  "geometryChangedFromSuppliedRelease": false,
+  "elementAssignmentsChanged": false,
+  "newEngineeringApproval": false,
+  "elements": 10795,
+  "rebarOnDemand": 13325,
+  "catalogueTypes": 2950,
+  "sources": 396,
+  "nodes": 559,
+  "unplaced": 47,
+  "restoredPublicExcerpt": {
+    "path": "drawings/R13_AR_PRIMARY_PAGES.pdf",
+    "sha256": "2afa4d7c3b1bb2fed48d3de1be3bc6e75add72b15b306ca4bd08db6eced6349f"
+  },
+  "integrationFixes": [
+    "Previously public recovery PDF",
+    "Recovered source links in cards and library",
+    "Atlas Core 1.1.0 runtime and orbit controls"
+  ],
+  "limitations": [
+    "47 positions remain without confirmed placement.",
+    "Publication and navigation checks do not constitute engineering approval.",
+    "Original drawings and engineering archive are not published; supplied archive-only links remain explicitly unavailable."
+  ],
+  "coreVersion": "1.1.0"
+}

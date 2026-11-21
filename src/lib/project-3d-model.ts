@@ -30,6 +30,15 @@ const troitskBuilding24Model: Project3dModel = {
   publicUrl: "/models/troitsk-building-24#node/building"
 };
 
+const troitskPublicModel: Project3dModel = {
+  ...troitskBuilding24Model,
+  slug: "troitsk-building-24-atlas-v12-20",
+  revision: "V12.20",
+  updatedAt: "22.11.2026",
+  assetPath: "src/assets/project-models/troitsk-r25v12-20",
+  assetBaseUrl: "/model-assets/troitsk-r25v12-20/"
+};
+
 const TROITSK_PROJECT_ID = "cmteg9g33000for4oc06rko5a";
 
 const dou200Model: Project3dModel = {
@@ -84,7 +93,7 @@ const goluboeFieldPilot: Project3dModel = {
 
 // Explicit publication allowlist. Never resolve arbitrary project IDs on a public route.
 export function getPublicProject3dModel(slug: string): Project3dModel | null {
-  if (slug === "troitsk-building-24") return troitskBuilding24Model;
+  if (slug === "troitsk-building-24") return troitskPublicModel;
   if (slug === "dou200") return dou200Model;
   if (slug === "zagoryanka-1500") return zagoryankaModel;
   if (slug === "goluboe-vodovod") return goluboeModel;

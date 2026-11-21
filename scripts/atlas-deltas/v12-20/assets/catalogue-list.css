@@ -1,0 +1,34 @@
+/* 3D Атлас · список каталога типов (заготовка этапа 5; карточка типа — в работе). */
+.catalogue-main .page-head { margin-top: 0; }
+.more-filters { margin: 8px 0 12px; font-size: var(--fs-13); }
+.more-filters label { display: flex; gap: 8px; align-items: center; }
+.type-card { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; }
+.type-text { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.type-text h3 { margin: 0; font-size: var(--fs-16); line-height: 1.35; }
+.type-meta { margin: 0; display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: var(--fs-13); color: var(--muted); }
+.type-mark { color: var(--ink); font-weight: 500; }
+.type-service { color: var(--sig-mid-text); font-weight: 500; }
+.type-remarks { margin: 2px 0 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: var(--fs-13); }
+.type-spec { margin: 0; font-size: var(--fs-13); color: var(--ink); }
+.type-tech { margin: 0; font-size: var(--fs-12); color: var(--muted); font-family: var(--font-mono); overflow-wrap: anywhere; }
+.type-actions { display: flex; flex-direction: column; align-items: stretch; gap: 6px; flex: none; }
+@media (max-width: 850px) { .type-card { flex-direction: column; } .type-actions { flex-direction: row; flex-wrap: wrap; } .type-actions .pbtn { min-height: 44px; } }
+/* 1.0.19a к2: на узком экране длинная подпись кнопки («Открыть тип в 3D (отдельно от здания)») переносится, страница не уходит вбок на 320;
+   body.has-shell — чтобы перебить высоту 44 px из atlas-pages.css (body.has-shell .pbtn) */
+@media (max-width: 850px) { body.has-shell .type-actions .pbtn { white-space: normal; height: auto; min-height: 44px; max-width: 100%; padding-block: 6px; line-height: 1.25; text-align: center; } }
+.type-head { display: flex; flex-direction: column; gap: 8px; margin: 0 0 12px; }
+.type-line, .type-rem { margin: 0; font-size: var(--fs-13); color: var(--muted); display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.type-line strong { color: var(--ink); font-weight: 600; }
+.type-head .pbtn { align-self: flex-start; }
+.type-spec-dl { display: grid; grid-template-columns: 130px minmax(0, 1fr); gap: 4px 10px; margin: 4px 0 0; font-size: var(--fs-13); }
+.type-spec-dl dt { color: var(--muted); } .type-spec-dl dd { margin: 0; overflow-wrap: anywhere; }
+.type-spec-h { margin: 6px 0 0; font-size: var(--fs-13); color: var(--ink); font-weight: 600; }
+.type-tech-details { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 8px; }
+.type-tech-details summary { font-weight: 600; cursor: pointer; min-height: 32px; }
+
+.type-nolink { font-size: var(--fs-12); font-weight: 500; color: var(--muted); padding: 6px 0; }
+.type-text h2.type-h { margin: 0; font-size: var(--fs-16); line-height: 1.35; font-weight: 700; }
+@media (max-width: 780px) { main:has(#details.open) .toolbar { visibility: hidden; } }
+
+/* V12.0b · 13: «Открыть в 3D →» — кнопка, надпись по центру (library.css .actions a{display:block} перебивал .pbtn) */
+.actions a.pbtn { display: inline-flex; align-items: center; justify-content: center; }

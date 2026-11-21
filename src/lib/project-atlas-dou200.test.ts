@@ -18,7 +18,7 @@ function decode(text: string, key: string) {
 describe("independent DOU200 public website", () => {
   it("keeps project aliases, roots and revisions separate", () => {
     expect(getPublicProject3dModel("dou200")).toMatchObject({ revision: "R1.27", assetBaseUrl: "/model-assets/dou200-r1-27/" });
-    expect(getPublicProject3dModel("troitsk-building-24")).toMatchObject({ revision: "V12.18", assetBaseUrl: "/model-assets/troitsk-r25v12-18/" });
+    expect(getPublicProject3dModel("troitsk-building-24")).toMatchObject({ revision: "V12.20", assetBaseUrl: "/model-assets/troitsk-r25v12-20/" });
     expect(getProject3dModel({ id: "cmteg9g33000for4oc06rko5a" })?.revision).toBe("V12.18");
     expect(getProject3dModel({ name: "ДОУ 200" })).toBeNull(); // No inferred private project assignment.
     expect(legacyAtlasDestination(new URL(base + "index.html"))).toBeNull();

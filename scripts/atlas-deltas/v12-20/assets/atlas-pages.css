@@ -1,0 +1,98 @@
+/* 3D Атлас · общие стили внутренних страниц (после стилей самой страницы). Только токены. */
+body.has-shell { margin: 0; font-family: var(--font); color: var(--ink); background: var(--page); }
+body.has-shell a { color: var(--brand); }
+body.has-shell a:hover { color: var(--brand-hover); }
+body.has-shell :focus-visible { outline: 3px solid var(--brand-2); outline-offset: 2px; }
+body.has-shell code, body.has-shell kbd { font-family: var(--font-mono); }
+
+/* Заголовок страницы по макету: 26 px + строка 14 px, справа — действия */
+.page { box-sizing: border-box; padding: 22px 32px 24px; }
+.page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; flex-wrap: wrap; margin: 0 0 16px; }
+.page-head h1 { margin: 0; font-size: var(--fs-26); line-height: 1.2; font-weight: 700; letter-spacing: -0.015em; }
+.page-head .page-sub { margin: 6px 0 0; font-size: var(--fs-14); color: var(--muted); }
+.page-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.pbtn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 40px; padding: 0 14px; box-sizing: border-box;
+        border: 1px solid var(--line-strong); border-radius: var(--radius); background: var(--surface); font: 500 var(--fs-14)/1 var(--font);
+        color: var(--ink); text-decoration: none; cursor: pointer; white-space: nowrap; }
+body.has-shell a.pbtn { color: var(--ink); }
+.pbtn--primary { background: var(--brand); border-color: var(--brand); color: #FFFFFF; font-weight: 600; }
+body.has-shell a.pbtn--primary { color: #FFFFFF; }
+.pbtn--outline { border-color: var(--brand); font-weight: 600; }
+body.has-shell a.pbtn--outline, .pbtn--outline { color: var(--brand); }
+.pbtn[disabled], .pbtn[aria-disabled="true"] { border-style: dashed; border-color: var(--c-line-strong); color: var(--muted); cursor: default; background: var(--surface); }
+.pbtn--sm { height: 32px; padding: 0 10px; font-size: var(--fs-13); }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-l); }
+.muted { color: var(--muted); }
+.tabs-seg { display: inline-flex; flex-wrap: wrap; max-width: 100%; box-sizing: border-box; padding: 4px; gap: 4px; background: #E9EDF2; border-radius: 10px; }   /* 1.0.19a A-08 (М-10а): перенос вкладок — без прокрутки при 320 px */
+.tabs-seg a, .tabs-seg button { display: inline-flex; align-items: center; height: 36px; padding: 0 16px; border: 0; border-radius: var(--radius);
+        background: transparent; font: 500 var(--fs-14)/1 var(--font); color: var(--ink); text-decoration: none; cursor: pointer; white-space: nowrap; }
+body.has-shell .tabs-seg a { color: var(--ink); }
+.tabs-seg [aria-selected="true"], .tabs-seg [aria-current="page"] { background: var(--surface); color: var(--brand); font-weight: 600; box-shadow: 0 1px 2px rgba(28, 28, 30, 0.08); }
+body.has-shell .tabs-seg a[aria-current="page"] { color: var(--brand); }
+.type-heading { display: flex; align-items: center; gap: 16px; padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--line); }
+.type-heading h1 { margin: 0; font-size: var(--fs-16); font-weight: 700; }
+.type-heading a { font-size: var(--fs-13); }
+.aux-frame { display: block; width: 100%; height: calc(100dvh - 48px); border: 0; }
+@media (max-width: 850px) {
+  .page { padding: 16px; }
+  .page-head h1 { font-size: var(--fs-22); }
+  .pbtn { min-height: var(--target); }
+  .tabs-seg a, .tabs-seg button { height: var(--target); }
+  .aux-frame { height: calc(100dvh - 48px - 64px); }
+}
+.hist-note { margin: 12px 16px 0; padding: 10px 14px; border-radius: var(--radius); background: var(--brand-tint); font-size: var(--fs-13); color: var(--ink); }
+
+/* V10.1: серый текст внутренних страниц — токен --muted (≥ 4,5:1 на --page и белом), размер ≥ 12 px */
+body.has-shell .stat, body.has-shell main small, body.has-shell .lead + .stat { color: var(--muted); }
+body.has-shell article.item small { font-size: var(--fs-12); }
+/* Телефон: область нажатия отдельных ссылок и полей — не меньше 44 px по высоте (вид не меняется) */
+@media (max-width: 850px) {
+  .drawing-head a, .type-heading a, main.doc > a, body.has-shell article > a, .album-rem, .docs-more, .about-links a { display: inline-flex; align-items: center; min-height: var(--target); }
+  /* Ссылки внутри предложений и таблиц — без отступов (WCAG 2.5.8, исключение «inline»); ссылка одна на строку списка — блоком 44 px */
+  body.has-shell main li > a:only-child, .docs-dev li > a { display: flex; align-items: center; min-height: var(--target); }
+  .rsearch input { align-self: stretch; min-height: var(--target); }
+}
+body.has-shell article.item h2 { font-size: var(--fs-16); line-height: 1.35; margin: 0 0 4px; }
+
+@media (max-width: 850px) {
+  html:has(body.has-shell) { scroll-padding-bottom: 72px; }
+  .modalheader :is(button, a) { min-height: var(--target); min-width: var(--target); display: inline-flex; align-items: center; justify-content: center; }
+}
+
+/* V12.0 · R1-02 (ревью D): на телефоне все цели нажатия внутренних страниц ≥ 44 × 44 px — поля, списки, вкладки, кнопки,
+   раскрывашки и ссылки, в том числе в строке текста. Шапку и нижнюю панель ведёт atlas-shell.css. Главной этот файл не касается. */
+@media (max-width: 850px) {
+  html body.has-shell :is(input[type="search"], input[type="text"], select, [role="tab"], button, .pbtn):not(.atlas-shell *):not(.as-tabbar *):not(.ov *):not(.as-menu *) {
+    min-height: 44px; min-width: 44px; box-sizing: border-box;
+  }
+  html body.has-shell summary:not(.atlas-shell *):not(.ov *) { min-height: 44px; box-sizing: border-box; padding-block: 12px; }
+  html body.has-shell a[href]:not(.skip-link):not(.atlas-shell *):not(.as-tabbar *):not(.ov *):not(.as-menu *):not(.as-results *):not(.pbtn):not(.about-tile) {
+    display: inline-flex; align-items: center; justify-content: center; min-height: 44px; min-width: 44px; vertical-align: middle; box-sizing: border-box;
+  }
+}
+
+/* V12.0 · 1.2 (план D): единая сетка внутренних страниц.
+   Контейнер: до --page-max (1360) по центру, поля --page-pad (32; телефон 16) → на 1440 содержимое 1296 px с краем 72 px.
+   Заголовок 26 / 700; одна кнопка — 40 px, скругление 8, начертание 600; одна карточка — скругление 12. Главная и 3D-просмотр типа не затронуты. */
+body.has-shell:not(.atlas-prototype):not(.catalogue-view) > main {
+  box-sizing: border-box; width: 100%; max-width: var(--page-max); margin-left: auto; margin-right: auto;
+  padding-left: var(--page-pad); padding-right: var(--page-pad); padding-top: 24px;
+}
+body.has-shell:not(.atlas-prototype):not(.catalogue-view) > main h1 { font-size: var(--fs-26); font-weight: 700; line-height: 1.2; letter-spacing: -0.015em; }
+body.has-shell .pbtn, body.has-shell .pbtn--sm { height: 40px; min-height: 40px; padding: 0 14px; border-radius: var(--r); font-weight: 600; font-size: var(--fs-14); }
+body.has-shell .card { border-radius: var(--r-l); }
+/* 1.2: обычные кнопки внутренних страниц («Открыть», «← Назад», «Далее →») — та же кнопка 40 / 8 / 600 */
+body.has-shell:not(.atlas-prototype):not(.catalogue-view) > main button:is([data-open-key], #previousPage, #nextPage, #catPrevious, #catNext) {
+  height: 40px; min-height: 40px; padding: 0 14px; border: 1px solid var(--c-line-mid); border-radius: var(--r); background: var(--c-surface);
+  font: 600 var(--fs-14)/1 var(--font); color: var(--c-text); cursor: pointer;
+}
+/* 1.2: один сегмент-переключатель — как значимость в «Замечаниях» (.seg): вкладки «Источники · Реестр» */
+body.has-shell > main .tabs:has(> #sourcesTab) { display: inline-flex; gap: 2px; padding: 3px; border-radius: var(--r); background: var(--c-surface-2); border: 1px solid var(--c-line); }
+body.has-shell > main .tabs > :is(#sourcesTab, #recordsTab) { flex: 0 0 auto; height: 32px; min-height: 32px; padding: 0 12px; border: 0; border-radius: var(--r-s); background: transparent; font: 500 var(--fs-13)/1 var(--font); color: var(--c-text-2); }
+body.has-shell > main .tabs > :is(#sourcesTab, #recordsTab).active { background: var(--c-surface); color: var(--c-text); font-weight: 600; box-shadow: var(--shadow-1); }
+.catalogue-main .page-head { margin-top: 0; }
+@media (max-width: 850px) {
+  body.has-shell:not(.atlas-prototype):not(.catalogue-view) > main button:is([data-open-key], #previousPage, #nextPage, #catPrevious, #catNext),
+  body.has-shell > main .tabs > :is(#sourcesTab, #recordsTab) { height: 44px; min-height: 44px; }
+  body.has-shell .pbtn, body.has-shell .pbtn--sm { height: 44px; min-height: 44px; }
+}

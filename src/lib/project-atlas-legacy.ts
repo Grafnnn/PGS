@@ -8,7 +8,8 @@ export const LEGACY_ATLAS_RELEASES = [
 
 export const LEGACY_DOU_ATLAS_RELEASES = ["dou200-r1-7", "dou200-r1-21", "dou200-r1-23", "dou200-r1-24", "dou200-r1-25", "dou200-r1-26"];
 export const LEGACY_GOLUBOE_ATLAS_RELEASES = ["goluboe-vodovod-r1-1", "goluboe-vodovod-r1-2", "goluboe-vodovod-r1-2-final154", "goluboe-vodovod-r1-2-excavations", "goluboe-vodovod-r1-2-up1-profile", "goluboe-vodovod-r1-2-sections", "goluboe-vodovod-r1-2-profile-3d", "goluboe-vodovod-r1-2-mobile-fit", "goluboe-vodovod-r1-2-terrain-depth"];
-const troitskPrefix = getPublicProject3dModel("troitsk-building-24")!.assetBaseUrl!;
+// Retired Troitsk links keep V12.18 independently of the public alias.
+const troitskPrefix = "/model-assets/troitsk-r25v12-18/";
 const douPrefix = getPublicProject3dModel("dou200")!.assetBaseUrl!;
 // Retired release links keep their snapshot independently of the main alias.
 const goluboeSnapshotPrefix = "/model-assets/goluboe-vodovod-r1-2-terrain-snapshot/";
