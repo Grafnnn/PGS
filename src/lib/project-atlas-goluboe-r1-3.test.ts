@@ -2,42 +2,50 @@ import { createHash } from "node:crypto";
 import { runInNewContext } from "node:vm";
 import { describe, expect, it } from "vitest";
 import { GET, HEAD } from "@/app/model-assets/goluboe-vodovod-r1-3/[...asset]/route";
+import { GET as r14GET, HEAD as r14HEAD } from "@/app/model-assets/goluboe-vodovod-r1-4/[...asset]/route";
 import { GET as alias } from "@/app/models/[slug]/route";
 import { legacyAtlasDestination, legacyAtlasWorker } from "./project-atlas-legacy";
 
 const origin = "https://pgs.local";
-const release = "/model-assets/goluboe-vodovod-r1-3/";
+const r13 = "/model-assets/goluboe-vodovod-r1-3/";
+const r14 = "/model-assets/goluboe-vodovod-r1-4/";
 const snapshot = "/model-assets/goluboe-vodovod-r1-2-terrain-snapshot/";
 const priorPilot = "/model-assets/goluboe-vodovod-r1-2-field-pilot-02-ux-01/";
 const hash = (data: string | Uint8Array) => createHash("sha256").update(data).digest("hex");
-const get = (name: string, init?: RequestInit) =>
-  GET(new Request(origin + release + name.split("/").map(encodeURIComponent).join("/"), init), { params: { asset: name.split("/") } });
 
-describe("Goluboe R1.3 publication", () => {
+describe("Goluboe R1.3 and R1.4 publication", () => {
   it("switches only the pilot alias while preserving immutable assets", async () => {
-    for (const prefix of [release, snapshot, priorPilot]) {
+    for (const prefix of [r13, r14, snapshot, priorPilot]) {
       expect(legacyAtlasDestination(new URL(origin + prefix + "index.html"))).toBeNull();
       expect(legacyAtlasWorker(new URL(origin + prefix + "service-worker.js"))).toBeNull();
     }
     const slug = "goluboe-vodovod-field-pilot";
     const response = await alias(new Request(origin + "/models/" + slug + "?field=1&pk=21.5"), { params: { slug } });
     expect(response.status).toBe(307);
-    expect(response.headers.get("location")).toBe(release + "index.html?field=1&pk=21.5");
+    expect(response.headers.get("location")).toBe(r14 + "index.html?field=1&pk=21.5");
     const main = "goluboe-vodovod";
     const primary = await alias(new Request(origin + "/models/" + main), { params: { slug: main } });
     expect(primary.status).toBe(307);
     expect(primary.headers.get("location")).toBe(snapshot + "index.html");
   });
 
-  it("serves all 338 hashed items and scopes its separate offline release", async () => {
-    expect(HEAD).toBe(GET);
+  it.each([
+    { release: r13, serve: GET, head: HEAD, manifestSha: "c967ddb475389106463e5bea52511f1fbf92cfef971aa4ac23c5c74de70f0442",
+      treeSha: "4820d30afa9aad4a4b7d465a465c9ccd60b82c73078730787d77c7352d0367c5", cache: "field-01319f828fba" },
+    { release: r14, serve: r14GET, head: r14HEAD, manifestSha: "f6df69c6463f2decb7e3ebd50f5300ba506e2ff8aab966493f51781761459927",
+      treeSha: "5cf9166e9885b238668400298cb45c91ce806d1829431161e644fca884eccac5", cache: "field-e0fc8c9ac634" },
+  ])("serves all 338 hashed items and isolates the worker for $release", async ({ release, serve, head, manifestSha, treeSha, cache }) => {
+    const get = (name: string) => serve(
+      new Request(origin + release + name.split("/").map(encodeURIComponent).join("/")), { params: { asset: name.split("/") } }
+    );
+    expect(head).toBe(serve);
     const manifestResponse = await get("MANIFEST.json");
     expect(manifestResponse.status).toBe(200);
     const serialized = await manifestResponse.text();
-    expect(hash(serialized)).toBe("c967ddb475389106463e5bea52511f1fbf92cfef971aa4ac23c5c74de70f0442");
+    expect(hash(serialized)).toBe(manifestSha);
     const manifest = JSON.parse(serialized);
     expect(manifest.files).toHaveLength(338);
-    expect(manifest.sourceTreeSha256).toBe("4820d30afa9aad4a4b7d465a465c9ccd60b82c73078730787d77c7352d0367c5");
+    expect(manifest.sourceTreeSha256).toBe(treeSha);
     for (const file of manifest.files) {
       const r = await get(file.path);
       expect(r.status, file.path).toBe(200);
@@ -52,7 +60,7 @@ describe("Goluboe R1.3 publication", () => {
     expect(hash(await worker.text())).toBe("9ae05e295372984a45d5b15990ff1449d393e8d07ca0a59955716ef139907259");
     const self: Record<string, any> = {};
     runInNewContext(await (await get("assets/offline-manifest.js")).text(), { self }, { timeout: 1000 });
-    expect(self.ATLAS_OFFLINE_VERSION).toBe("field-01319f828fba");
+    expect(self.ATLAS_OFFLINE_VERSION).toBe(cache);
     expect(self.ATLAS_OFFLINE_FILES).toEqual(expect.arrayContaining([
       "project/underground-geometry-data.js", "project/underground-mesh.js", "project/underground-view.js"
     ]));
