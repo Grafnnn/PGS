@@ -1,6 +1,6 @@
 # Goluboe R1.10
 
-The [field pilot](https://pgs-frankfurt.onrender.com/models/goluboe-vodovod-field-pilot) targets `/model-assets/goluboe-vodovod-r1-10/`. The main Goluboe alias stays on Terrain Snapshot; Troitsk and prior direct release paths stay intact.
+The [main Goluboe link](https://pgs-frankfurt.onrender.com/models/goluboe-vodovod) and the [field pilot](https://pgs-frankfurt.onrender.com/models/goluboe-vodovod-field-pilot) both target the same immutable `/model-assets/goluboe-vodovod-r1-10/` release. The [R1.2 Terrain Snapshot](https://pgs-frankfurt.onrender.com/model-assets/goluboe-vodovod-r1-2-terrain-snapshot/index.html), Troitsk and prior direct release paths stay intact.
 
 Compared with R1.9, only the engine, offline manifest, release label, field overlay, plan controls, terrain tools and underground viewer changed. Source geometry and documents are unchanged. Publication is not engineering acceptance.
 

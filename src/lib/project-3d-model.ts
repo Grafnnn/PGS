@@ -63,14 +63,14 @@ export function getProjectAtlasUrl(projectId: string): string | null {
 }
 
 const goluboeModel: Project3dModel = {
-  slug: "goluboe-vodovod-atlas-r1-2-terrain-snapshot",
+  slug: "goluboe-vodovod-atlas-r1-10",
   title: "3D Атлас Голубое",
   subtitle: "Водовод до ВЗУ: 264 записи реестра, 154 элемента сцены, 6 PDF",
-  revision: "R1.2",
-  updatedAt: "20.11.2026",
+  revision: "R1.10",
+  updatedAt: "22.11.2026",
   disclaimer: "Модель по ПД 19/26-2026. Расхождения со ЗнП № 10 сохранены в замечаниях и заключении; оригинал ЗнП не входит в пакет. Не инженерная приёмка и не исполнительная съёмка.",
-  assetPath: "src/assets/project-models/goluboe-vodovod-r1-2-terrain-snapshot",
-  assetBaseUrl: "/model-assets/goluboe-vodovod-r1-2-terrain-snapshot/",
+  assetPath: "src/assets/project-models/goluboe-vodovod-r1-10",
+  assetBaseUrl: "/model-assets/goluboe-vodovod-r1-10/",
   publicUrl: "/models/goluboe-vodovod#node/building"
 };
 
@@ -79,10 +79,6 @@ const goluboeFieldPilot: Project3dModel = {
   slug: "goluboe-vodovod-field-pilot",
   title: "3D Атлас Голубое · полевой пилот",
   subtitle: "Полевой комплект водовода, ПК0+00 – ПК0+45",
-  revision: "R1.10",
-  updatedAt: "22.11.2026",
-  assetPath: "src/assets/project-models/goluboe-vodovod-r1-10",
-  assetBaseUrl: "/model-assets/goluboe-vodovod-r1-10/",
   publicUrl: "/models/goluboe-vodovod-field-pilot"
 };
 
