@@ -54,6 +54,23 @@ const releases = {
       "data/geometry_02.js": "goluboe-vodovod-r1-7",
       "data/geometry_03.js": "goluboe-vodovod-r1-7"
     }
+  },
+  "goluboe-vodovod-r1-9": {
+    release: "GOLUBOE_VODOVOD_R1_9", directory: "GOLUBOE_VODOVOD_ATLAS_R1_9", assetDirectory: "goluboe-vodovod-r1-9", files: 339,
+    base: "goluboe-vodovod-r1-3", manifestSha256: "42b28ffa312074b7b61ef37b26a46f025d0fd04f67a4948a23c9704ae3dbe18e",
+    overlay: [
+      "assets/graphics-optimization-module.js", "assets/atlas-engine.js", "assets/atlas-field.js", "project/config.js",
+      "data/geometry_00.js", "data/geometry_02.js", "data/geometry_03.js",
+      "project/field-pilot-overlay.js", "project/plan-controls.js", "project/profile-waterline.html",
+      "assets/offline-manifest.js", "CURRENT_RELEASE.json", "MANIFEST.json"
+    ],
+    overlayFrom: {
+      "assets/graphics-optimization-module.js": "goluboe-vodovod-r1-4",
+      "data/geometry_00.js": "goluboe-vodovod-r1-7",
+      "data/geometry_02.js": "goluboe-vodovod-r1-7",
+      "data/geometry_03.js": "goluboe-vodovod-r1-7",
+      "project/config.js": "goluboe-vodovod-r1-8"
+    }
   }
 };
 
