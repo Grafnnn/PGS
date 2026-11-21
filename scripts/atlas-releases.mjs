@@ -17,6 +17,15 @@ const releases = {
     base: "goluboe-vodovod-r1-3", manifestSha256: "b3e7edd1eeeed6a9955b8222a7fce192781e0dd9f40e9718ebbe9ed3f86b1388",
     overlay: ["assets/graphics-optimization-module.js", "assets/atlas-engine.js", "data/geometry_02.js", "assets/offline-manifest.js", "CURRENT_RELEASE.json", "MANIFEST.json"],
     overlayFrom: { "assets/graphics-optimization-module.js": "goluboe-vodovod-r1-4" }
+  },
+  "goluboe-vodovod-r1-6": {
+    release: "GOLUBOE_VODOVOD_R1_6", directory: "GOLUBOE_VODOVOD_ATLAS_R1_6", assetDirectory: "goluboe-vodovod-r1-6", files: 339,
+    base: "goluboe-vodovod-r1-3", manifestSha256: "5b1a5b31141fae560f5cf09a2b764b498501572cef188167c57cc0b54273b133",
+    overlay: ["assets/graphics-optimization-module.js", "assets/atlas-engine.js", "data/geometry_02.js", "assets/offline-manifest.js", "CURRENT_RELEASE.json", "MANIFEST.json"],
+    overlayFrom: {
+      "assets/graphics-optimization-module.js": "goluboe-vodovod-r1-4",
+      "data/geometry_02.js": "goluboe-vodovod-r1-5"
+    }
   }
 };
 
