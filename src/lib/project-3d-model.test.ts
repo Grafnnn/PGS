@@ -4,9 +4,9 @@ import { getProject3dModel, getPublicProject3dModel, getProject3dPresentation, p
 afterEach(() => vi.unstubAllEnvs());
 
 describe("project 3D model registry", () => {
-  it("resolves Atlas V11 and exposes a stable explicitly published URL", () => {
+  it("keeps the public Troitsk release separate from the in-project viewer", () => {
     expect(getProject3dModel({ id: "cmteg9g33000for4oc06rko5a" })).toMatchObject({ revision: "V12.18", slug: "troitsk-building-24-atlas-v12-18", assetBaseUrl: "/model-assets/troitsk-r25v12-18/" });
-    expect(getPublicProject3dModel("troitsk-building-24")).toBe(getProject3dModel({ id: "cmteg9g33000for4oc06rko5a" }));
+    expect(getPublicProject3dModel("troitsk-building-24")).toMatchObject({ revision: "V12.20", assetBaseUrl: "/model-assets/troitsk-r25v12-20/" });
     expect(getPublicProject3dModel("troitsk-building-24")?.publicUrl).toBe("/models/troitsk-building-24#node/building");
     expect(getPublicProject3dModel("cmteg9g33000for4oc06rko5a")).toBeNull();
   });

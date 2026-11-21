@@ -14,12 +14,19 @@ describe("Atlas V11 publication", () => {
   it("preserves the public alias without sessions or project lookups", async () => {
     const response = await GET(new Request("https://pgs.local/models/troitsk-building-24"), { params: { slug: "troitsk-building-24" } });
     expect(response.status).toBe(307);
-    expect(response.headers.get("location")).toBe("/model-assets/troitsk-r25v12-18/index.html");
+    expect(response.headers.get("location")).toBe("/model-assets/troitsk-r25v12-20/index.html");
     expect(response.headers.get("cache-control")).toBe("no-store");
     expect(response.headers.has("set-cookie")).toBe(false);
     expect(mocks.access).not.toHaveBeenCalled();
     expect(mocks.find).not.toHaveBeenCalled();
     expect(mocks.readFile).not.toHaveBeenCalled();
+  });
+  it("retains public Troitsk embed without changing the protected release", async () => {
+    const response = await GET(new Request("https://pgs.local/models/troitsk-building-24?embed=monolith-v1#node/building"), { params: { slug: "troitsk-building-24" } });
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toBe("/model-assets/troitsk-r25v12-20/index.html?embed=monolith-v1");
+    expect(mocks.access).not.toHaveBeenCalled();
+    expect(mocks.find).not.toHaveBeenCalled();
   });
   it("publishes DOU200 under its own anonymous alias without changing Troitsk", async () => {
     const response = await GET(new Request("https://pgs.local/models/dou200"), { params: { slug: "dou200" } });

@@ -6,6 +6,11 @@ import {projectAtlasR25Response} from './project-atlas-r25-response';
 
 const base='https://pgs.local/model-assets/troitsk-r25v12-18/';
 const get=(name:string, init?:RequestInit)=>projectAtlasR25Response(new Request(base+name,init),name.split('/'),'v12-18');
+function drawingRelease(version: 'v12-18' | 'v12-20') {
+  const base = `https://pgs.local/model-assets/troitsk-r25${version}/`;
+  return {base, get: (name: string, init?: RequestInit) =>
+    projectAtlasR25Response(new Request(base + name, init), name.split('/'), version)};
+}
 type Source={image?:string;pdf_url?:string;pdf_page?:number;printed_sheet?:string};
 const ovParts = [[1,16],[17,31],[32,60],[61,110],[111,158],[159,222]];
 function decode(text:string,key:string) {
@@ -67,7 +72,8 @@ describe('sealed V12.18 website delivery',()=>{
     expect(Object.keys(index.files)).toHaveLength(4661);
     expect(index.archiveSha256).toBe('329b84daa82dbd74b1b7153dc0ccb891a3f27dbab9f1f0a9d3cd22eac7c407f5');
   });
-  it('keeps all 396 drawing previews and PDF targets inside the published release',async()=>{
+  it.each(['v12-18','v12-20'] as const)('keeps all 396 drawing previews and PDF targets inside %s',async(version)=>{
+    const {base,get}=drawingRelease(version);
     const library=decode(await (await get('data/library.js')).text(),'ATLAS_LIBRARY_GZIP');
     const recoveryWindow:any={};vm.runInNewContext(await (await get('data/source_recovery.js')).text(),{window:recoveryWindow},{timeout:1000});
     const recovery=recoveryWindow.AtlasSourceRecoveryData;
@@ -104,7 +110,8 @@ describe('sealed V12.18 website delivery',()=>{
     const split=window.AtlasPackageLinks!.map('albums/АР_полный.pdf#page=100');
     expect(split?.href).toBe(base+'albums/AR_polnyy_chast2.pdf#page=24');
   });
-  it('routes all 222 original OV.ITP pages to the correct lossless PDF part',async()=>{
+  it.each(['v12-18','v12-20'] as const)('routes all 222 original OV.ITP pages to the correct lossless PDF part in %s',async(version)=>{
+    const {base,get}=drawingRelease(version);
     const window:any={};
     const document={readyState:'loading',currentScript:{src:base+'assets/package-links.js'},baseURI:base+'index.html',addEventListener(){},querySelectorAll(){return [];}};
     vm.runInNewContext(await (await get('assets/package-links.js')).text(),{window,document,URL},{timeout:1000});

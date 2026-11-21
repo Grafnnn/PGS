@@ -1,0 +1,294 @@
+/* 1.0.17 П-3/П-4 · «Ход работ»: вкладка на главной (.apg-*) и страница PROGRESS.html (.pg-*). Только токены (tokens.css, Д-1).
+   1.0.19a: Т-3 — подпись шкалы снаружи заливки, рамка у образцов, зелёный текст — --c-done-text; Б6 — цели ≥ 56 px и шрифт ≥ 16 px на сенсоре и узком экране,
+   «Снять» отдельно (≥ 16 px), свёрнутая шторка ≤ 30 % высоты; строка «Записано · Отменить»; плашки состояний; ошибки — с кнопками «Закрыть» / «Повторить». */
+
+/* ---------- страница PROGRESS.html ---------- */
+.pg .page-head { align-items: flex-start; }
+.pg-bar[hidden] { display: none; }
+.pg-bar { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 0 0 12px; padding: 8px 12px; border-radius: var(--r); background: var(--c-surface-2); font-size: var(--fs-13); color: var(--c-text-2); }
+.pg-warn { color: var(--c-sig-high-text); }
+.pg-ok { color: var(--c-done-text); }
+.pg-bad { color: var(--c-sig-high-text); }
+.pg-tabs { margin: 0 0 16px; }
+.pg-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.pg-toolbar { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; align-items: center; margin: 0 0 12px; }
+.pg-plan-head { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.pg-badge { display: inline-flex; align-items: center; height: 24px; padding: 0 10px; border-radius: var(--r-pill); font-size: var(--fs-13); font-weight: 600; }
+.pg-badge--ok { background: var(--c-done-bg); color: var(--c-done-text); }
+.pg-badge--draft { background: var(--c-partial-bg); color: var(--c-partial-text); }
+.pg-card { padding: 12px 16px; margin: 0 0 12px; }
+.pg-card h2, .pg-h2 { font-size: var(--fs-16); margin: 16px 0 8px; }
+.pg-card h2 { margin-top: 0; }
+.pg-check ul { margin: 8px 0 0; padding-left: 20px; font-size: var(--fs-13); }
+.pg-stages { list-style: none; margin: 0 0 12px; padding: 0; display: grid; gap: 8px; }
+.pg-stage { padding: 10px 14px; display: grid; gap: 6px; }
+.pg-stage--cur { border-color: var(--c-brand); box-shadow: 0 0 0 1px var(--c-brand); }
+.pg-stage-h { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.pg-stage-n { font-size: var(--fs-12); color: var(--c-text-2); }
+.pg .code, .apg .code, .apg-pop .code { font-family: var(--font-mono); font-size: var(--fs-12); color: var(--c-text-2); }
+.pg-order { color: var(--c-text-2); }
+.pg-empty strong { font-size: var(--fs-16); }
+.pg-save { display: inline-flex; align-items: center; gap: 6px; color: var(--c-sig-high-text); font-weight: 600; }
+.pg-more { position: relative; }
+.pg-more > summary { list-style: none; cursor: pointer; }
+.pg-more > summary::-webkit-details-marker { display: none; }
+.pg-more-l { position: absolute; right: 0; top: calc(100% + 4px); z-index: 20; display: grid; gap: 6px; padding: 8px; min-width: 200px; background: var(--c-surface); border: 1px solid var(--c-line-mid); border-radius: var(--r); box-shadow: var(--shadow-2); }
+.pg-journal-h { justify-content: space-between; margin: 0 0 8px; }
+.pg-journal-h p { margin: 0; }
+.pg-acc-l { margin: 0 0 10px; padding-left: 20px; }
+.pg-sheet-h { margin-top: 0; }
+.pg-stage-t { flex: 1 1 220px; min-width: 0; font: 600 var(--fs-14)/1.3 var(--font); }
+input.pg-stage-t { height: 34px; padding: 0 8px; border: 1px solid var(--c-line); border-radius: var(--r-s); background: var(--c-surface); color: var(--c-text); }
+.pg-stage-m { font-size: var(--fs-13); display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.pg-after { width: 160px; height: 28px; padding: 0 6px; border: 1px solid var(--c-line); border-radius: var(--r-s); font: var(--fs-13) var(--font-mono); background: var(--c-surface); color: var(--c-text); }
+.pg-meter { display: inline-flex; align-items: center; gap: 8px; }
+.pg-meter-bar { position: relative; display: inline-block; width: 140px; height: 12px; border-radius: var(--r-pill); background: var(--c-surface-2); overflow: hidden; border: 1px solid var(--c-line-strong); }
+.pg-meter-bar i { position: absolute; inset: 0 auto 0 0; background: var(--c-done); }
+/* Т-3: подпись — снаружи заливки, обычным текстом (контраст как у текста страницы) */
+.pg-meter b { min-width: 64px; font-size: var(--fs-13); font-weight: 600; color: var(--c-text); white-space: nowrap; }
+.pg-move .pbtn { width: 36px; padding: 0; }
+.pg-comp { display: grid; gap: 8px; padding-top: 6px; border-top: 1px solid var(--c-line); }
+.pg-comp input[type="search"], .pg-comp textarea { width: 100%; box-sizing: border-box; padding: 6px 8px; border: 1px solid var(--c-line-mid); border-radius: var(--r-s); font: var(--fs-13) var(--font); background: var(--c-surface); color: var(--c-text); }
+.pg-ids { list-style: none; margin: 0; padding: 0; max-height: 260px; overflow: auto; font-size: var(--fs-13); }
+.pg-ids li { display: flex; gap: 8px; align-items: center; padding: 3px 0; border-bottom: 1px solid var(--c-line); }
+.pg-x { margin-left: auto; width: 28px; height: 28px; border: 1px solid var(--c-line); border-radius: var(--r-s); background: var(--c-surface); color: var(--c-text-2); cursor: pointer; }
+.pg-filters { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: flex-end; margin: 0 0 12px; }
+.pg-f { display: grid; gap: 4px; font-size: var(--fs-12); color: var(--c-text-2); }
+.pg-f input, .pg-f select, .pg-filters > input, .pg-filters > select { height: 36px; padding: 0 8px; border: 1px solid var(--c-line-strong); border-radius: var(--r-s); font: var(--fs-14) var(--font); background: var(--c-surface); color: var(--c-text); box-sizing: border-box; }
+.pg-f--q input { width: 220px; }
+.pg-chk { display: inline-flex; gap: 6px; align-items: center; height: 36px; font-size: var(--fs-13); }
+.pg-seg { display: inline-flex; gap: 2px; padding: 3px; border-radius: var(--r); background: var(--c-surface-2); border: 1px solid var(--c-line); }
+.pg-seg button { height: 32px; padding: 0 12px; border: 0; border-radius: var(--r-s); background: transparent; font: 500 var(--fs-13)/1 var(--font); color: var(--c-text-2); cursor: pointer; }
+.pg-seg button[aria-pressed="true"] { background: var(--c-surface); color: var(--c-text); font-weight: 600; box-shadow: var(--shadow-1); }
+.pg-tablebox { overflow-x: auto; margin: 0 0 12px; }
+.pg-table { width: 100%; border-collapse: collapse; font-size: var(--fs-13); }
+.pg-table th { text-align: left; font-weight: 600; color: var(--c-text-2); padding: 8px 10px; border-bottom: 1px solid var(--c-line-mid); white-space: nowrap; position: sticky; top: 0; background: var(--c-surface); }
+.pg-table td { padding: 6px 10px; border-bottom: 1px solid var(--c-line); vertical-align: top; }
+.pg-table td.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pg-table .pg-id { font-size: var(--fs-12); word-break: break-all; }
+.pg-tr--conf td { background: var(--c-conflict-bg); }
+.pg-act { white-space: nowrap; }
+.pg-act .pbtn { margin: 0 4px 4px 0; }
+.pg-op { display: inline-block; padding: 1px 8px; border-radius: var(--r-pill); font-size: var(--fs-12); font-weight: 600; background: var(--c-surface-2); color: var(--c-text-2); }
+.pg-op--done { background: var(--c-done-bg); color: var(--c-done-text); }
+.pg-op--partial { background: var(--c-partial-bg); color: var(--c-partial-text); }
+.pg-op--confirm { background: var(--c-confirmed-bg); color: var(--c-confirmed-text); }
+.pg-op--reject { background: var(--c-sig-high-bg); color: var(--c-sig-high-text); }
+.pg-conf-mark--confirmed { color: var(--c-confirmed); font-weight: 700; }
+.pg-conf-mark--rejected { color: var(--c-sig-high); font-weight: 700; }
+.pg-confs { border-color: var(--c-conflict); }
+.pg-conf { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; padding: 6px 0; border-top: 1px solid var(--c-line); font-size: var(--fs-13); }
+.pg-dlg { border: 1px solid var(--c-line-mid); border-radius: var(--r-l); padding: 20px; min-width: 300px; max-width: min(440px, calc(100vw - 32px)); background: var(--c-surface); color: var(--c-text); box-shadow: var(--shadow-3); }
+.pg-dlg::backdrop { background: var(--c-overlay); }
+.pg-dlg h2 { margin: 0 0 8px; font-size: var(--fs-16); }
+.pg-dlg .pg-f { margin: 0 0 10px; }
+.pg-dlg .pg-f input, .pg-dlg .pg-f select { width: 100%; }
+.pg-toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 60; width: max-content; box-sizing: border-box; max-width: min(640px, calc(100vw - 32px)); padding: 10px 16px; border-radius: var(--r); background: var(--c-text); color: var(--c-surface); font-size: var(--fs-14); box-shadow: var(--shadow-2); display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.pg-toast--bad { background: var(--c-sig-high-text); color: var(--c-surface); }
+.pg-toast-msg { flex: 1 1 260px; }
+.pg-toast-btn, .apg-toast-btn, .apg-undo-btn { min-height: 36px; padding: 0 12px; border: 1px solid currentColor; border-radius: var(--r-s); background: transparent; color: inherit; font: 600 var(--fs-14)/1 var(--font); cursor: pointer; }
+.pg-toast[hidden] { display: none; }
+/* круг 4 (Л2): кнопка «Кто отмечает» с длинной подписью («… · вход не подтверждён сервером») — переносится, не шире экрана (у .pbtn nowrap и высота 40) */
+.pg-user { white-space: normal; height: auto; min-height: 40px; max-width: 100%; padding-top: 6px; padding-bottom: 6px; line-height: 1.25; text-align: left; overflow-wrap: anywhere; }
+@media (max-width: 850px) {
+  .pg-user { min-height: var(--target); }
+  .pg-f input, .pg-f select, .pg-filters > input, .pg-filters > select { height: auto; min-height: 44px; }   /* круг 2 (B-07): поля «Период с / по» и отбора на телефоне ≥ 44 px */
+  .pg-toast { bottom: calc(var(--tabbar-h, 64px) + 12px); }
+  .pg-f--q input { width: 100%; }
+  .pg-f--q { flex: 1 1 100%; }
+  .pg-meter { width: 110px; }
+  .pg-stage-t { flex-basis: 100%; }
+  .pg-after { width: 120px; min-height: 36px; }
+  .pg-chk { min-height: 44px; }
+}
+
+/* ---------- вкладка «Ход работ» на главной ---------- */
+.apg { position: absolute; z-index: 30; top: 12px; left: 12px; width: 320px; max-height: calc(100% - 24px); overflow: auto; box-sizing: border-box; padding: 12px 14px; display: grid; gap: 10px;
+  background: var(--c-surface); color: var(--c-text); border: 1px solid var(--c-line-mid); border-radius: var(--r-l); box-shadow: var(--shadow-2); font: var(--fs-13)/1.35 var(--font); }
+.apg[hidden] { display: none; }
+.apg > * { min-width: 0; }
+.apg select, .apg input { min-width: 0; }
+.apg-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.apg-head h2 { margin: 0; font-size: var(--fs-16); font-weight: 700; }
+.apg-x { width: 32px; height: 32px; border: 1px solid var(--c-line); border-radius: var(--r-s); background: var(--c-surface); color: var(--c-text-2); font-size: 18px; line-height: 1; cursor: pointer; }
+.apg-head h2 { flex: 1 1 auto; }
+.apg-head h2:focus { outline: none; }
+.apg-head h2:focus-visible { outline: 2px solid var(--c-brand); outline-offset: 2px; }
+.apg-fold { display: none; }
+.apg-sr { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.apg-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.apg select, .apg-sel, .apg input[type="date"], .apg-pop input, .apg-pop select, .apg-dlg input, .apg-dlg select { height: 32px; padding: 0 6px; border: 1px solid var(--c-line-mid); border-radius: var(--r-s); background: var(--c-surface); color: var(--c-text); font: var(--fs-13) var(--font); box-sizing: border-box; max-width: 100%; }
+.apg > .apg-row > select { flex: 1 1 0; min-width: 0; width: 100%; }
+.apg-date { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 8px; align-items: center; }
+.apg-date input[type="date"] { width: 100%; }
+.apg-date input[type="range"] { grid-column: 1 / -1; width: 100%; margin: 0; box-sizing: border-box; accent-color: var(--c-brand); }
+.apg-lbl { font-size: var(--fs-12); color: var(--c-text-2); }
+.apg-secs summary { cursor: pointer; font-weight: 600; }
+.apg-secs-l { display: grid; gap: 2px; max-height: 180px; overflow: auto; padding: 4px 0; }
+.apg-secs-l label { display: flex; gap: 6px; align-items: center; }
+.apg-sum { display: grid; gap: 4px; padding: 8px 10px; border-radius: var(--r); background: var(--c-surface-2); }
+.apg-pct b { font-size: var(--fs-20); }
+.apg-legend { display: flex; flex-wrap: wrap; gap: 4px 10px; }
+.apg-leg { display: inline-flex; align-items: center; gap: 4px; font-size: var(--fs-12); }
+.apg-leg i { width: 10px; height: 10px; border-radius: 2px; background: color-mix(in srgb, var(--c-pending) 45%, transparent); box-sizing: border-box; border: 1px solid var(--c-text-2); }   /* Т-3: рамка 1 px — образец ≥ 3:1 к подложке; «не начато» — полупрозрачная заливка без прозрачности рамки */
+.apg-leg--done i { background: var(--c-done); opacity: 1; }
+.apg-leg--day i { background: var(--c-done-day); opacity: 1; }
+.apg-leg--partial i { background: var(--c-partial); opacity: 1; }
+.apg-leg--conflict i { background: var(--c-conflict); opacity: 1; }
+.apg-btn { height: 32px; padding: 0 10px; border: 1px solid var(--c-line-mid); border-radius: var(--r-s); background: var(--c-surface); color: var(--c-text); font: 600 var(--fs-13)/1 var(--font); cursor: pointer; white-space: nowrap; }
+a.apg-btn { display: inline-flex; align-items: center; text-decoration: none; box-sizing: border-box; }
+.apg-btn--on { border-color: var(--c-brand); background: var(--c-brand-tint); color: var(--c-brand); }
+.apg-btn--done { border-color: var(--c-done-text); background: var(--c-done-text); color: var(--c-surface); }   /* Т-3: --c-done (4,32:1) — только заливки; кнопка — по --c-done-text */
+.apg-btn--partial { border-color: var(--c-partial); background: var(--c-partial-bg); color: var(--c-partial-text); }
+.apg .apg-link, .apg-link { border: 0; background: none; padding: 0; color: var(--c-link); font: var(--fs-13) var(--font); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+.apg-foot { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; padding-top: 6px; border-top: 1px solid var(--c-line); }
+.apg-muted { color: var(--c-text-2); font-size: var(--fs-12); }
+.apg-warn { color: var(--c-sig-high-text); font-size: var(--fs-12); }
+.apg-banner { display: block; padding: 6px 8px; border-radius: var(--r-s); background: var(--c-sig-high-bg); color: var(--c-sig-high-text); font-weight: 600; }
+.apg-chip { display: inline-flex; align-items: center; height: 24px; padding: 0 10px; border-radius: var(--r-pill); background: var(--c-done-bg); color: var(--c-done-text); font-size: var(--fs-12); font-weight: 600; }
+.apg-chip--wait { background: var(--c-partial-bg); color: var(--c-partial-text); }
+.apg-more summary { cursor: pointer; color: var(--c-text-2); font-size: var(--fs-12); }
+.apg-save { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; width: 100%; }
+.apg-order { color: var(--c-text-2); }
+.apg-chips { gap: 6px; }
+.apg-chip-btn { height: 32px; padding: 0 10px; border: 1px solid var(--c-line-strong); border-radius: var(--r-pill); background: var(--c-surface); color: var(--c-text); font: 500 var(--fs-13)/1 var(--font); cursor: pointer; }
+.apg-chip-btn[aria-pressed="true"] { border-color: var(--c-brand); background: var(--c-brand-tint); color: var(--c-link); font-weight: 600; }
+.apg-undo-row { margin-top: 16px; padding-top: 10px; border-top: 1px solid var(--c-line); }   /* Б6: «Снять» — отдельной строкой, ≥ 16 px от «Выполнено» */
+.apg-btn--undo { color: var(--c-sig-high-text); }
+.apg-risk-l { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
+.apg-chk { display: flex; gap: 8px; align-items: center; }
+.apg-undo { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 72; display: flex; gap: 12px; align-items: center; width: max-content; max-width: min(560px, calc(100vw - 32px)); box-sizing: border-box; padding: 8px 8px 8px 16px; border-radius: var(--r); background: var(--c-text); color: var(--c-surface); font: var(--fs-14) var(--font); box-shadow: var(--shadow-2); }
+.apg-undo[hidden] { display: none; }
+.apg-toast-msg { flex: 1 1 240px; }
+.apg-note { margin: 0; }
+.apg-pop { position: absolute; z-index: 40; width: 300px; box-sizing: border-box; padding: 10px 12px; display: grid; gap: 8px; background: var(--c-surface); color: var(--c-text); border: 1px solid var(--c-line-strong); border-radius: var(--r-l); box-shadow: var(--shadow-3); font: var(--fs-13)/1.35 var(--font); }
+.apg-pop-h { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; }
+.apg-pop-h b { overflow-wrap: anywhere; }
+.apg-pop > input { width: 100%; }
+.apg-pop--dock { left: 344px; top: 12px; }
+.apg-id { font-family: var(--font-mono); word-break: break-all; }
+.apg-num { width: 72px; }
+.apg-f { display: grid; gap: 3px; }
+.apg-f > span { font-size: var(--fs-12); color: var(--c-text-2); }
+.apg-rect { position: absolute; z-index: 35; border: 1.5px dashed var(--c-brand); background: color-mix(in srgb, var(--c-brand) 10%, transparent); pointer-events: none; }
+.apg-rect[hidden] { display: none; }
+body.apg-marking .stage canvas { cursor: crosshair; }
+.apg-dlg { border: 1px solid var(--c-line-mid); border-radius: var(--r-l); padding: 18px; width: min(360px, calc(100vw - 32px)); box-sizing: border-box; background: var(--c-surface); color: var(--c-text); display: grid; gap: 10px; }
+.apg-dlg::backdrop { background: var(--c-overlay); }
+.apg-dlg h2 { margin: 0; font-size: var(--fs-16); }
+.apg-dlg input, .apg-dlg select { width: 100%; }
+.apg-toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 70; width: max-content; box-sizing: border-box; max-width: min(560px, calc(100vw - 32px)); padding: 10px 16px; border-radius: var(--r); background: var(--c-text); color: var(--c-surface); font: var(--fs-14) var(--font); box-shadow: var(--shadow-2); display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.apg-toast--bad { background: var(--c-sig-high-text); color: var(--c-surface); }
+.apg-toast[hidden] { display: none; }
+@media (max-width: 850px) {
+  /* телефон — нижняя шторка поверх свёрнутой «Сводки» (как легенда «Замечаний»): z 40 над #right (35), свёрнутая сводка скрыта */
+  .apg { top: auto; bottom: 0; left: 0; right: 0; width: auto; max-height: 55%; padding: 10px 12px 12px; z-index: 40; border-radius: var(--r-xl) var(--r-xl) 0 0; border-bottom: 0; }
+  body.apg-on #right.open:not(.expanded) { visibility: hidden; pointer-events: none; }
+  /* осмотр D 21.10: действия — сразу под заголовком (на 390 видны без прокрутки шторки), отступ снизу над нижней панелью */
+  #apg { padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px)); scroll-padding-bottom: 16px; }
+  #apg > .apg-head { order: -2; }
+  #apg > .apg-acts { order: -1; }
+  .apg-fold { display: inline-flex; align-items: center; justify-content: center; }
+  /* Б6: свёрнутая шторка — заголовок, итог и «Отмечать»; не выше 30 % экрана (модель над ней) */
+  #apg.apg--folded { max-height: 30%; overflow: hidden; }
+  #apg.apg--folded > :not(.apg-head):not(.apg-sum):not(.apg-acts):not(.apg-foot), #apg.apg--folded > .apg-batch { display: none; }
+  #apg.apg--folded > .apg-foot > :not(.apg-save) { display: none; }
+  #apg.apg--folded .apg-sum > :not(.apg-pct) { display: none; }
+  #apg.apg--folded .apg-sum { padding: 6px 8px; }
+  body.apg-on.apg-folded #atlasMain .stage .zoom-controls { bottom: calc(30% + 12px); }
+  /* цели ≥ 44 × 44: селектор с #apg — глобальные правила главной для кнопок телефона (min-height 36) сильнее классов */
+  #apg :is(button, select, input[type="date"], a.apg-btn), .apg-pop :is(button, select, input), .apg-dlg :is(button, select, input, a) { min-height: 44px; }
+  #apg .apg-x, .apg-pop .apg-x { min-width: 44px; min-height: 44px; }
+  #apg .apg-secs summary { min-height: 44px; display: flex; align-items: center; }
+  #apg .apg-secs-l label { min-height: 44px; }
+  #apg .apg-secs-l input[type="checkbox"] { width: 20px; height: 20px; }
+  #apg input[type="range"] { min-height: 44px; }
+  body.apg-on #atlasMain .stage .zoom-controls { bottom: calc(55% + 12px); }
+  .apg-btn, .apg select, .apg-sel, .apg input[type="date"], .apg-x, .apg-pop input, .apg-dlg input, .apg-dlg select { min-height: 44px; }
+  .apg-link { min-height: 44px; display: inline-flex; align-items: center; }
+  .apg-pop, .apg-pop--dock { left: 0; right: 0; top: auto; bottom: 0; width: auto; max-height: 75%; overflow: auto; z-index: 45; border-radius: var(--r-xl) var(--r-xl) 0 0; }
+  .apg-toast { bottom: calc(var(--tabbar-h, 64px) + 12px); }
+  /* строка «Записано · Отменить» и сообщения — слева, правый край свободен для плавающих кнопок модели (вписать, линейка) */
+  .apg-undo, .apg-toast { left: 12px; transform: none; max-width: calc(100vw - 84px); }
+}
+
+/* r2, Д8: на главной `.atlas-prototype :is(button, input, select)` (prototype.css, 0,1,1) перебивал цвета кнопок — те же правила со специфичностью 0,2,0 */
+:is(body, .atlas-prototype) .apg-btn { background: var(--c-surface); color: var(--c-text); border: 1px solid var(--c-line-mid); border-radius: var(--r-s); font-size: var(--fs-13); }
+:is(body, .atlas-prototype) .apg-btn--on { border-color: var(--c-brand); background: var(--c-brand-tint); color: var(--c-brand); }
+:is(body, .atlas-prototype) .apg-btn--done { border-color: var(--c-done-text); background: var(--c-done-text); color: var(--c-surface); }
+:is(body, .atlas-prototype) .apg-btn--partial { border-color: var(--c-partial); background: var(--c-partial-bg); color: var(--c-partial-text); }
+:is(body, .atlas-prototype) .apg-x { background: var(--c-surface); color: var(--c-text-2); border: 1px solid var(--c-line); }
+:is(body, .atlas-prototype) .apg .apg-link, :is(body, .atlas-prototype) .apg-link { border: 0; background: none; color: var(--c-link); }
+
+/* 1.0.19a, Б6 «для перчаток»: сенсорный экран или узкое окно — цели ≥ 56 px, шрифт ≥ 16 px (окно отметки, окно подтверждения, главные кнопки панели) */
+@media (pointer: coarse), (max-width: 850px) {
+  .apg-pop .apg-btn, .apg-pop .apg-chip-btn, .apg-pop input, .apg-pop select, .apg-dlg .apg-btn, .apg-dlg input, .apg-dlg select, #apg .apg-acts .apg-btn, #apg .apg-save .apg-btn, #apg .apg-scope select { min-height: 56px; font-size: var(--fs-16); }
+  :is(body, .atlas-prototype) .apg-pop .apg-btn, :is(body, .atlas-prototype) .apg-dlg .apg-btn, :is(body, .atlas-prototype) #apg .apg-acts .apg-btn, :is(body, .atlas-prototype) #apg .apg-save .apg-btn { font-size: var(--fs-16); }
+  .apg-pop .apg-x, #apg .apg-head .apg-x { min-width: 56px; min-height: 56px; }
+  :is(body, .atlas-prototype) .apg-pop .apg-x, :is(body, .atlas-prototype) #apg .apg-head .apg-x { font-size: 22px; }
+  .apg-pop .apg-main .apg-btn--done { flex: 1 1 100%; }
+  .apg-pop { font-size: var(--fs-16); }
+  :is(body, .atlas-prototype) .apg-undo-btn, :is(body, .atlas-prototype) .apg-toast-btn { min-height: 48px; }   /* круг 2 (B-04): иначе на главной перебивает .atlas-prototype button (36 px) */
+  .apg-pop .apg-num { width: 88px; }
+}
+
+/* 1.0.19a, решение владельца 13: КС, RFI, PGS — с расшифровкой в подсказке (<abbr title>, h() панели и PROGRESS) */
+.apg-abbr[title] { text-decoration: underline dotted; text-decoration-thickness: 1px; text-underline-offset: 2px; cursor: help; }
+:is(button, a) .apg-abbr[title] { cursor: inherit; }
+/* круг 4: расшифровка по фокусу и касанию (abbrTip в atlas-progress.js и progress-page.js) */
+.apg-abbr[tabindex]:focus-visible { outline: 2px solid var(--c-brand); outline-offset: 2px; border-radius: 2px; }
+.apg-abbr-tip { position: fixed; z-index: 95; max-width: min(360px, calc(100vw - 16px)); box-sizing: border-box; padding: 8px 12px; border-radius: var(--r-s); background: var(--c-text); color: var(--c-surface); font: var(--fs-14)/1.4 var(--font); pointer-events: none; }
+.apg-abbr-tip[hidden] { display: none; }
+/* круг 3: флажок «Снять и принятые» в окне подтверждения — 24 px (правило целей 44/56 px растягивало его в квадрат 56×56); цель нажатия — вся строка-подпись */
+.apg-dlg .apg-chk, .apg-pop .apg-chk { min-height: 44px; cursor: pointer; }
+.apg-dlg .apg-chk input[type="checkbox"], .apg-pop .apg-chk input[type="checkbox"] { min-height: 0; width: 24px; height: 24px; margin: 0; flex: none; }
+@media (pointer: coarse), (max-width: 850px) { .apg-dlg .apg-chk, .apg-pop .apg-chk { min-height: 56px; } }
+
+/* 1.0.20 (§5.2): «Ещё ▾» вкладок PROGRESS — только при ключе modes; чипы фильтров «Истории отметок» (only=fix, lot=) — только при этих параметрах адреса */
+.pg-tabs-more { display: inline-block; vertical-align: top; margin: 0 0 16px 8px; }
+.pg-tabs-more > summary { min-height: 36px; }
+.pg-tabs-more .pg-more-l { max-width: calc(100vw - 32px); }   /* меню — от правого края «Ещё ▾», как .pg-more: на 390 не выходит за экран */
+.pg-fchips { margin: 0 0 8px; }
+.pg-fchip { display: inline-flex; align-items: center; gap: 6px; padding: 2px 4px 2px 10px; border: 1px solid var(--c-line-mid); border-radius: 999px; background: var(--c-surface); }
+@media (max-width: 600px) { .pg-tabs-more > summary, .pg-tabs-more .pg-more-l .pbtn, .pg-fchip .pbtn { min-height: 44px; min-width: 44px; } }
+@media (pointer: coarse) { .pg-tabs-more > summary, .pg-tabs-more .pg-more-l .pbtn, .pg-fchip .pbtn { min-height: 56px; } }
+/* 1.0.20 (§6.5): вкладка «Принять» — только при ключе modes (вкладка модуля accept); пакеты «автор × дата работ × зона» */
+.pg-acc-mass .pg-acc-l, .pg-pkg .pg-acc-l { margin: 8px 0; }
+.pg-pkgs { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr)); gap: 12px; margin: 0 0 16px; }
+.pg-pkg { margin: 0; }
+.pg-pkg-h { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 0 0 4px; font-size: var(--fs-15, 15px); line-height: 1.35; overflow-wrap: anywhere; }
+.pg-acc-more > summary { cursor: pointer; display: inline-flex; align-items: center; min-height: 32px; }
+.pg-acc-more > summary::before { content: '▸'; margin-right: 6px; } .pg-acc-more[open] > summary::before { content: '▾'; }
+.pg-acc-more .pg-ids { max-height: 240px; overflow: auto; }
+@media (max-width: 600px) { .pg-pkg .pbtn, .pg-acc-mass .pbtn, .pg-acc-need .pbtn, .pg-acc-more > summary { min-height: 44px; min-width: 44px; } }
+@media (pointer: coarse) { .pg-pkg .pbtn, .pg-acc-mass .pbtn, .pg-acc-need .pbtn, .pg-acc-more > summary { min-height: 56px; } }
+
+/* 1.0.20, §14 и §6.5 п. 3–4: закрытое меню при modes — список hidden; окно причин; «Принято за 7 дней»; «приёмка снята»; «К исправлению» */
+.pg-more-l[hidden] { display: none; }
+.pg-more-sep { margin: 2px 0; border: 0; border-top: 1px solid var(--c-line-mid); }
+.pg-whys { flex-wrap: wrap; gap: 8px; margin: 0 0 10px; }
+.pg-why[aria-pressed="true"] { background: var(--c-accent, #1f5fbf); border-color: var(--c-accent, #1f5fbf); color: #fff; }
+.pg-why[aria-pressed="true"]::before { content: '✓ '; }
+.pg-reason .pg-f input { min-height: 40px; width: 100%; }
+.pg-acc-done { margin: 0 0 16px; }
+.pg-acc-done > summary { cursor: pointer; font-weight: 600; min-height: 32px; display: flex; align-items: center; }
+.pg-acc-done .pg-acc-done-l { position: static; box-shadow: none; border: 0; padding: 8px 0 0; min-width: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr)); gap: 12px; }
+.pg-wd, .pg-fixinfo { color: var(--c-warn-text, #8a4b00); }
+.pg-fixinfo { display: block; margin: 0 0 4px; max-width: 320px; overflow-wrap: anywhere; }
+@media (max-width: 600px) { .pg-reason .pbtn, .pg-acc-done > summary, .pg-acc-done .pbtn, .pg-act .pbtn--primary { min-height: 44px; min-width: 44px; } }
+@media (pointer: coarse) { .pg-reason .pbtn, .pg-acc-done > summary, .pg-acc-done .pbtn { min-height: 56px; } }
+.pg-acc-done .pg-acc-done-l[hidden], .pg-reason .pg-f[hidden] { display: none; }
+
+/* П3-1 (1.0.20, §6.5 п. 8): на сенсоре (pointer: coarse) цели PROGRESS при ключе modes — ≥ 56 px, шрифт ≥ 16 px. Только под меткой body.pg-modes:
+   её ставит progress-page.js лишь при AtlasShell.modesOn() — без ключа правило ни к чему не применяется (0 px, как 1.0.19). Охват: окна «Кто отмечает», «Принять…»,
+   «Вернуть», «Снять приёмку» (.pg-dlg), вкладки и «Ещё ▾», шапка страницы и плашка, экран «Принять» (#pgBody вкладки accept), чипы фильтров «Истории отметок».
+   !important — иначе на ≤ 850 px перебивают общие правила оболочки (atlas-pages.css: body.has-shell .pbtn — 44 px, html body.has-shell :is(…) — 44 px, шрифт 14). */
+@media (pointer: coarse) {
+  html body.pg-modes .pg-dlg :is(button, .pbtn, select, summary, input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"])),
+  html body.pg-modes #pgTabs [role="tab"],
+  html body.pg-modes #pgTabsMore :is(summary, .pbtn),
+  html body.pg-modes #pgActions :is(.pbtn, summary),
+  html body.pg-modes #pgBar .pbtn,
+  html body.pg-modes #pgBody[aria-labelledby="pgTab-accept"] :is(.pbtn, summary),
+  html body.pg-modes #pgBody .pg-fchip .pbtn { min-height: 56px !important; min-width: 56px !important; font-size: var(--fs-16, 16px) !important; }
+}

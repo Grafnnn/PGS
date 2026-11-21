@@ -1,0 +1,158 @@
+/* 3D Атлас · страница «Замечания к РД» по макету «Стало · Замечания к РД». Только токены. */
+body.remarks-page { box-sizing: border-box; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
+.remarks { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: 16px; }
+.remarks .page-head { margin: 0; }
+.rfilters { display: flex; flex-direction: column; gap: 10px; }
+.frow { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.flabel { flex: none; width: 88px; font-size: var(--fs-13); color: var(--muted); }
+.chips { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.chip { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px; border: 1px solid var(--line-strong); border-radius: var(--radius-pill);
+        background: var(--surface); color: var(--ink); font: 600 var(--fs-13)/1 var(--font); cursor: pointer; white-space: nowrap; }
+.chip .chip-n { font-weight: 500; color: var(--muted); }
+.chip.is-on { background: var(--brand); border-color: var(--brand); color: #FFFFFF; }
+.chip.is-on .chip-n { color: #FFFFFF; }
+#priChips .chip.is-on { background: var(--brand-tint); border-color: var(--brand); color: var(--ink); }
+#priChips .chip.is-on .chip-n { color: var(--muted); }
+.dot { width: 8px; height: 8px; border-radius: var(--radius-pill); background: var(--sig-low); }
+.dot--high { background: var(--sig-high); } .dot--mid { background: var(--sig-mid); } .dot--low { background: var(--sig-low); }
+.rsearch { margin-left: auto; display: flex; align-items: center; gap: 8px; width: 300px; height: 38px; box-sizing: border-box; padding: 0 12px;
+           border: 1px solid var(--c-line-strong);   /* 1.0.19a Т-1: рамка обёртки поля ≥3:1 (было --line-strong = --c-line-mid, 1,59:1) */ border-radius: var(--radius); background: var(--surface); color: var(--muted); }
+.rsearch input { flex: 1 1 auto; min-width: 0; border: 0; background: transparent; font: 400 var(--fs-14)/1 var(--font); color: var(--ink); outline: none; }
+.vsep { width: 1px; height: 22px; background: var(--line-strong); margin: 0 6px; }
+.fselect { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 4px 0 12px; border: 1px solid var(--c-line-strong);   /* 1.0.19a Т-1 */ border-radius: var(--radius);
+           background: var(--surface); font-size: var(--fs-13); color: var(--ink); }
+.fselect > span { color: var(--muted); }
+.fselect select { border: 0; background: transparent; font: 400 var(--fs-13)/1 var(--font); color: var(--ink); height: 32px; padding: 0 4px; max-width: 250px; }
+.elfilter { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 4px 0 12px; border-radius: var(--radius-pill); background: var(--brand-tint); font-size: var(--fs-13); color: var(--brand); }
+.elfilter button { width: 28px; height: 28px; border: 0; border-radius: var(--radius-pill); background: transparent; color: var(--brand); font-size: 18px; cursor: pointer; }
+.elfilter[hidden] { display: none; }
+.shown { margin-left: auto; font-size: var(--fs-13); color: var(--muted); white-space: nowrap; }
+.rgrid { flex: 1 1 auto; min-height: 0; display: flex; gap: 20px; }
+.rlist { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
+.rhead, .rrow { display: grid; grid-template-columns: 86px 118px minmax(0, 1fr) 190px; gap: 12px; }
+.rhead { padding: 10px 16px; border-bottom: 1px solid var(--line); font-size: var(--fs-12); font-weight: 600; color: var(--muted); background: var(--surface-soft); }
+.rrows { flex: 1 1 auto; overflow-y: auto; }
+.rrow { width: 100%; align-items: start; padding: 12px 16px; margin: 0; border: 0; border-bottom: 1px solid #EEF1F5; background: var(--surface); text-align: left; color: var(--ink); cursor: pointer; font: inherit; }
+.rrow:hover { background: var(--page); }
+.rrow[aria-pressed="true"] { background: var(--brand-tint); }
+.rrow[aria-pressed="true"] .rid { color: var(--brand); }
+.rid { font-size: var(--fs-13); font-weight: 600; color: var(--ink); padding-top: 2px; }
+.rtext { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.rwhat { font-size: var(--fs-14); line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.rmeta { font-size: var(--fs-12); color: var(--muted); }
+.rsheet { font-size: var(--fs-13); line-height: 1.4; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; padding-top: 1px; }
+.rempty { padding: 48px 16px; text-align: center; font-size: var(--fs-14); color: var(--muted); margin: 0; }
+.rempty--reset { display: flex; flex-direction: column; align-items: center; gap: 12px; }   /* 1.0.19a к2: текст и «Сбросить» под ним */
+.rdetail { width: 460px; flex: none; box-sizing: border-box; display: flex; flex-direction: column; gap: 14px; padding: 20px; overflow-y: auto; }
+.rback { display: none; }
+.dhead { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.did { font-size: 15px; font-weight: 600; color: var(--brand); }
+.dpill { padding: 2px 8px; border-radius: var(--radius-pill); background: #F2F4F7; font-size: var(--fs-12); font-weight: 500; }
+.dstatus { margin-left: auto; font-size: var(--fs-12); color: var(--muted); }
+.dwhat { font-size: 18px; font-weight: 600; line-height: 1.4; }
+.dgrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding: 12px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.dgrid > div, .dblock { display: flex; flex-direction: column; gap: 4px; }
+.dlabel { font-size: var(--fs-12); font-weight: 600; color: var(--muted); }
+.dvalue { font-size: var(--fs-14); font-weight: 500; }
+.dtext { font-size: var(--fs-14); line-height: 1.45; }
+.dtodo { padding: 12px; border-radius: var(--radius); background: #F0F6F9; }
+.dtodo .dlabel { color: var(--brand); }
+.dbtns { display: flex; gap: 8px; margin-top: auto; padding-top: 4px; }
+.lbtn { position: relative; flex: 1 1 0; display: flex; }
+.lbtn .pbtn { flex: 1 1 auto; height: 44px; padding: 0 8px; }
+.lbtn .pbtn[disabled] { font-size: var(--fs-12); white-space: normal; line-height: 1.2; text-align: center; }
+.lpop { position: absolute; bottom: 50px; left: 0; min-width: 260px; max-width: 360px; z-index: 20; display: flex; flex-direction: column; padding: 6px;
+        background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-l); box-shadow: 0 16px 40px rgba(28, 28, 30, 0.16); }
+.lpop[hidden] { display: none; }
+.lpop a { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: var(--radius); text-decoration: none; font-size: var(--fs-14); }
+.lpop a:hover { background: var(--page); }
+.lpop small { font-size: var(--fs-12); color: var(--muted); }
+.dfoot { display: flex; flex-direction: column; gap: 4px; font-size: var(--fs-12); color: var(--muted); }
+.dfoot .mono { color: var(--ink); }
+@media (max-width: 1200px) {
+  .rdetail { width: 400px; }
+  .rhead, .rrow { grid-template-columns: 76px 110px minmax(0, 1fr); }
+  .rhead span:last-child, .rsheet { display: none; }
+}
+@media (max-width: 850px) {
+  body.remarks-page { height: auto; overflow: visible; display: block; }
+  .remarks { gap: 12px; }
+  .page-actions { width: 100%; }
+  .page-actions .pbtn { flex: 1 1 auto; }
+  .frow { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; }
+  .frow:first-child { flex-wrap: wrap; }
+  .flabel { width: auto; }
+  .chips { flex-wrap: nowrap; }
+  .chip, .fselect, .fselect select { height: var(--target); }
+  .rsearch { order: -1; width: 100%; margin: 0 0 4px; height: var(--target); }
+  .shown { margin-left: 8px; }
+  .rgrid { display: block; }
+  .rlist { overflow: visible; }
+  .rhead { display: none; }
+  .rrow { grid-template-columns: 70px minmax(0, 1fr); grid-template-areas: "id sig" "text text"; gap: 6px 10px; min-height: var(--target); }
+  .rid { grid-area: id; } .rsig { grid-area: sig; } .rtext { grid-area: text; }
+  .rdetail { display: none; }
+  body.has-detail .rlist, body.has-detail .rfilters, body.has-detail .page-head { display: none; }
+  body.has-detail .rdetail { display: flex; width: 100%; padding: 16px; }
+  .rback { display: inline-flex; align-self: flex-start; align-items: center; height: var(--target); padding: 0 12px; border: 1px solid var(--line-strong); border-radius: var(--radius); background: var(--surface); font: 600 var(--fs-14)/1 var(--font); color: var(--brand); cursor: pointer; }
+  .dbtns { flex-wrap: wrap; }
+  .lbtn { flex: 1 1 100%; }
+  .lpop { position: static; margin-top: 6px; box-shadow: none; }
+}
+
+.phone-only { display: none; }
+.did { margin: 0; font-size: 15px; font-weight: 600; color: var(--brand); }
+body.ui-dark .did { color: var(--brand-text); }
+@media (max-width: 850px) {
+  html { scroll-padding-bottom: 72px; }
+  .phone-only { display: inline-flex; }
+  .page-actions .pbtn:not(.dl-btn):not(#toIssues) { display: none; }
+  .page-actions #toIssues { flex: 1 1 100%; min-height: 44px; justify-content: center; } /* V12.2 · M4: вход в «Замечания на модели» на телефоне */
+  .page-actions .dl-btn { flex: 0 0 auto; }
+  #filtersMore { display: none; }
+  #filtersMore.open { display: flex; flex-wrap: wrap; gap: 8px; flex: 1 1 100%; }
+  .filters-btn { align-self: flex-start; }
+  .shown-phone { display: block; margin: 0; font-size: var(--fs-13); color: var(--muted); }
+  .page-head { gap: 8px; }
+}
+
+/* V12.0 · 0.5: чего у замечания нет — одной строкой вместо пунктирных кнопок */
+.dbtns .dnone { flex: 1 1 100%; margin: 4px 0 0; font-size: var(--fs-13); font-weight: 500; color: var(--c-text-2); }
+/* V12.0 · 0.5: номер замечания («АС2-23») не переносится по дефису ни на какой ширине */
+.rid, .did, .rrow .rid, .dhead .did { white-space: nowrap; word-break: keep-all; hyphens: none; }
+
+/* V12.0 · 1.3: одна строка фильтров — значимость сегментом, «Вид», «Статус», поиск справа; ниже разделы и «Показано N из 80» */
+.frow--main { flex-wrap: wrap; }
+.fmore { display: contents; }
+.seg { display: inline-flex; align-items: center; gap: 2px; padding: 3px; border-radius: var(--r); background: var(--c-surface-2); border: 1px solid var(--c-line); }
+.seg-b { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border: 0; border-radius: var(--r-s); background: transparent;
+         font: 500 var(--fs-13)/1 var(--font); color: var(--c-text-2); cursor: pointer; white-space: nowrap; }
+.seg-b .chip-n { font-weight: 500; }
+.seg-b:hover { color: var(--c-text); }
+.seg-b.is-on { background: var(--c-surface); color: var(--c-text); font-weight: 600; box-shadow: var(--shadow-1); }
+.frow--sec .chips { flex: 1 1 auto; }
+.rsearch { width: 340px; }
+/* статус замечания — крупно */
+.dstatus { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; font-size: var(--fs-14); font-weight: 600; color: var(--c-text); }
+.dstatus .icon { width: 18px; height: 18px; color: var(--c-text-2); }
+@media (max-width: 1200px) { .rsearch { width: 260px; } }
+@media (max-width: 850px) {
+  .frow--main { flex-wrap: wrap; overflow: visible; }
+  .fmore { display: none; }
+  #filtersMore.open { display: flex; }
+  .seg { width: 100%; overflow-x: auto; }
+  .seg-b { height: 44px; min-height: 44px; flex: 1 0 auto; }
+  .frow--sec .shown { display: none; }
+  .rsearch { order: -1; width: 100%; flex: 1 1 100%; }
+}
+
+/* R3-05: значок значимости формой; надпись — цветом значимости (≥ 4,5:1 на своём фоне) */
+.sig.sig--icon::before { display: none; }
+.sig.sig--icon { gap: 4px; }
+.sig--icon .icon { width: 14px; height: 14px; }
+.sig--high.sig--icon { color: var(--c-sig-high-text); } .sig--mid.sig--icon { color: var(--c-sig-mid-text); } .sig--low.sig--icon { color: var(--c-sig-low-text); }
+/* R3-06: на телефоне сегмент значимости — 2 × 2, числа не обрезаются («Низкая 23») */
+@media (max-width: 850px) {
+  .seg { display: grid; grid-template-columns: 1fr 1fr; overflow: visible; }
+  .seg-b { justify-content: center; }
+}

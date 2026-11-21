@@ -38,11 +38,12 @@ describe("legacy atlas links", () => {
     const pkg = JSON.parse(await readFile("package.json", "utf8"));
     expect(pkg.scripts.build).toBe("node scripts/prepare-public-atlases.mjs && next build");
     expect(pkg.scripts.test).toBe("node scripts/prepare-public-atlases.mjs && vitest run");
-    expect((await readdir("src/app/model-assets")).sort()).toEqual(["dou200-r1-27", "goluboe-vodovod-r1-10", "goluboe-vodovod-r1-2-field-pilot-01", "goluboe-vodovod-r1-2-field-pilot-02", "goluboe-vodovod-r1-2-field-pilot-02-ux-01", "goluboe-vodovod-r1-2-terrain-snapshot", "goluboe-vodovod-r1-3", "goluboe-vodovod-r1-4", "goluboe-vodovod-r1-5", "goluboe-vodovod-r1-6", "goluboe-vodovod-r1-7", "goluboe-vodovod-r1-8", "goluboe-vodovod-r1-9", "troitsk-r25v12-18", "zagoryanka-1500-r1-0"]);
+    expect((await readdir("src/app/model-assets")).sort()).toEqual(["dou200-r1-27", "goluboe-vodovod-r1-10", "goluboe-vodovod-r1-2-field-pilot-01", "goluboe-vodovod-r1-2-field-pilot-02", "goluboe-vodovod-r1-2-field-pilot-02-ux-01", "goluboe-vodovod-r1-2-terrain-snapshot", "goluboe-vodovod-r1-3", "goluboe-vodovod-r1-4", "goluboe-vodovod-r1-5", "goluboe-vodovod-r1-6", "goluboe-vodovod-r1-7", "goluboe-vodovod-r1-8", "goluboe-vodovod-r1-9", "troitsk-r25v12-18", "troitsk-r25v12-20", "zagoryanka-1500-r1-0"]);
     expect((await readdir("public")).includes("model-assets")).toBe(false);
   });
   it.each([
-    current + "index.html", currentDou + "index.html", currentGoluboe + "index.html", "/model-assets/other-project/index.html", "/api/projects/1/model-viewer",
+    current + "index.html", currentDou + "index.html", currentGoluboe + "index.html", "/model-assets/troitsk-r25v12-20/index.html",
+    "/model-assets/other-project/index.html", "/api/projects/1/model-viewer",
     "/projects", old + "service-worker.js", old + "%00.html",
     old + "a%5Cindex.html", old + "%zz.html", "/model-assets/dou200-r1-21/%00.html",
     "/model-assets/dou200-r1-21/a%5Cindex.html", "/model-assets/dou200-r1-21/%zz.html"

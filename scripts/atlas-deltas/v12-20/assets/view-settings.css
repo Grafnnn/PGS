@@ -1,0 +1,123 @@
+/* R23: a non-modal right inspector; desktop canvas never shrinks when it opens. */
+:root{--r23-card:rgba(249,252,255,.83);--r23-blur:16px;--r23-radius:15px;--r23-tool-bottom:54px}
+
+
+.stage{width:auto;height:auto;bottom:auto}
+#right,#right.open{display:block;position:absolute;grid-column:auto;grid-row:auto;left:auto;right:14px;top:calc(var(--r23-tool-bottom) + 10px);bottom:46px;width:308px;max-width:calc(100% - 28px);height:auto;max-height:none;z-index:14;padding:16px;border:1px solid rgba(255,255,255,.9);border-radius:var(--r23-radius);background:var(--r23-card);-webkit-backdrop-filter:blur(var(--r23-blur)) saturate(1.15);backdrop-filter:blur(var(--r23-blur)) saturate(1.15);box-shadow:0 12px 40px #17374820,0 2px 8px #17374810;transform:translateX(calc(100% + 30px));opacity:0;visibility:hidden;pointer-events:none;overscroll-behavior:contain}
+#right.open{transform:translateX(0);opacity:1;visibility:visible;pointer-events:auto}
+#right .closepane{float:none;position:absolute;top:11px;right:11px;border-radius:50%;font-size:16px;line-height:20px;padding:2px;width:28px;height:28px;background:#ffffff80;border-color:#c5d6df}
+#right .eyebrow{display:block;color:#5c7480;font-size:12px;letter-spacing:.12em;margin:1px 40px 12px 0;font-weight:700}
+#right #selectedName{padding-right:23px;font-size:16px;line-height:1.35;margin:6px 0}
+#right .alert{background:#fff5e0b3;font-size:12px;margin:12px 0;border-radius:0 7px 7px 0}
+#right .actions{position:sticky;bottom:0;padding:7px 0;margin:5px 0 0;background:transparent}
+#right .props>div{border-bottom-color:#c6d6df99}
+#right .props span{color:#4a6878}
+#right .actions button{background:#ffffffc9;border-radius:7px;min-height:32px}
+.r23-archive-links summary{font-size:12px;cursor:pointer;padding:12px 0;color:#476571}
+.tools{z-index:16;align-items:center;gap:5px;right:12px;left:12px;max-width:calc(100% - 24px)}
+.tools button,.tools select{border-radius:8px;min-height:34px;background:#fffffff0;box-shadow:0 2px 9px #1737480a}
+.tools button[aria-pressed=true],#viewSettingsToggle[aria-expanded=true]{background:#e3f0f5;border-color:#6595a8;color:#173e51}
+.r23-quality-group{display:flex;gap:4px;align-items:center;pointer-events:auto}
+#quality{max-width:93px}
+#viewSettingsToggle{white-space:nowrap;font-weight:650}
+#viewSettings{position:absolute;z-index:21;width:350px;max-width:calc(100% - 16px);max-height:calc(100% - 65px);overflow:auto;overscroll-behavior:contain;background:rgba(250,253,255,.96);border:1px solid #bdd0da;border-radius:14px;box-shadow:0 12px 42px #15384a2b;padding:0 14px 14px;scrollbar-width:thin}
+#viewSettings[hidden]{display:none}
+.r23-menu-head{display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:#fafdffed;z-index:2;padding:12px 0 10px;border-bottom:1px solid #d9e4eb;margin:0 0 10px}
+.r23-menu-head b{font-size:13px}.r23-menu-head button{font-size:17px;line-height:21px;width:27px;height:27px;padding:0;border-radius:50%}
+/* V12.0 · 0.17а: «Закрыть» — кнопка со словом, не круг 27 px: ширина по тексту, на телефоне цель 44 px */
+.r23-menu-head #closeViewSettings{width:auto;min-width:0;flex:none;white-space:nowrap;border-radius:var(--radius,6px);padding:0 12px;font-size:var(--fs-13,13px);line-height:1}
+@media(max-width:850px){#viewSettings .r23-menu-head #closeViewSettings{height:44px;min-height:44px;min-width:44px}.atlas-prototype #viewSettings summary{min-height:44px;padding:11px 0;box-sizing:border-box}
+ /* V12.0 · R4-02: все цели внутри «Инструментов» на телефоне — не меньше 44 × 44 px (флажок: поле касания 44, квадрат 22) */
+ html body.atlas-prototype #viewSettings :is(button,select,input:not([type=checkbox]):not([type=range])){min-height:44px;height:auto;min-width:44px;box-sizing:border-box}
+ html body.atlas-prototype #viewSettings input[type=range]{height:44px;min-height:44px;padding:0;margin:0}
+ html body.atlas-prototype #viewSettings input[type=checkbox]{appearance:none;-webkit-appearance:none;position:relative;flex:none;width:44px;height:44px;margin:-10px 0 -10px -11px;padding:0;border:0;background:transparent;cursor:pointer}
+ html body.atlas-prototype #viewSettings input[type=checkbox]::before{content:'';position:absolute;left:11px;top:11px;width:22px;height:22px;box-sizing:border-box;border:2px solid var(--c-line-strong);border-radius:4px;background:var(--c-surface)}
+ html body.atlas-prototype #viewSettings input[type=checkbox]:checked::before{border-color:var(--c-brand-fill);background:var(--c-brand-fill) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.5 8.5l3 3 6-7' fill='none' stroke='%23fff' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/16px no-repeat}
+ html body.atlas-prototype #viewSettings input[type=checkbox]:focus-visible{outline:none}
+ html body.atlas-prototype #viewSettings input[type=checkbox]:focus-visible::before{outline:3px solid var(--c-accent);outline-offset:2px}}
+#viewSettings h3{font-size:12px;color:#537080;font-weight:700;margin:16px 0 8px;letter-spacing:.03em}
+#viewSettings label{font-size:12px;line-height:1.5;color:#284b5e;display:flex;align-items:center;justify-content:space-between;gap:8px;margin:8px 0;min-height:24px}   /* 1.0.19a A-15 (2.5.8): цель метки ≥ 24 px */
+#viewSettings input[type=checkbox]{width:15px;height:15px;margin:0 5px 0 0;flex-shrink:0}
+#viewSettings label:has(input[type=checkbox]){justify-content:flex-start}
+#viewSettings input[type=range]{min-width:80px;width:44%;height:25px;padding:0;border:0;accent-color:#307b8d}
+#viewSettings select{font-size:12px;padding:5px 7px;min-height:31px;max-width:175px}
+#viewSettings output{min-width:32px;text-align:right;font-variant-numeric:tabular-nums;font-size:12px;color:#466778}
+#viewSettings details{border-top:1px solid #dce7ec;margin:12px 0 0;padding-top:10px}
+#viewSettings summary{cursor:pointer;color:#294d60;font-size:12px;font-weight:650}
+#viewSettings .r23-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin:8px 0}
+#viewSettings .r23-grid button{font-size:12px;padding:7px 5px;min-height:32px;border-radius:7px}
+#viewSettings .r23-wide{width:100%;font-size:12px;min-height:32px}
+#viewSettings .r23-note{font-size:12px;color:#627c8b;line-height:1.55;margin:6px 0}
+#viewSettings .inline{background:none;padding:0}
+#viewSettings #search{font-size:12px;width:100%;margin:6px 0}
+#viewSearchResults{max-height:230px;overflow:auto;overscroll-behavior:contain}
+#viewSearchResults .r23-result{display:block;width:100%;text-align:left;font-size:12px;padding:8px;margin:2px 0;border-radius:6px;border-color:#e0e9ee}
+#viewSearchResults small{display:block;color:#65808e;font-size:12px;word-break:break-word}
+#r23SearchCount,#r23HiddenCount{font-size:12px;color:#4f7182;margin:4px 0}
+#r23Diagnostics{font:12px/1.6 ui-monospace,SFMono-Regular,monospace;white-space:pre-wrap;overflow-wrap:anywhere;margin:8px 0;background:#edf4f8;padding:9px;border-radius:8px}
+#r23Overlay{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1;touch-action:none}
+#axisCanvas{z-index:2}
+.hud strong{font-size:12px}
+#selectionCaption{right:14px;left:120px;max-width:none;bottom:29px}
+#r23Toast{position:absolute;bottom:85px;left:50%;transform:translateX(-50%);z-index:30;max-width:88%;background:#173c50eb;color:white;padding:10px 16px;border-radius:10px;font-size:12px;pointer-events:auto;display:flex;align-items:center;flex-wrap:wrap;gap:6px 12px}
+/* 1.0.19a A-12: ошибки и сообщения со ссылкой — с «Закрыть», без таймера; пауза при наведении и фокусе */
+.atlas-prototype #r23Toast.is-error,#r23Toast.is-error{background:#5a1f1aeb}   /* к2: правило .atlas-prototype #r23Toast (prototype.css) перебивало фон ошибки */
+#r23Toast .r23-toast-a{color:#fff;font-weight:600;text-decoration:underline}
+#r23Toast .r23-toast-x{min-height:32px;padding:0 12px;border:1px solid rgba(255,255,255,.7);border-radius:8px;background:transparent;color:#fff;font:600 12px/1 var(--font,inherit);cursor:pointer}
+#r23Toast .r23-toast-x:focus-visible,#r23Toast .r23-toast-a:focus-visible{outline:2px solid #fff;outline-offset:2px}
+@media(max-width:850px){#r23Toast .r23-toast-x{min-height:44px;min-width:44px}}
+#r23Toast:empty{display:none}
+.r23-no-blur #right,.r23-moving #right{background:rgba(249,252,255,.95);-webkit-backdrop-filter:none;backdrop-filter:none}
+.r23-no-hud .hud,.r23-no-hud #selectionCaption{display:none}
+.r23-background-dark .hud,.r23-background-dark #selectionCaption{color:var(--c-text);text-shadow:none;background:var(--c-float);border-color:var(--c-line-mid)}
+.r23-background-dark .hud strong{color:var(--c-text)}.r23-background-dark .hud{padding:6px;border-radius:7px}
+@supports not (backdrop-filter:blur(1px)){#right{background:rgba(249,252,255,.97)}}
+@media(min-width:1600px){#right{width:325px}}
+@media(max-width:1100px){#right{width:282px;padding:13px}.tools{gap:4px}.hud{right:300px}}
+@media(max-width:850px){.stage{position:absolute;inset:0;width:100%;height:100%;bottom:0}
+ #right,#right.open{left:auto;right:8px;top:calc(var(--r23-tool-bottom) + 8px);bottom:auto;width:min(282px,78vw);height:auto;max-height:calc(100% - var(--r23-tool-bottom) - 60px);padding:12px;border-radius:13px;border:1px solid #fff9}
+ #right .props{max-height:28vh;overflow:auto;overscroll-behavior:contain}#right .props b{font-size:12px}#right #objectWarning{max-height:78px;overflow:auto}#right .r23-archive-links{display:none}
+ .tools{left:8px;right:8px;max-width:calc(100% - 16px);gap:4px}.tools button,.tools select{min-height:33px;padding:6px 8px}.tools #fit{font-size:0}.tools #fit:after{content:'Вписать';font-size:12px}
+ .tools [data-view=plan],.tools [data-view=iso]{padding:6px}.r23-quality-group{gap:3px}
+ #viewSettings{width:350px;max-height:calc(100% - var(--r23-tool-bottom) - 20px)}#viewSettings select{max-width:165px}
+.hud strong{font-size:12px}#selectionCaption{left:87px;right:8px;font-size:12px;max-width:none}
+ #right .primary{padding:7px;margin-top:7px}.tools button#saveImage{display:block}#viewSettings [data-view=front],#viewSettings [data-view=side],#viewSettings #sliceAxis,#viewSettings #sliceValue{display:initial}
+}
+@media(max-height:520px){#right .props{max-height:80px;overflow:auto}.hud{display:none}#right .alert{max-height:45px;overflow:auto}#right #pairs{max-height:50px;overflow:auto}}
+/* 1.0.19a A-15 (М-13): переход шторки — только при prefers-reduced-motion: no-preference (раньше #right.open перебивал отмену по специфичности) */
+@media(prefers-reduced-motion:no-preference){#right,#right.open{transition:transform .22s ease,opacity .18s ease,visibility .22s}}
+@media(prefers-reduced-transparency:reduce){#right{background:#f9fcff;-webkit-backdrop-filter:none;backdrop-filter:none}}
+
+/* Compact mobile inspector keeps a usable model area underneath. */
+@media(max-width:850px){#right,#right.open{max-height:min(48vh,calc(100% - var(--r23-tool-bottom) - 60px));overflow:auto}#right .props{max-height:none;overflow:visible}#right .actions{position:relative;bottom:auto}#right #objectWarning{max-height:65px}#right #selectedName{font-size:14px}.tools button,.tools select{min-height:36px}}
+
+/* R24.1: keep the quality / view / axes / designation controls together. */
+.r23-quality-group{max-width:100%;flex-wrap:nowrap;min-width:0}
+#quality{width:90px;min-width:72px;max-width:100px}
+#quickAxes,#quickLabels{white-space:nowrap}
+/* V12.0b · 8: нажатые «Оси»/«Подписи» — в atlas-toolbar.css (B3); правило по id давало светлую плашку в тёмной теме */
+#objectTransparency[aria-pressed="true"]{background:var(--c-brand-tint);border-color:var(--c-link);color:var(--c-link);box-shadow:none}
+#right .actions{display:grid;grid-template-columns:1.28fr 1.08fr .74fr;gap:4px}
+#right .actions button{min-width:0;padding:7px 4px;white-space:nowrap;font-size:12px}
+#objectTransparency:disabled{opacity:.45;cursor:default}
+#quality:focus-visible,#quickAxes:focus-visible,#quickLabels:focus-visible,#objectTransparency:focus-visible{outline:2px solid #168997;outline-offset:2px}
+@media(max-width:850px){
+ .r23-quality-group{flex-basis:100%;justify-content:flex-start;gap:4px}
+ .r23-quality-group #quality{width:76px;min-width:70px;max-width:84px}
+ .r23-quality-group button,.r23-quality-group select{min-height:40px}
+ #quickLabels{flex:0 1 auto}
+ #right .actions button{min-height:36px;font-size:12px}
+}
+
+/* FINAL V3: keep full action labels readable. */
+#right .actions{grid-template-columns:1.15fr 1.35fr .7fr;align-items:stretch}
+#right .actions button{white-space:normal;overflow-wrap:normal;line-height:1.25;min-height:40px}
+
+/* V4: compact body counters; the model tree gets the recovered height. */
+#left .kpis{gap:5px;margin:6px 0}
+#left .kpis>div{padding:5px 7px;min-width:0;border-radius:5px}
+#left .kpis b{font-size:17px;line-height:1.15}
+#left .kpis span{font-size:12px;line-height:1.25;letter-spacing:0;margin-top:2px}
+
+#axisCanvas[hidden]{display:none}
+@media(max-width:850px){#left.open{z-index:24}#left .close-left{position:sticky;top:0;z-index:1;background:#fbfdfe;margin-bottom:8px}}

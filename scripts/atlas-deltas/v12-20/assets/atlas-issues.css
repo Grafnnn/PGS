@@ -1,0 +1,237 @@
+/* 3D Атлас · «Замечания на модели» (V12.2 · M4, B2). Макет D — D_дизайн/итог/V12_2_замечания.html. Цвета — токены главной. */
+.iss-legend, .iss-nav { position: absolute; z-index: 6; background: var(--c-surface); border: 1px solid var(--c-line); border-radius: var(--r-l); box-shadow: var(--shadow-2); color: var(--c-text); }
+.iss-legend[hidden], .iss-nav[hidden] { display: none; }
+.iss-legend { left: 16px; top: 108px; width: 292px; padding: 12px 14px; font-size: var(--fs-13); }
+.iss-lh { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.iss-lh b { font-size: var(--fs-14); }
+.iss-x, .iss-nb { display: inline-grid; place-items: center; width: 36px; height: 36px; border: 0; border-radius: var(--r-s); background: none; color: var(--c-text-2); cursor: pointer; }
+.iss-x:hover, .iss-nb:hover { background: var(--c-surface-2); color: var(--c-text); }
+.iss-ls { margin: 2px 0 8px; color: var(--c-text-2); font-weight: 500; }
+.iss-ls b { color: var(--c-text); }
+.iss-rows { display: grid; gap: 2px; }
+.iss-row { display: grid; grid-template-columns: 22px 1fr auto; align-items: center; gap: 8px; min-height: 32px; padding: 0 6px; border: 0; border-radius: var(--r-s); background: none; color: var(--c-text); font: inherit; text-align: left; cursor: pointer; }
+.iss-row:hover { background: var(--c-surface-2); }
+.iss-row[aria-pressed="false"] { opacity: .55; }
+.iss-row b { font-variant-numeric: tabular-nums; }
+.iss-sw { width: 22px; height: 22px; border-radius: 6px; display: grid; place-items: center; }
+.iss-sw .icon { width: 14px; height: 14px; }
+.iss-sw--high { background: var(--c-sig-high-bg); color: var(--c-sig-high); }
+.iss-sw--mid { background: var(--c-sig-mid-bg); color: var(--c-sig-mid); }
+.iss-sw--low { background: var(--c-sig-low-bg); color: var(--c-sig-low); }
+.iss-sep { height: 1px; background: var(--c-line); margin: 8px 0 6px; }
+.iss-line { display: flex; justify-content: space-between; gap: 8px; margin: 0; min-height: 24px; align-items: baseline; }
+.iss-line span { flex: none; color: var(--c-text-2); }   /* 1.0.19a: подпись «В здании» не переносится по словам */
+.iss-line b { font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; }
+.iss-note { margin: 6px 0 0; font-size: var(--fs-12); line-height: 16px; color: var(--c-text-2); font-weight: 500; }
+.iss-nav { left: 50%; bottom: 84px; transform: translateX(-50%); display: flex; align-items: center; gap: 6px; max-width: calc(100% - 176px);   /* R1-07: «→» не под колонкой масштаба справа */ padding: 4px 6px; font-size: var(--fs-13); white-space: nowrap; }
+.iss-cur { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.iss-nid { color: var(--c-link); font-weight: 600; }
+.iss-nn { color: var(--c-text-2); font-variant-numeric: tabular-nums; }
+.iss-nt { overflow: hidden; text-overflow: ellipsis; max-width: 260px; }
+.iss-na { color: var(--c-link); font-weight: 600; text-decoration: none; }
+.iss-na:hover { text-decoration: underline; }
+a.iss-nid { text-decoration: none; } a.iss-nid:hover { text-decoration: underline; }   /* 1.0.15 B3-12 (L4): ID — ссылка на замечание */
+.iss-nrow2 { display: none; }
+@media (max-width: 850px) {   /* 1.0.15 B3-12 (L4): вторая строка шторки — текст в 2 строки и «Открыть замечание» (44 px) */
+  .iss-nav .iss-nrow2 { display: flex; align-items: center; gap: 8px; margin: 2px 0 0; min-width: 0; }
+  .iss-nrow2 .iss-nt2 { flex: 1 1 auto; min-width: 0; font-size: var(--fs-12); line-height: 16px; color: var(--c-text-2); display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; white-space: normal; overflow-wrap: anywhere; }
+  .iss-nrow2 .iss-na2 { flex: none; display: inline-flex; align-items: center; min-height: 44px; margin-left: auto; padding: 0 4px; color: var(--c-link); font-size: var(--fs-13); font-weight: 600; text-decoration: none; white-space: nowrap; }
+  .iss-nrow2 .iss-na2:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 1px; }
+}
+#atbIssues[aria-pressed="true"] { color: var(--c-link); }
+.iss-mode { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; padding: 2px; margin: 0 0 8px; border-radius: var(--r-s); background: var(--c-surface-2); }
+.iss-mode button { min-height: 32px; border: 0; border-radius: calc(var(--r-s) - 2px); background: none; color: var(--c-text-2); font: inherit; font-weight: 600; cursor: pointer; }
+.iss-mode button[aria-pressed="true"] { background: var(--c-surface); color: var(--c-text); box-shadow: var(--shadow-1); }
+.iss-pick[hidden] { display: none; }
+.iss-pick { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; margin: 8px 0 0; padding: 6px 8px; border-radius: var(--r-s); background: var(--c-surface-2); font-size: var(--fs-12); }
+.iss-pick .icon { width: 16px; height: 16px; color: var(--c-text-2); }
+.iss-pt { color: var(--c-text-2); }
+.iss-pn { max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 850px) {
+  #atbIssues.iss-chip { position: absolute; left: 8px; top: 56px; z-index: 6; display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 12px; border: 1px solid var(--c-line); border-radius: var(--r-pill); background: var(--c-surface); box-shadow: var(--shadow-1); color: var(--c-text); font: inherit; font-size: var(--fs-13); font-weight: 600; }
+  body.iss-on #atbIssues.iss-chip { color: var(--c-link); }
+  /* R1-05: легенда — нижняя шторка над панелью вкладок, обход ← → внутри (макет D, 390) */
+  .iss-legend { left: 0; right: 0; top: auto; bottom: 0; width: auto; max-height: 60%; overflow: auto; padding: 8px 12px 10px; border-radius: var(--r-xl) var(--r-xl) 0 0; border-bottom: 0; }
+  .iss-legend .iss-nav { position: static; transform: none; margin: 6px 0 0; padding: 0; border: 0; box-shadow: none; background: none; max-width: none; }
+  .iss-legend .iss-rows { grid-template-columns: repeat(3, 1fr); }
+  .iss-legend .iss-row { grid-template-columns: 22px auto; justify-content: center; min-height: 44px; }
+  .iss-legend .iss-lt { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .iss-legend .iss-line, .iss-legend .iss-note, .iss-legend .iss-sep { display: none; }
+  .iss-mode button { min-height: 44px; }   /* R1-06 */
+  .iss-nav { left: 8px; right: 8px; transform: none; bottom: 132px; max-width: none; z-index: 40; }   /* R1-04: над шторкой #right (z 35) */
+  .iss-legend, #atbIssues.iss-chip { z-index: 40; }
+  .iss-nb, .iss-x { width: 44px; height: 44px; }
+  .iss-nt, .iss-na { display: none; }
+  body.iss-on #atlasMain .stage .zoom-controls { bottom: max(78px, calc(var(--iss-sheet-h, 0px) + 12px)); }   /* 1.0.15 B3-4 (L5): колонка «Вписать» над шторкой замечаний (карточка закрыта) */
+  body.iss-on #atlasMain:has(#right.open) .stage .zoom-controls { bottom: max(calc(32dvh + 12px), calc(var(--iss-sheet-h, 0px) + 12px)); }   /* карточка открыта — выше её шторки и шторки замечаний */
+}
+
+/* ---- Ядро 1.0.2 (D): исправлено атласом, «не оценена», метки коллизий, фильтр ---- */
+.sig--none { background: var(--c-sig-none-bg); color: var(--c-sig-none-text); }
+.sig--fix, .iss-fix { background: var(--c-fix-bg); color: var(--c-fix-text); }
+.iss-fix { display: inline-flex; align-items: center; min-height: 20px; padding: 0 8px; border-radius: var(--r-pill); font-size: var(--fs-12); font-weight: 600; white-space: nowrap; }
+.iss-sw--none { background: var(--c-sig-none-bg); color: var(--c-sig-none); border-radius: 50%; }   /* круг, не скруглённый квадрат: отличие от «Низкой» не только оттенком */
+.iss-sw--fix { background: var(--c-fix-bg); color: var(--c-fix); }
+.iss-hd { margin: 8px 0 2px; font-size: var(--fs-12); font-weight: 600; color: var(--c-text-2); }
+.iss-grp { display: grid; grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 2px; padding: 2px; margin: 0 0 8px; border-radius: var(--r-s); background: var(--c-surface-2); }
+.iss-grp button { min-height: 32px; padding: 0 4px; border: 0; border-radius: calc(var(--r-s) - 2px); background: none; color: var(--c-text-2); font: inherit; font-size: var(--fs-12); font-weight: 600; white-space: nowrap; cursor: pointer; }
+.iss-grp button[aria-pressed="true"] { background: var(--c-surface); color: var(--c-text); box-shadow: var(--shadow-1); }
+.iss-grp button:disabled { opacity: .45; cursor: default; }
+.iss-l-s { display: none; }
+.iss-l-n { display: none; }   /* 1.0.19a М-2: три вкладки и больше — коротко, число второй строкой */
+.iss-grp--many { grid-auto-columns: auto; }   /* ширина по содержимому, остаток — поровну (auto растягивается) */
+.iss-grp--many button { white-space: nowrap; line-height: 1.2; padding: 3px 4px; }
+.iss-grp--many .iss-l-f { display: none; } .iss-grp--many .iss-l-s, .iss-grp--many .iss-l-n { display: block; }
+.iss-grp--many .iss-l-n { font-weight: 500; font-variant-numeric: tabular-nums; }
+.iss-of { font-weight: 500; color: var(--c-text-2); }   /* 1.0.19a М-2: «13 из 19» */
+.iss-ls .iss-all { color: var(--c-link); font-weight: 600; text-decoration: none; white-space: nowrap; } .iss-ls .iss-all:hover { text-decoration: underline; }
+.iss-row:disabled { opacity: .4; cursor: default; }
+.iss-legend { max-height: calc(100vh - 350px); overflow: auto; }
+.iss-pts { position: absolute; inset: 0; z-index: 5; pointer-events: none; overflow: hidden; }
+body.atlas-prototype .iss-pts .iss-pt-m { position: absolute; left: 0; top: 0; box-sizing: border-box; min-width: 0; min-height: 0; width: 28px; height: 28px; margin: -14px 0 0 -14px; padding: 0; border: 3px solid var(--c-sig-high); border-radius: 50%; background: var(--c-surface); box-shadow: 0 0 0 2px var(--c-surface), var(--shadow-2); cursor: pointer; pointer-events: auto; transform: translate(var(--x, 0px), var(--y, 0px)) scale(var(--s, 1)); }
+body.atlas-prototype .iss-pts .iss-pt-m::after { content: ""; position: absolute; inset: 6px; border-radius: 50%; background: var(--c-sig-high); }
+body.atlas-prototype .iss-pts .iss-pt-m--fix { border-color: var(--c-fix); }
+body.atlas-prototype .iss-pts .iss-pt-m--fix::after { background: var(--c-fix); }
+body.atlas-prototype .iss-pts .iss-pt-m[aria-pressed="true"] { --s: 1.25; }
+.iss-pt-m[hidden] { display: none !important; }
+.iss-navrow { display: flex; align-items: center; gap: 6px; flex: none; }
+.iss-pairs { display: flex; flex-wrap: wrap; gap: 4px; margin: 4px 6px 2px; max-height: 96px; overflow: auto; }
+.iss-pairs button { min-height: 28px; padding: 0 8px; border: 1px solid var(--c-line); border-radius: var(--r-s); background: var(--c-surface-2); color: var(--c-text); font: inherit; font-size: var(--fs-12); cursor: pointer; }
+.iss-pairs button[aria-pressed="true"] { border-color: var(--c-brand); background: var(--c-brand-tint); }
+/* 1.0.16 B3-8 (A5): пара — две строки (пара и место / имена тел), каждая обрезается многоточием, кнопка не шире списка */
+.iss-pairs button.iss-pr { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; max-width: 100%; min-width: 0; padding: 3px 8px; text-align: left; }
+.iss-pairs .iss-pr > span { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 16px; }
+.iss-pairs .iss-pr .iss-pr-h { font-weight: 600; }
+.iss-pairs .iss-pr .iss-pr-n { color: var(--c-text-2); }
+.iss-nav { flex-direction: column; align-items: stretch; gap: 0; }
+.card-fixchip { display: inline-flex; align-items: center; min-height: 20px; padding: 0 8px; border-radius: var(--r-pill); background: var(--c-fix-bg); color: var(--c-fix-text); font-size: var(--fs-12); font-weight: 600; }
+body #right.card-v12 .card-remark--none::before { background: var(--c-sig-none); }
+@media (max-width: 850px) {
+  .iss-legend { max-height: 60%; }
+  .iss-legend .iss-lh { gap: 6px; }
+  .iss-legend .iss-lh .iss-mode { flex: 1; margin: 0; grid-template-columns: 1fr 1fr; }
+  .iss-legend .iss-ls { display: none; }   /* «N из M» — на кнопке «Все · N»; шторка не выше прежней */
+  .iss-grp { margin: 0 0 6px; }
+  .iss-grp button { min-height: 44px; padding: 0 2px; }
+  .iss-l-f { display: none; } .iss-l-s { display: inline; } .iss-grp .iss-l-n { display: none; }
+  .iss-legend .iss-hd { display: none; }
+  .iss-rwrap { display: grid; grid-template-columns: repeat(var(--iss-rn, 6), minmax(0, 1fr)); gap: 2px; }   /* 1.0.19a М-2: колонок — по числу строк значимости */
+  .iss-rwrap--many .iss-of { display: none; }   /* больше трёх строк — «из N» не помещается; число полностью — в подписи кнопки */
+  .iss-rwrap .iss-rows, .iss-legend .iss-rwrap .iss-rows { display: contents; }
+  .iss-pairs { max-height: 72px; }
+  .iss-pairs button.iss-pr { width: 100%; }   /* 1.0.16 B3-8: кнопка пары во всю ширину, две строки в 44 px; высота списка прежняя (шторка не растёт — кадр выреза как в 1.0.15) */
+  .iss-pairs button { min-height: 44px; }
+  body.atlas-prototype .iss-pts .iss-pt-m { width: 36px; height: 36px; margin: -18px 0 0 -18px; }
+  body.atlas-prototype .iss-pts .iss-pt-m::after { inset: 8px; }
+}
+
+/* ---- Ядро 1.0.11 (D): вырез у замечания. Разметку и классы ставит atlas-issues.js (B3) ----
+   Ряд .iss-crop в .iss-nav между строкой «‹ ВК-06 ›» и списком пар:
+   <div class="iss-crop" role="group">
+     <button class="iss-crop-b" data-act="crop" aria-pressed="true"><svg class="icon"/><span class="iss-crop-t">Вырез</span></button>
+     <button class="iss-crop-b" data-act="minus"><span class="iss-crop-t">−</span></button> <span class="iss-crop-r">±1,5 м</span> <button … data-act="plus">
+     <button class="iss-crop-b" data-act="link">…</button>
+     <span class="iss-crop-s" aria-live="polite">у пары 20 · оси 3–4 / Ж–И · отм. +0,300</span>
+   </div>
+   Состояние «Вырез снят»: класс .iss-crop--off (или data-state="off") на ряду + кнопка .iss-crop-back «Вернуть».
+   Контур куба: <svg class="iss-box"> в слое .iss-pts (пути/линии, подпись .iss-box-lbl). Режим: body.iss-crop. Скрытая соседняя метка: .iss-pt-m--hide. */
+.iss-nav .iss-crop { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; margin: 4px 6px 2px; min-width: 0; }
+.iss-nav .iss-crop .iss-crop-b { display: inline-flex; align-items: center; justify-content: center; gap: 4px; min-width: 28px; min-height: 28px; padding: 0 8px; border: 1px solid var(--c-line); border-radius: var(--r-s); background: var(--c-surface-2); color: var(--c-text); font: inherit; font-size: var(--fs-12); font-weight: 600; white-space: nowrap; cursor: pointer; }
+.iss-nav .iss-crop .iss-crop-b:hover { background: var(--c-surface); border-color: var(--c-line-strong, var(--c-line)); }
+.iss-nav .iss-crop .iss-crop-b:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 1px; }
+.iss-nav .iss-crop .iss-crop-b[aria-pressed="true"] { border-color: var(--c-brand); background: var(--c-brand-tint); color: var(--c-link); }
+.iss-nav .iss-crop .iss-crop-b:disabled { opacity: .45; cursor: default; }
+.iss-nav .iss-crop .iss-crop-b .icon { width: 16px; height: 16px; flex: none; }
+.iss-nav .iss-crop .iss-crop-r { min-width: 56px; text-align: center; font-size: var(--fs-12); font-weight: 600; color: var(--c-text-2); font-variant-numeric: tabular-nums; }
+.iss-nav .iss-crop .iss-crop-s { flex: 1 1 100%; min-width: 0; margin: 0; font-size: var(--fs-12); line-height: 16px; font-weight: 500; color: var(--c-text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* «Вырез снят» (чужое сечение): ряд приглушён, статус — со значком-границей, «Вернуть» — ссылка; не только цветом: текст и граница */
+.iss-nav .iss-crop--off, .iss-nav .iss-crop[data-state="off"] { padding: 2px 0; }
+.iss-nav .iss-crop--off .iss-crop-b[data-act="crop"], .iss-nav .iss-crop[data-state="off"] .iss-crop-b[data-act="crop"] { border-style: dashed; background: var(--c-surface); color: var(--c-text-2); }
+.iss-nav .iss-crop--off .iss-crop-r, .iss-nav .iss-crop[data-state="off"] .iss-crop-r { opacity: .5; }
+.iss-nav .iss-crop--off .iss-crop-s, .iss-nav .iss-crop[data-state="off"] .iss-crop-s { padding-left: 8px; border-left: 3px solid var(--c-sig-mid); color: var(--c-text); }
+.iss-nav .iss-crop .iss-crop-back { margin-left: 6px; padding: 0; border: 0; background: none; color: var(--c-link); font: inherit; font-size: var(--fs-12); font-weight: 600; text-decoration: underline; cursor: pointer; }
+.iss-nav .iss-crop .iss-crop-back:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; }
+/* контур куба: 1 px, акцентный токен, пунктир; слой над сценой, не перехватывает мышь */
+.iss-box { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; z-index: 5; }
+.iss-box path, .iss-box line, .iss-box polyline { fill: none; stroke: var(--c-accent); stroke-width: 1px; stroke-dasharray: 5 3; vector-effect: non-scaling-stroke; shape-rendering: geometricPrecision; }
+.iss-box .iss-box-front { stroke-dasharray: none; }   /* ближние рёбра — сплошные, дальние — пунктиром (если JS их разделяет) */
+.iss-box-lbl { position: absolute; z-index: 5; pointer-events: none; padding: 1px 6px; border-radius: var(--r-s); background: var(--c-surface); border: 1px solid var(--c-line); color: var(--c-text-2); font-size: var(--fs-12); line-height: 16px; white-space: nowrap; }
+/* выбранная метка в режиме выреза: кольцо без заливки (центр открыт — виден узел); соседние метки скрыты */
+body.iss-crop .iss-pts .iss-pt-m[aria-pressed="true"] { --s: 1; background: transparent; box-shadow: 0 0 0 1px var(--c-surface); }
+body.iss-crop .iss-pts .iss-pt-m[aria-pressed="true"]::after { display: none; }
+body.iss-crop .iss-pts .iss-pt-m--fix[aria-pressed="true"] { border-color: var(--c-fix); }
+.iss-pts .iss-pt-m--hide, body.iss-crop .iss-pts .iss-pt-m--hide { display: none !important; }
+/* 1.0.12 · легенда свёрнута до заголовка, пока выбрано замечание и режим выреза включён — с кубом или без (body.iss-one); body.iss-crop — только метки и контур */
+body.iss-one .iss-legend { max-height: none; padding-bottom: 8px; }
+body.iss-one .iss-legend .iss-rows, body.iss-one .iss-legend .iss-rwrap, body.iss-one .iss-legend .iss-grp, body.iss-one .iss-legend .iss-hd,
+body.iss-one .iss-legend .iss-sep, body.iss-one .iss-legend .iss-line, body.iss-one .iss-legend .iss-note, body.iss-one .iss-legend .iss-ls,
+body.iss-one .iss-legend .iss-pick { display: none; }
+body.iss-one .iss-legend .iss-lh { margin: 0; }
+@media (max-width: 850px) {
+  /* 390: ряд — в шторке вместе с плашкой; 4 кнопки по 44 px в одну строку, подписи только в title/aria-label, без горизонтальной прокрутки */
+  .iss-nav .iss-crop { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 4px; margin: 6px 0 0; }
+  .iss-nav .iss-crop .iss-crop-b { min-width: 0; min-height: 44px; padding: 0 4px; }
+  .iss-nav .iss-crop .iss-crop-b .iss-crop-t { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .iss-nav .iss-crop .iss-crop-b[data-act="minus"] .iss-crop-t, .iss-nav .iss-crop .iss-crop-b[data-act="plus"] .iss-crop-t { position: static; width: auto; height: auto; overflow: visible; clip: auto; font-size: var(--fs-16, 16px); }   /* «−» и «+» остаются видимыми */
+  .iss-nav .iss-crop .iss-crop-r { grid-column: 1 / -1; order: 5; min-width: 0; text-align: left; }
+  .iss-nav .iss-crop .iss-crop-s { grid-column: 1 / -1; order: 6; white-space: normal; }
+  .iss-nav .iss-crop--off .iss-crop-back, .iss-nav .iss-crop[data-state="off"] .iss-crop-back { min-height: 44px; margin: 0 0 0 8px; }
+  body.iss-one .iss-legend { max-height: 60%; }
+  body.iss-crop .iss-pts .iss-pt-m[aria-pressed="true"] { width: 36px; height: 36px; margin: -18px 0 0 -18px; }
+  .iss-box-lbl { display: none; }   /* адрес — в строке состояния шторки */
+}
+
+/* ---- Ядро 1.0.12 (D): «Выреза нет» (.iss-crop--na), «Срез по телу» (.iss-crop--cut), легенда (body.iss-one), подпись куба у правого края ----
+   Ряд: <div class="iss-crop iss-crop--na" data-state="na"> кнопка «Вырез» (.iss-crop-b, aria-pressed = предпочтение), «−»/«+» disabled, ±R серый,
+   <span class="iss-crop-s"><b class="iss-crop-why">Выреза нет:</b> тела на всё здание · 49×50 м <button class="iss-crop-act">Срез по телу</button></span>.
+   «Срез по телу» поверх: .iss-crop--cut (data-state="cut"), в строке «Срез по телу · <button class="iss-crop-act">Убрать</button>».
+   Подпись куба: .iss-box-lbl (+ .iss-box-lbl--r — выравнивание по правому краю). */
+.iss-nav .iss-crop--na, .iss-nav .iss-crop[data-state="na"], .iss-nav .iss-crop--cut, .iss-nav .iss-crop[data-state="cut"] { padding: 2px 0; }
+.iss-nav .iss-crop--na .iss-crop-b[data-act="crop"], .iss-nav .iss-crop[data-state="na"] .iss-crop-b[data-act="crop"],
+.iss-nav .iss-crop--cut .iss-crop-b[data-act="crop"], .iss-nav .iss-crop[data-state="cut"] .iss-crop-b[data-act="crop"] { border-style: dashed; border-color: var(--c-line); background: var(--c-surface); color: var(--c-text-2); }
+.iss-nav .iss-crop--na .iss-crop-b:disabled, .iss-nav .iss-crop[data-state="na"] .iss-crop-b:disabled { opacity: .45; cursor: default; }
+.iss-nav .iss-crop--na .iss-crop-r, .iss-nav .iss-crop[data-state="na"] .iss-crop-r { opacity: .45; }
+.iss-nav .iss-crop--na .iss-crop-s, .iss-nav .iss-crop[data-state="na"] .iss-crop-s,
+.iss-nav .iss-crop--cut .iss-crop-s, .iss-nav .iss-crop[data-state="cut"] .iss-crop-s { padding-left: 8px; border-left: 3px solid var(--c-line-strong, var(--c-line)); color: var(--c-text); white-space: normal; overflow: visible; }
+.iss-nav .iss-crop .iss-crop-why { font-weight: 700; color: var(--c-text); }
+.iss-nav .iss-crop .iss-crop-act { margin-left: 6px; padding: 0; min-height: 0; border: 0; background: none; color: var(--c-link); font: inherit; font-size: var(--fs-12); font-weight: 600; text-decoration: underline; cursor: pointer; }
+.iss-nav .iss-crop .iss-crop-act:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; }
+.iss-box-lbl { max-width: 60%; overflow: hidden; text-overflow: ellipsis; }
+.iss-box-lbl--r { transform: translateX(-100%); }
+@media (min-width: 851px) { body.iss-one .iss-legend { z-index: 4; } }
+@media (min-width: 851px) { .iss-legend { top: max(108px, calc(var(--atb-view-b, 0px) + 8px)); } }   /* 1.0.15 B3-3 (L3): путь в 2 строки опускает строку вида — легенда ниже неё (atlas-toolbar.js, viewTop) */   /* ПК: свёрнутая легенда — под слоем меток и подписей куба (.iss-pts z 5), подпись не прячется под ней */
+@media (max-width: 850px) {
+  .iss-nav .iss-crop--na, .iss-nav .iss-crop[data-state="na"], .iss-nav .iss-crop--cut, .iss-nav .iss-crop[data-state="cut"] { padding: 0; }
+  .iss-nav .iss-crop .iss-crop-act { min-height: 44px; margin: 0 0 0 8px; }
+}
+
+/* ---- Ядро 1.0.12, раунд 4 (D): список мест, ряд «‹ K / N ›», кнопки обхода на 390, лист карточки под шторкой ---- */
+/* П1 · места при большом N (СС-07 — 125): список выше 96 px, своя прокрутка; текущее место доводит в зону видимости JS (markList) */
+.iss-pairs--places { max-height: min(40vh, 360px); overscroll-behavior: contain; }
+/* П2 · ряд «‹ K / N ›» (.iss-crop-pl: кнопки .iss-crop-b + число .iss-crop-pln) */
+.iss-nav .iss-crop .iss-crop-pl { display: inline-flex; align-items: center; gap: 4px; }
+.iss-nav .iss-crop .iss-crop-pln { min-width: 52px; text-align: center; font-size: var(--fs-12); font-weight: 600; color: var(--c-text-2); font-variant-numeric: tabular-nums; }
+/* П3 · обход: кнопки, ID, «N из M» и чип значимости не сжимаются; сжимается только текст замечания (.iss-nt); на 390 текста нет — тогда сжимается ID */
+.iss-navrow .iss-nb { flex: none; }
+.iss-navrow .iss-cur { flex: 1 1 auto; min-width: 0; overflow: hidden; }
+.iss-navrow .iss-nid, .iss-navrow .iss-nn, .iss-navrow .iss-cur .sig, .iss-navrow .iss-cur .iss-fix, .iss-navrow .iss-na { flex: none; white-space: nowrap; }
+.iss-navrow .iss-nt { flex: 1 1 0; min-width: 0; max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.iss-nav .iss-crop .iss-crop-pl .iss-crop-t { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }   /* ‹ › — значки, подписи только для чтения с экрана */
+@media (max-width: 850px) {
+  .iss-pairs--places { max-height: 28vh; }
+  .iss-nav .iss-crop .iss-crop-pl { grid-column: 1 / -1; order: 4; display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; gap: 4px; }
+  .iss-nav .iss-crop .iss-crop-pl .iss-crop-b { min-height: 44px; min-width: 44px; }
+  .iss-nav .iss-crop .iss-crop-pln { min-width: 0; font-size: var(--fs-13); }
+  .iss-navrow .iss-nb { width: 44px; height: 44px; min-width: 44px; min-height: 44px; }
+  .iss-navrow .iss-nid { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  .iss-navrow .iss-cur { flex-wrap: wrap; row-gap: 2px; }   /* длинный ID: чип значимости переносится на вторую строку, а не режется и не налезает на «вперёд» */
+  .iss-navrow .iss-nid { max-width: 100%; }
+  /* П4 · пока открыта шторка замечаний, свёрнутый лист «Выбранный элемент» не торчит над ней (развёрнутый — как был) */
+  body.iss-on #right.open:not(.expanded) { visibility: hidden; pointer-events: none; }
+}
+
+/* ---- Ядро 1.0.13 (D): на 390 ряд «‹ K / N › · Список мест» — в одну строку ---- */
+@media (max-width: 850px) {
+  .iss-nav .iss-crop .iss-crop-pl { grid-column: 1 / 4; }
+  .iss-nav .iss-crop .iss-crop-b[data-act="pllist"] { grid-column: 4; order: 4; }
+}

@@ -1,0 +1,214 @@
+{
+ "release": "3D_Атлас_Здание24 (выпуск V12.20)",
+ "created": "2026-11-22 01:37",
+ "source": "troitsk-b24 (22.11.2026 01:28:08)",
+ "build_hash": "f6a40cf80f99",
+ "checks": 14,
+ "passed": 14,
+ "failed": 0,
+ "sizes_mb": {
+  "package": 565.1,
+  "package_albums": 247.7,
+  "package_without_pdf": 316.4,
+  "archive": 1957.9,
+  "source": 2521.8,
+  "package_by_folder": {
+   "data": 106.3,
+   "source_album": 83.8,
+   "provenance": 69.9,
+   "packages": 51.2,
+   "assets": 3.2,
+   "(корень)": 0.7,
+   "engineering": 0.7,
+   "rd_remarks_final": 0.2,
+   "project": 0.0
+  },
+  "archive_by_folder": {
+   "provenance": 742.6,
+   "engineering": 462.7,
+   "history_recovered": 189.7,
+   "v9_source_packages": 165.1,
+   "v93_source_packages": 99.6,
+   "v92_source_packages": 96.1,
+   "qa": 72.2,
+   "v94_source_packages": 58.0,
+   "(корень)": 33.2,
+   "packages": 22.1,
+   "data": 7.9,
+   "source_album": 3.6,
+   "rev04_source_packages": 2.2,
+   "qa_unified": 1.2,
+   "rd_remarks_v92": 0.4,
+   "docs": 0.3,
+   "rd_remarks_v94": 0.3,
+   "rd_remarks_v93": 0.3,
+   "rd_remarks_v9": 0.3,
+   "v9_build_scripts": 0.1,
+   "tools": 0.0,
+   "plugins": 0.0
+  },
+  "note": "Цели 130/400 МБ сняты решением владельца 27.09; указан фактический размер."
+ },
+ "files": {
+  "package": 4649,
+  "archive": 33793,
+  "source": 38435
+ },
+ "prior_checks": "qa/BROWSER_QA.json, LINKS_QA.json, CONTENT_QA.json, INDEPENDENT_* относятся к R21/V9: сверка с R20 и со старым MANIFEST.json полного архива, тесты Playwright/Node. К пакету V10 неприменимы (геометрия дополнена задачей A, состав разделён на пакет и архив) и не перезапускались; заменены проверками этого файла. Файлы сохранены в архиве (qa/).",
+ "results": [
+  {
+   "name": "Каждый файл исходника — ровно в одном месте (пакет / albums / архив)",
+   "pass": true,
+   "source_files": 38435,
+   "placed": 38435,
+   "missing": [],
+   "in_both": []
+  },
+  {
+   "name": "Файлы скопированы без изменений (кроме переписанных страниц и созданных файлов)",
+   "pass": true,
+   "compared": 38413,
+   "rewritten_pages_and_generated": 22,
+   "changed": []
+  },
+  {
+   "name": "В пакете нет посторонних файлов",
+   "pass": true,
+   "extra": []
+  },
+  {
+   "name": "Восемь альбомов в albums/",
+   "pass": true,
+   "albums": [
+    "albums/01-2024_IYaI-OV.ITP_chast1.pdf",
+    "albums/AS2_last_full.pdf",
+    "albums/AR_polnyy_chast1.pdf",
+    "albums/VK_spetsifikatsiya.pdf",
+    "albums/GP.pdf",
+    "albums/NVK_izm1.pdf",
+    "albums/ODI_spetsifikatsiya.pdf",
+    "albums/UUTE_spetsifikatsiya.pdf"
+   ]
+  },
+  {
+   "name": "Движок пакета = рабочая сборка (правки V10.1 и D по решению владельца); логотип = REV04 побайтно",
+   "pass": true,
+   "files": {
+    "assets/atlas-engine.js": {
+     "pkg=src": true,
+     "pkg=REV04": false
+    },
+    "assets/world-switch-runtime.js": {
+     "pkg=src": true,
+     "pkg=REV04": false
+    },
+    "assets/building-axes.js": {
+     "pkg=src": true,
+     "pkg=REV04": false
+    },
+    "assets/loader.js": {
+     "pkg=src": true,
+     "pkg=REV04": false
+    },
+    "assets/worker-source.js": {
+     "pkg=src": true,
+     "pkg=REV04": false
+    },
+    "assets/graphics-tools.js": {
+     "pkg=src": true,
+     "pkg=REV04": true
+    },
+    "assets/graphics-optimization-module.js": {
+     "pkg=src": true,
+     "pkg=REV04": false
+    },
+    "assets/canvas-rasterizer.js": {
+     "pkg=src": true,
+     "pkg=REV04": false
+    },
+    "assets/navigation-optimization-module.js": {
+     "pkg=src": true,
+     "pkg=REV04": false
+    },
+    "assets/atlas-mark-v3.png": {
+     "pkg=src": true,
+     "pkg=REV04": true
+    }
+   },
+   "engine_changed_vs_REV04": [
+    "assets/atlas-engine.js",
+    "assets/building-axes.js",
+    "assets/canvas-rasterizer.js",
+    "assets/graphics-optimization-module.js",
+    "assets/loader.js",
+    "assets/navigation-optimization-module.js",
+    "assets/worker-source.js",
+    "assets/world-switch-runtime.js"
+   ]
+  },
+  {
+   "name": "Битых ссылок в пакете нет",
+   "pass": true,
+   "broken": [],
+   "links_to_archive_html": 15,
+   "redirected_js_data": 4102,
+   "preexisting_missing_in_source": []
+  },
+  {
+   "name": "Офлайн-манифест: только файлы пакета, версия = хеш сборки",
+   "pass": true,
+   "files": 4637,
+   "version": "pkg-f6a40cf80f99",
+   "outside": [],
+   "albums_in_manifest": 0,
+   "was_files_in_source_manifest": 33049
+  },
+  {
+   "name": "Service worker: сначала кэш, затем обновить в фоне",
+   "pass": true
+  },
+  {
+   "name": "В страницах пакета нет требования Python/.command/.bat",
+   "pass": true,
+   "pages": []
+  },
+  {
+   "name": "Файлы запуска .command/.bat/.py — только в архиве",
+   "pass": true,
+   "in_archive": [
+    "START_LOCAL_SERVER.bat",
+    "START_LOCAL_SERVER.command",
+    "START_PROTOTYPE.command"
+   ]
+  },
+  {
+   "name": "Обязательные файлы в пакете",
+   "pass": true,
+   "missing": []
+  },
+  {
+   "name": "assets/data-fallback/ — в архиве, не в пакете (в исходнике ядра 1.0 их нет)",
+   "pass": true
+  },
+  {
+   "name": "Браузер из file:// (с архивом рядом): 0 ошибок консоли и незагрузок",
+   "pass": true,
+   "pages": 22,
+   "sizes": [
+    "1440x900",
+    "390x844"
+   ],
+   "problems": {}
+  },
+  {
+   "name": "Браузер из file:// (без архива): 0 ошибок консоли и незагрузок",
+   "pass": true,
+   "pages": 22,
+   "sizes": [
+    "1440x900",
+    "390x844"
+   ],
+   "problems": {}
+  }
+ ]
+}
