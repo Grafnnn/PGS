@@ -88,10 +88,10 @@ const goluboeFieldPilot: Project3dModel = {
   slug: "goluboe-vodovod-field-pilot",
   title: "3D Атлас Голубое · полевой пилот",
   subtitle: "Полевой комплект водовода, ПК0+00 – ПК0+45",
-  revision: "R1.11",
+  revision: "R1.12",
   updatedAt: "22.11.2026",
-  assetPath: "src/assets/project-models/goluboe-vodovod-r1-11",
-  assetBaseUrl: "/model-assets/goluboe-vodovod-r1-11/",
+  assetPath: "src/assets/project-models/goluboe-vodovod-r1-12",
+  assetBaseUrl: "/model-assets/goluboe-vodovod-r1-12/",
   publicUrl: "/models/goluboe-vodovod-field-pilot"
 };
 
