@@ -35,7 +35,7 @@ describe("Goluboe field pilot publication", () => {
 
   it("keeps field-only options off the main alias and preserves legacy route isolation", async () => {
     const r = await alias(new Request(origin + "/models/goluboe-vodovod?field=1&pk=21.5&pdFieldPk=21.5"), { params: { slug: "goluboe-vodovod" } });
-    expect(r.headers.get("location")).toBe("/model-assets/goluboe-vodovod-r1-12/index.html");
+    expect(r.headers.get("location")).toBe("/model-assets/goluboe-vodovod-r1-13/index.html");
     expect(legacyAtlasDestination(new URL(origin + prefix + "index.html"))).toBeNull();
     expect(legacyAtlasWorker(new URL(origin + prefix + "service-worker.js"))).toBeNull();
     expect(legacyAtlasDestination(new URL(origin + current + "index.html"))).toBeNull();
