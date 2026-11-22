@@ -7,14 +7,14 @@ vi.mock("@/lib/prisma", () => ({ prisma: { project: { findUnique: mocks.find } }
 import { GET } from "./route";
 import { GET as privateGET } from "@/app/api/projects/[projectId]/model-viewer/route";
 
-const goluboeIndex = "/model-assets/goluboe-vodovod-r1-10/index.html";
+const goluboeIndex = "/model-assets/goluboe-vodovod-r1-12/index.html";
 
 describe("Atlas V11 publication", () => {
   beforeEach(() => vi.clearAllMocks());
   it("preserves the public alias without sessions or project lookups", async () => {
     const response = await GET(new Request("https://pgs.local/models/troitsk-building-24"), { params: { slug: "troitsk-building-24" } });
     expect(response.status).toBe(307);
-    expect(response.headers.get("location")).toBe("/model-assets/troitsk-r25v12-20/index.html");
+    expect(response.headers.get("location")).toBe("/model-assets/troitsk-r25v12-21/index.html");
     expect(response.headers.get("cache-control")).toBe("no-store");
     expect(response.headers.has("set-cookie")).toBe(false);
     expect(mocks.access).not.toHaveBeenCalled();
@@ -24,7 +24,7 @@ describe("Atlas V11 publication", () => {
   it("retains public Troitsk embed without changing the protected release", async () => {
     const response = await GET(new Request("https://pgs.local/models/troitsk-building-24?embed=monolith-v1#node/building"), { params: { slug: "troitsk-building-24" } });
     expect(response.status).toBe(307);
-    expect(response.headers.get("location")).toBe("/model-assets/troitsk-r25v12-20/index.html?embed=monolith-v1");
+    expect(response.headers.get("location")).toBe("/model-assets/troitsk-r25v12-21/index.html?embed=monolith-v1");
     expect(mocks.access).not.toHaveBeenCalled();
     expect(mocks.find).not.toHaveBeenCalled();
   });

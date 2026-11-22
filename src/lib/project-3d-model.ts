@@ -32,11 +32,11 @@ const troitskBuilding24Model: Project3dModel = {
 
 const troitskPublicModel: Project3dModel = {
   ...troitskBuilding24Model,
-  slug: "troitsk-building-24-atlas-v12-20",
-  revision: "V12.20",
+  slug: "troitsk-building-24-atlas-v12-21",
+  revision: "V12.21",
   updatedAt: "22.11.2026",
-  assetPath: "src/assets/project-models/troitsk-r25v12-20",
-  assetBaseUrl: "/model-assets/troitsk-r25v12-20/"
+  assetPath: "src/assets/project-models/troitsk-r25v12-21",
+  assetBaseUrl: "/model-assets/troitsk-r25v12-21/"
 };
 
 const TROITSK_PROJECT_ID = "cmteg9g33000for4oc06rko5a";
@@ -72,14 +72,14 @@ export function getProjectAtlasUrl(projectId: string): string | null {
 }
 
 const goluboeModel: Project3dModel = {
-  slug: "goluboe-vodovod-atlas-r1-10",
+  slug: "goluboe-vodovod-atlas-r1-12",
   title: "3D Атлас Голубое",
   subtitle: "Водовод до ВЗУ: 264 записи реестра, 154 элемента сцены, 6 PDF",
-  revision: "R1.10",
+  revision: "R1.12",
   updatedAt: "22.11.2026",
   disclaimer: "Модель по ПД 19/26-2026. Расхождения со ЗнП № 10 сохранены в замечаниях и заключении; оригинал ЗнП не входит в пакет. Не инженерная приёмка и не исполнительная съёмка.",
-  assetPath: "src/assets/project-models/goluboe-vodovod-r1-10",
-  assetBaseUrl: "/model-assets/goluboe-vodovod-r1-10/",
+  assetPath: "src/assets/project-models/goluboe-vodovod-r1-12",
+  assetBaseUrl: "/model-assets/goluboe-vodovod-r1-12/",
   publicUrl: "/models/goluboe-vodovod#node/building"
 };
 
@@ -88,10 +88,6 @@ const goluboeFieldPilot: Project3dModel = {
   slug: "goluboe-vodovod-field-pilot",
   title: "3D Атлас Голубое · полевой пилот",
   subtitle: "Полевой комплект водовода, ПК0+00 – ПК0+45",
-  revision: "R1.12",
-  updatedAt: "22.11.2026",
-  assetPath: "src/assets/project-models/goluboe-vodovod-r1-12",
-  assetBaseUrl: "/model-assets/goluboe-vodovod-r1-12/",
   publicUrl: "/models/goluboe-vodovod-field-pilot"
 };
 

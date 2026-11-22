@@ -6,7 +6,7 @@ import {projectAtlasR25Response} from './project-atlas-r25-response';
 
 const base='https://pgs.local/model-assets/troitsk-r25v12-18/';
 const get=(name:string, init?:RequestInit)=>projectAtlasR25Response(new Request(base+name,init),name.split('/'),'v12-18');
-function drawingRelease(version: 'v12-18' | 'v12-20') {
+function drawingRelease(version: 'v12-18' | 'v12-20' | 'v12-21') {
   const base = `https://pgs.local/model-assets/troitsk-r25${version}/`;
   return {base, get: (name: string, init?: RequestInit) =>
     projectAtlasR25Response(new Request(base + name, init), name.split('/'), version)};
@@ -72,7 +72,7 @@ describe('sealed V12.18 website delivery',()=>{
     expect(Object.keys(index.files)).toHaveLength(4661);
     expect(index.archiveSha256).toBe('329b84daa82dbd74b1b7153dc0ccb891a3f27dbab9f1f0a9d3cd22eac7c407f5');
   });
-  it.each(['v12-18','v12-20'] as const)('keeps all 396 drawing previews and PDF targets inside %s',async(version)=>{
+  it.each(['v12-18','v12-20','v12-21'] as const)('keeps all 396 drawing previews and PDF targets inside %s',async(version)=>{
     const {base,get}=drawingRelease(version);
     const library=decode(await (await get('data/library.js')).text(),'ATLAS_LIBRARY_GZIP');
     const recoveryWindow:any={};vm.runInNewContext(await (await get('data/source_recovery.js')).text(),{window:recoveryWindow},{timeout:1000});
@@ -110,7 +110,7 @@ describe('sealed V12.18 website delivery',()=>{
     const split=window.AtlasPackageLinks!.map('albums/АР_полный.pdf#page=100');
     expect(split?.href).toBe(base+'albums/AR_polnyy_chast2.pdf#page=24');
   });
-  it.each(['v12-18','v12-20'] as const)('routes all 222 original OV.ITP pages to the correct lossless PDF part in %s',async(version)=>{
+  it.each(['v12-18','v12-20','v12-21'] as const)('routes all 222 original OV.ITP pages to the correct lossless PDF part in %s',async(version)=>{
     const {base,get}=drawingRelease(version);
     const window:any={};
     const document={readyState:'loading',currentScript:{src:base+'assets/package-links.js'},baseURI:base+'index.html',addEventListener(){},querySelectorAll(){return [];}};

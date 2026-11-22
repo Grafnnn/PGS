@@ -1,0 +1,271 @@
+/* 3D Атлас · общая шапка, меню «Ещё», режим проверки, нижняя панель телефона. Только токены из tokens.css. */
+html:not(.review-mode) .review-only { display: none; }
+/* 1.0.19a A-08 (Т-2): плейсхолдеры полей — --c-text-2 (5,1:1 в светлой, 6,5:1 в тёмной), на всех страницах (оболочка подключена везде) */
+::placeholder { color: var(--c-text-2); opacity: 1; }
+html.review-mode .client-only { display: none; }
+
+.atlas-shell {
+  position: relative; z-index: 60; flex: 0 0 auto;
+  display: flex; flex-wrap: nowrap; align-items: center; gap: 20px;
+  height: var(--header-h); min-height: var(--header-h); box-sizing: border-box; margin: 0;
+  padding: 0 12px 0 16px; background: var(--c-surface); color: var(--c-text);
+  border-bottom: 1px solid var(--c-line); font-family: var(--font); white-space: nowrap;
+}
+.atlas-shell * { box-sizing: border-box; }
+.atlas-shell .as-brand { display: flex; align-items: center; gap: 8px; flex: none; text-decoration: none; color: var(--ink); min-width: 0; }
+.atlas-shell .as-brand img { width: 28px; height: 28px; border-radius: 3px; flex: none; }
+.atlas-shell .as-word { font-size: 15px; font-weight: 700; letter-spacing: -0.01em; }
+.atlas-shell .as-sep { width: 1px; height: 24px; background: var(--c-line); flex: none; margin: 0 4px; }
+/* объект и строка выпуска — в две строки: «<title.object>» / «<выпуск> · ред. …» (моно) */
+.atlas-shell .as-edition { display: flex; flex-direction: column; justify-content: center; gap: 1px; min-width: 0; overflow: hidden; }
+.atlas-shell .as-ed-b { font-size: var(--fs-12); font-weight: 600; line-height: 1.25; color: var(--c-text); overflow: hidden; text-overflow: ellipsis; }
+.atlas-shell .as-ed-date { font: 500 var(--fs-12)/1.25 var(--mono); color: var(--c-text-2); overflow: hidden; text-overflow: ellipsis; }
+.atlas-shell .as-ed-date:empty { display: none; }
+.atlas-shell .as-nav { display: flex; align-items: stretch; height: var(--header-h); flex: none; gap: 0; padding: 0; margin: 0; border: 0; background: transparent; overflow: visible; flex-wrap: nowrap; white-space: nowrap; }
+.atlas-shell .as-link {
+  display: flex; align-items: center; gap: 6px; height: var(--header-h); padding: 0 10px; margin: 0;
+  font: 500 var(--fs-14)/1 var(--font); color: var(--c-text); text-decoration: none; white-space: nowrap;
+  border: 0; border-radius: 0; background: transparent; cursor: pointer; min-height: 0;
+}
+.atlas-shell .as-link .icon { color: var(--c-text-2); }
+.atlas-shell .as-link:hover { color: var(--c-link); background: var(--c-bg); }
+.atlas-shell .as-link:hover .icon, .atlas-shell .as-link[aria-current="page"] .icon { color: currentColor; }
+.atlas-shell .as-link[aria-current="page"] { color: var(--c-link); font-weight: 600; box-shadow: inset 0 -2px 0 var(--c-brand); }
+.atlas-shell .count { font-size: var(--fs-12); font-weight: 600; line-height: 16px; padding: 0 6px; border-radius: var(--radius-pill); }
+.atlas-shell .as-more { position: relative; display: flex; align-items: stretch; }
+.atlas-shell .as-more-btn[aria-expanded="true"] { background: var(--page); }
+.atlas-shell .as-tools { position: relative; margin-left: auto; display: flex; align-items: center; gap: 4px; min-width: 0; }
+.atlas-shell .as-search {
+  position: relative; display: flex; align-items: center; gap: 8px; width: 196px; height: 32px; margin: 0;
+  padding: 0 6px 0 10px; border: 1px solid var(--c-line-strong); border-radius: var(--radius); background: var(--c-surface-2); color: var(--c-text-2);   /* 1.0.19a A-08 (Т-1): рамка обёртки поля ≥ 3:1 */
+}
+.atlas-shell .as-search:focus-within { border-color: var(--brand); background: var(--surface); outline: 1px solid var(--brand); outline-offset: 0; }   /* 1.0.19a к3: фокус поля — кольцо 2 px (рамка + outline), видно и в режиме высокого контраста; в к2 менялся только цвет рамки 1 px (2,7:1 к покою) */
+.atlas-shell .as-search input, .atlas-shell .as-search #search {
+  flex: 1 1 auto; min-width: 0; width: 100%; height: 28px; min-height: 0; margin: 0; padding: 0; border: 0; border-radius: 0;
+  background: transparent; font: 400 var(--fs-13)/1 var(--font); color: var(--ink); outline: none; box-shadow: none;
+}
+.atlas-shell .as-search input::-webkit-search-cancel-button { display: none; }
+/* 1.0.19a A-10 (О-7): своя кнопка «×»; на телефоне — цель 44 px */
+.atlas-shell .as-search .as-search-clear { flex: none; display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; min-height: 0; margin: 0; padding: 0; border: 0; border-radius: var(--radius); background: transparent; color: var(--c-text-2); font: 400 18px/1 var(--font); cursor: pointer; }
+.atlas-shell .as-search .as-search-clear[hidden] { display: none; }
+.atlas-shell .as-search .as-search-clear:hover { background: var(--c-surface-2); color: var(--c-text); }
+@media (max-width: 850px) {
+  /* 1.0.19a A-10 (О-7): шрифт полей ≥ 16 px — iOS не приближает страницу при фокусе */
+  input[type="search"], input[type="text"], input:not([type]), select, textarea { font-size: 16px !important; }
+  .atlas-shell .as-search .as-search-clear { width: 44px; height: 44px; margin-right: -6px; font-size: 22px; }
+}
+.atlas-shell kbd { font: 500 var(--fs-12)/1.2 var(--font-mono); color: var(--muted); border: 1px solid var(--line-strong); border-radius: 4px; padding: 1px 5px; background: var(--surface); }
+.atlas-shell .as-icon {
+  width: 32px; height: 32px; min-height: 0; display: flex; align-items: center; justify-content: center; padding: 0; margin: 0;
+  border: 0; border-radius: var(--radius); background: transparent; color: var(--ink); cursor: pointer;
+}
+.atlas-shell .as-icon:hover { background: var(--page); }
+.atlas-shell .as-theme-slot { display: contents; }
+.atlas-shell .as-search-toggle { display: none; }
+
+/* Меню «Ещё» */
+.as-menu {
+  position: absolute; top: calc(var(--header-h) - 2px); right: -140px; width: 340px; z-index: 90; padding: 8px;
+  display: flex; flex-direction: column; gap: 2px; white-space: normal;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-l);
+  box-shadow: 0 16px 40px rgba(28, 28, 30, 0.16); font-family: var(--font);
+}
+.as-menu[hidden] { display: none; }
+.as-menu .as-mi {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%; min-height: 0; margin: 0;
+  padding: 10px 12px; border: 0; border-radius: var(--radius); background: transparent;
+  text-align: left; text-decoration: none; color: var(--ink); cursor: pointer; font: inherit;
+}
+.as-menu .as-mi:hover, .as-menu .as-mi:focus-visible { background: var(--page); }
+.as-menu .as-mi[aria-current="page"] .as-mi-title { color: var(--brand); }
+.as-menu .as-mi-title { font-size: var(--fs-14); font-weight: 600; line-height: 1.35; color: var(--ink); }
+.as-menu .as-mi-desc { font-size: var(--fs-12); line-height: 1.35; color: var(--muted); font-weight: 400; }
+.as-menu .as-menu-sep { height: 1px; background: var(--line); margin: 6px 4px; }
+.as-menu [data-phone-only] { display: none; }
+
+/* Нижняя панель телефона */
+.as-tabbar { display: none; }
+
+/* 1.0.20 b1 (§6.1): чип режима «Площадка / Технадзор / Обзор» и нижняя панель режима. Разметка .as-mode, .as-mode-menu, .as-tabbar--modes есть
+   только при ключах progress и modes (atlas-shell.js) — без них правила ни на что не действуют. Высота шапки и панели не меняется:
+   чип 32 px в шапке, на телефоне 44 px в строке 52 px. Режим — вид, а не права. 1.0.20 реш. 6: правила .as-switch* (переключатель «Режим проверки») сняты. */
+.atlas-shell .as-mode { position: relative; display: flex; align-items: center; flex: none; padding: 0 6px; }
+.atlas-shell .as-mode-btn { display: inline-flex; align-items: center; gap: 6px; height: 32px; min-height: 0; margin: 0; padding: 0 8px 0 12px; border: 1px solid var(--c-line-strong); border-radius: var(--radius-pill);
+  background: var(--c-surface-2); color: var(--c-text); font: 600 var(--fs-13)/1 var(--font); white-space: nowrap; cursor: pointer; }
+.atlas-shell .as-mode-btn .as-mode-k { font-weight: 500; color: var(--c-text-2); }
+.atlas-shell .as-mode-btn .icon { color: var(--c-text-2); }
+.atlas-shell .as-mode-btn:hover { background: var(--c-bg); color: var(--c-link); }
+.atlas-shell .as-mode-btn[aria-expanded="true"] { border-color: var(--c-brand); }
+.atlas-shell .as-mode-btn:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; }
+.atlas-shell .as-mode-menu { position: absolute; top: calc(var(--header-h) / 2 + 20px); right: 0; z-index: 91; width: 260px; max-width: calc(100vw - 16px); padding: 6px;
+  display: flex; flex-direction: column; gap: 2px; white-space: normal; background: var(--c-surface); border: 1px solid var(--c-line); border-radius: var(--radius-l); box-shadow: 0 16px 40px rgba(28, 28, 30, 0.16); }
+.atlas-shell .as-mode-menu[hidden] { display: none; }
+.atlas-shell .as-mode-item { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%; min-height: 44px; margin: 0; padding: 8px 12px 8px 32px;
+  border: 0; border-radius: var(--radius); background: transparent; color: var(--c-text); text-align: left; font: 600 var(--fs-14)/1.3 var(--font); cursor: pointer; }
+.atlas-shell .as-mode-item small { font: 400 var(--fs-12)/1.3 var(--font); color: var(--c-text-2); }
+.atlas-shell .as-mode-item[aria-checked="true"]::before { content: ''; position: absolute; left: 12px; top: 50%; width: 8px; height: 8px; margin-top: -4px; border-radius: 50%; background: var(--c-brand); }
+.atlas-shell .as-mode-item[aria-checked="true"] span { color: var(--c-link); }
+.atlas-shell .as-mode-item:hover, .atlas-shell .as-mode-item:focus-visible { background: var(--c-bg); }
+.atlas-shell .as-mode-item:focus-visible { outline: 2px solid var(--c-accent); outline-offset: -2px; }
+@media (max-width: 1000px) {
+  .atlas-shell.as-has-modes .as-tools { flex: none; }   /* чип и кнопка поиска не сжимаются — сжимается строка объекта (многоточие) */
+  .atlas-shell .as-mode { position: static; padding: 0; }
+  .atlas-shell .as-mode-btn { height: 44px; min-width: 44px; padding: 0 10px 0 14px; }
+  .atlas-shell .as-mode-btn .as-mode-k { display: none; }
+  .atlas-shell .as-mode-menu { top: calc(var(--header-h) - 2px); right: 8px; }
+  .as-tabbar.as-tabbar--modes { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+/* 1.0.19a A-13: плашка «Режим проверки включён · Выключить» — только пока режим включён.
+   к2: полоса во всю ширину сразу под шапкой, в потоке страницы (atlas-shell.js ставит её после header) — ничего не перекрывает:
+   в к1 плавающая плашка закрывала «3D / План» сцены (щелчок по «3D» выключал режим), а ниже по сцене — плашку «Элемент из замечания» и кнопки страниц (PROGRESS, OVERVIEW, library на 390).
+   На главной (body — колонка flex) сцена становится ниже на высоту полосы; холст следит за размером сам (ResizeObserver движка). */
+/* 1.0.19a к3: z-index 59 — ниже шапки (60): меню «Ещё» и результаты поиска шапки ложатся поверх полосы (в к2 полоса закрывала первый пункт «Ещё» и результаты на 390). */
+.as-review-bar { position: relative; z-index: 59; flex: none; display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 4px 12px; box-sizing: border-box; width: 100%; min-height: 40px; margin: 0;
+  padding: 4px 16px; border: 0; border-bottom: 1px solid var(--c-line-strong); background: var(--c-brand-tint); color: var(--c-text); font: 600 var(--fs-13)/1.3 var(--font); text-align: center; }
+.as-review-bar[hidden] { display: none; }
+.as-review-bar .as-review-off { min-height: 32px; padding: 0 14px; border: 1px solid var(--c-line-strong); border-radius: var(--radius-pill); background: var(--c-surface); color: var(--c-link); font: 600 var(--fs-13)/1 var(--font); cursor: pointer; }
+.as-review-bar .as-review-off:hover { background: var(--c-surface-2); }
+.as-review-bar .as-review-off:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; }
+@media (max-width: 1000px) { .as-review-bar .as-review-off { min-height: 44px; } }
+
+@media (max-width: 1360px) {
+  .atlas-shell .as-search { width: 140px; }
+  .atlas-shell .as-search kbd { display: none; }
+}
+/* 1.0.19a A-01 (Б1): при ключе progress подпись «Ход работ» видна на 1001–1920 (правила 1.0.17 B3-17b/e, прятавшие её в значок, сняты);
+   «Требует решения» при ключе — в «Ещё» с числом (в шапке пункта нет, atlas-shell.js). Без ключа шапка как в 1.0.18. */
+@media (max-width: 1280px) and (min-width: 1001px) {
+  .atlas-shell { gap: 12px; }
+  .atlas-shell .as-ed-date { display: none; }
+}
+@media (max-width: 1279px) and (min-width: 1001px) {
+  /* при ключе: поле поиска — сколько остаётся (плейсхолдер «Найти» — atlas-shell.js), пункты плотнее */
+  .atlas-shell.as-has-progress { gap: 10px; }
+  .atlas-shell.as-has-progress .as-link { padding: 0 8px; }
+  .atlas-shell.as-has-progress .as-search { width: 140px; flex: 0 1 auto; min-width: 72px; }
+  .atlas-shell.as-has-progress .as-search kbd { display: none; }
+}
+@media (max-width: 1120px) and (min-width: 1001px) {
+  .atlas-shell .as-sep, .atlas-shell .as-edition { display: none; }
+  .atlas-shell .as-link { padding: 0 8px; }
+  /* «Требует решения» — значок и число, подпись в title */
+  .atlas-shell .as-link[data-key="unplaced"] .as-link-t { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .atlas-shell .as-search { width: 168px; }
+}
+@media (max-width: 1000px) {
+  .atlas-shell { gap: 10px; padding: 0 8px 0 16px; }
+  .atlas-shell .as-nav > .as-link, .atlas-shell .as-more-btn, .atlas-shell .as-help, .atlas-shell .as-ed-date { display: none; }
+  .atlas-shell .as-edition, .atlas-shell .as-sep { display: flex; }
+  .atlas-shell .as-brand { flex: 1 1 auto; overflow: hidden; min-height: 44px; gap: 8px; }
+  .atlas-shell .as-ed-b { font-size: var(--fs-13); font-weight: 600; color: var(--c-text); white-space: nowrap; }
+  .atlas-shell .as-nav { height: 0; width: 0; flex: none; }
+  .atlas-shell .as-more { position: static; }
+  .atlas-shell .as-tools { margin-left: 0; flex: 0 0 auto; }   /* 1.1.0: из объекта (R1.10) — панель инструментов на узкой ширине не сжимается */
+  .atlas-shell .as-search { display: none; }
+  .atlas-shell .as-search-toggle { display: flex; width: 44px; height: 44px; border-radius: 10px; }
+  .atlas-shell .as-theme-slot { display: none; }
+  .atlas-shell.as-search-open .as-search {
+    display: flex; position: absolute; left: 8px; right: 60px; top: 6px; width: auto; height: 36px; z-index: 5; background: var(--surface);
+  }
+  .as-menu, .as-menu.as-menu--sheet {
+    position: fixed; top: auto; bottom: 64px; left: 0; right: 0; width: auto; max-height: calc(100dvh - 120px); overflow: auto;
+    border-radius: var(--radius-l) var(--radius-l) 0 0; box-shadow: 0 -8px 24px rgba(28, 28, 30, 0.14);
+  }
+  .as-menu .as-mi { min-height: var(--target); }
+  .as-menu [data-phone-only] { display: flex; }
+  .as-tabbar {
+    display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); flex: 0 0 64px; height: 64px; z-index: 70;
+    background: var(--surface); border-top: 1px solid var(--line); font-family: var(--font);
+  }
+  body.has-shell:not(.atlas-prototype) .as-tabbar { position: fixed; left: 0; right: 0; bottom: 0; gap: 0; }   /* 1.0.19a к2: gap 0 — правило страницы nav{gap:24px} (UNPLACED.html) сжимало вкладки до 58,8 px; главная — как в 1.0.18 */
+  body.has-shell:not(.atlas-prototype) { padding-bottom: 64px; }
+  html .as-tabbar .as-tab {
+    position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+    min-height: 0; height: 64px; margin: 0; padding: 0; border: 0; border-radius: 0; background: transparent;
+    font: 500 var(--fs-12)/1.2 var(--font); color: var(--ink); text-decoration: none; cursor: pointer;
+  }
+  html .as-tabbar .as-tab[aria-current="page"] { color: var(--brand); font-weight: 600; }
+  html .as-tabbar .as-tab:focus-visible { outline: 2px solid var(--c-accent); outline-offset: -3px; }   /* 1.0.19a A-07 (О-14): кольцо фокуса внутри вкладки */
+  .as-tab-badge {
+    position: absolute; top: 6px; left: 50%; margin-left: 6px; padding: 0 5px; border-radius: var(--radius-pill);
+    background: var(--brand); color: #FFFFFF; font-size: var(--fs-12); font-weight: 600; line-height: 16px;
+  }
+}
+@media (max-width: 360px) {
+  .atlas-shell .as-ed-date { display: none; }
+}
+
+/* Общий поиск шапки: группы результатов (assets/atlas-search.js) */
+.as-results { position: absolute; top: calc(var(--header-h) / 2 + 22px); right: 0; width: 460px; max-width: calc(100vw - 24px); max-height: calc(100dvh - 70px); overflow: auto; z-index: 95;
+  padding: 10px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-l); box-shadow: 0 16px 40px rgba(28, 28, 30, .16); white-space: normal; color: var(--ink); }
+.as-results[hidden] { display: none; }
+.search-groups .sg, .as-results .sg { padding: 6px 0; border-top: 1px solid var(--line); }
+.as-results .sg:first-child { border-top: 0; }
+.sg-h { margin: 4px 8px 4px; font-size: var(--fs-12); font-weight: 600; color: var(--muted); }
+.sg-item { display: flex; flex-direction: column; gap: 2px; padding: 8px; border-radius: var(--radius); text-decoration: none; color: var(--ink); }
+body.has-shell .sg-item, .atlas-prototype .sg-item { color: var(--ink); }
+.sg-item:hover, .sg-item:focus-visible { background: var(--page); }
+.sg-label { font-size: var(--fs-14); line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.sg-sub { font-size: var(--fs-12); color: var(--muted); font-weight: 500; }
+.sg-more { display: inline-block; margin: 2px 8px 4px; font-size: var(--fs-13); font-weight: 600; }
+/* 1.1.1 B3: «Показать ещё» и «Повторить» в группах поиска — кнопки; сбой индекса — своё состояние, не «ничего не найдено» */
+button.sg-more { display: inline-flex; align-items: center; min-height: 36px; margin: 4px 8px; padding: 0 12px; border: 1px solid var(--line); border-radius: var(--radius); background: transparent; color: var(--link, var(--ink)); font: inherit; font-size: var(--fs-13); font-weight: 600; cursor: pointer; }
+button.sg-more[hidden] { display: none; }
+button.sg-more:hover, button.sg-more:focus-visible { background: var(--page); }
+.sg-err { margin: 2px 8px 4px; font-size: var(--fs-13); color: var(--ink); }
+.sg-error .sg-h { color: var(--sig-high-text, #8C1D18); }
+.as-empty { margin: 6px 8px; font-size: var(--fs-13); color: var(--muted); }
+@media (max-width: 850px) {
+  .as-results { position: fixed; top: 48px; left: 8px; right: 8px; width: auto; }
+  .sg-item { min-height: var(--target); justify-content: center; }
+}
+
+/* Общий всплывающий список (assets/atlas-shell.js → AtlasShell.popover) */
+.as-pop { position: fixed; box-sizing: border-box; z-index: 120; overflow: auto; padding: 6px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-l);
+  box-shadow: 0 16px 40px rgba(28, 28, 30, .18); font-family: var(--font); color: var(--ink); }
+.as-pop-item { display: flex; flex-direction: column; justify-content: center; gap: 2px; min-height: 40px; padding: 8px 10px; border-radius: var(--radius); text-decoration: none; }
+body .as-pop .as-pop-item { color: var(--ink); }
+.as-pop-item:hover, .as-pop-item:focus-visible { background: var(--page); }
+.as-pop-label { font-size: var(--fs-14); line-height: 1.35; }
+.as-pop-sub { font-size: var(--fs-12); font-weight: 500; color: var(--muted); }
+@media (max-width: 850px) { .as-pop-item { min-height: var(--target); } }
+.skip-link { position: absolute; left: 8px; top: -60px; z-index: 200; padding: 10px 14px; border-radius: var(--radius); background: var(--brand); color: #FFFFFF; font: 600 var(--fs-14)/1 var(--font); text-decoration: none; }
+body .atlas-shell a.skip-link { color: #FFFFFF; }
+.skip-link:focus { top: 6px; }
+
+/* V12.0 · R1-01 (ревью D): тёмная тема главной — оболочка берёт тёмные значения при body.ui-dark сама,
+   не дожидаясь html[data-theme="dark"] (ранний скрипт темы B2). Значения = assets/tokens_v2_dark.css; старые имена — тоже,
+   т. к. псевдонимы (--surface: var(--c-surface)) вычисляются на :root светлыми. Рабочая сборка не ломается ни в какой момент. */
+body.ui-dark .atlas-shell, body.ui-dark .as-menu, body.ui-dark .as-results, body.ui-dark .as-tabbar {
+  --c-bg: #101B24; --c-surface: #16232E; --c-surface-2: #1D2C38; --c-line: #2B3C4A; --c-line-mid: #3C5061; --c-line-strong: #5E7182;
+  --c-text: #E8EEF3; --c-text-2: #A0B1BF; --c-link: #86C8E0; --c-brand-tint: #19394A; --c-accent: #5BA9C7;
+  --c-sig-mid-bg: #3A2F1C; --c-sig-mid-text: #F2C77A; --logo-ring: 0 0 0 1px rgba(255,255,255,.28);
+  --surface: var(--c-surface); --page: var(--c-bg); --surface-soft: var(--c-surface-2); --line: var(--c-line); --line-strong: var(--c-line-mid);
+  --ink: var(--c-text); --muted: var(--c-text-2); --brand-tint: var(--c-brand-tint);
+  color-scheme: dark;
+}
+body.ui-dark .atlas-shell .as-link[aria-current="page"] { box-shadow: inset 0 -2px 0 var(--c-link); }
+body.ui-dark .atlas-shell .count { background: var(--c-brand-tint); color: var(--c-link); }
+body.ui-dark .atlas-shell .count--warn { background: var(--c-sig-mid-bg); color: var(--c-sig-mid-text); }
+body.ui-dark .atlas-shell .as-brand img { box-shadow: var(--logo-ring); }
+body.ui-dark .atlas-shell kbd { background: var(--c-surface); }
+
+/* V12.0 · проверка шапки: цели нажатия ≥ 44 px и у ссылки-пропуска (видна при фокусе), и у кнопки поиска на телефоне */
+.atlas-shell .skip-link { min-height: 44px; display: inline-flex; align-items: center; box-sizing: border-box; }
+@media (max-width: 1000px) { .atlas-shell .as-search-toggle { width: 48px; height: 48px; min-width: 48px; min-height: 48px; } }
+
+/* V12.0b · 12: на телефоне открытое поле поиска — по ширине шапки (раньше позиционировалось внутри .as-tools шириной 48 px → 0 px) */
+@media (max-width: 1000px) { .atlas-shell .as-tools { position: static; } .atlas-shell.as-search-open .as-search { left: 8px; right: 60px; width: auto; } }
+/* К1 · «Здание пока не собрано» (assets/empty-world.js; вид К1, сессия D, §2): плашка по центру сцены, не модальная; стиль — как «Закрыт окружением» */
+.stage .empty-world { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 16; box-sizing: border-box; width: min(440px, calc(100% - 32px)); padding: 16px 20px; border: 1px solid var(--c-line); border-radius: var(--r); background: var(--c-surface); box-shadow: var(--shadow-1, 0 1px 3px rgba(0,0,0,.12)); color: var(--c-text); }
+.stage .empty-world-i { display: block; color: var(--c-text-2); margin-bottom: 8px; }
+.stage .empty-world h2 { margin: 0 0 6px; font-size: var(--fs-16, 16px); line-height: 1.3; font-weight: 600; }
+.stage .empty-world p { margin: 0 0 12px; font-size: var(--fs-13, 13px); line-height: 1.45; color: var(--c-text-2); }
+.stage .empty-world-a { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
+.stage .empty-world-a .primary { display: inline-flex; align-items: center; min-height: 36px; padding: 0 14px; border-radius: var(--r); background: var(--c-brand-fill); color: #fff; font-weight: 600; text-decoration: none; }
+.stage .empty-world-r { color: var(--c-link); font-size: var(--fs-13, 13px); }
+.stage .empty-world-n { margin: 12px 0 0 !important; font-size: 12px !important; color: var(--c-text-3, var(--c-text-2)) !important; }
+@media (max-width: 850px) { .stage .empty-world { top: auto; bottom: 8px; transform: translateX(-50%); width: calc(100% - 16px); padding: 12px 16px; } .stage .empty-world-i { display: none; } .stage .empty-world-a .primary { flex: 1 1 100%; justify-content: center; min-height: 44px; } }
+/* 1.1.1 A2: один вход в справку на размер экрана — на ПК «?» в шапке, на телефоне и узком окне (≤ 1000 px, где «?» скрыт) — «Ещё → Как работать с атласом» */
+@media (min-width: 1001px) { .atlas-shell .as-menu .as-mi-help, .atlas-shell .as-menu .as-mi-help + .as-menu-sep { display: none; } }

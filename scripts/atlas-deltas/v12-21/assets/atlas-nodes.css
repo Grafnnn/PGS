@@ -1,0 +1,117 @@
+/* 3D Атлас · V12.1 «Узлы и навигация» — левое меню (B2). Токены — tokens.css / tokens_v2_dark.css. */
+.nav-find { width: 100%; margin: 8px 0 6px; }
+.nav-views { display: flex; gap: 2px; padding: 3px; margin: 6px 0 8px; background: var(--c-surface-2); border-radius: var(--radius, 8px); }
+.nav-views .nav-view { flex: 1 1 auto; min-width: 0; height: 32px; min-height: 32px; padding: 0 6px; border: 0; border-radius: calc(var(--radius, 8px) - 2px); background: transparent; color: var(--c-text-2); font-size: var(--fs-13, 13px); font-weight: 500; white-space: nowrap; }
+.nav-views .nav-view:hover { background: var(--c-surface); color: var(--c-text); }
+.nav-views .nav-view[aria-pressed="true"] { background: var(--c-surface); color: var(--c-text); font-weight: 600; box-shadow: var(--shadow-1); }
+.nav-view-box[hidden] { display: none !important; }
+@media (max-width: 850px) { .nav-views .nav-view { height: 44px; min-height: 44px; } }
+/* дерево «Узлы» (§2.5): строка 32 px, отступ 12 px на уровень; дерево движка #albumTree скрыто стилем, разметка на месте */
+body.nt-on #navViewNodes > #albumTree { display: none !important; }
+.nt { display: flex; flex-direction: column; margin: 0 -4px; }
+.nt-row { position: relative; display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; align-items: center; column-gap: 4px; min-height: 32px; padding: 4px 8px 4px calc(4px + var(--d, 0) * 12px); border-radius: var(--r-s, 6px); font-size: var(--fs-14, 14px); line-height: 1.3; color: var(--c-text); cursor: pointer; outline: none; }
+.nt-row:hover { background: var(--c-surface-2); }
+.nt-row:focus-visible { box-shadow: inset 0 0 0 2px var(--c-accent); }
+.nt-row[aria-current="true"] { background: var(--c-brand-tint); color: var(--c-link); font-weight: 600; box-shadow: inset 3px 0 0 var(--c-link); }
+.nt-row[aria-current="true"]:focus-visible { box-shadow: inset 3px 0 0 var(--c-link), inset 0 0 0 2px var(--c-accent); }
+.nt-tw { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; color: var(--c-text-2); border-radius: 4px; }
+.nt-tw .icon { width: 14px; height: 14px; transition: transform var(--dur-1, .12s); }   /* 1.0.19a A-15: --dur-1 — 0 при prefers-reduced-motion */
+.nt-row[aria-expanded="true"] > .nt-tw .icon { transform: rotate(90deg); }
+.nt-l { min-width: 0; overflow-wrap: anywhere; }
+.nt-n { color: var(--c-text-2); font-size: var(--fs-13, 13px); font-variant-numeric: tabular-nums; white-space: nowrap; font-weight: 500; }
+.nt-row[aria-current="true"] .nt-n { color: var(--c-link); }
+.nt-sub { grid-column: 2 / 4; font-size: var(--fs-12, 12px); font-weight: 500; color: var(--c-text-2); }
+.nt-tree[aria-level="1"] { font-weight: 500; }
+.nt-role, .nt-el { font-size: var(--fs-13, 13px); }
+#nodeTree .nt-more { align-self: flex-start; min-height: 32px; margin-left: calc(28px + var(--d, 0) * 12px); padding: 0 8px; border: 0; background: transparent; color: var(--c-link); font-size: var(--fs-13, 13px); font-weight: 600; }
+.nt-note { margin: 6px 4px; font-size: var(--fs-13, 13px); color: var(--c-text-2); }
+.nt-note:empty { display: none; }
+@media (max-width: 850px) { .nt-row { min-height: 44px; } .nt-tw { width: 32px; height: 44px; } .nt-row { grid-template-columns: 32px minmax(0, 1fr) auto; } .nt-more { min-height: 44px; } }
+/* 390: уровень на экран (§2.6) */
+#nodeTree .nt-back { align-self: flex-start; min-height: 44px; padding: 0 8px; border: 0; background: transparent; color: var(--c-link); font-size: var(--fs-14, 14px); font-weight: 600; }
+.nt-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding: 2px 8px 8px; font-size: var(--fs-16, 16px); font-weight: 600; border-bottom: 1px solid var(--c-line); margin-bottom: 4px; }
+.nt-head .nt-n { font-size: var(--fs-13, 13px); }
+.nt-row.has-go { grid-template-columns: 8px minmax(0, 1fr) auto 44px; }
+.nt-row.has-go .nt-sub { grid-column: 2 / 4; }
+#nodeTree .nt-go { width: 44px; height: 44px; min-height: 44px; padding: 0; border: 0; background: transparent; color: var(--c-text-2); display: inline-flex; align-items: center; justify-content: center; border-radius: var(--r-s, 6px); }
+#nodeTree .nt-go:hover { background: var(--c-surface-2); color: var(--c-text); }
+@media (max-width: 850px) { .nt-row:not(.has-go) { grid-template-columns: 8px minmax(0, 1fr) auto; } .nt-tw { width: 8px; } }
+/* поиск ⌘K: группа «Узлы» первой */
+.search-popover .search-nodes { margin: 0 0 8px; padding: 0 0 8px; border-bottom: 1px solid var(--c-line); }
+.search-popover .search-nodes[hidden] { display: none; }
+.search-popover .search-nodes .sg-h { margin: 0 0 4px; font-size: var(--fs-12, 12px); font-weight: 600; color: var(--c-text-2); }
+/* V121-R1-03: подпись в одну строку с многоточием, счётчик справа; вторая строка — только состав текущего узла */
+.nt-l { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; overflow-wrap: normal; }
+.nt-sub { white-space: normal; }
+.nt-all { font-weight: 500; }
+/* V121-R1-02: над полями нет заголовка раздела и отдельной строки «Всё здание» (ПК); на телефоне заголовок шторки с «Закрыть» остаётся */
+@media (min-width: 851px) {
+  body.nav-v121 #left .navigation-heading, body.nav-v121 #left #leftCount, body.nav-v121 #left .nav-building { display: none; }
+}
+body.nav-v121 #panelSections > #levelNavigation { margin: 0 0 8px; }
+
+/* V121-R1-08: своя прокрутка у дерева узлов; высоту до низа колонки задаёт atlas-nodes.js */
+#navViewNodes { overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+/* 390: «‹ родитель» и заголовок уровня закреплены сверху дерева */
+#nodeTree .nt-back { position: sticky; top: 0; z-index: 2; width: 100%; text-align: left; background: var(--c-surface); }
+#nodeTree .nt-head { position: sticky; top: 44px; z-index: 2; background: var(--c-surface); }
+/* шторка 390: цели ≥ 44 px (поле узлов, «Уровень», «О разделе», «Основания и ограничения»); «Закрыть» — на токенах (тёмная тема: было #fff под светлым текстом) */
+#left .navigation-heading .close-left { background: var(--c-surface); color: var(--c-text); border-color: var(--c-line-mid); }
+@media (max-width: 850px) {
+  #left #navFind { min-height: 44px; height: 44px; }
+  body.atlas-prototype #left #levelNavigation > summary { min-height: 44px; height: auto; }
+  body.atlas-prototype #left details:not(#levelNavigation) > summary { min-height: 44px; padding-top: 12px; padding-bottom: 12px; box-sizing: border-box; }
+}
+
+/* V12.1d · п. 1: имени — не меньше читаемой ширины, многоточие у имени, счётчик не сжимается */
+.nt-row { grid-template-columns: 20px minmax(72px, 1fr) auto; }
+.nt-n { flex: none; }
+@media (max-width: 850px) { .nt-row:not(.has-go) { grid-template-columns: 8px minmax(72px, 1fr) auto; } .nt-row.has-go { grid-template-columns: 8px minmax(72px, 1fr) auto 44px; } }
+
+/* V12.2 · S1: строка «Загрузка узлов…» — без наведения */
+.nt-row.nt-load, .nt-row.nt-load:hover { background: none; cursor: default; }
+
+/* V12.2 · M15: галка «показать на модели» у раздела первого уровня (вместо числа), плашка набора над деревом. Макет D — V12_2_галки_разделов.html */
+.nt-ck { position: relative; display: inline-grid; place-items: center; width: 32px; height: 32px; margin: -4px -6px -4px auto; flex: none; cursor: pointer; }
+/* a11y44: цель касания — сам input на всё поле; вид галки 18 px рисуется ::before */
+.nt-ck input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.nt-ck::before { content: ""; width: 18px; height: 18px; box-sizing: border-box; border: 1.5px solid var(--c-line-strong, var(--c-text-2)); border-radius: 4px; background: var(--c-surface) center / 12px 12px no-repeat; pointer-events: none; }
+.nt-ck:has(input:checked)::before { border-color: var(--c-brand-fill, var(--c-link)); background-color: var(--c-brand-fill, var(--c-link)); background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 6.2l2.3 2.3 4.7-4.9' fill='none' stroke='%23fff' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); }
+.nt-ck:has(input:focus-visible)::before { outline: 2px solid var(--c-link); outline-offset: 2px; }
+.nt-row.nt-on > .nt-l { font-weight: 600; }
+.nt-sethead[hidden] { display: none; }
+.nt-sethead { display: grid; gap: 6px; margin: 0 0 4px; }
+.nt-sethint { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding: 0 2px 0 12px; font-size: var(--fs-12); color: var(--c-text-2); }
+.nt-sethint b { font-weight: 600; color: var(--c-text-2); }
+.nt-set { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; padding: 6px 10px; border-radius: var(--r-s); background: var(--c-brand-tint, var(--c-surface-2)); font-size: var(--fs-13); }
+.nt-set span { color: var(--c-text-2); }
+#left .nt-set .nt-set-x, .nt-set .nt-set-x { margin-left: auto; height: auto; min-height: 0; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; color: var(--c-link); font: inherit; font-weight: 600; cursor: pointer; }
+.nt-set-x:hover { text-decoration: underline; }
+@media (max-width: 850px) {
+  .nt-ck { width: 44px; height: 44px; margin: 0 0 0 auto; }
+  /* R2-03: раздел в шторке — число второй строкой; галка и «›» — в первой строке */
+  .nt-row:has(.nt-ck) > .nt-tw { grid-column: 1; grid-row: 1; }
+  .nt-row:has(.nt-ck) > .nt-l { grid-column: 2; grid-row: 1; }
+  .nt-row:has(.nt-ck) > .nt-ck { grid-column: 3; grid-row: 1; }
+  .nt-row.has-go:has(.nt-ck) > .nt-go { grid-column: 4; grid-row: 1 / span 2; }
+  .nt-row:has(.nt-ck) > .nt-sub { grid-column: 2 / 4; grid-row: 2; margin-top: -10px; padding-bottom: 2px; }
+  #left .nt-set .nt-set-x { min-height: 44px; }
+}
+/* К1: галка «На модели», когда тел на модели нет (atlas-nodes.js noBodies) */
+.nt-ck--off { opacity: .4; cursor: not-allowed; } .nt-ck--off input { cursor: not-allowed; }
+/* 1.1.1 B4: телефон, ветка «Состава» — путь и текущая ветка над поиском и фильтрами (.nt-pbar, ставит atlas-nodes.js); поиск, вид, «Уровень» и строка «Всё здание» —
+   под «Поиск и фильтры» (#left.nt-filters-open); имя строки — до двух строк */
+.nt-pbar { display: flex; flex-direction: column; gap: 2px; padding-bottom: 6px; border-bottom: 1px solid var(--c-line); }
+.nt-pbar[hidden] { display: none; }
+.nt-prow { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.nt-pbar .nt-back { flex: none; min-height: 44px; padding: 0 8px; border: 0; background: transparent; color: var(--c-link); font-size: var(--fs-14, 14px); font-weight: 600; }
+.nt-path { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-13, 13px); color: var(--c-text-2); }
+.nt-ftoggle { flex: none; min-height: 44px; padding: 0 10px; border: 1px solid var(--c-line); border-radius: var(--r-s, 6px); background: transparent; color: var(--c-text); font-size: var(--fs-13, 13px); }
+.nt-ftoggle[aria-expanded="true"] { background: var(--c-surface-2); }
+.nt-pbar .nt-head { margin: 0; padding: 2px 8px 0; border-bottom: 0; }
+.nt-pbar .nt-hl { min-width: 0; overflow-wrap: anywhere; }
+@media (max-width: 850px) {
+  #left.nt-branch:not(.nt-filters-open):has(#panelSections:not([hidden]) #navViewNodes:not([hidden])) :is(.atlas-navigation, #navFind, .nav-views, #levelNavigation) { display: none; }
+  #left:not(.nt-branch) .nt-pbar, #left:has(#navViewNodes[hidden]) .nt-pbar { display: none; }
+  #nodeTree .nt-row .nt-l { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+}
