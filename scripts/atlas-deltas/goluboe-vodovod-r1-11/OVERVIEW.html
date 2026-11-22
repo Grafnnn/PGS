@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="ru" data-theme="light"><head><meta charset="utf-8"><style>a[data-pkg-archive]::after{content:" · в архиве";font-size:.85em;opacity:.75}</style><script defer src="assets/package-links.js"></script><script src="project/config.js"></script><script>/* К1: наборы данных объекта (имя атрибута — переменной A, чтобы проверка ссылок не принимала шаблон за адрес) */(function(){var A="src",P=window.ATLAS_PROJECT||{},L=Array.isArray(P.plugins)?P.plugins:[],X=window.ATLAS_PLUGINS=window.ATLAS_PLUGINS||{},N=[],seen={};for(var i=0;i<L.length;i++){var p=L[i];if(p&&/^[A-Za-z0-9_-]+$/.test(p.name||"")){X[p.name]=Object.assign(X[p.name]||{},{data:p.data||[]});N.push(p.name);}}var pg=(location.pathname.split("/").pop()||"index.html").replace(/\.html$/,"");window.__atlasPluginData=function(defer){for(var i=0;i<N.length;i++){var x=X[N[i]];if(!x||!x.data)continue;for(var j=0;j<x.data.length;j++){var d=x.data[j],u=typeof d==="string"?d:d&&d.src,ps=d&&d.pages;if(!u||seen[u])continue;if(ps&&!ps.some(function(q){return String(q).replace(/\.html$/,"")===pg;}))continue;seen[u]=1;if(document.querySelector("script["+A+"=\""+u+"\"]"))continue;document.write('<script'+(defer?' defer':'')+' '+A+'="'+u+'"><\/script>');}}};if(pg!=="index")window.__atlasPluginData(false);})();</script><link rel="stylesheet" href="assets/tokens.css"><link rel="icon" href="assets/atlas-mark-v3-84.png"><script src="assets/atlas-data.js" data-need="release"></script><script src="assets/atlas-shell.js"></script><script>/* 1.0.4 В4: оболочка страницы (atlas-shell.js) не загрузилась — сообщение и «Обновить», не пустой экран */window.AtlasShell||addEventListener("DOMContentLoaded",function(){var d=document,b=d.createElement("div"),k=d.createElement("button");b.setAttribute("role","alert");b.style.cssText="margin:24px auto;max-width:520px;padding:16px;border:1px solid var(--c-line-strong,#9ab);border-radius:8px;background:var(--c-surface,#fff);color:var(--c-text,#123);font:15px/1.5 system-ui,sans-serif";b.append("Не загрузилась оболочка страницы. ");k.type="button";k.textContent="Обновить";k.style.cssText="display:block;min-height:44px;margin-top:8px;padding:0 16px";k.onclick=function(){location.reload();};b.append(k);d.body.prepend(b);});</script>
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>Обзор проекта · 3D Атлас</title>
+<link rel="stylesheet" href="assets/atlas-shell.css"><link rel="stylesheet" href="assets/atlas-pages.css"><link rel="stylesheet" href="assets/overview.css"></head>
+<body data-nav="overview">
+<!-- V12.0 · B4 «Обзор проекта». Все числа — из data/release-info.js при открытии страницы (assets/overview.js); в разметке чисел нет. -->
+<main class="page ov" id="main">
+<div class="ov-head">
+  <div>
+    <div class="ov-eyebrow">Обзор проекта</div>
+    <h1></h1>
+    <p class="ov-sub" id="ovSub"></p>
+  </div>
+  <div class="ov-actions"><a class="btn btn--primary" href="index.html" id="ovOpen">Открыть модель</a></div>
+</div>
+
+<div class="ov-top">
+  <a class="ov-scene" href="index.html" id="ovScene" aria-label="Открыть 3D-модель">
+    <img alt="3D-модель, вид «Всё здание»" width="1152" height="836" decoding="async">
+    <span class="ov-scene-cap" id="ovSceneCap"></span>
+  </a>
+  <div class="ov-summary">
+    <div class="ov-tiles" id="ovTiles"></div>
+    <div class="ov-sig" id="ovSig" hidden>
+      <div class="ov-sigbar" id="ovSigBar" aria-hidden="true"></div>
+      <div class="ov-legend" id="ovLegend"></div>
+      <p class="ov-linked" id="ovLinked" hidden></p>
+    </div>
+  </div>
+</div>
+
+<div class="ov-mid">
+  <section class="card ov-card" id="ovSections" hidden aria-labelledby="ovSectionsH"><h2 id="ovSectionsH">Элементы по разделам модели</h2><ul class="ov-bars" id="ovSectionsBars"></ul></section>
+  <section class="card ov-card" id="ovRemarks" hidden aria-labelledby="ovRemarksH"><h2 id="ovRemarksH">Замечания к РД по разделам</h2><ul class="ov-bars" id="ovRemarksBars"></ul><p class="ov-note" id="ovRemarksNote"></p></section>
+</div>
+
+<div class="ov-bot">
+  <section class="card ov-card" id="ovNews" hidden aria-labelledby="ovNewsH"><h2 id="ovNewsH">Что нового</h2><div id="ovNewsRows"></div></section>
+  <section class="card ov-card" aria-labelledby="ovLimitsH"><h2 id="ovLimitsH">Границы применения</h2>
+    <ul class="ov-limits">
+      <li>Атлас — координационная модель по рабочей документации. Он <b>не заменяет</b> чертежи и не является инженерной приёмкой; для изготовления и монтажа модель не используется.</li>
+      <li>Размеры и привязки взяты из РД. Где РД противоречива или неполна, привязка условная — это указано в карточке элемента меткой «привязка условная».</li>
+      <li id="ovLimitUnplaced" hidden></li>
+    </ul>
+    <p class="ov-note"><a href="ABOUT.html#limits">Все границы применения — «О выпуске»</a></p>
+  </section>
+  <section class="card ov-card" aria-labelledby="ovQuickH"><h2 id="ovQuickH">Быстрые переходы</h2><div class="ov-quick" id="ovQuick"></div></section>
+</div>
+</main>
+<script src="assets/overview.js"></script>
+</body></html>

@@ -1,0 +1,588 @@
+/* 3D Атлас · главная (V10): раскладка по макету «Стало · Модель здания». Только токены из assets/tokens.css.
+   Движок, данные и исходные элементы управления не меняются; здесь только их оформление. */
+:root { --r23-card: var(--surface); color-scheme: light; }
+body.atlas-prototype { background: var(--page); font: 400 var(--fs-14)/1.45 var(--font); color: var(--ink); }
+body.atlas-prototype :is(button, input, select, textarea, summary, kbd) { font-family: inherit; }
+.atlas-prototype :is(button, input, select) { font-size: var(--fs-13); line-height: 1.35; color: var(--ink); background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--radius); box-shadow: none; }
+.atlas-prototype button { min-height: 36px; cursor: pointer; }
+.atlas-prototype button:hover { background: var(--brand-tint); }
+.atlas-prototype button:disabled { color: var(--muted); background: var(--surface); cursor: default; }
+.atlas-prototype :is(button, a, input, select, summary):focus-visible { outline: 3px solid var(--brand-2); outline-offset: 2px; }
+.atlas-prototype [hidden] { display: none; }
+.ui-icon { width: 18px; height: 18px; flex: 0 0 18px; opacity: .85; object-fit: contain; }
+.ui-button { display: inline-flex; gap: 8px; align-items: center; justify-content: center; white-space: nowrap; }
+.mono { font-family: var(--font-mono); }
+
+/* Поиск в шапке */
+.atlas-shell .as-search #search { font-size: var(--fs-13); }
+.search-popover { position: absolute; top: 38px; left: auto; right: 0; width: 460px; max-width: calc(100vw - 24px); max-height: calc(100dvh - 70px); overflow: auto; padding: 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-l); box-shadow: 0 16px 40px rgba(28, 28, 30, .16); z-index: 95; white-space: normal; color: var(--ink); }
+.search-popover label { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0; font-size: var(--fs-13); color: var(--muted); }
+.search-popover select { max-width: 60%; min-height: 36px; }
+.search-popover #r23SearchCount { font-size: var(--fs-12); line-height: 1.5; color: var(--muted); padding: 10px 0 6px; }
+.search-popover #viewSearchResults { max-height: 45vh; overflow: auto; }
+.search-popover .r23-result .r23-meta { display: block; font-family: var(--font); font-size: var(--fs-12); color: var(--muted); font-weight: 500; }
+.search-popover .r23-more, .search-popover .empty-reset { display: inline-flex; align-items: center; min-height: 36px; margin: 6px 0; padding: 0 12px; font-size: var(--fs-13); font-weight: 600; color: var(--brand); }
+.search-popover .r23-result { display: block; width: 100%; text-align: left; background: var(--surface); font-size: var(--fs-14); border: 0; border-bottom: 1px solid var(--line); border-radius: 0; padding: 10px 8px; line-height: 1.4; overflow-wrap: anywhere; }
+.search-popover .r23-result small { display: block; font-size: var(--fs-12); color: var(--muted); font-family: var(--font-mono); }
+html:not(.review-mode) #viewSearchResults .r23-result small.r23-id, html:not(.review-mode) #list .row small { display: none; }
+#viewSearchResults small.r23-meta { color: var(--muted); }
+
+/* Сетка главной */
+body.atlas-prototype .shell { display: grid; position: relative; grid-template-columns: 288px minmax(0, 1fr) 0; overflow: hidden; min-height: 0; flex: 1 1 auto; }
+body.atlas-prototype .shell:has(#right.open) { grid-template-columns: 288px minmax(0, 1fr) 360px; }
+body.atlas-prototype.nav-collapsed .shell { grid-template-columns: 0 minmax(0, 1fr) 0; }
+body.atlas-prototype.nav-collapsed .shell:has(#right.open) { grid-template-columns: 0 minmax(0, 1fr) 360px; }
+
+/* Левая панель */
+body.atlas-prototype #left { grid-column: 1; grid-row: 1; position: relative; inset: auto; width: auto; height: auto; display: flex; flex-direction: column; gap: 14px; padding: 20px 16px; background: var(--surface); border-right: 1px solid var(--line); box-shadow: none; min-width: 0; overflow: auto; }
+body.atlas-prototype.nav-collapsed #left { display: none; }
+body.atlas-prototype #left > * { flex-shrink: 0; }
+html:not(.review-mode) body.atlas-prototype #left .kpis { display: none; }
+.atlas-shell .as-nav { padding: 0; margin: 0; border: 0; background: transparent; overflow: visible; white-space: nowrap; gap: 0; }
+.navigation-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0; padding: 0 4px; }
+.atlas-prototype #left .navigation-heading :is(h1, h2) { margin: 0; font-size: var(--fs-20); line-height: 1.3; font-weight: 700; letter-spacing: -0.01em; }
+.navigation-heading .close-left { display: none; }
+.left-count { margin: -10px 0 0; padding: 0 4px; font-size: var(--fs-14); color: var(--muted); }
+#left nav.atlas-navigation { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; border: 0; background: none; }
+.atlas-navigation .nav-building { display: flex; align-items: center; justify-content: space-between; height: 36px; min-height: 36px; padding: 0 12px; border: 0; border-radius: var(--radius); background: var(--brand-tint); color: var(--brand); font-size: var(--fs-14); font-weight: 600; text-align: left; }
+.atlas-navigation .nav-building span { font-size: var(--fs-13); color: var(--brand); font-weight: 500; font-variant-numeric: tabular-nums; }
+.atlas-navigation .nav-building.is-off { background: transparent; color: var(--ink); font-weight: 500; }
+.atlas-navigation .nav-building.is-off span { color: var(--muted); }
+.atlas-navigation .nav-layer { display: flex; align-items: center; justify-content: space-between; min-height: 36px; padding: 0 12px; border: 1px dashed var(--line-strong); border-radius: var(--radius); background: var(--surface); font-size: var(--fs-14); text-align: left; }
+.atlas-navigation .nav-layer { gap: 8px; }
+.atlas-navigation .nav-layer small { flex: none; white-space: nowrap; font-size: var(--fs-13); color: var(--muted); font-variant-numeric: tabular-nums; }
+.atlas-navigation .nav-layer[aria-pressed=true] { border-style: solid; border-color: var(--brand); background: var(--brand-tint); color: var(--brand); font-weight: 600; }
+.layer-legend { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border-radius: var(--radius); background: var(--page); font-size: var(--fs-13); line-height: 1.45; }
+.layer-legend[hidden] { display: none; }
+.layer-legend p { margin: 0; }
+.layer-cond { display: flex; gap: 8px; align-items: baseline; }
+.layer-dot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--sig-mid); transform: translateY(-1px); }
+body.placed-layer label:has(#rev04ReviewOld) { display: none; }
+#levelNavigation { border: 0; padding: 0; margin: 0; }
+#levelNavigation > summary { display: flex; align-items: center; justify-content: space-between; height: 40px; padding: 0 12px; border: 1px solid var(--line-strong); border-radius: var(--radius); font-size: var(--fs-14); font-weight: 400; color: var(--ink); cursor: pointer; list-style: none; }
+#levelNavigation > summary::-webkit-details-marker { display: none; }
+#levelNavigation > summary::after { content: ''; width: 7px; height: 7px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(45deg) translateY(-2px); }
+#levelChoices { display: flex; flex-direction: column; gap: 2px; max-height: 38vh; overflow: auto; padding: 6px 0 0; }
+/* V12.0 · 0.15а: закрытый список уровней не занимает место (display:flex перекрывал скрытие <details>; audit видел 6–10 «наложений») */
+#levelNavigation:not([open]) > #levelChoices { display: none; }
+#levelChoices button > .mono-num { flex: none; margin: 0 auto 0 .35em; white-space: nowrap; }
+#levelChoices button { display: flex; justify-content: space-between; min-height: 36px; border: 0; background: transparent; font-size: var(--fs-14); text-align: left; padding: 0 12px; }
+#levelChoices button small { font-size: var(--fs-13); color: var(--muted); }
+body.atlas-prototype #levelChoices button, body.atlas-prototype #left .study-items :is(button, a) { color: var(--ink); }
+body.atlas-prototype #levelChoices button[aria-pressed=true] { color: var(--brand); }
+#levelChoices button[aria-pressed=true] { background: var(--brand-tint); color: var(--brand); font-weight: 600; }
+.section-label { font-size: var(--fs-12); font-weight: 600; color: var(--muted); padding: 0 12px 6px; }
+/* V12.5 · Q8: стили скрытого дерева движка (#albumTree: путь, кнопки, «образец», ссылка Фп-1) убраны — дерево не показывается (atlas-nodes.css), при albumTree=false не строится; .album-node small — у кнопок слоёв (.placed-node) */
+.album-tree-controls { display: flex; gap: 6px; }
+.album-tree-controls button { min-height: 32px; font-size: var(--fs-13); padding: 0 10px; }
+.album-node small { color: var(--muted); font-size: var(--fs-13); font-variant-numeric: tabular-nums; }
+#left details { border: 0; border-top: 1px solid var(--line); padding: 10px 0 0; margin: 0; font-size: var(--fs-13); }
+#left details > summary { font-size: var(--fs-13); font-weight: 600; color: var(--muted); cursor: pointer; line-height: 1.5; min-height: 28px; }
+#left .element-list .list-count { font-size: var(--fs-12); color: var(--muted); margin: 8px 0 4px; }
+#left .list { height: 290px; max-height: 45vh; min-height: 130px; border: 1px solid var(--line); border-radius: var(--radius); }
+.row { font-size: var(--fs-13); background: var(--surface); color: var(--ink); line-height: 1.4; white-space: normal; padding: 8px; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; }
+.atlas-prototype #list .row.selected { background: var(--brand-tint); box-shadow: inset 3px 0 var(--brand); }
+.engineering-note .sub, .engineering-note .alert { font-size: var(--fs-13); line-height: 1.5; color: var(--ink); background: var(--page); border: 0; border-radius: var(--radius); padding: 10px; margin: 8px 0 0; }
+.navigation-footnote { font-size: var(--fs-12); line-height: 1.5; color: var(--muted); margin: 0; padding: 0 4px; }
+#left .kpis { display: flex; gap: 12px; margin: 0; padding: 0 4px; border: 0; }
+#left .kpis > div { background: none; padding: 0; border: 0; }
+#left .kpis > div:first-child { display: none; }
+#left .kpis b { font-size: var(--fs-16); }
+#left .kpis span { font-size: var(--fs-12); color: var(--muted); text-transform: none; }
+/* Блок режима проверки */
+.review-block { margin-top: auto; display: flex; flex-direction: column; gap: 6px; padding: 12px; border: 1px dashed var(--brand-2); border-radius: 10px; background: #F4F8FA; }
+html:not(.review-mode) .review-block { display: none; }
+.review-title { font-size: var(--fs-13); font-weight: 600; color: var(--brand); padding: 0 4px 4px; }
+.review-block > details { border: 0; border-radius: var(--radius-s); background: var(--surface); padding: 0 8px; }
+#left .review-block > details > summary { display: flex; align-items: center; justify-content: space-between; min-height: 34px; font-size: var(--fs-14); font-weight: 400; color: var(--ink); }
+.review-block .filterBox[hidden] { display: block; }
+.review-block .study-items { display: flex; flex-direction: column; gap: 2px; max-height: 45vh; overflow: auto; padding-bottom: 8px; }
+.review-block .study-items :is(button, a) { font-size: var(--fs-13); line-height: 1.35; padding: 8px; min-height: 36px; border: 0; background: transparent; text-align: left; color: var(--ink); }
+.review-block .study-items button.active { background: var(--brand-tint); color: var(--brand); }
+.review-block .study-items p { font-size: var(--fs-12); color: var(--muted); margin: 6px 0; }
+.review-block .ctrl label, .review-block label { font-size: var(--fs-13); margin: 8px 0 4px; display: block; }
+.review-block select { width: 100%; min-height: 36px; font-size: var(--fs-13); }
+.review-block .alert, .review-block .ctrl p { font-size: var(--fs-12); line-height: 1.5; background: var(--page); border: 0; padding: 8px; margin: 6px 0; }
+.review-block #rev04WorldControls { display: flex; flex-direction: column; gap: 6px; padding: 0 0 8px; font-size: var(--fs-13); }
+.review-block #rev04WorldControls button { min-height: 36px; font-size: var(--fs-13); text-align: left; padding: 0 10px; }
+.review-hint { font-size: var(--fs-12); line-height: 1.45; color: var(--muted); margin: 4px; }
+
+/* Сцена */
+body.atlas-prototype .stage { grid-column: 2; grid-row: 1; position: relative; inset: auto; width: 100%; height: 100%; min-width: 0; min-height: 0; background: var(--scene); }
+.stage-actions { position: absolute; top: 16px; left: 16px; right: 16px; display: flex; align-items: flex-start; gap: 8px; z-index: 16; pointer-events: none; }
+.stage-actions > * { pointer-events: auto; }
+.stage-actions button { display: flex; align-items: center; gap: 8px; height: 38px; min-height: 38px; padding: 0 12px; font-size: var(--fs-14); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+.stage-actions #menu, .stage-actions #card { display: none; }
+.stage-actions #quickRestore { margin-left: auto; }
+.stage-actions #quickRestore:not(.is-needed) { color: var(--ink); }
+.stage-actions #quickRestore.is-needed { background: var(--brand-tint); border-color: var(--brand); color: var(--brand); font-weight: 600; }
+#quickHome:not(.is-needed) { display: none; }   /* 1.0.19a A-02 */
+.stage-path { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; max-width: calc(100% - 180px); padding: 8px 12px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); font-size: var(--fs-13); color: var(--muted); }
+.stage-path:empty { display: none; }
+.stage-path .crumb { height: auto; min-height: 0; padding: 0; border: 0; background: transparent; color: var(--brand); font-size: var(--fs-13); }
+@media (min-width: 851px) { .stage-path button.crumb { min-height: 24px; min-width: 24px; display: inline-flex; align-items: center; } }   /* 1.0.19a A-15 (2.5.8): цель крошки ≥ 24 × 24 (телефон — 44 px, ниже) */
+.stage-path button.crumb:hover { text-decoration: underline; background: transparent; }
+.stage-path .crumb--here { color: var(--ink); font-weight: 600; }
+/* V12.0b · 11: последнее звено при нехватке места — с многоточием (полное имя — в title) */
+.stage-path > :last-child { min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.stage-path .crumb-home { display: none; width: 16px; height: 16px; vertical-align: -3px; }
+.atlas-prototype .tools { top: auto; left: 50%; right: auto; bottom: 20px; transform: translateX(-50%); width: max-content; max-width: calc(100% - 120px); display: flex; flex-wrap: nowrap; gap: 0; align-items: center; padding: 6px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-l); box-shadow: 0 8px 24px rgba(28, 28, 30, .10); z-index: 16; pointer-events: auto; }
+.tools .view-controls, .tools .r23-quality-group, .tools .shot-group { display: flex; align-items: center; gap: 4px; flex-wrap: nowrap; min-width: 0; }
+.tools .r23-quality-group, .tools .shot-group { border-left: 1px solid var(--line); margin-left: 4px; padding-left: 4px; }
+.tools button { display: flex; align-items: center; justify-content: center; gap: 8px; height: 40px; min-height: 40px; padding: 0 14px; font-size: var(--fs-14); border: 0; border-radius: var(--radius); background: transparent; box-shadow: none; color: var(--ink); }
+/* V12.0 · R4-01: нажатое состояние кнопок панели — в atlas-toolbar.css (B3, --c-link / --c-brand-tint); старое правило с --brand давало 1,36:1 в тёмной */
+.tools .ui-icon { width: 16px; height: 16px; flex-basis: 16px; }
+.tools #stack { position: absolute; bottom: 60px; left: 0; right: 0; background: var(--surface); border: 1px solid var(--line); }
+.zoom-controls { position: absolute; right: 16px; bottom: 20px; display: flex; flex-direction: column; z-index: 15; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); overflow: hidden; }
+.zoom-controls button { display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 0; background: transparent; }
+.zoom-controls button + button { border-top: 1px solid var(--line); }
+.zoom-controls button:focus-visible { outline: 2px solid var(--c-accent); outline-offset: -3px; }   /* 1.0.19a A-07 (О-14): кольцо внутрь (overflow: hidden) */
+.zoom-controls .ui-button span:empty { display: none; }
+.atlas-prototype #axisCanvas { position: absolute; width: 76px; height: 72px; left: 16px; right: auto; bottom: 20px; }
+.atlas-prototype .hud { position: absolute; left: 16px; right: 16px; top: 64px; bottom: auto; pointer-events: none; text-shadow: none; }
+.atlas-prototype .hud strong { font-size: var(--fs-12); color: var(--muted); font-weight: 500; }
+.atlas-prototype .hud span { display: none; }
+.atlas-prototype #selectionCaption { display: none; }
+.atlas-prototype .status { position: absolute; left: 0; right: 0; bottom: 0; font-size: var(--fs-12); background: var(--surface); border-top: 1px solid var(--line); color: var(--muted); height: auto; padding: 4px 12px; }
+html:not(.review-mode) .atlas-prototype .status, html:not(.review-mode) .atlas-prototype .hud { display: none; }
+.atlas-prototype #loading { font-size: var(--fs-14); color: var(--ink); background: var(--surface); border-color: var(--line); }
+.atlas-prototype .stage:has(#loading:not([hidden])) #canvas { opacity: 0; }
+.atlas-prototype #r23Toast { font-size: var(--fs-13); border-radius: var(--radius); background: var(--ink); color: #FFFFFF; bottom: 90px; max-width: 85%; }
+
+/* Панель «Инструменты» */
+.atlas-prototype #viewSettings { position: fixed; top: 60px; left: auto; right: 376px; width: 380px; max-width: calc(100vw - 32px); max-height: calc(100dvh - 80px); overflow: auto; border: 1px solid var(--line); border-radius: var(--radius-l); box-shadow: 0 16px 40px rgba(28, 28, 30, .16); background: var(--surface); padding: 0 18px 18px; z-index: 70; }
+.shell:not(:has(#right.open)) #viewSettings { right: 16px; }
+.r23-menu-head { background: var(--surface); padding: 16px 0 12px; border-color: var(--line); display: flex; align-items: center; justify-content: space-between; }
+.r23-menu-head b { font-size: var(--fs-16); }
+.r23-menu-head #closeViewSettings { font-size: var(--fs-13); height: 34px; min-height: 34px; padding: 0 10px; }
+.tool-intro { font-size: var(--fs-13); line-height: 1.5; color: var(--muted); margin: 0 0 12px; }
+.atlas-prototype #viewSettings details { border-top: 1px solid var(--line); padding-top: 12px; margin-top: 12px; }
+.atlas-prototype #viewSettings summary { font-size: var(--fs-14); font-weight: 600; line-height: 1.5; color: var(--ink); padding: 2px 0; cursor: pointer; }
+.atlas-prototype #viewSettings label { display: flex; align-items: center; justify-content: space-between; font-size: var(--fs-13); color: var(--ink); margin: 12px 0; gap: 10px; }
+.atlas-prototype #viewSettings select { font-size: var(--fs-13); min-height: 36px; max-width: 190px; background: var(--page); }
+.atlas-prototype #quality { display: block; width: auto; min-width: 105px; max-width: 190px; }
+.atlas-prototype #viewSettings input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--brand); }
+.atlas-prototype #viewSettings input[type=range] { accent-color: var(--brand); }
+.atlas-prototype #viewSettings .r23-note { font-size: var(--fs-12); line-height: 1.55; color: var(--muted); }
+.atlas-prototype #viewSettings .r23-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.atlas-prototype #viewSettings .r23-grid button { font-size: var(--fs-13); min-height: 38px; background: var(--page); padding: 6px; line-height: 1.3; }
+.atlas-prototype #viewSettings output, .atlas-prototype #viewSettings #r23HiddenCount { font-size: var(--fs-12); color: var(--muted); }
+.atlas-prototype #viewSettings #r23Diagnostics { font-size: var(--fs-12); background: var(--page); color: var(--ink); white-space: pre-wrap; }
+
+/* Правая панель: карточка элемента */
+body.atlas-prototype #right { grid-column: 3; grid-row: 1; position: relative; inset: auto; width: auto; max-width: none; height: 100%; max-height: none; display: none; flex-direction: column; gap: 14px; padding: 16px 20px 20px; background: var(--surface); border: 0; border-left: 1px solid var(--line); border-radius: 0; box-shadow: none; overflow: auto; transform: none; opacity: 1; visibility: visible; }
+body.atlas-prototype #right.open { display: flex; }
+#right .sheet-handle { display: none; }
+#right .card-head { display: flex; align-items: center; gap: 4px; }
+#right .card-head .eyebrow { display: block; flex: 1 1 auto; margin: 0; font-size: var(--fs-12); font-weight: 600; color: var(--muted); letter-spacing: .02em; text-transform: none; }
+#right .card-icon, #right .card-head .closepane { position: static; display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; min-height: 32px; padding: 0; border: 0; border-radius: var(--radius-s); background: transparent; color: var(--muted); float: none; }
+#right .card-icon:hover { background: var(--page); color: var(--ink); }
+#right .card-empty { margin: 8px 0 0; padding: 16px; border: 1px dashed var(--line-strong); border-radius: var(--radius); font-size: var(--fs-14); color: var(--muted); }
+#right .card-empty-h { margin: 0 0 8px; color: var(--ink); font-weight: 600; }
+#right .card-empty-tips { margin: 0 0 10px; padding-left: 18px; font-size: var(--fs-13); line-height: 1.5; }
+#right .card-empty-link { font-size: var(--fs-13); font-weight: 600; }
+#left .in-section { width: 100%; min-height: 36px; margin: 8px 0 0; padding: 0 10px; font-size: var(--fs-13); }
+/* 1.0.19a A-08 (Т-1): поля главной — рамка --c-line-strong (≥ 3:1; правило «кнопки и поля» выше давало --line-strong = --c-line-mid, 1,59:1) */
+.atlas-prototype :is(input[type=search], input[type=text], select), #left .in-section, #left #navFind { border-color: var(--c-line-strong); }
+#right:not(.is-empty) .card-empty, #right.is-empty .card-body { display: none; }
+#right .card-body { display: flex; flex-direction: column; gap: 14px; }
+#right .card-title { display: flex; flex-direction: column; gap: 4px; }
+#right #cardTitle { margin: 0; font-size: 21px; line-height: 1.3; font-weight: 700; letter-spacing: -0.01em; overflow-wrap: anywhere; }
+#right .card-path { font-size: var(--fs-13); color: var(--muted); }
+#right .card-facts { display: none; font-size: var(--fs-13); color: var(--muted); }
+#right .card-badges { display: flex; flex-wrap: wrap; gap: 6px; }
+#right .card-badge { padding: 2px 8px; border-radius: var(--radius-pill); background: #F2F4F7; color: var(--ink); font-size: var(--fs-12); font-weight: 500; }
+#right .card-badge--state { background: var(--brand-tint); color: var(--brand); font-weight: 600; }
+#right .card-block { display: flex; flex-direction: column; gap: 8px; padding-top: 12px; border-top: 1px solid var(--line); }
+#right h3 { margin: 0; font-size: var(--fs-13); font-weight: 700; color: var(--ink); }
+#right .card-grid { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 6px 10px; margin: 0; font-size: var(--fs-13); line-height: 1.4; }
+#right .card-grid dt { color: var(--muted); }
+#right .card-grid dd { margin: 0; overflow-wrap: anywhere; }
+#right .card-grid dd.mono, #right .card-grid dd .mono { font-family: var(--font-mono); font-size: var(--fs-12); word-break: break-all; }
+#right .card-extra { display: flex; align-items: center; gap: 6px; margin-top: 3px; font-size: var(--fs-12); color: var(--ink); }
+#right .card-extra a { font-weight: 600; }
+.card-dot { width: 7px; height: 7px; border-radius: var(--radius-pill); flex: none; background: var(--sig-low); }
+.card-dot.sig-dot--high { background: var(--sig-high); } .card-dot.sig-dot--mid { background: var(--sig-mid); }
+#right .card-note, #right .card-muted { margin: 0; font-size: var(--fs-12); color: var(--muted); }
+#right .card-note a { font-weight: 600; }
+#right .card-clamp { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+#right .card-clamp.open { display: block; }
+#right .card-link { display: inline; min-height: 0; height: auto; padding: 0; border: 0; background: transparent; color: var(--brand); font-size: var(--fs-12); font-weight: 600; }
+#right .card-remarks { display: flex; flex-direction: column; gap: 8px; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius-l); background: var(--surface-soft); }
+#right .card-remarks[hidden] { display: none; }
+#right .card-remarks-head { display: flex; align-items: center; justify-content: space-between; }
+#right .card-remarks-head h3 { font-size: var(--fs-14); }
+#right .card-remarks-head a { font-size: var(--fs-13); font-weight: 500; text-decoration: none; }
+#right .card-remark { display: flex; flex-direction: column; gap: 6px; }
+#right .card-remark + .card-remark { border-top: 1px solid var(--line); padding-top: 8px; }
+#right .card-remark-line { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+#right .card-remark-id { font-size: var(--fs-13); font-weight: 600; color: var(--brand); }
+#right .card-remark-what { margin: 0; font-size: var(--fs-13); line-height: 1.45; }
+#right .card-remark-pr { display: grid; grid-template-columns: 84px minmax(0, 1fr); gap: 2px 8px; margin: 0; font-size: var(--fs-12); line-height: 1.4; }
+#right .card-remark-pr dt { color: var(--muted); }
+#right .card-remark-pr dd { margin: 0; }
+#right .card-remark-btns { display: flex; flex-wrap: wrap; gap: 8px; }
+#right .card-btn { display: inline-flex; align-items: center; justify-content: center; height: 32px; min-height: 32px; padding: 0 12px; border: 1px solid var(--line-strong); border-radius: var(--radius); background: var(--surface); font-size: var(--fs-13); font-weight: 500; color: var(--ink); text-decoration: none; }
+#right .card-btn--outline { border-color: var(--brand); color: var(--brand); font-weight: 600; }
+#right .card-primary { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; min-height: 44px; margin: 0; padding: 0 12px; border: 0; border-radius: var(--radius); background: var(--brand); color: #FFFFFF; font-size: 15px; font-weight: 600; }
+#right .card-primary:hover { background: var(--brand-hover); }
+#right .card-primary:disabled { background: var(--surface); color: var(--muted); border: 1px dashed var(--line-strong); }
+#right .card-drawlist { display: flex; flex-direction: column; gap: 4px; margin-top: -6px; }
+#right .card-drawitem { text-align: left; padding: 8px 10px; font-size: var(--fs-13); line-height: 1.4; }
+#right .card-drawitem small { display: block; font-size: var(--fs-12); color: var(--muted); }
+#right #detailDrawing { min-height: 40px; font-size: var(--fs-13); }
+#right .card-mobile-actions { display: none; }
+#right .actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; position: static; margin: 0; padding: 0; background: none; }
+#right .actions button { display: flex; align-items: center; justify-content: center; gap: 6px; height: 36px; min-height: 36px; padding: 0 8px; font-size: var(--fs-13); border: 1px solid var(--line-strong); border-radius: var(--radius); background: var(--surface); line-height: 1.2; white-space: nowrap; }
+#right .actions button[aria-pressed=true] { background: var(--brand-tint); color: var(--brand); border-color: var(--brand); }
+#right .actions .ui-icon { width: 15px; height: 15px; flex-basis: 15px; }
+#right .card-details { margin: 0; padding: 0; border: 0; border-top: 1px solid var(--line); }
+#right .card-details:last-child { border-bottom: 1px solid var(--line); }
+#right .card-details > summary { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0; font-size: var(--fs-14); font-weight: 600; color: var(--ink); cursor: pointer; list-style: none; }
+#right .card-details > summary::-webkit-details-marker { display: none; }
+#right .card-details > summary::before { content: '›'; display: inline-block; width: 10px; font-size: 16px; line-height: 1; color: var(--muted); }
+#right .card-details[open] > summary::before { transform: rotate(90deg); }
+#right .card-details > :not(summary) { margin-bottom: 12px; }
+#right #objectWarning, #right .card-extra-notes p { display: block; margin: 0 0 8px; padding: 0; background: transparent; border: 0; color: var(--ink); font-size: var(--fs-13); line-height: 1.45; max-height: none; }
+#right #pairHeading { display: none; }
+#right #pairs { font-size: var(--fs-13); }
+#right #pairs .sub { font-size: var(--fs-13); color: var(--muted); }
+#right .album-source { display: block; width: 100%; font-size: var(--fs-13); text-align: left; padding: 8px 0; margin: 0; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; background: transparent; line-height: 1.45; height: auto; }
+#right .album-source small { display: block; font-size: var(--fs-12); color: var(--muted); }
+#right .r23-archive-links .links a { display: block; font-size: var(--fs-13); line-height: 1.45; margin: 6px 0; text-decoration: none; }
+#right .r23-archive-links .links br { display: none; }
+#right .props { display: grid; gap: 8px; margin: 10px 0 0; max-height: none; overflow: visible; }
+#right .props > div { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 10px; padding: 0; border: 0; }
+#right .props span { font-size: var(--fs-13); color: var(--muted); }
+#right .props b { font-size: var(--fs-13); line-height: 1.4; font-weight: 400; color: var(--ink); overflow-wrap: anywhere; }
+#right .props details { grid-column: 1 / -1; border: 0; }
+#right .props details > summary { font-size: var(--fs-13); font-weight: 600; color: var(--brand); cursor: pointer; min-height: 36px; display: flex; align-items: center; }
+#right .props pre { font: 500 var(--fs-12)/1.5 var(--font-mono); background: var(--page); padding: 10px; overflow-wrap: anywhere; white-space: pre-wrap; border-radius: var(--radius-s); }
+#right #selectedId { font: 500 var(--fs-12)/1.4 var(--font-mono); color: var(--ink); background: none; }
+
+/* V11.1: вкладки «Разделы | Элементы (N)» */
+.left-tabs { display: flex; gap: 4px; padding: 4px; background: #E9EDF2; border-radius: 10px; }
+.atlas-prototype #left .left-tab { flex: 1 1 0; min-height: 34px; height: 34px; padding: 0 10px; border: 0; border-radius: var(--radius); background: transparent; font-size: var(--fs-14); font-weight: 500; color: var(--ink); white-space: nowrap; }
+.atlas-prototype #left .left-tab[aria-selected="true"] { background: var(--surface); color: var(--brand); font-weight: 600; box-shadow: 0 1px 2px rgba(28, 28, 30, .08); }
+body.ui-dark .left-tabs { background: var(--c-bg); }
+body.ui-dark .atlas-prototype #left .left-tab[aria-selected="true"], body.ui-dark #left .left-tab[aria-selected="true"] { color: var(--c-link); }
+.left-panel { display: flex; flex-direction: column; gap: 14px; }
+.left-panel[hidden] { display: none; }
+#left .el-count { margin: 0; padding: 0 4px; font-size: var(--fs-12); font-weight: 500; color: var(--muted); }
+#left .el-list { display: flex; flex-direction: column; gap: 1px; }
+.atlas-prototype #left .el-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; width: 100%; min-height: 36px; height: auto; padding: 7px 10px; border: 0; border-radius: var(--radius); background: transparent; text-align: left; font-size: var(--fs-14); line-height: 1.35; color: var(--ink); flex-wrap: wrap; }
+.atlas-prototype #left .el-row:hover { background: var(--page); }
+.atlas-prototype #left .el-row[aria-selected="true"] { background: var(--brand-tint); color: var(--brand); font-weight: 600; }
+body.ui-dark #left .el-row[aria-selected="true"] { color: var(--c-link); }
+#left .el-row .el-title { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+#left .el-row .el-meta { flex: 1 1 100%; font-size: var(--fs-12); font-weight: 500; color: var(--muted); }
+#left .el-row .el-mult { flex: none; font-size: var(--fs-13); color: var(--muted); font-variant-numeric: tabular-nums; }
+#left .el-sub { display: flex; flex-direction: column; gap: 1px; margin-left: 14px; padding-left: 8px; border-left: 2px solid var(--line); }
+#left .el-sub[hidden] { display: none; }
+.atlas-prototype #left .el-child { font-size: var(--fs-13); }
+.atlas-prototype #left .el-more, .atlas-prototype #left .el-reset { min-height: 36px; padding: 0 12px; font-size: var(--fs-13); font-weight: 600; color: var(--brand); }
+@media (max-width: 850px) { .atlas-prototype #left .left-tab, .atlas-prototype #left .el-row, .atlas-prototype #left .el-more, .atlas-prototype #left .el-reset { min-height: 44px; height: auto; } }   /* к4: и «Искать во всём здании» / «Сбросить» */
+
+/* V11.1 · E: блок «Размещено по РД · 117» */
+.placed-block { display: flex; flex-direction: column; gap: 2px; }
+.placed-block[hidden] { display: none; }
+.placed-items { display: flex; flex-direction: column; gap: 2px; }
+.atlas-prototype #left .placed-node { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; width: 100%; min-height: 36px; height: auto; padding: 8px 12px; border: 0; border-radius: var(--radius); background: transparent; font-size: var(--fs-14); line-height: 1.35; text-align: left; color: var(--ink); white-space: normal; }
+.atlas-prototype #left .placed-node:hover { background: var(--page); }
+.atlas-prototype #left .placed-node.is-current { background: var(--brand-tint); color: var(--brand); font-weight: 600; }
+.placed-node .placed-label { min-width: 0; overflow-wrap: anywhere; }
+/* 1.0.15 B3-15: строка группы «По РД» — название (переход) и флажок (вместе со зданием) */
+.placed-row { display: flex; align-items: center; gap: 2px; min-width: 0; }
+.atlas-prototype #left .placed-row .placed-node { flex: 1 1 auto; width: auto; min-width: 0; }
+.placed-row .nt-ck { margin: 0 4px 0 0; }
+.placed-block .placed-set { margin: 2px 0 4px; }
+.placed-block .placed-set[hidden] { display: none; }
+.placed-node small { flex: none; font-size: var(--fs-13); color: var(--muted); font-variant-numeric: tabular-nums; padding-top: 1px; }
+.placed-cond { display: flex; align-items: center; gap: 6px; margin-top: 2px; font-size: var(--fs-12); font-weight: 500; color: var(--muted); }
+.placed-ctx { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 12px; color: var(--muted); }
+.placed-ctx-label { display: flex; align-items: baseline; gap: 8px; margin: 0; font-size: var(--fs-13); color: var(--muted); cursor: pointer; }
+.placed-ctx-label small { font-size: var(--fs-13); font-variant-numeric: tabular-nums; }
+.atlas-prototype .placed-switch { flex: none; width: 40px; height: 24px; min-height: 24px; padding: 3px; border: 0; border-radius: var(--radius-pill); background: var(--c-line-strong); display: flex; justify-content: flex-start; }
+.atlas-prototype .placed-switch[aria-checked="true"] { background: var(--sig-low); justify-content: flex-end; }
+.placed-switch .as-knob { width: 18px; height: 18px; border-radius: var(--radius-pill); background: #FFFFFF; box-shadow: 0 1px 3px rgba(0, 0, 0, .25); }
+.atlas-prototype #left .placed-all { margin-top: 2px; border-style: dashed; }
+.placed-legend { display: flex; align-items: center; gap: 8px; margin: 4px 12px 0; font-size: var(--fs-12); font-weight: 500; color: var(--muted); }
+.placed-legend[hidden] { display: none; }
+body.ui-dark .atlas-prototype #left .placed-node.is-current, body.ui-dark #left .placed-node.is-current { color: var(--c-link); }
+@media (max-width: 850px) {
+  .atlas-prototype #left .placed-node, .placed-ctx { min-height: 44px; }
+  .placed-row .nt-ck { margin: 0; }
+  .atlas-prototype .placed-switch { width: 48px; height: 28px; }
+  .placed-ctx-label { min-height: 44px; align-items: center; }
+}
+
+/* Закреплённая полоса действий карточки (п. 14) */
+@media (min-width: 851px) {
+  body.atlas-prototype #right.open { overflow: hidden; padding-bottom: 0; }
+  #right .card-body { flex: 1 1 auto; min-height: 0; overflow: auto; margin: 0 -20px; padding: 0 20px 16px; }
+  #right .card-empty { flex: 0 0 auto; }
+}
+#right .card-dock { flex: none; display: flex; flex-direction: column; gap: 8px; margin: 0 -20px; padding: 12px 20px 16px; background: var(--surface); border-top: 1px solid var(--line); }
+#right.is-empty .card-dock { display: none; }
+#right .card-dock .actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+#right .card-dock .actions button { white-space: normal; line-height: 1.2; height: auto; min-height: 36px; padding: 4px 8px; }
+#right .card-remark-link { color: var(--ink); text-decoration: none; }
+#right .card-remark-link:hover { text-decoration: underline; }
+#right .card-archive-note { margin: 0 0 8px; font-size: var(--fs-12); font-weight: 500; color: var(--muted); }
+/* Плашка «Элемент из замечания …» (п. 7) */
+.from-banner { position: absolute; top: 64px; left: 16px; right: 16px; z-index: 17; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; width: max-content; max-width: calc(100% - 32px); padding: 6px 6px 6px 12px; background: var(--surface); border: 1px solid var(--brand); border-radius: var(--radius); box-shadow: 0 6px 18px rgba(11, 79, 108, .16); font-size: var(--fs-13); }
+.from-banner[hidden] { display: none; }
+.from-banner b { font-weight: 600; }
+.atlas-prototype .from-banner button, .atlas-prototype .from-banner a { display: inline-flex; align-items: center; min-height: 32px; padding: 0 10px; border: 1px solid var(--line-strong); border-radius: var(--radius); background: var(--surface); font-size: var(--fs-13); color: var(--ink); text-decoration: none; }
+.atlas-prototype .from-banner a { border-color: var(--brand); color: var(--brand); font-weight: 600; }
+.atlas-prototype .from-banner [aria-pressed=true] { background: var(--brand-tint); border-color: var(--brand); color: var(--brand); }
+.atlas-prototype .from-banner .from-close { border: 0; width: 32px; justify-content: center; padding: 0; color: var(--muted); }
+body.ui-dark .from-banner a, body.ui-dark .from-banner [aria-pressed=true] { color: var(--c-link); border-color: var(--c-link); }
+
+/* Справка и чертёж */
+.atlas-dialog { color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 28px; width: min(560px, calc(100vw - 32px)); max-height: 85dvh; font-size: var(--fs-14); line-height: 1.6; box-shadow: 0 18px 60px rgba(28, 28, 30, .25); }
+.atlas-dialog::backdrop { background: rgba(28, 28, 30, .35); }
+.atlas-dialog h2 { font-size: var(--fs-22); margin: 16px 0; }
+.atlas-dialog h3 { font-size: var(--fs-16); margin-top: 20px; }
+.atlas-dialog ol { padding-left: 22px; }
+.atlas-dialog .help-controls { padding-left: 22px; margin: 8px 0; } .atlas-dialog .help-controls li + li { margin-top: 6px; }   /* 1.1.1 A2 */
+.atlas-dialog .dialog-close { float: right; min-height: 36px; padding: 0 12px; }
+.atlas-dialog .eyebrow { display: block; margin-top: 6px; font-size: var(--fs-12); color: var(--muted); }
+.help-keyboard { font-size: var(--fs-12); color: var(--muted); border-top: 1px solid var(--line); padding-top: 14px; }
+.atlas-prototype .modal { z-index: 100; }
+.atlas-prototype .modalbar { gap: 10px; background: var(--surface); padding: 12px; color: var(--ink); }
+.atlas-prototype .modalbar :is(button, a) { font-size: var(--fs-13); }
+.atlas-prototype #drawingCaption { font-size: var(--fs-12); color: var(--muted); }
+
+/* Тёмная тема главной (как прежде) */
+/* V12.0 · 0.9: отметки уровней — моно (prototype.js, .mono-num) */
+.mono-num { font-family: var(--mono); font-weight: 500; font-variant-numeric: tabular-nums; }
+/* V12.0 · 0.9: тёмные значения — из tokens_v2_dark.css (html[data-theme="dark"]); старые имена (--ink, --page, --surface…) — псевдонимы --c-*, свои тёмные значения здесь больше не задаются. */
+body.ui-dark .atlas-shell .as-search { background: var(--c-bg); }
+.ui-dark .review-block { background: var(--c-surface-2); }
+/* Тёмная тема: текст и ссылки цвета бренда — светлый оттенок (контраст ≥ 4,5:1 на тёмных поверхностях);
+   белый текст на кнопках с заливкой --brand не меняется. */
+body.ui-dark a, body.ui-dark .atlas-shell .as-link[aria-current="page"], body.ui-dark .atlas-shell .as-link:hover, body.ui-dark .count, body.ui-dark .stage-path .crumb, body.ui-dark .atlas-navigation .nav-building, body.ui-dark .atlas-navigation .nav-building span, body.ui-dark .atlas-navigation .nav-layer[aria-pressed=true], body.ui-dark #levelChoices button[aria-pressed=true], body.ui-dark .review-title, body.ui-dark #list .row.selected, body.ui-dark .as-tabbar .as-tab[aria-current="page"], body.ui-dark .as-menu .as-mi[aria-current="page"] .as-mi-title { color: var(--c-link); }
+body.ui-dark .atlas-shell .as-link[aria-current="page"] { box-shadow: inset 0 -2px 0 var(--c-link); }
+body.ui-dark .sig { color: var(--c-text); }
+body.ui-dark .as-tab-badge { background: var(--c-link); color: var(--c-bg); }
+
+/* Узкие окна */
+@media (max-width: 1200px) {
+  body.atlas-prototype .shell { grid-template-columns: 248px minmax(0, 1fr) 0; }
+  body.atlas-prototype .shell:has(#right.open) { grid-template-columns: 248px minmax(0, 1fr) 320px; }
+  .tools button { padding: 0 10px; }
+  .atlas-prototype #viewSettings { right: 336px; }
+}
+
+/* Компактная панель сцены (≤ 1180 px и масштаб 125–150 %): значки с подписью в aria-label и подсказке */
+@media (max-width: 1180px) and (min-width: 851px) {
+  .tools button > span { display: none; }
+  .tools button { min-width: 44px; padding: 0 10px; }
+  .tools .ui-icon { display: block; }
+  .atlas-prototype .tools { max-width: calc(100% - 100px); }
+  #right .card-grid { grid-template-columns: 84px minmax(0, 1fr); }
+}
+@media (max-width: 1000px) and (min-width: 851px) {
+  .tools .shot-group { display: none; }
+  .tools > *, .tools button { flex-shrink: 0; }
+  body.atlas-prototype .shell { grid-template-columns: 220px minmax(0, 1fr) 0; }
+  body.atlas-prototype .shell:has(#right.open) { grid-template-columns: 220px minmax(0, 1fr) 300px; }
+  .stage-path { max-width: calc(100% - 150px); }
+}
+
+/* Телефон и планшет (≤ 850 px) */
+@media (max-width: 850px) {
+  body.atlas-prototype .shell, body.atlas-prototype .shell:has(#right.open), body.atlas-prototype.nav-collapsed .shell, body.atlas-prototype.nav-collapsed .shell:has(#right.open) { display: block; position: relative; grid-template-columns: none; }
+  body.atlas-prototype .stage, body.atlas-prototype .shell:has(#right.open) .stage { position: absolute; inset: 0; width: 100%; height: 100%; bottom: 0; }
+  body.atlas-prototype #left, body.atlas-prototype.nav-collapsed #left { display: none; position: absolute; left: 0; top: 0; bottom: 0; width: min(88vw, 340px); height: 100%; z-index: 55; padding: 16px; box-shadow: 8px 0 35px rgba(28, 28, 30, .15); }
+  body.atlas-prototype #left.open { display: flex; }
+  .navigation-heading .close-left { display: block; position: static; min-height: 44px; padding: 0 12px; font-size: var(--fs-13); }
+  :is(#left, #right, .review-block) :is(button, summary) { min-height: 44px; }
+  #levelChoices button, .atlas-navigation .nav-building { min-height: 44px; }
+  .stage-actions { top: 12px; left: 12px; right: 12px; gap: 6px; }
+  .stage-actions #menu { display: flex; width: 44px; height: 44px; padding: 0; justify-content: center; }
+  .stage-actions #menu span, .stage-actions #card span { display: none; }
+  .stage-actions #card { display: none; }
+  .stage-actions #quickRestore { display: none; }
+  .stage-actions #quickRestore.is-needed { display: flex; width: 44px; height: 44px; padding: 0; justify-content: center; }
+  .stage-actions #quickRestore span { display: none; }
+  /* Крошка: в пределах места слева от «3D / План / настройки», длинные части — с многоточием */
+  .stage-path { flex: 0 1 auto; min-width: 0; max-width: calc(100% - 44px - 6px - 165px); height: 44px; padding: 0 12px; gap: 4px; border-radius: var(--radius-pill); flex-wrap: nowrap; overflow: hidden; white-space: nowrap; }
+  .stage-path > * { flex: 0 1 auto; min-width: 0; }
+  .stage-path .crumb-sep { flex: none; }
+  .stage-path > :first-child { flex: none; }
+  .stage-path .crumb.crumb--el, .stage-path .crumb-sep.crumb-sep--el { display: none; }
+  .stage-path > :last-child { min-width: 3em; }
+  /* Есть раздел — «Всё здание» значком дома, чтобы раздел читался */
+  .stage-path.has-section > .crumb:first-child .crumb-full { display: none; }
+  .stage-path.has-section > .crumb:first-child .crumb-home { display: inline-block; }
+  .stage-path.has-section > .crumb:first-child { display: flex; align-items: center; justify-content: center; min-width: 32px; }
+  .stage-path.has-section { padding: 0 12px 0 0; }
+  /* V12.0 · 0.17б: домик — цель 44 px; средние уровни скрыты */
+  .stage-path.has-section > .crumb:first-child { min-width: 44px; width: 44px; height: 44px; flex: none; }
+  .stage-path > .crumb--mid, .stage-path > .crumb.crumb--mid { display: none; }
+  .stage-path .crumb { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 44px; }
+  .atlas-prototype .tools { top: 12px; right: 12px; left: auto; bottom: auto; transform: none; max-width: none; padding: 3px; border-radius: 10px; box-shadow: none; }
+  .tools .view-controls { gap: 2px; }
+  .tools .view-controls .ui-icon { display: none; }
+  .tools > *, .tools button { flex-shrink: 0; }
+  .tools .view-controls button { height: 44px; min-height: 44px; padding: 0 12px; font-size: var(--fs-13); }
+  .stage-path .crumb { min-height: 44px; }
+  .tools .r23-quality-group #quickAxes, .tools .r23-quality-group #quickLabels, .tools .shot-group { display: none; }
+  .tools .r23-quality-group { margin-left: 2px; padding-left: 2px; }
+  .tools #viewSettingsToggle { width: 44px; height: 44px; min-height: 44px; padding: 0; font-size: 0; }
+  .tools #viewSettingsToggle .ui-icon { display: block; }
+  .tools #viewSettingsToggle span { display: none; }
+  .zoom-controls { right: 12px; bottom: 16px; border-radius: 12px; }
+  .zoom-controls #zoomIn, .zoom-controls #zoomOut { display: none; }
+  .zoom-controls button + button { border-top: 0; }
+  .atlas-prototype #axisCanvas { left: 8px; bottom: 16px; width: 66px; height: 63px; }
+  .shell:has(#right.open) .zoom-controls { bottom: calc(var(--atb-sheet-h, 32dvh) + 12px); }   /* 1.1.1 C3: над верхом шторки (её высота — --atb-sheet-h, ставит atlas-toolbar.js) */
+  .shell:has(#right.open) #axisCanvas { bottom: calc(var(--atb-sheet-h, 32dvh) + 12px); }
+  .shell:has(#right.open.expanded) :is(.zoom-controls, #axisCanvas) { display: none; }
+  .atlas-prototype #viewSettings { top: 56px; right: 8px; left: 8px; width: auto; max-height: calc(100dvh - 140px); }
+  /* Шторка карточки */
+  body.atlas-prototype #right, body.atlas-prototype #right.open { position: absolute; left: 0; right: 0; top: auto; bottom: 0; width: 100%; height: auto; max-height: 32dvh; padding: 8px 16px 16px; gap: 10px; border: 0; border-radius: 16px 16px 0 0; box-shadow: 0 -8px 24px rgba(28, 28, 30, .10); z-index: 35; overflow: auto; }
+  body.atlas-prototype #right:not(.open) { display: none; }
+  body.atlas-prototype #right.expanded { height: 85%; max-height: 85%; }
+  #right .sheet-handle { touch-action: none; display: block; flex: none; align-self: center; width: 88px; height: 44px; min-height: 44px; margin: -8px 0 -18px; padding: 0; border: 0; background: transparent; position: relative; }
+  #right .sheet-handle::before { content: ''; position: absolute; left: 26px; right: 26px; top: 12px; height: 4px; border-radius: var(--radius-pill); background: var(--line-strong); }
+  #right .card-remarks-head a { display: inline-flex; align-items: center; min-height: 44px; padding: 0 4px; }
+  .tools .view-controls button { min-width: 44px; }
+  #right .card-head { display: none; }
+  #right.expanded .card-head { display: flex; }
+  #right #cardTitle { font-size: 19px; }
+  #right .card-path { display: none; }
+  #right .card-facts { display: block; }
+  #right:not(.expanded) .card-facts { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  #right .card-dock { margin: 0; padding: 0; border: 0; }
+  body.atlas-prototype #right.dragging { transition: none; }
+  .from-banner { top: 64px; left: 12px; right: 12px; max-width: calc(100% - 24px); }
+  /* R3-02: на телефоне чип «Замечания · 27» (top 56, 44 px) — плашка «из замечания» ниже него */
+  .stage:has(#atbIssues.iss-chip) .from-banner { top: 120px; }   /* 1.0.19a к2: чип опущен до 68 px (A-10) — плашка на 8 px ниже его низа (112) */
+  .atlas-prototype .from-banner :is(button, a) { min-height: 44px; }
+  #right .card-body { gap: 10px; }
+  #right:not(.expanded) .card-section, #right:not(.expanded) #cardDrawing, #right:not(.expanded) .card-drawlist, #right:not(.expanded) #detailDrawing { display: none; }
+  #right:not(.expanded) .card-remarks { padding: 10px 12px; border-radius: 10px; }
+  #right:not(.expanded) .card-remarks-head, #right:not(.expanded) .card-remark--more, #right:not(.expanded) .card-remark-pr, #right:not(.expanded) .card-remark-btns { display: none; }
+  #right:not(.expanded) .card-remark-what { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: var(--fs-14); }
+  #right .card-mobile-actions { display: flex; gap: 8px; }
+  #right.expanded .card-mobile-actions { display: none; }
+  #right .card-mobile-actions .card-primary { flex: 1 1 auto; width: auto; min-height: 46px; border-radius: 10px; }
+  #right .card-mobile-actions .card-btn { height: 46px; min-height: 46px; padding: 0 14px; border-radius: 10px; font-size: var(--fs-14); }
+  #right .card-mobile-actions .card-more { width: 46px; padding: 0; }
+  #right .actions button, #right .card-btn, #right .card-primary, #right .card-icon, #right .card-head .closepane { min-height: 44px; height: 44px; }
+  #right .card-icon, #right .card-head .closepane { width: 44px; }
+  .search-popover { position: fixed; top: var(--header-h); left: 8px; right: 8px; width: auto; }
+  .search-popover select, .search-popover #r23SearchScope { min-height: 44px; } /* V12.0b · 9 */
+  .atlas-prototype .modalbar :is(button, a) { min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; justify-content: center; }
+}
+@media (max-height: 550px) and (max-width: 850px) {
+  body.atlas-prototype #right.open { left: auto; width: 320px; height: 100%; max-height: 100%; border-radius: 0; top: 0; }
+}
+:root { --atlas-shell-style-ready: 1; }
+.atlas-prototype #left .placed-block .placed-all { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; min-height: 36px; margin-top: 4px; padding: 0 12px; border: 1px dashed var(--line-strong); border-radius: var(--radius); background: var(--surface); font-size: var(--fs-14); text-align: left; color: var(--ink); }
+.atlas-prototype #left .placed-block .placed-all small { font-size: var(--fs-13); color: var(--muted); }
+.atlas-prototype #left .placed-block .placed-all[aria-pressed=true] { border-style: solid; border-color: var(--brand); background: var(--brand-tint); color: var(--brand); font-weight: 600; }
+body.ui-dark #left .placed-block .placed-all[aria-pressed=true] { color: var(--c-link); border-color: var(--c-link); }
+@media (max-width: 850px) { .atlas-prototype #left .placed-block .placed-all { min-height: 44px; } }
+/* Переключатель «Контекст»: сам переключатель 48×28, область нажатия — вся строка через <label for> */
+body.atlas-prototype #left .placed-switch { min-height: 24px; height: 24px; width: 40px; }
+@media (max-width: 850px) { body.atlas-prototype #left .placed-switch { min-height: 28px; height: 28px; width: 48px; } .placed-ctx-label { flex: 1 1 auto; } }
+
+/* V11.1 · H: «Линейка» */
+.sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.tools #quickMeasure svg { flex: none; }
+body.measure-on .stage #canvas { cursor: crosshair; }
+/* V12.0 · 0.17б: панель линейки — справа, над панелью инструментов и левее «+ / − / Вписать»; не перекрывает инструменты, значок осей и точки на модели слева. Точное место — atlas-measure.js (layoutPanel). */
+.measure-panel { position: absolute; left: auto; top: auto; right: 76px; bottom: 96px; z-index: 18; width: 320px; max-width: calc(100% - 100px); max-height: calc(100% - 170px); display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-l); box-shadow: 0 8px 24px rgba(28, 28, 30, .14); font-size: var(--fs-13); color: var(--ink); }
+.measure-panel[hidden] { display: none; }
+.mp-head { display: flex; align-items: center; gap: 6px; padding: 8px 10px 8px 14px; border-bottom: 1px solid var(--line); }
+.mp-title { flex: 1 1 auto; margin: 0; font-size: var(--fs-14); font-weight: 700; }
+.atlas-prototype .measure-panel button { min-height: 32px; height: auto; padding: 4px 10px; font-size: var(--fs-13); }
+.atlas-prototype .measure-panel .mp-exit { border-color: var(--brand); color: var(--brand); font-weight: 600; }
+.mp-body { display: flex; flex-direction: column; gap: 8px; padding: 10px 14px 12px; overflow: auto; }
+.measure-panel.collapsed .mp-body { display: none; }
+.mp-opts { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; }
+.mp-opt { display: inline-flex; align-items: center; gap: 6px; margin: 0; font-size: var(--fs-13); }
+.mp-opt input { width: 18px; height: 18px; accent-color: var(--brand); }
+.mp-hint { margin: 0; color: var(--muted); font-weight: 500; font-size: var(--fs-12); }
+.mp-list { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; max-height: 220px; overflow: auto; }
+.mp-list[hidden], .mp-foot[hidden] { display: none; }
+.mp-item { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; padding: 6px 0; border-top: 1px solid var(--line); }
+.mp-item-t { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.mp-item-t b { font-family: var(--mono); font-weight: 500; font-variant-numeric: tabular-nums; } /* V12.0 · 0.9: размеры — моно (макет: .mrow .v) */
+.mp-d, .mp-on { font-size: var(--fs-12); font-weight: 500; color: var(--muted); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.mp-d { font-family: var(--mono); }
+.mp-foot { display: flex; gap: 8px; }
+.mp-note { margin: 0; font-size: var(--fs-12); font-weight: 500; color: var(--muted); }
+.mp-marker { position: absolute; z-index: 19; transform: translate(-50%, -50%); width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: var(--surface); border: 2px solid var(--brand); color: var(--brand); font-size: 14px; pointer-events: none; box-shadow: 0 2px 6px rgba(0, 0, 0, .2); }
+.mp-marker[hidden] { display: none; }
+.mp-marker--touch { width: 48px; height: 48px; font-size: 20px; }
+.mp-marker--touch::after { content: ''; position: absolute; left: 50%; top: 100%; width: 2px; height: 40px; background: var(--brand); transform: translateX(-50%); }
+body.ui-dark .measure-panel .mp-exit, body.ui-dark .mp-marker { color: var(--c-link); border-color: var(--c-link); }
+@media (max-width: 850px) {
+  .measure-panel { left: 8px; right: 8px; bottom: auto; top: 118px; width: auto; max-width: none; max-height: 45%; } /* место уточняет atlas-measure.js (layoutPanel) */
+  .measure-panel.collapsed { left: auto; width: auto; }
+  .atlas-prototype .measure-panel button { min-height: 44px; }
+  .atlas-prototype .measure-panel .mp-collapse { min-width: 44px; }
+  .mp-opt { min-height: 44px; }
+  .mp-opt input { width: 22px; height: 22px; }
+  .tools #quickMeasure span { display: none; }
+  .tools #quickMeasure { width: 44px; min-width: 44px; padding: 0; }
+}
+@media (max-width: 1180px) and (min-width: 851px) { .tools #quickMeasure span { display: none; } }
+/* Компактная панель сцены по ширине самой сцены (карточка открыта, линейка добавила кнопку) */
+@media (min-width: 851px) {
+  body.atlas-prototype .stage { container-type: inline-size; container-name: stage; }
+  @container stage (max-width: 900px) {
+    .tools button > span { display: none; }
+    .tools .ui-icon { display: block; }
+    .tools button { min-width: 44px; padding: 0 10px; }
+  }
+  @container stage (max-width: 620px) {
+    .atlas-prototype .tools { left: 12px; transform: none; max-width: calc(100% - 84px); }
+    .tools .shot-group { display: none; }
+    .atlas-prototype #axisCanvas { bottom: 84px; }
+  }
+}
+@media (max-width: 850px) {
+  .zoom-controls #quickMeasure { display: flex; width: 44px; height: 44px; min-height: 44px; padding: 0; border: 0; border-radius: 0; background: transparent; }
+  .zoom-controls #quickMeasure[hidden] { display: none; }
+  .zoom-controls #quickMeasure span { display: none; }
+  .zoom-controls #quickMeasure[aria-pressed=true] { background: var(--brand-tint); color: var(--brand); }
+  .zoom-controls #quickMeasure + button { border-top: 1px solid var(--line); }
+}
+#right .card-note--warn { color: var(--sig-mid-text); font-weight: 500; }
+#left .el-kind { margin: 12px 12px 4px; font: 600 var(--fs-12)/1.3 var(--font); letter-spacing: .02em; text-transform: uppercase; color: var(--muted); }
+#left .el-kind:first-child { margin-top: 4px; }
+#left .placed-kinds { color: var(--muted); }
+#right .card-line { display: block; }
+#right .card-line + .card-line { margin-top: 4px; }
+
+/* V12.1h · п. 5 → 1.0.19a к4 (С2): на ≤ 850 px сообщение #r23Toast — над шторкой (35), меню (55) и «Инструментами» (70): z 71.
+   Место — над обычной шторкой (как кнопки масштаба), при развёрнутой — над полосой действий (113 px от низа); поля 60 px — мимо колонок кнопок, «⋯» и «Закрыть» */
+@media (max-width: 850px) {
+  body.atlas-prototype #r23Toast { left: 60px; right: 60px; width: fit-content; max-width: none; margin: 0 auto; transform: none; z-index: 71; }
+  body.atlas-prototype .shell:has(#right.open) #r23Toast { bottom: calc(32dvh + 12px); }
+  body.atlas-prototype .shell:has(#right.open.expanded) #r23Toast { bottom: 124px; }
+  body.atlas-prototype .stage:has(#viewSettings:not([hidden])) #r23Toast { left: 12px; right: 12px; }   /* панель и так закрывает колонку кнопок; шире — ниже ростом, не до «Закрыть» */
+  body.atlas-prototype #r23Toast.is-error { background: #5a1f1a; }   /* непрозрачно: поверх панели и карточки текст под сообщением не просвечивает */
+}
+@media (max-height: 550px) and (max-width: 850px) {   /* телефон лёжа: карточка — панель 320 px справа; сообщение — над моделью слева от неё */
+  body.atlas-prototype .shell:has(#right.open) #r23Toast, body.atlas-prototype .shell:has(#right.open.expanded) #r23Toast { right: 332px; bottom: 12px; }
+}
+
+/* ---- Ядро 1.0.13 (D): сворачивание правой панели (ПК, > 850 px). Состояние — класс .rp-collapsed на #right (ставит JS) ----
+   Свёрнутая панель — вкладка 44 px у правого края; холст занимает освободившееся место; переход 200 мс, при prefers-reduced-motion — без анимации. */
+@media (min-width: 851px) {
+  body.atlas-prototype .shell { transition: grid-template-columns var(--dur-2, .2s) ease; }   /* 1.0.19a A-15: 0 при reduced-motion */
+  body.atlas-prototype .shell:has(#right.open.rp-collapsed) { grid-template-columns: 288px minmax(0, 1fr) 44px; }
+  body.atlas-prototype.nav-collapsed .shell:has(#right.open.rp-collapsed) { grid-template-columns: 0 minmax(0, 1fr) 44px; }
+  .shell:has(#right.open.rp-collapsed) #viewSettings { right: 60px; }   /* окно настроек вида — левее вкладки */
+}
+@media (max-width: 1200px) and (min-width: 851px) { body.atlas-prototype .shell:has(#right.open.rp-collapsed) { grid-template-columns: 248px minmax(0, 1fr) 44px; } }
+@media (max-width: 1000px) and (min-width: 851px) { body.atlas-prototype .shell:has(#right.open.rp-collapsed) { grid-template-columns: 220px minmax(0, 1fr) 44px; } }
+@media (max-width: 1200px) and (min-width: 851px) { body.atlas-prototype.nav-collapsed .shell:has(#right.open.rp-collapsed) { grid-template-columns: 0 minmax(0, 1fr) 44px; } }
+@media (prefers-reduced-motion: reduce) { body.atlas-prototype .shell { transition: none; } }

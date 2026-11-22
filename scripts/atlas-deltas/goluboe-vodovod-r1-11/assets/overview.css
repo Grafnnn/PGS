@@ -1,0 +1,114 @@
+/* 3D Атлас · «Обзор проекта» (V12.0 · B4). Только светлая тема. Цвета и размеры — токены --c-* из tokens.css. */
+.ov { max-width: 1360px; margin: 0 auto; color: var(--c-text); }
+.ov h1, .ov h2 { color: var(--c-text); }
+
+/* заголовок */
+.ov-head { display: flex; align-items: flex-start; gap: 24px; margin: 0 0 18px; }
+.ov-head h1 { margin: 0; font-size: var(--fs-26); line-height: var(--lh-tight); font-weight: 700; letter-spacing: -.01em; }
+.ov-eyebrow { font: 500 var(--fs-12)/1.3 var(--mono); letter-spacing: .04em; text-transform: uppercase; color: var(--c-text-2); margin-bottom: 4px; }
+.ov-sub { margin: 6px 0 0; color: var(--c-text-2); font-size: var(--fs-14); }
+.ov-actions { margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; }
+.ov-actions .btn { text-decoration: none; }
+/* ссылки-кнопки и плитки: цвет текста свой, а не цвет ссылки из atlas-pages.css (body.has-shell a) */
+body.has-shell .ov a.btn--primary, body.has-shell .ov a.btn--primary:hover { color: var(--c-on-brand); }
+body.has-shell .ov a.ov-tile, body.has-shell .ov .ov-quick a, body.has-shell .ov .ov-bar > a, body.has-shell .ov a.ov-scene { color: var(--c-text); }
+.ov .icon { width: 18px; height: 18px; flex: none; }
+.ov .icon--16 { width: 16px; height: 16px; }
+
+/* кадр модели + сводка */
+.ov-top { display: grid; grid-template-columns: 1.25fr 1fr; gap: 16px; margin-bottom: 16px; }
+.ov-scene { position: relative; display: block; min-height: 320px; border-radius: var(--r-l); overflow: hidden; border: 1px solid var(--c-line);
+  background: var(--c-scene); color: var(--c-text); text-decoration: none; }
+.ov-scene img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.ov-scene:hover { border-color: var(--c-line-mid); }
+.ov-scene-cap { position: absolute; left: 12px; bottom: 12px; display: inline-flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 12px;
+  border-radius: var(--r); background: var(--c-float); box-shadow: 0 1px 3px rgba(10, 20, 28, .12); font-size: var(--fs-13); font-weight: 600; }
+.ov-scene--empty .ov-scene-cap { position: static; margin: 12px; }
+
+.ov-tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.ov-tile { display: block; padding: 12px; border-radius: var(--r-l); background: var(--c-surface); border: 1px solid var(--c-line); color: var(--c-text); text-decoration: none; }
+.ov-tile:hover { border-color: var(--c-line-mid); background: var(--c-surface-2); }
+.ov-tile b { display: block; font-size: var(--fs-26); font-weight: 700; letter-spacing: -.02em; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.ov-tile span { display: block; margin-top: 4px; font-size: var(--fs-13); color: var(--c-text-2); font-weight: 500; }
+.ov-tile--warn b { color: var(--c-sig-mid-text); }
+
+.ov-sigbar { display: flex; gap: 2px; height: 8px; margin: 16px 0 8px; border-radius: 4px; overflow: hidden; }
+.ov-sigbar i { display: block; }
+.ov-sigbar--high { background: var(--c-sig-high); } .ov-sigbar--mid { background: var(--c-sig-mid); } .ov-sigbar--low { background: var(--c-sig-low); }
+.ov-legend { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.ov-pill { display: inline-flex; align-items: center; gap: 6px; min-height: 24px; padding: 0 8px; border-radius: var(--r-pill); font-size: var(--fs-12); font-weight: 600;
+  white-space: nowrap; text-decoration: none; }
+.ov-pill .icon { width: 14px; height: 14px; }
+.ov-pill--high { background: var(--c-sig-high-bg); color: var(--c-sig-high-text); } .ov-pill--high .icon { color: var(--c-sig-high); }
+.ov-pill--mid { background: var(--c-sig-mid-bg); color: var(--c-sig-mid-text); } .ov-pill--mid .icon { color: var(--c-sig-mid); }
+.ov-pill--low { background: var(--c-sig-low-bg); color: var(--c-sig-low-text); } .ov-pill--low .icon { color: var(--c-sig-low); }
+.ov-linked { margin: 10px 0 0; font-size: var(--fs-13); color: var(--c-text-2); text-align: right; }
+
+/* карточки */
+.ov-card { padding: 20px 22px; background: var(--c-surface); border-color: var(--c-line); }
+.ov-card h2 { margin: 0 0 12px; font-size: var(--fs-20); line-height: var(--lh-tight); font-weight: 700; }
+.ov-note { margin: 10px 0 0; font-size: var(--fs-13); color: var(--c-text-2); }
+.ov-note a, .ov-limits a { color: var(--c-link); font-weight: 600; }
+.ov-note a { display: inline-flex; align-items: center; gap: 4px; }
+.ov-mid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; align-items: start; }
+.ov-mid--one { grid-template-columns: 1fr; }
+.ov-bot { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; align-items: start; }
+
+/* полосовые диаграммы */
+.ov-bars { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+body.has-shell .ov .ov-bar > a, .ov-bar > div { display: grid; grid-template-columns: 150px 1fr 56px; align-items: center; gap: 10px; min-height: 26px; padding: 0 6px;
+  border-radius: 6px; font-size: var(--fs-13); color: var(--c-text); text-decoration: none; }
+.ov-bar > a:hover, .ov-bar > div:hover { background: var(--c-surface-2); }
+.ov-bar-l { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ov-bar-t { height: 10px; }
+.ov-bar-t i { display: block; height: 100%; background: var(--c-accent); border-radius: 0 4px 4px 0; }
+.ov-bar-v { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+
+/* что нового, границы, переходы */
+.ov-rel { display: grid; grid-template-columns: 64px 1fr; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--c-line); font-size: var(--fs-13); line-height: var(--lh); }
+.ov-rel:last-child { border-bottom: 0; }
+.ov-rel .mono { font-family: var(--mono); color: var(--c-link); }
+.ov-limits { margin: 0; padding-left: 18px; display: grid; gap: 6px; font-size: var(--fs-14); line-height: var(--lh-read); }
+.ov-quick { display: grid; gap: 6px; }
+.ov-quick a { display: grid; grid-template-columns: 20px 1fr auto; gap: 10px; align-items: center; min-height: 44px; padding: 0 12px; border-radius: var(--r);
+  background: var(--c-surface-2); color: var(--c-text); text-decoration: none; font-weight: 500; font-size: var(--fs-14); }
+.ov-quick a:hover { background: var(--c-brand-tint); }
+.ov-quick a b { font-variant-numeric: tabular-nums; color: var(--c-link); }
+.ov-quick a .icon { color: var(--c-link); }
+
+@media (max-width: 1100px) {
+  .ov-top, .ov-mid { grid-template-columns: 1fr; }
+}
+@media (max-width: 850px) {
+  .ov-head { flex-direction: column; gap: 12px; margin-bottom: 12px; }
+  .ov-head h1 { font-size: var(--fs-20); }
+  .ov-sub { font-size: var(--fs-13); }
+  .ov-actions { margin-left: 0; }
+  .ov-actions .btn { min-height: 44px; }
+  .ov-scene { min-height: 200px; aspect-ratio: 1152 / 836; }
+  .ov-tiles { grid-template-columns: repeat(2, 1fr); }
+  .ov-tile b { font-size: var(--fs-20); }
+  .ov-note a { min-height: 44px; }
+  .ov-linked { text-align: left; }
+  .ov-card { padding: 16px; }
+  body.has-shell .ov .ov-bar > a, .ov-bar > div { grid-template-columns: 110px 1fr 48px; }
+  body.has-shell .ov .ov-bar > a { min-height: 44px; }
+  .ov-bot { grid-template-columns: 1fr; }
+}
+
+/* V12.0b · п. 17: на ≤ 850 правило 44 px из atlas-pages.css (html body.has-shell a[href]:not(…)) делает ссылки inline-flex по центру —
+   ломает плитки, полосы и переходы. Возвращаем свою раскладку через #main (специфичность выше); высота 44 px сохраняется. */
+#main.ov a.ov-scene, #main.ov a.ov-tile { display: block; }
+#main.ov .ov-bar > a, #main.ov .ov-quick a { display: grid; justify-content: normal; }
+#main.ov .ov-note a { justify-content: flex-start; }
+
+/* 1.0.20 b4 (§6.3): карточка «Ход работ · Итог» под плитками — только при режимах (overview.js; без ключа modes разметки нет).
+   Текст — --c-text / --c-text-2 (≥ 4,5:1), ссылка — --c-link; на телефоне цель 44 px; длинные строки переносятся (без прокрутки вбок на 390). */
+.ov-prog { margin-top: 12px; padding: 16px 18px; }
+.ov-prog h2 { margin: 0 0 8px; font-size: var(--fs-16); }
+.ov-prog p { margin: 0 0 4px; overflow-wrap: anywhere; }
+.ov-prog-main { font-size: var(--fs-16); font-weight: 600; color: var(--c-text); font-variant-numeric: tabular-nums; }
+.ov-prog-week { font-size: var(--fs-14); color: var(--c-text); font-variant-numeric: tabular-nums; }
+.ov-prog-meta { font-size: var(--fs-13); color: var(--c-text-2); }
+#main.ov a.ov-prog-link { display: inline-flex; align-items: center; justify-content: flex-start; min-height: 32px; margin-top: 4px; color: var(--c-link); font-weight: 600; font-size: var(--fs-14); }
+@media (max-width: 850px) { #main.ov a.ov-prog-link { min-height: 44px; } }

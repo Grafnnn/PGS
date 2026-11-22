@@ -1,0 +1,67 @@
+/* 1.0.20 (§6.7–6.8 задания) · экраны «Сегодня» и «Итог» на PROGRESS.html. Все селекторы — только под разметкой этих вкладок (.pt-…),
+   которую строят progress-today.js / progress-summary.js при AtlasShell.modesOn(): без ключа modes правила ни к чему не применяются (0 px). Только светлая тема. */
+.pt-today { display: flex; flex-direction: column; gap: 16px; max-width: 1180px; min-width: 0; font-size: var(--fs-16, 16px); }
+.pt-today .pt-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+.pt-today .pt-title { margin: 0; font-size: 20px; line-height: 1.3; font-weight: 600; overflow-wrap: anywhere; }
+.pt-today .pt-dates { display: inline-flex; gap: 8px; }
+.pt-today .pt-dchip[aria-checked="true"] { background: var(--c-brand, #1f5f8b); border-color: var(--c-brand, #1f5f8b); color: #fff; }
+.pt-today .pt-link { border: 0; background: none; padding: 0; font: inherit; color: var(--c-brand, #1f5f8b); text-decoration: underline; cursor: pointer; min-height: 32px; }
+.pt-today .pt-undo { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 10px 14px; border-radius: var(--r-s, 6px); background: var(--c-surface, #fff); border: 1px solid var(--c-line-mid, #c9d2da); }
+.pt-today .pt-undo-btn { min-height: 44px; padding: 0 8px; font-weight: 600; }
+.pt-today .pt-fix { align-self: flex-start; min-height: 44px; padding: 0 16px; border-radius: var(--r-s, 6px); border: 1px solid var(--c-sig-high-text, #a33); background: var(--c-surface, #fff); color: var(--c-sig-high-text, #a33); font: inherit; font-weight: 600; cursor: pointer; }
+.pt-today .pt-sec { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.pt-today .pt-h { margin: 0; font-size: 16px; font-weight: 600; color: var(--c-text-2, #4a5560); }
+.pt-today .pt-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: 12px; }
+.pt-today .pt-card { display: flex; flex-direction: column; gap: 8px; min-width: 0; padding: 14px; border: 1px solid var(--c-line, #dde3e8); border-radius: var(--r, 8px); background: var(--c-surface, #fff); }
+.pt-today .pt-card-h { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; }
+.pt-today .pt-zone { font-weight: 600; overflow-wrap: anywhere; }
+.pt-today .pt-draft { font-size: var(--fs-13, 13px); padding: 1px 8px; border-radius: 10px; border: 1px dashed var(--c-line-mid, #c9d2da); color: var(--c-text-2, #4a5560); }
+.pt-today .pt-meta { display: flex; flex-wrap: wrap; gap: 12px; color: var(--c-text-2, #4a5560); font-size: var(--fs-14, 14px); }
+.pt-today .pt-chips { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.pt-today .pbtn.pt-chip, .pt-today .pbtn.pt-dchip, .pt-today .pbtn.pt-other, .pt-today .pbtn.pt-back, .pt-today .pbtn.pt-open { height: auto; min-height: 48px; font-size: 16px; }   /* сильнее body.has-shell .pbtn (высота 40, шрифт 14) */
+.pt-today .pbtn.pt-chip { padding: 0 6px; }
+.pt-today .pt-card--short .pt-open { align-self: flex-start; }
+.pt-today .pt-chip--done { border-color: var(--c-done-text, #2e7d32); color: var(--c-done-text, #2e7d32); }
+.pt-today .pbtn:disabled { opacity: .55; cursor: not-allowed; }
+.pt-today .pt-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.pt-today .pt-pick { display: flex; flex-direction: column; gap: 12px; align-items: flex-start; min-width: 0; width: 100%; }
+.pt-today .pt-big { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr)); gap: 10px; width: 100%; }
+.pt-today .pbtn.pt-bigbtn { height: auto; min-height: 64px; padding: 10px 14px; font-size: 16px; flex-direction: column; align-items: flex-start; text-align: left; white-space: normal; overflow-wrap: anywhere; }
+.pt-today .pt-bigbtn small { font-size: var(--fs-13, 13px); color: var(--c-text-2, #4a5560); }
+.pt-today .pt-muted { margin: 0; color: var(--c-text-2, #4a5560); }
+.pt-dlg { max-width: min(92vw, 480px); border: 1px solid var(--c-line-mid, #c9d2da); border-radius: var(--r, 8px); padding: 18px; font-size: 16px; }
+.pt-dlg h2 { margin: 0 0 8px; font-size: 18px; }
+.pt-dlg .pt-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.pt-dlg .pt-row .pbtn { height: auto; min-height: 48px; font-size: 16px; }
+.pt-dlg .pt-muted { color: var(--c-text-2, #4a5560); }
+@media (max-width: 600px) {
+  .pt-today .pt-title { font-size: 18px; }
+  .pt-today .pbtn.pt-chip { min-height: 52px !important; }   /* !important: на ≤ 850 px общее правило оболочки (html body.has-shell :is(…, button, .pbtn):not(…)) ставит 44 px; правило — только под .pt-today */
+}
+@media (pointer: coarse) {
+  .pt-today .pbtn.pt-chip, .pt-today .pbtn.pt-dchip, .pt-today .pbtn.pt-other, .pt-today .pbtn.pt-back, .pt-today .pbtn.pt-open, .pt-today .pt-fix, .pt-today .pt-undo-btn { min-height: 56px !important; min-width: 56px; }
+  .pt-dlg .pt-row .pbtn { height: auto; min-height: 56px !important; }
+}
+/* «Итог» (progress-summary.js, §6.8): одна крупная строка, источник рядом, неделя, приёмка, список этапов с чипом состояния, «Как посчитано». Контраст ≥ 4,5:1. */
+.pt-sum { display: flex; flex-direction: column; gap: 12px; max-width: 1180px; min-width: 0; font-size: var(--fs-16, 16px); color: var(--c-text, #1d2730); }
+.pt-sum .pt-sum-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 16px; }
+.pt-sum .pt-sum-big { margin: 0; font-size: 24px; line-height: 1.3; font-weight: 600; overflow-wrap: anywhere; }
+.pt-sum .pt-sum-src { color: var(--c-text-2, #4a5560); font-size: var(--fs-14, 14px); overflow-wrap: anywhere; }
+.pt-sum .pt-sum-week, .pt-sum .pt-sum-acc, .pt-sum .pt-sum-rd, .pt-sum .pt-sum-empty { margin: 0; overflow-wrap: anywhere; }
+.pt-sum .pt-sum-week { font-size: 18px; font-weight: 600; }
+.pt-sum .pt-sum-acc, .pt-sum .pt-sum-rd { color: var(--c-text-2, #4a5560); }
+.pt-sum .pt-sum-est, .pt-sum .pt-sum-w { margin: 0; overflow-wrap: anywhere; }
+.pt-sum .pt-sum-est { font-size: 18px; font-weight: 600; }
+.pt-sum .pt-sum-w { color: var(--c-text-2, #4a5560); font-size: var(--fs-14, 14px); }
+.pt-sum .pt-sum-list { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; border: 1px solid var(--c-line, #dde3e8); border-radius: var(--r, 8px); background: var(--c-surface, #fff); }
+.pt-sum .pt-sum-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; padding: 8px 12px; border-top: 1px solid var(--c-line, #dde3e8); min-width: 0; }
+.pt-sum .pt-sum-row:first-child { border-top: 0; }
+.pt-sum .pt-sum-name { flex: 1 1 220px; min-width: 0; overflow-wrap: anywhere; }
+.pt-sum .pt-sum-n { color: var(--c-text-2, #4a5560); font-size: var(--fs-14, 14px); white-space: nowrap; }
+.pt-sum .pt-sum-chip { font-size: var(--fs-14, 14px); padding: 2px 10px; border-radius: 12px; border: 1px solid currentColor; background: var(--c-surface, #fff); white-space: nowrap; }
+.pt-sum .pt-sum-chip--done { color: var(--c-done-text, #2e7d32); }
+.pt-sum .pt-sum-chip--work { color: var(--c-brand, #1f5f8b); }
+.pt-sum .pt-sum-chip--none { color: var(--c-text-2, #4a5560); border-style: dashed; }
+.pt-sum .pt-sum-how summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; color: var(--c-brand, #1f5f8b); font-weight: 600; }
+.pt-sum .pt-sum-how ul { margin: 4px 0 0; padding-left: 20px; color: var(--c-text-2, #4a5560); font-size: var(--fs-14, 14px); }
+@media (max-width: 600px) { .pt-sum .pt-sum-big { font-size: 20px; } .pt-sum .pt-sum-row { padding: 8px 10px; } }

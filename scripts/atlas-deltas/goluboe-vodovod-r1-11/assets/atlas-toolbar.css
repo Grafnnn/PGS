@@ -1,0 +1,191 @@
+/* 3D Атлас · панель инструментов сцены (V12.0, B3). Раскладку ведёт atlas-toolbar.js (класс .stage.atb).
+   Цвета и размеры — токены v2 (--c-*, --r*, --shadow-*); тёмная тема главной — через :root[data-theme="dark"] и body.ui-dark. */
+
+/* ---------- нижняя панель ---------- */
+.stage.atb .tools {
+  position: absolute; top: auto; right: auto; bottom: 16px; left: 50%; transform: translateX(-50%);
+  width: max-content; max-width: calc(100% - 32px); display: flex; flex-wrap: nowrap; align-items: center; gap: 2px;
+  padding: 5px; background: var(--c-float); border: 1px solid var(--c-line); border-radius: var(--r-l); box-shadow: var(--shadow-2);
+  z-index: 16; pointer-events: auto;
+}
+.stage.atb .tools .atb-hold, .stage.atb .tools .atb-hold * { display: none !important; }
+.stage.atb .atb-g { display: flex; align-items: center; gap: 2px; flex-wrap: nowrap; }
+.stage.atb .atb-g + .atb-g { margin-left: 3px; padding-left: 5px; border-left: 1px solid var(--c-line); }
+.stage.atb .atb-g--issues:empty { display: none; } /* M4: пока кнопки «Замечания» нет — группы и разделителя нет */
+.stage.atb .tools .atb-g button {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+  min-width: 60px; height: 50px; min-height: 50px; padding: 0 6px; border: 0; border-radius: var(--r);
+  background: transparent; box-shadow: none; color: var(--c-text); font: 500 var(--fs-12)/1.2 var(--font); white-space: nowrap; cursor: pointer;
+}
+.stage.atb .tools .atb-g button .icon { display: block; width: 20px; height: 20px; }
+.stage.atb .tools .atb-g button > .atb-t { display: inline; } /* перекрывает прежнее «только значки» prototype.css (@container stage ≤ 900) */
+.stage.atb .tools .atb-g button:hover { background: var(--c-surface-2); }
+.stage.atb .tools .atb-g button[aria-pressed="true"], .stage.atb .tools .atb-g button[aria-expanded="true"] { background: var(--c-brand-tint); color: var(--c-link); font-weight: 600; }
+.stage.atb .tools .atb-g button[hidden] { display: none; }
+.stage.atb .tools .atb-g #viewSettingsToggle:not([aria-expanded="true"]) { font-weight: 500; } /* view-settings.css: 650 */
+.stage.atb .tools .atb-g #viewSettingsToggle[aria-expanded="true"] { background: var(--c-brand-tint); border-color: transparent; color: var(--c-link); font-weight: 600; } /* view-settings.css задаёт светлые цвета через id */
+.stage.atb .tools .atb-g button:focus-visible, .stage.atb .atb-tr button:focus-visible, .stage.atb .zoom-controls button:focus-visible { outline: 2px solid var(--c-link); outline-offset: 1px; }
+.stage.atb .zoom-controls button:focus-visible { outline-offset: -3px; }   /* 1.0.19a A-07 (О-14): столбец с overflow: hidden — кольцо внутрь, не обрезается */
+/* Узкая сцена (панели слева и справа открыты, 851–1180 px и т. п.) — только значки, подписи — в aria-label */
+.stage.atb.atb-compact .tools .atb-g button { min-width: 44px; width: 44px; height: 44px; min-height: 44px; padding: 0; }
+.stage.atb.atb-compact .atb-t { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+/* 1.0.19a A-09 (М-15): узкая сцена — подпись кнопки видна подсказкой при наведении и фокусе с клавиатуры (не только title) */
+.stage.atb.atb-compact .tools .atb-g button { position: relative; }
+.stage.atb.atb-compact .tools .atb-g button:is(:hover, :focus-visible) > .atb-t {
+  width: auto; height: auto; overflow: visible; clip: auto; left: 50%; bottom: calc(100% + 8px); transform: translateX(-50%); z-index: 40;
+  padding: 5px 8px; border-radius: var(--r-s, 6px); background: var(--c-text); color: var(--c-surface); font: 600 var(--fs-12)/1.2 var(--font); box-shadow: var(--shadow-2); pointer-events: none;
+}
+.stage.atb.atb-compact .tools #quickMeasure:is(:hover, :focus-visible) > .atb-t { display: block; }   /* prototype.css прячет подпись линейки по id на 851–1180 */
+/* сенсорный экран (без наведения): у главных кнопок — подпись под значком вместо title; панель при нехватке места — в две строки */
+@media (hover: none) and (min-width: 851px) {
+  .stage.atb.atb-compact .tools { flex-wrap: wrap; justify-content: center; max-width: calc(100% - 24px); }
+  .stage.atb.atb-compact .tools .atb-g { flex-wrap: wrap; }
+  .stage.atb.atb-compact .tools .atb-g :is(#atbSlice, #quickMeasure, #atbIssues, #atbLink) { width: auto; min-width: 48px; height: 50px; min-height: 50px; padding: 0 6px; }
+  .stage.atb.atb-compact .tools .atb-g :is(#atbSlice, #quickMeasure, #atbIssues, #atbLink) > .atb-t { display: block; position: static; width: auto; height: auto; overflow: visible; clip: auto; transform: none; padding: 0; background: none; color: inherit; box-shadow: none; font-size: 11px; }
+}
+/* стек масштаба поднимается над панелью, когда они пересекаются (1366×768, 1024×768 и т. п.; класс ставит atlas-toolbar.js) */
+.stage.atb.atb-zoom-up .zoom-controls { bottom: var(--atb-zoom-b, 86px); }
+/* Очень узкая сцена: панель — от левого края, значок осей поднимается над ней (prototype.css, @container stage ≤ 620) */
+@media (min-width: 851px) {
+  @container stage (max-width: 620px) {
+    .stage.atb .tools { left: 12px; transform: none; max-width: calc(100% - 84px); }
+  }
+  /* Сцена ≤ 440 px (900–1000 px с обеими панелями): панель доходит до столбца масштаба — столбец выше панели */
+  @container stage (max-width: 440px) {
+    body .stage.atb .zoom-controls { bottom: 78px; } /* body — чтобы перекрыть правило ниже по файлу */
+    body .stage.atb .tools { max-width: calc(100% - 24px); }
+  }
+}
+
+/* ---------- всплывающие: «Сечение», «Ракурс ▾» ---------- */
+.stage.atb .atb-pop {
+  position: absolute; z-index: 30; min-width: 240px; padding: 12px; background: var(--c-surface); color: var(--c-text);
+  border: 1px solid var(--c-line); border-radius: var(--r-l); box-shadow: var(--shadow-3); font-size: var(--fs-13);
+}
+.stage.atb .atb-pop[hidden] { display: none; }
+.stage.atb .atb-slice { bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); width: 280px; display: flex; flex-direction: column; gap: 10px; }
+.stage.atb .atb-pop-h { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.stage.atb .atb-pop-h b { font-size: var(--fs-14); font-weight: 600; }
+.stage.atb .atb-pop .atb-pop-link { height: 32px; min-height: 32px; padding: 0 10px; border: 1px solid var(--c-line-mid); border-radius: var(--r); background: var(--c-surface); color: var(--c-link); font: 600 var(--fs-13) var(--font); cursor: pointer; }
+.stage.atb .atb-pop .atb-pop-link:disabled { color: var(--c-text-2); cursor: default; }
+.stage.atb .atb-field { display: grid; grid-template-columns: 84px minmax(0, 1fr); align-items: center; gap: 8px; margin: 0; color: var(--c-text-2); font-weight: 500; }
+.stage.atb .atb-field select { min-height: 36px; padding: 0 8px; border: 1px solid var(--c-line-strong); border-radius: var(--r); background: var(--c-surface); color: var(--c-text); font: 500 var(--fs-13) var(--font); }
+.stage.atb .atb-field input[type=range] { width: 100%; accent-color: var(--c-brand-fill); }
+.stage.atb .atb-field #sliceAxis, .stage.atb .atb-field #sliceValue { display: block; width: 100%; min-width: 0; margin: 0; box-shadow: none; } /* release.css: #sliceValue 70 px, на узких — скрыт */
+.stage.atb .atb-field #sliceValue { height: 28px; padding: 0; border: 0; background: transparent; }
+.stage.atb .atb-note { margin: 0; font-size: var(--fs-12); color: var(--c-text-2); }
+/* V12.2 · S3 «По этажу» */
+.atb-floor { display: flex; flex-direction: column; gap: 6px; }
+.atb-floor-h { font-size: var(--fs-13); font-weight: 600; color: var(--c-text); }
+.atb-floor-row { display: flex; gap: 6px; flex-wrap: wrap; }
+.atb-floor .atb-pop-link { height: 32px; min-height: 32px; padding: 0 10px; border: 1px solid var(--c-line-mid); border-radius: var(--r); background: var(--c-surface); color: var(--c-link); font: 600 var(--fs-13) var(--font); cursor: pointer; }
+.stage.atb .atb-pop .atb-floor .atb-pop-link[aria-pressed="true"], .atb-floor .atb-pop-link[aria-pressed="true"] { background: var(--c-brand-tint); border-color: var(--c-link); }
+.atb-floor-note { margin: 0; font-size: var(--fs-12); color: var(--c-text-2); }
+@media (max-width: 850px) { .atb-floor .atb-pop-link { height: 44px; min-height: 44px; flex: 1 1 0; } }
+/* 1.0.19a A-03: окно «Сечение» — этажи сверху, X/Y/Z под спойлером; телефон — этажи вверху «Инструментов» */
+.stage.atb .atb-other { border-top: 1px solid var(--c-line); padding-top: 6px; }
+.stage.atb .atb-other > summary { display: flex; align-items: center; min-height: 32px; cursor: pointer; font-size: var(--fs-13); font-weight: 600; color: var(--c-text); }
+.stage.atb .atb-other > .atb-field { margin-top: 8px; }
+#viewSettings > .atb-floor { margin: 0 0 4px; padding: 0 0 8px; }
+
+/* ---------- верх справа: «3D / План», «Ракурс ▾», «Показать всё» ---------- */
+.stage.atb .stage-actions > .atb-tr { display: flex; align-items: center; gap: 8px; flex: none; margin-left: auto; }
+.stage.atb .atb-seg { display: inline-grid; grid-auto-flow: column; gap: 2px; padding: 3px; border: 1px solid var(--c-line); border-radius: var(--r); background: var(--c-float); box-shadow: var(--shadow-2); }
+.stage.atb .atb-seg button {
+  height: 30px; min-height: 30px; min-width: 44px; padding: 0 12px; border: 0; border-radius: var(--r-s); background: transparent; box-shadow: none;
+  color: var(--c-text-2); font: 500 var(--fs-13) var(--font); white-space: nowrap; cursor: pointer;
+}
+.stage.atb .atb-seg button[aria-pressed="true"] { background: var(--c-surface); color: var(--c-text); font-weight: 600; box-shadow: var(--shadow-1); }
+:root[data-theme="dark"] .stage.atb .atb-seg button[aria-pressed="true"], body.ui-dark .stage.atb .atb-seg button[aria-pressed="true"] { background: var(--c-brand-tint); color: var(--c-text); }
+.stage.atb .atb-tr .atb-cam { position: relative; }
+.stage.atb .atb-tr .atb-b {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 38px; min-height: 38px; padding: 0 12px;
+  border: 1px solid var(--c-line); border-radius: var(--r); background: var(--c-float); box-shadow: var(--shadow-2);
+  color: var(--c-text); font: 500 var(--fs-14) var(--font); white-space: nowrap; cursor: pointer;
+}
+.stage.atb .atb-tr .atb-b .icon { width: 18px; height: 18px; }
+.stage.atb .atb-tr .atb-b .atb-chev { width: 16px; height: 16px; color: var(--c-text-2); }
+.stage.atb .atb-tr .atb-b:hover { background: var(--c-surface-2); }
+.stage.atb .atb-tr .atb-b[aria-expanded="true"] { background: var(--c-brand-tint); color: var(--c-link); }
+/* «Показать всё» (1.1.1 C2): только когда что-то скрыто или изолировано — значок со словами и выделением; без подписи значка-глаза нет */
+.stage.atb .atb-tr #quickRestore { margin-left: 0; }
+.stage.atb .atb-tr #quickRestore:not(.is-needed) { display: none; }
+.stage.atb .atb-tr #quickRestore.is-needed { width: auto; padding: 0 12px; background: var(--c-brand-tint); border-color: var(--c-link); color: var(--c-link); font-weight: 600; }
+.stage.atb .atb-tr #quickRestore.is-needed .atb-t { display: inline; }
+/* 1.0.19a A-02: ↺ «Как при открытии» — только когда вид изменён */
+.stage.atb #quickHome:not(.is-needed) { display: none; }
+.stage.atb .atb-tr #quickHome { margin-left: 0; }
+#quickPrev[hidden] { display: none !important; }   /* 1.1.1 B2: «Предыдущий вид» — только когда есть шаг назад */
+.stage.atb .atb-tr #quickPrev { margin-left: 0; width: 38px; padding: 0; justify-content: center; }   /* значок «←», подпись — aria-label и подсказка: ряд не заходит под карточку */
+.stage.atb .atb-tr #quickPrev .atb-t { display: none; }
+.stage.atb .atb-menu { top: calc(100% + 6px); right: 0; padding: 4px; min-width: 200px; display: flex; flex-direction: column; }
+.stage.atb .atb-menu button {
+  display: flex; align-items: center; gap: 10px; width: 100%; height: 36px; min-height: 36px; padding: 0 10px; border: 0; border-radius: var(--r-s);
+  background: transparent; color: var(--c-text); font: 500 var(--fs-13) var(--font); text-align: left; cursor: pointer;
+}
+.stage.atb .atb-menu button .icon { width: 18px; height: 18px; color: var(--c-text-2); }
+.stage.atb .atb-menu button:hover, .stage.atb .atb-menu button:focus-visible { background: var(--c-surface-2); outline: none; }
+.stage.atb .atb-menu button:focus-visible { outline: 2px solid var(--c-accent); outline-offset: -2px; }   /* 1.0.19a A-07 (М-4): видимый фокус в «Ракурсе» (было: outline снят, фон 1,13:1) */
+.stage.atb .atb-menu button[aria-checked="true"] { background: var(--c-brand-tint); color: var(--c-link); font-weight: 600; }
+.stage.atb .atb-menu button[aria-checked="true"] .icon { color: var(--c-link); }
+.stage.atb.atb-compact .atb-tr .atb-cam .atb-t { display: none; }
+.stage.atb.atb-compact .atb-tr .atb-cam .atb-b { padding: 0 8px; gap: 2px; }
+
+/* ---------- текущий ракурс и углы — первой строкой меню «Ракурс» (1.1.1 C2: на поле модели чипа нет) ---------- */
+.stage.atb .atb-menu .atb-cam-now { display: flex; align-items: baseline; gap: 8px; margin: 0 0 4px; padding: 6px 10px 8px; border-bottom: 1px solid var(--c-line); font: 500 var(--fs-12) var(--mono); color: var(--c-text-2); white-space: nowrap; }
+.stage.atb .atb-menu .atb-cam-now[hidden] { display: none; }
+.stage.atb .atb-menu .atb-cam-now-h { font-family: var(--font); color: var(--c-text-2); }
+.stage.atb .atb-menu .atb-cam-now b { color: var(--c-text); font-weight: 600; }
+
+/* ---------- масштаб справа снизу ---------- */
+.stage.atb .zoom-controls { right: 16px; bottom: 16px; padding: 4px; gap: 2px; background: var(--c-float); border: 1px solid var(--c-line); border-radius: var(--r-l); box-shadow: var(--shadow-2); }
+.stage.atb .zoom-controls button { width: 40px; height: 40px; min-height: 40px; border: 0; border-radius: var(--r-s); background: transparent; color: var(--c-text); }
+.stage.atb .zoom-controls button + button { border-top: 0; }
+.stage.atb .zoom-controls button:hover { background: var(--c-surface-2); }
+.stage.atb .zoom-controls .atb-t { display: none; }
+
+/* ---------- кнопки «Состав», «Элемент» (видны на телефоне) ---------- */
+.stage.atb .stage-actions #menu, .stage.atb .stage-actions #card { background: var(--c-float); border-color: var(--c-line); color: var(--c-text); box-shadow: var(--shadow-2); }
+
+/* ---------- телефон: как в V11.5 — сверху справа «3D / План» и «Инструменты», справа столбец ---------- */
+@media (max-width: 850px) {
+  .stage.atb .tools { top: 12px; right: 12px; left: auto; bottom: auto; transform: none; max-width: none; padding: 3px; gap: 2px; border-radius: var(--r); box-shadow: var(--shadow-2); }
+  .stage.atb .tools .atb-seg { padding: 0; border: 0; box-shadow: none; background: transparent; gap: 8px; }   /* 1.0.19a A-10: зазор между целями ≥ 8 px */
+  .stage.atb .tools { gap: 8px; }
+  .stage.atb .tools .atb-seg button { height: 44px; min-height: 44px; min-width: 44px; padding: 0 8px; }   /* 1.1.1 C3: уже — место пути «Всё здание» слева */
+  .stage.atb .stage-actions .stage-path:not(.has-section) { padding: 0 6px; }
+  /* 1.1.1 C3: корень пути не помещается целиком — значок дома с подсказкой (имя читает чтец), без «Всё …»; класс ставит atlas-toolbar.js */
+  .stage.atb .stage-actions .stage-path.atb-path-icon { padding: 0; }
+  .stage.atb .stage-actions .stage-path.atb-path-icon > :first-child { display: flex; align-items: center; justify-content: center; width: 44px; min-width: 44px; font-size: 0; }
+  .stage.atb .stage-actions .stage-path.atb-path-icon > :first-child .crumb-full { display: none; }
+  .stage.atb .stage-actions .stage-path.atb-path-icon > :first-child .crumb-home { display: inline-block; width: 18px; height: 18px; }
+  .stage.atb .tools .atb-g { display: none; }
+  .stage.atb .tools .atb-g--view { display: flex; margin-left: 2px; padding-left: 2px; }   /* 1.1.1 C2: «Инструменты» — в группе «Вид» */
+  .stage.atb .tools .atb-g--view > :not(#viewSettingsToggle) { display: none; }
+  .stage.atb .tools .atb-g button { min-width: 44px; width: 44px; height: 44px; min-height: 44px; padding: 0; }
+  .stage.atb .tools .atb-t { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .stage.atb .atb-slice { display: none; }
+  .stage.atb .stage-actions > .atb-tr { display: none; }
+  /* 1.0.19a A-10 (М-6): правая рейка — отдельные кнопки 44 × 44 с зазором 8 px; «+» и «−» вернулись (масштаб за 1 касание, WCAG 2.5.1) */
+  .stage.atb .zoom-controls { right: 12px; padding: 0; gap: 8px; border: 0; border-radius: 0; background: transparent; box-shadow: none; overflow: visible; }
+  /* 1.1.1 C3: рейка стоит у низа (над шторкой; высота шторки — --atb-sheet-h) — не столбцом поверх модели, а строкой справа; не помещается — вторая строка выше; слева место значку осей.
+     Класс .atb-zoom-row ставит atlas-toolbar.js, только когда рейка на месте ядра (объект, поднявший рейку своим правилом, остаётся со столбцом) */
+  .stage.atb.atb-zoom-row .zoom-controls { left: auto; flex-direction: row; flex-wrap: wrap-reverse; justify-content: flex-end; align-items: flex-end; max-width: calc(100% - 24px - 78px); }
+  .stage.atb .zoom-controls button { width: 44px; height: 44px; min-height: 44px; border: 1px solid var(--c-line); border-radius: 12px; background: var(--c-float); box-shadow: var(--shadow-2); }
+  .stage.atb .zoom-controls button + button { border-top: 1px solid var(--c-line); }
+  .stage.atb .zoom-controls #zoomIn, .stage.atb .zoom-controls #zoomOut { display: flex; align-items: center; justify-content: center; }
+  .stage.atb .zoom-controls :is(#quickMeasure, #quickRestore, #quickHome) { border: 1px solid var(--c-line); border-radius: 12px; background: var(--c-float); box-shadow: var(--shadow-2); }
+  /* зазор 8 px между «Составом» и чипом «Замечания» (чип ставит atlas-issues.css на top: 56px); к2: 68 px — и до «3D / План» по вертикали 8 px (низ строки 60 px) при любой длине подписи чипа */
+  .stage.atb #atbIssues.iss-chip { top: 68px; }
+  /* во время замера линейкой чипы над сценой скрыты */
+  body.measure-on .stage.atb #atbIssues.iss-chip, body.measure-on .stage.atb .stage-actions .stage-path { display: none; }
+  .stage.atb .zoom-controls #quickMeasure { display: flex; align-items: center; justify-content: center; width: 44px; min-width: 44px; padding: 0; }
+  .stage.atb .zoom-controls #quickMeasure[aria-pressed="true"], .stage.atb .zoom-controls #quickRestore.is-needed { background: var(--c-brand-tint); color: var(--c-link); }
+  .stage.atb .zoom-controls #quickRestore { display: none; }
+  .stage.atb .zoom-controls #quickRestore.is-needed { display: flex; align-items: center; justify-content: center; background: var(--c-brand-tint); color: var(--c-link); }
+  .stage.atb .zoom-controls #quickHome.is-needed { display: flex; align-items: center; justify-content: center; width: 44px; min-width: 44px; padding: 0; color: var(--c-link); }
+  .stage.atb .zoom-controls #quickPrev { display: flex; align-items: center; justify-content: center; width: 44px; min-width: 44px; padding: 0; color: var(--c-link); }
+  .stage.atb .zoom-controls #quickPrev .atb-t { display: none; }
+}
+/* К1-B3 (ревью D): нет тел на модели — «Сечение» и «Подписи» выключены */
+.stage.atb .tools .atb-g button[data-atb-no-bodies][aria-disabled="true"], .stage.atb .tools .atb-g button[data-atb-no-bodies][aria-disabled="true"]:hover { color: var(--c-text-2); background: none; cursor: default; font-weight: inherit; }
