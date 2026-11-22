@@ -7,7 +7,7 @@ vi.mock("@/lib/prisma", () => ({ prisma: { project: { findUnique: mocks.find } }
 import { GET } from "./route";
 import { GET as privateGET } from "@/app/api/projects/[projectId]/model-viewer/route";
 
-const goluboeIndex = "/model-assets/goluboe-vodovod-r1-12/index.html";
+const goluboeIndex = "/model-assets/goluboe-vodovod-r1-13/index.html";
 
 describe("Atlas V11 publication", () => {
   beforeEach(() => vi.clearAllMocks());

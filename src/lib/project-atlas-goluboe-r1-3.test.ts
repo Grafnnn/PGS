@@ -32,7 +32,7 @@ const priorPilot = "/model-assets/goluboe-vodovod-r1-2-field-pilot-02-ux-01/";
 const hash = (data: string | Uint8Array) => createHash("sha256").update(data).digest("hex");
 
 describe("Goluboe R1.3 through R1.13 publication", () => {
-  it("advances the field pilot while keeping the main alias and prior releases", async () => {
+  it("serves R1.13 from both aliases without changing prior releases", async () => {
     for (const prefix of [r13, r14, r15, r16, r17, r18, r19, r110, r111, r112, r113, snapshot, priorPilot]) {
       expect(legacyAtlasDestination(new URL(origin + prefix + "index.html"))).toBeNull();
       expect(legacyAtlasWorker(new URL(origin + prefix + "service-worker.js"))).toBeNull();
@@ -44,7 +44,7 @@ describe("Goluboe R1.3 through R1.13 publication", () => {
     const main = "goluboe-vodovod";
     const primary = await alias(new Request(origin + "/models/" + main), { params: { slug: main } });
     expect(primary.status).toBe(307);
-    expect(primary.headers.get("location")).toBe(r112 + "index.html");
+    expect(primary.headers.get("location")).toBe(r113 + "index.html");
   });
 
   it.each([
