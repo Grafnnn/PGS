@@ -29,7 +29,7 @@ describe("Goluboe field pilot publication", () => {
   ])("passes only pilot query parameters: %s", async (query, target) => {
     const r = await alias(new Request(origin + "/models/" + slug + "?" + query), { params: { slug } });
     expect(r.status).toBe(307);
-    expect(r.headers.get("location")).toBe("/model-assets/goluboe-vodovod-r1-12/index.html" + target);
+    expect(r.headers.get("location")).toBe("/model-assets/goluboe-vodovod-r1-13/index.html" + target);
     expect(r.headers.has("set-cookie")).toBe(false);
   });
 
