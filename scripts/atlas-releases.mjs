@@ -159,7 +159,7 @@ const releases = {
   },
   "goluboe-vodovod-r1-12": {
     release: "GOLUBOE_VODOVOD_R1_12", directory: "GOLUBOE_VODOVOD_ATLAS_R1_12", assetDirectory: "goluboe-vodovod-r1-12", files: 346,
-    base: "goluboe-vodovod-r1-3", manifestSha256: "b995a63cc0f54851e3d9d1af2843934ef57d2f69561c1ddfcec01e1e301a1932",
+    base: "goluboe-vodovod-r1-3", manifestSha256: "6d7d1045e3c87b0000167311bf7ba10817b7c41bf14ecd3d07b3c8def6419f10",
     overlay: [
       "ABOUT.html", "CURRENT_RELEASE.json", "DOCUMENTS.html",
       "MANIFEST.json", "OVERVIEW.html", "PROGRESS.html",
@@ -206,7 +206,6 @@ const releases = {
       "assets/atlas-progress.js": "goluboe-vodovod-r1-11",
       "assets/atlas-search.js": "goluboe-vodovod-r1-11",
       "assets/atlas-shell.css": "goluboe-vodovod-r1-11",
-      "assets/atlas-shell.js": "goluboe-vodovod-r1-11",
       "assets/atlas-toolbar.css": "goluboe-vodovod-r1-11",
       "assets/atlas-toolbar.js": "goluboe-vodovod-r1-11",
       "assets/atlas-viewer.css": "goluboe-vodovod-r1-11",

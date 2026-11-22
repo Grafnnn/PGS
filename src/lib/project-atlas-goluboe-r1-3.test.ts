@@ -64,8 +64,8 @@ describe("Goluboe R1.3 through R1.12 publication", () => {
       treeSha: "a8012a721a9a9cf40936ba95a78439b3c9bf0dbf4c961b0ccab0c955218dcf8e", cache: "field-bf0d5282df7a" },
     { release: r111, serve: r111GET, head: r111HEAD, manifestSha: "f12c262bc8a50849b9bc1fb019bff547b52cdc9ef21211fd1cd626d2f013aa28",
       treeSha: "c3d604e38a6397326c882dd62dff5336f0382929cbcf7702b34074d06636a211", cache: "field-d857ffef1232", files: 345 },
-    { release: r112, serve: r112GET, head: r112HEAD, manifestSha: "b995a63cc0f54851e3d9d1af2843934ef57d2f69561c1ddfcec01e1e301a1932",
-      treeSha: "70e055e0e5561df397fde0b8cf5d26b99a4621b3306b5fac1ee8431a4a744f28", cache: "field-83cf8e941f6b", files: 345 },
+    { release: r112, serve: r112GET, head: r112HEAD, manifestSha: "6d7d1045e3c87b0000167311bf7ba10817b7c41bf14ecd3d07b3c8def6419f10",
+      treeSha: "c590cf0ce23aab3c03b2a7d0076d92035aaf003b6149b5aa9ce8bd31151e33a8", cache: "field-9188a938881d", files: 345 },
   ])("serves all hashed items and isolates the worker for $release", async ({ release, serve, head, manifestSha, treeSha, cache, files = 338 }) => {
     const get = (name: string) => serve(
       new Request(origin + release + name.split("/").map(encodeURIComponent).join("/")), { params: { asset: name.split("/") } }
@@ -104,7 +104,14 @@ describe("Goluboe R1.3 through R1.12 publication", () => {
     if (release === r112) {
       expect(hash(new Uint8Array(await (await get("assets/atlas-field-offline.js")).arrayBuffer())))
         .toBe("62083de270fa86d6fd828d40c91ecaa31598f3b280f9eef56da21bc981101e68");
-      expect(await (await get("CURRENT_RELEASE.json")).json()).toMatchObject({ coreVersion: "1.1.2" });
+      const metadata = await (await get("CURRENT_RELEASE.json")).json();
+      expect(metadata).toMatchObject({ coreVersion: "1.1.3" });
+      const shell = await (await get("assets/atlas-shell.js")).text();
+      const stamps = [...shell.matchAll(/^\s*window\.ATLAS_CORE_VERSION\s*=\s*["']([^"']+)["'];/gm)].map(match => match[1]);
+      expect(stamps).toEqual([metadata.coreVersion]);
+      const config: Record<string, any> = {};
+      runInNewContext(await (await get("project/config.js")).text(), { window: config }, { timeout: 1000 });
+      expect(config.ATLAS_PROJECT.core_version).toBe(metadata.coreVersion);
     }
     expect((await get("MANIFEST_SHA256_пакета.txt")).status).toBe(404);
     expect((await get("qa/report.json")).status).toBe(404);

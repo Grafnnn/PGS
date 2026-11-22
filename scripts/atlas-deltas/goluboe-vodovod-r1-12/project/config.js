@@ -3,7 +3,7 @@
    Без строк-комментариев «//» тело — JSON (так его читает валидатор). */
 window.ATLAS_PROJECT = {
  "project_id": "goluboe-vodovod",
- "core_version": "1.1.2",
+ "core_version": "1.1.3",
  "schema_version": 1,
  "title": {
   "object": "Водовод до ВЗУ «Голубое» · по ПД 19/26-2026",
