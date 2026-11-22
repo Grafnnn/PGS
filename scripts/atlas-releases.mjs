@@ -121,6 +121,41 @@ const releases = {
       "assets/atlas-field.js": "goluboe-vodovod-r1-9",
       "project/profile-waterline.html": "goluboe-vodovod-r1-9"
     }
+  },
+  "goluboe-vodovod-r1-11": {
+    release: "GOLUBOE_VODOVOD_R1_11", directory: "GOLUBOE_VODOVOD_ATLAS_R1_11", assetDirectory: "goluboe-vodovod-r1-11", files: 346,
+    base: "goluboe-vodovod-r1-3", manifestSha256: "f12c262bc8a50849b9bc1fb019bff547b52cdc9ef21211fd1cd626d2f013aa28",
+    overlay: [
+      "ABOUT.html", "CURRENT_RELEASE.json", "DOCUMENTS.html",
+      "MANIFEST.json", "OVERVIEW.html", "PROGRESS.html",
+      "RD_REMARKS.html", "assets/atlas-card.css", "assets/atlas-card.js",
+      "assets/atlas-compare.js", "assets/atlas-elements.js", "assets/atlas-engine.js",
+      "assets/atlas-field-print.js", "assets/atlas-field.js", "assets/atlas-layers.js",
+      "assets/atlas-measure.js", "assets/atlas-modes.js", "assets/atlas-nodes.css",
+      "assets/atlas-nodes.js", "assets/atlas-progress.css", "assets/atlas-progress.js",
+      "assets/atlas-search.js", "assets/atlas-shell.css", "assets/atlas-shell.js",
+      "assets/atlas-toolbar.css", "assets/atlas-toolbar.js", "assets/atlas-viewer.css",
+      "assets/atlas-viewer.js", "assets/atlas-viewlink.js", "assets/building-axes.js",
+      "assets/catalogue.js", "assets/graphics-optimization-module.js", "assets/library.js",
+      "assets/offline-manifest.js", "assets/overview.css", "assets/overview.js",
+      "assets/progress-core.js", "assets/progress-page.js", "assets/progress-screens.css",
+      "assets/progress-summary.js", "assets/progress-today.js", "assets/prototype.css",
+      "assets/prototype.js", "assets/unplaced.js", "assets/view-settings.js",
+      "assets/worker-source.js", "catalogue-model.html", "catalogue.html",
+      "data/geometry_00.js", "data/geometry_02.js", "data/geometry_03.js",
+      "data/layers.js", "data/release-info.js", "index.html",
+      "library.html", "project/config.js", "project/field-pilot-overlay.js",
+      "project/plan-controls.js", "project/profile-waterline.html", "project/terrain-overlay.js",
+      "project/terrain-tools.js", "project/texts.js", "project/underground-view.js"
+    ],
+    overlayFrom: {
+      "assets/graphics-optimization-module.js": "goluboe-vodovod-r1-4",
+      "data/geometry_00.js": "goluboe-vodovod-r1-7",
+      "data/geometry_02.js": "goluboe-vodovod-r1-7",
+      "data/geometry_03.js": "goluboe-vodovod-r1-7",
+      "project/profile-waterline.html": "goluboe-vodovod-r1-9",
+      "project/underground-view.js": "goluboe-vodovod-r1-10"
+    }
   }
 };
 

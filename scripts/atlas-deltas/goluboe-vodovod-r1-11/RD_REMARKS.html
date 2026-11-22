@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><style>a[data-pkg-archive]::after{content:" · в архиве";font-size:.85em;opacity:.75}</style><script defer src="assets/package-links.js"></script><script src="project/config.js"></script><script>/* К1: наборы данных объекта (имя атрибута — переменной A, чтобы проверка ссылок не принимала шаблон за адрес) */(function(){var A="src",P=window.ATLAS_PROJECT||{},L=Array.isArray(P.plugins)?P.plugins:[],X=window.ATLAS_PLUGINS=window.ATLAS_PLUGINS||{},N=[],seen={};for(var i=0;i<L.length;i++){var p=L[i];if(p&&/^[A-Za-z0-9_-]+$/.test(p.name||"")){X[p.name]=Object.assign(X[p.name]||{},{data:p.data||[]});N.push(p.name);}}var pg=(location.pathname.split("/").pop()||"index.html").replace(/\.html$/,"");window.__atlasPluginData=function(defer){for(var i=0;i<N.length;i++){var x=X[N[i]];if(!x||!x.data)continue;for(var j=0;j<x.data.length;j++){var d=x.data[j],u=typeof d==="string"?d:d&&d.src,ps=d&&d.pages;if(!u||seen[u])continue;if(ps&&!ps.some(function(q){return String(q).replace(/\.html$/,"")===pg;}))continue;seen[u]=1;if(document.querySelector("script["+A+"=\""+u+"\"]"))continue;document.write('<script'+(defer?' defer':'')+' '+A+'="'+u+'"><\/script>');}}};if(pg!=="index")window.__atlasPluginData(false);})();</script><link rel="stylesheet" href="assets/tokens.css"><link rel="icon" href="assets/atlas-mark-v3-84.png"><script src="assets/atlas-data.js" data-need="release remarks"></script><script src="assets/atlas-shell.js"></script><script defer src="assets/atlas-abbr.js"></script><script>/* 1.0.4 В4: оболочка страницы (atlas-shell.js) не загрузилась — сообщение и «Обновить», не пустой экран */window.AtlasShell||addEventListener("DOMContentLoaded",function(){var d=document,b=d.createElement("div"),k=d.createElement("button");b.setAttribute("role","alert");b.style.cssText="margin:24px auto;max-width:520px;padding:16px;border:1px solid var(--c-line-strong,#9ab);border-radius:8px;background:var(--c-surface,#fff);color:var(--c-text,#123);font:15px/1.5 system-ui,sans-serif";b.append("Не загрузилась оболочка страницы. ");k.type="button";k.textContent="Обновить";k.style.cssText="display:block;min-height:44px;margin-top:8px;padding:0 16px";k.onclick=function(){location.reload();};b.append(k);d.body.prepend(b);});</script>
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>Замечания к РД · 3D Атлас</title>
+<link rel="stylesheet" href="assets/atlas-shell.css"><link rel="stylesheet" href="assets/atlas-pages.css"><link rel="stylesheet" href="assets/remarks.css"></head>
+<body data-nav="remarks" class="remarks-page">
+<main class="page remarks">
+<div class="page-head">
+<div><h1>Замечания к рабочей документации</h1><p class="page-sub" id="edition"></p></div>
+<div class="page-actions">
+<a class="pbtn" id="file_xlsx" hidden download><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg><span>Скачать реестр (XLSX)</span></a>
+<a class="pbtn" id="file_pdf" hidden target="_blank" rel="noopener"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg><span>PDF</span></a>
+<a class="pbtn" id="file_appendix1" hidden download><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg><span>Приложение 1 · пересечения по осям</span></a>
+</div>
+</div>
+<div class="rfilters">
+<div class="frow frow--main">
+<div class="seg" id="priChips" role="group" aria-label="Значимость"></div>
+<span class="fmore" id="filtersMore"><label class="fselect"><span>Вид:</span><select id="cat" aria-label="Вид замечания"></select></label>
+<label class="fselect"><span>Статус:</span><select id="status" aria-label="Статус"></select></label>
+<span class="elfilter" id="elFilter" hidden><span></span><button type="button" aria-label="Снять фильтр по элементу">×</button></span></span>
+<label class="rsearch"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input type="search" id="q" aria-label="Поиск по замечаниям" placeholder="Лист, марка, текст" autocomplete="off"></label>
+</div>
+<div class="frow frow--sec"><div class="chips" id="secChips" role="group" aria-label="Раздел"></div><span class="shown" id="shown" aria-live="polite"></span></div>
+</div>
+<div class="rgrid">
+<section class="rlist card" aria-label="Список замечаний"><div class="rhead" aria-hidden="true"><span>№</span><span>Значимость</span><span>Замечание</span><span>Лист</span></div><div class="rrows" id="rows" data-atlas-abbr></div></section>
+<section class="rdetail card" id="detail" data-atlas-abbr aria-label="Замечание" aria-live="polite"></section>
+</div>
+</main>
+<script src="assets/remarks-page.js"></script>
+</body></html>
