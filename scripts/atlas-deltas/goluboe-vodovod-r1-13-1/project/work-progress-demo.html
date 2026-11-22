@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Демонстрация хода работ · Голубое · 3D Атлас</title>
+  <link rel="icon" href="../assets/atlas-mark-v3.png">
+  <link rel="stylesheet" href="../assets/tokens.css">
+  <link rel="stylesheet" href="work-progress-demo.css">
+  <script defer src="config.js"></script>
+  <script defer src="../data/progress_items.js"></script>
+  <script defer src="../data/progress_plan.js"></script>
+  <script defer src="../assets/progress-core.js"></script>
+  <script defer src="work-progress-demo.js"></script>
+</head>
+<body>
+  <header class="wd-header">
+    <span class="wd-brand"><img src="../assets/atlas-mark-v3.png" width="28" height="28" alt="">3D Атлас</span>
+    <div class="wd-actions">
+      <button type="button" class="wd-sample-toggle" id="wd-sample-toggle" aria-pressed="false">Тестовый пример</button>
+      <a class="wd-return" href="../index.html">К модели</a>
+    </div>
+  </header>
+  <main class="wd-main">
+    <div class="wd-intro">
+      <h1>Ход работ</h1>
+      <p id="wd-object">Водовод ВЗУ «Голубое»</p>
+    </div>
+    <div class="wd-overview">
+      <section class="wd-scene" aria-label="3D-модель трассы водовода">
+        <p id="wd-sample-label" class="wd-sample-label" role="status" hidden>Тестовые данные · пример выполнения</p>
+        <div class="wd-view" id="wd-view">
+          <p id="wd-view-status" role="status">Загружается 3D-модель</p>
+          <iframe id="wd-model" title="Интерактивная 3D-модель трассы водовода"></iframe>
+        </div>
+        <ul class="wd-scene-key" aria-label="Обозначения на модели">
+          <li>Выполнено · яркая линия в цвете материала</li>
+          <li>Предстоит · полупрозрачная линия</li>
+        </ul>
+      </section>
+      <aside class="wd-rail" aria-label="Данные о ходе работ" tabindex="0">
+        <section class="wd-results" aria-labelledby="wd-results-title" aria-busy="true">
+          <h2 id="wd-results-title">Объёмы работ</h2>
+          <p id="wd-sample-progress" class="wd-sample-progress" hidden></p>
+          <dl class="wd-metrics">
+            <div>
+              <dt>План</dt>
+              <dd id="wd-plan">—</dd>
+            </div>
+            <div>
+              <dt>Учтено по журналу</dt>
+              <dd id="wd-fact">—</dd>
+            </div>
+            <div>
+              <dt>Принято технадзором</dt>
+              <dd id="wd-accepted">—</dd>
+            </div>
+          </dl>
+          <p class="wd-journal" id="wd-journal" role="status">Проверяем журнал работ</p>
+          <noscript><p class="wd-journal">Включите JavaScript, чтобы открыть модель и журнал.</p></noscript>
+        </section>
+        <section class="wd-stages" aria-labelledby="wd-stages-title">
+          <div class="wd-stages-heading">
+            <h2 id="wd-stages-title">Этапы</h2>
+            <ul class="wd-legend" id="wd-legend"></ul>
+          </div>
+          <ul class="wd-stage-list" id="wd-stages"></ul>
+          <p class="wd-source">План по ПД 19/26-2026 · ТКР, PDF стр. 32 · ПОС, таблица 8 и листы восстановления.</p>
+        </section>
+      </aside>
+    </div>
+  </main>
+</body>
+</html>
