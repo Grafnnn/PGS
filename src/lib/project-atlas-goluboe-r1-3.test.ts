@@ -13,6 +13,7 @@ import { GET as r111GET, HEAD as r111HEAD } from "@/app/model-assets/goluboe-vod
 import { GET as r112GET, HEAD as r112HEAD } from "@/app/model-assets/goluboe-vodovod-r1-12/[...asset]/route";
 import { GET as r113GET, HEAD as r113HEAD } from "@/app/model-assets/goluboe-vodovod-r1-13/[...asset]/route";
 import { GET as r1131GET, HEAD as r1131HEAD } from "@/app/model-assets/goluboe-vodovod-r1-13-1/[...asset]/route";
+import { GET as r1132GET, HEAD as r1132HEAD } from "@/app/model-assets/goluboe-vodovod-r1-13-2/[...asset]/route";
 import { GET as alias } from "@/app/models/[slug]/route";
 import { legacyAtlasDestination, legacyAtlasWorker } from "./project-atlas-legacy";
 
@@ -29,24 +30,25 @@ const r111 = "/model-assets/goluboe-vodovod-r1-11/";
 const r112 = "/model-assets/goluboe-vodovod-r1-12/";
 const r113 = "/model-assets/goluboe-vodovod-r1-13/";
 const r1131 = "/model-assets/goluboe-vodovod-r1-13-1/";
+const r1132 = "/model-assets/goluboe-vodovod-r1-13-2/";
 const snapshot = "/model-assets/goluboe-vodovod-r1-2-terrain-snapshot/";
 const priorPilot = "/model-assets/goluboe-vodovod-r1-2-field-pilot-02-ux-01/";
 const hash = (data: string | Uint8Array) => createHash("sha256").update(data).digest("hex");
 
-describe("Goluboe R1.3 through R1.13.1 publication", () => {
-  it("serves R1.13.1 from both aliases without changing prior releases", async () => {
-    for (const prefix of [r13, r14, r15, r16, r17, r18, r19, r110, r111, r112, r113, r1131, snapshot, priorPilot]) {
+describe("Goluboe R1.3 through R1.13.2 publication", () => {
+  it("serves R1.13.2 from both aliases without changing prior releases", async () => {
+    for (const prefix of [r13, r14, r15, r16, r17, r18, r19, r110, r111, r112, r113, r1131, r1132, snapshot, priorPilot]) {
       expect(legacyAtlasDestination(new URL(origin + prefix + "index.html"))).toBeNull();
       expect(legacyAtlasWorker(new URL(origin + prefix + "service-worker.js"))).toBeNull();
     }
     const slug = "goluboe-vodovod-field-pilot";
     const response = await alias(new Request(origin + "/models/" + slug + "?field=1&pk=21.5"), { params: { slug } });
     expect(response.status).toBe(307);
-    expect(response.headers.get("location")).toBe(r1131 + "index.html?field=1&pk=21.5");
+    expect(response.headers.get("location")).toBe(r1132 + "index.html?field=1&pk=21.5");
     const main = "goluboe-vodovod";
     const primary = await alias(new Request(origin + "/models/" + main), { params: { slug: main } });
     expect(primary.status).toBe(307);
-    expect(primary.headers.get("location")).toBe(r1131 + "index.html");
+    expect(primary.headers.get("location")).toBe(r1132 + "index.html");
   });
 
   it.each([
@@ -74,6 +76,8 @@ describe("Goluboe R1.3 through R1.13.1 publication", () => {
       treeSha: "870d73c42a5198c3aa8ced8dfdeb668160821b1b8d9ebdf1d995bf8205edbb50", cache: "field-f0f3994dd89c", files: 353 },
     { release: r1131, serve: r1131GET, head: r1131HEAD, manifestSha: "4dded89e44206070e91afec43d1f42ec5b61271f3ee02a13dbd57c60b7ae4e71",
       treeSha: "7d87e9a45924549da3b47b08ab20189ec1b0ef1d9e885094df51c23989dc955b", cache: "field-c83501683889", files: 353 },
+    { release: r1132, serve: r1132GET, head: r1132HEAD, manifestSha: "404b758f6b8bc7b74e40d843dd35be0b3f27a77dee1d4ebaa11d2b18703f3548",
+      treeSha: "cd2e83897a45e145ef08addad9e9d4489a6d239dd808028fbec2d23df2dc54d5", cache: "field-1a847e80b9a8", files: 353 },
   ])("serves all hashed items and isolates the worker for $release", async ({ release, serve, head, manifestSha, treeSha, cache, files = 338 }) => {
     const get = (name: string) => serve(
       new Request(origin + release + name.split("/").map(encodeURIComponent).join("/")), { params: { asset: name.split("/") } }
@@ -109,7 +113,7 @@ describe("Goluboe R1.3 through R1.13.1 publication", () => {
     expect(self.ATLAS_OFFLINE_FILES).toEqual(expect.arrayContaining([
       "project/underground-geometry-data.js", "project/underground-mesh.js", "project/underground-view.js"
     ]));
-    if (release === r112 || release === r113 || release === r1131) {
+    if (release === r112 || release === r113 || release === r1131 || release === r1132) {
       expect(hash(new Uint8Array(await (await get("assets/atlas-field-offline.js")).arrayBuffer())))
         .toBe("62083de270fa86d6fd828d40c91ecaa31598f3b280f9eef56da21bc981101e68");
       const metadata = await (await get("CURRENT_RELEASE.json")).json();
@@ -125,7 +129,7 @@ describe("Goluboe R1.3 through R1.13.1 publication", () => {
     expect((await get("qa/report.json")).status).toBe(404);
   });
 
-  it.each([[r113, r113GET], [r1131, r1131GET]] as const)("keeps the progress demo and embedded model inside the release policy at %s", async (prefix, serve) => {
+  it.each([[r113, r113GET], [r1131, r1131GET], [r1132, r1132GET]] as const)("keeps the progress demo and embedded model inside the release policy at %s", async (prefix, serve) => {
     const get = (name: string) => serve(
       new Request(origin + prefix + name), { params: { asset: name.split("/") } }
     );
