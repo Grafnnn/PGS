@@ -72,14 +72,14 @@ export function getProjectAtlasUrl(projectId: string): string | null {
 }
 
 const goluboeModel: Project3dModel = {
-  slug: "goluboe-vodovod-atlas-r1-15",
+  slug: "goluboe-vodovod-atlas-r1-16",
   title: "3D Атлас Голубое",
-  subtitle: "Водовод до ВЗУ: 382 записи реестра, 230 элементов сцены, 6 PDF",
-  revision: "R1.15",
+  subtitle: "Водовод до ВЗУ: 384 записи реестра, 232 элемента сцены, 6 PDF",
+  revision: "R1.16",
   updatedAt: "24.11.2026",
   disclaimer: "Модель по ПД 19/26-2026. Расхождения со ЗнП № 10 сохранены в замечаниях и заключении; оригинал ЗнП не входит в пакет. Не инженерная приёмка и не исполнительная съёмка.",
-  assetPath: "src/assets/project-models/goluboe-vodovod-r1-15",
-  assetBaseUrl: "/model-assets/goluboe-vodovod-r1-15/",
+  assetPath: "src/assets/project-models/goluboe-vodovod-r1-16",
+  assetBaseUrl: "/model-assets/goluboe-vodovod-r1-16/",
   publicUrl: "/models/goluboe-vodovod#node/building"
 };
 
