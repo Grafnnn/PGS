@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { createReadStream, createWriteStream } from "node:fs";
-import { copyFile, readFile, mkdtemp, rm } from "node:fs/promises";
+import { copyFile, mkdir, readFile, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { Readable, Transform } from "node:stream";
@@ -52,8 +52,13 @@ if (await verifiedCache()) {
     if (release.base) {
       // Materialize a complete new release; no runtime cross-version asset requests.
       for (const name of release.overlay) {
+        if (path.isAbsolute(name) || name.split("/").some(part => !part || part === "." || part === "..") || name.includes("\\")) {
+          throw new Error("Unsafe Atlas overlay path");
+        }
         const from = release.overlayFrom?.[name] ?? release.version;
-        await copyFile(path.join("scripts", "atlas-deltas", from, name), path.join(source, name));
+        const target = path.join(source, name);
+        await mkdir(path.dirname(target), { recursive: true });
+        await copyFile(path.join("scripts", "atlas-deltas", from, name), target);
       }
     }
     const { stdout } = await run(process.execPath, ["scripts/package-atlas-r25v5.mjs", source, release.version], { maxBuffer: 1024 * 1024 });

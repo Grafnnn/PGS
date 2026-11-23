@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="ru" data-theme="light"><head><meta charset="utf-8"><style>a[data-pkg-archive]::after{content:" · в архиве";font-size:.85em;opacity:.75}</style><script defer src="assets/package-links.js"></script><script src="project/config.js"></script><script>/* К1: наборы данных объекта (как на прочих страницах; имя атрибута — переменной A). 1.2.1: наборы «Хода работ» сюда не пишутся — их подгружает atlas-demo.js после первого кадра */(function(){var A="src",P=window.ATLAS_PROJECT||{},L=Array.isArray(P.plugins)?P.plugins:[],X=window.ATLAS_PLUGINS=window.ATLAS_PLUGINS||{},N=[],seen={};for(var i=0;i<L.length;i++){var p=L[i];if(p&&/^[A-Za-z0-9_-]+$/.test(p.name||"")){X[p.name]=Object.assign(X[p.name]||{},{data:p.data||[]});N.push(p.name);}}var pg=(location.pathname.split("/").pop()||"index.html").replace(/\.html$/,"");window.__atlasPluginData=function(defer){for(var i=0;i<N.length;i++){var x=X[N[i]];if(!x||!x.data)continue;for(var j=0;j<x.data.length;j++){var d=x.data[j],u=typeof d==="string"?d:d&&d.src,ps=d&&d.pages;if(!u||seen[u])continue;if(ps&&!ps.some(function(q){return String(q).replace(/\.html$/,"")===pg;}))continue;seen[u]=1;if(document.querySelector("script["+A+"=\""+u+"\"]"))continue;document.write('<script'+(defer?' defer':'')+' '+A+'="'+u+'"><\/script>');}}};if(pg!=="index")window.__atlasPluginData(false);})();</script>
+<script>/* 1.2.1: тема — выбор на этой странице (atlas:<объект>:demo), иначе «Фон» главной (atlas:global:view); до первой отрисовки */try{var P=window.ATLAS_PROJECT||{},k=((P.storage&&P.storage.prefix)||("atlas:"+(P.project_id||"default")+":"))+"demo",d=JSON.parse(localStorage.getItem(k))||{},v=JSON.parse(localStorage.getItem("atlas:global:view"))||{},dark=d.theme?d.theme==="dark":v.background==="dark";document.documentElement.dataset.theme=dark?"dark":"light";if(d.hc)document.documentElement.classList.add("demo-hc");}catch(e){}</script>
+<meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light dark"><title>Демонстрация · 3D Атлас</title>
+<link rel="stylesheet" href="assets/tokens.css"><link rel="stylesheet" href="assets/tokens_v2_dark.css"><link rel="stylesheet" href="assets/atlas-demo.css"><link rel="icon" href="assets/atlas-mark-v3-84.png">
+<script src="assets/atlas-data.js" data-need="release"></script></head>
+<body class="demo">
+<a class="demo-skip" href="#demoMain">К данным</a>
+<header class="demo-head">
+<a class="demo-brand" href="index.html" title="Открыть атлас"><img src="assets/atlas-mark-v3-84.png" alt="" width="36" height="36"><span class="demo-brand-t">3D Атлас</span></a>
+<div class="demo-ttl"><p class="demo-eyebrow">Демонстрация · ход работ</p><h1 class="demo-obj" id="demoObj">Загрузка…</h1><p class="demo-sub" id="demoSub"></p></div>
+<div class="demo-acts" role="toolbar" aria-label="Показ">
+<button type="button" class="demo-btn demo-btn--main" id="demoPlay" aria-pressed="false" title="Автопрокрутка экранов и автоповорот модели (←/→ — листать, Esc — пауза)"><span class="demo-btn-t">Слайды</span></button>
+<button type="button" class="demo-btn demo-btn--test" id="demoTest" aria-pressed="false" title="Временный пример: часть работ по порядку трассы и этапов отмечена в памяти страницы. Не факт, никуда не записывается"><span class="demo-btn-t">Тестовый пример</span></button>
+<button type="button" class="demo-btn" id="demoFull" aria-pressed="false" title="Полный экран: крупный шрифт для проектора"><span class="demo-btn-t">На весь экран</span></button>
+<button type="button" class="demo-btn" id="demoTheme" aria-pressed="false"><span class="demo-btn-t">Тёмная тема</span></button>
+<button type="button" class="demo-btn" id="demoContrast" aria-pressed="false" title="Высокий контраст">Контраст</button>
+<a class="demo-btn" href="PROGRESS.html" id="demoProgress">Ход работ</a>
+</div>
+<span class="demo-tick" aria-hidden="true"><span id="demoTick"></span></span>
+</header>
+<div class="demo-board" id="demoBoard">
+<div class="demo-testbar" id="demoTestBar" role="alert" hidden><strong class="demo-testbar-t">ТЕСТОВЫЕ ДАННЫЕ — не факт</strong><span class="demo-testbar-s" id="demoTestNote"></span><button type="button" class="demo-btn" id="demoTestOff">Выйти из теста</button></div>
+<section class="demo-kpi" id="demoKpi" aria-label="Итог хода работ" aria-live="polite"><p class="demo-load">Загрузка данных хода работ…</p></section>
+<figure class="demo-model" id="demoModel" aria-label="3D-модель объекта">
+<div class="demo-model-box" id="demoModelBox"></div>
+<p class="demo-model-load" id="demoModelLoad" role="status">Загрузка модели…</p>
+<div class="demo-model-tools" id="demoModelTools">
+<button type="button" class="demo-mbtn" id="demoFit" title="Вписать позиции плана в кадр">Вписать</button>
+<button type="button" class="demo-mbtn" id="demoSpin" aria-pressed="false" title="Медленный поворот модели">Автоповорот</button>
+<a class="demo-mbtn" id="demo3d" href="index.html" target="_blank" rel="noopener" title="Открыть атлас в новой вкладке">В атласе</a>
+</div>
+<ul class="demo-mlegend" id="demoLegend" aria-label="Цвета модели"></ul>
+<p class="demo-pick" id="demoPick" role="status" hidden><span id="demoPickT"></span><button type="button" class="demo-pick-x" id="demoPickX" aria-label="Снять выбор">×</button></p>
+</figure>
+<aside class="demo-side" aria-label="Данные хода работ">
+<nav class="demo-tabs" id="demoTabs" role="tablist" aria-label="Экраны демонстрации" hidden></nav>
+<main class="demo-main" id="demoMain" role="tabpanel" tabindex="-1" aria-busy="true" aria-live="polite"><p class="demo-load">Загрузка…</p></main>
+</aside>
+<section class="demo-foot" id="demoFoot" aria-label="Шкала этапов и последние отметки"></section>
+</div>
+<p class="demo-status" id="demoStatus" role="status" aria-live="polite"></p>
+<noscript><p class="demo-nodata">Для демонстрации нужен JavaScript.</p></noscript>
+<script src="assets/progress-core.js"></script><script src="assets/progress-summary.js"></script><script src="assets/atlas-demo.js"></script>
+</body></html>

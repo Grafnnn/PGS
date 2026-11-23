@@ -1,0 +1,506 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Продольный разрез водовода В1 · Голубое</title>
+<style>
+@font-face{font-family:Golos;src:url("../assets/fonts/GolosText-Regular.woff2") format("woff2");font-display:swap}
+@font-face{font-family:Golos;src:url("../assets/fonts/GolosText-SemiBold.woff2") format("woff2");font-weight:600;font-display:swap}
+:root{color-scheme:light;--ink:#173747;--muted:#4c6675;--rule:#ccdae2;--brand:#115d7a;--axis:#7a5135;--earth:#4b725b;--well:#865534}
+*{box-sizing:border-box}
+body{margin:0;background:#f6f9fb;color:var(--ink);font:15px/1.5 Golos,system-ui,sans-serif}
+main{max-width:66rem;margin:auto;padding:clamp(.85rem,4vw,2.5rem)}
+a{color:var(--brand);text-underline-offset:3px}
+a:focus-visible,button:focus-visible,select:focus-visible,.profile-window:focus-visible{outline:2px solid var(--brand);outline-offset:3px}
+nav{display:flex;flex-wrap:wrap;gap:.4rem 1rem;font-size:.88rem;font-weight:600;margin-bottom:.85rem}
+h1{font-size:clamp(1.48rem,4vw,2.5rem);line-height:1.14;letter-spacing:-.035em;margin:0 0 .35rem}
+header p{color:var(--muted);margin:0 0 1.05rem}
+figure{margin:0;border:1px solid var(--rule);background:#fff;border-radius:.7rem;padding:clamp(.65rem,2vw,1.1rem)}
+.views,.legend,.methods,.sources{display:flex;flex-wrap:wrap;gap:.45rem 1rem}
+.views{gap:.35rem;margin-bottom:.4rem}
+.views button,.interval button{border:1px solid var(--rule);border-radius:.35rem;
+  background:#fff;color:var(--brand);font:600 .79rem/1.2 Golos,system-ui,sans-serif;padding:.44rem .54rem;cursor:pointer}
+.views button[aria-pressed="true"]{border-color:var(--brand);background:#edf5f8}
+.interval{display:flex;flex-wrap:wrap;gap:.35rem .55rem;align-items:end;margin:.55rem 0 .35rem}
+.interval label{display:grid;gap:.18rem;color:var(--muted);font-size:.78rem}
+.interval input{width:5.7rem;border:1px solid var(--rule);border-radius:.32rem;padding:.34rem .45rem;
+  color:var(--ink);background:#fff;font:inherit;font-variant-numeric:tabular-nums}
+.interval input:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+.interval input[aria-invalid="true"]{border-color:#a13932}
+.interval-status{margin:0 0 .25rem;font-size:.8rem;color:var(--muted)}
+.interval-status.error{color:#a13932}
+.height-scale{display:flex;flex-wrap:wrap;align-items:center;gap:.3rem .5rem;margin:.25rem 0 .45rem}
+.height-scale label,.height-scale p,.print-scale{color:var(--muted);font-size:.8rem;margin:0}
+.height-scale select{border:1px solid var(--rule);border-radius:.32rem;padding:.34rem .45rem;color:var(--ink);background:#fff;font:inherit}
+.print-scale{display:none}
+.profile-window{--chart-height:360px;height:var(--chart-height);overflow:hidden;scrollbar-gutter:stable}
+.profile-window.zoomed{overflow-y:auto}
+canvas{position:sticky;top:0;width:100%;height:var(--chart-height);display:block}
+.legend{font-size:.82rem;gap:.35rem .9rem;margin:.45rem 0 .65rem}
+.legend span{display:inline-flex;align-items:center;gap:.36rem}
+.legend i{width:1.35rem;display:inline-block;color:var(--brand);border-top:2px solid}
+.legend .axis{color:var(--axis);border-top-style:dashed}
+.legend .earth{width:.5rem;height:.5rem;border:0;background:var(--earth);margin-left:.4rem;margin-right:.45rem}
+.legend .well{width:.5rem;height:.5rem;border:0;background:var(--well);transform:rotate(45deg);margin-left:.4rem;margin-right:.45rem}
+figcaption,.method-note,.sources{color:var(--muted);font-size:.84rem;margin:.3rem 0 0}
+.methods{padding:0;list-style:none;margin:.8rem 0 0;gap:.35rem .9rem}
+.methods li{font-size:.83rem;color:var(--ink);white-space:nowrap}
+.methods .mark{display:inline-block;width:.52em;height:.52em;border-radius:1rem;background:#5d7a89;margin-right:.34rem;vertical-align:.11em}
+.methods .hdd{background:#295c78}
+.methods .long{background:#4b8295}
+h2{font-size:1.08rem;margin:1.1rem 0 .42rem}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+th,td{padding:.4rem .42rem;border-bottom:1px solid var(--rule);text-align:right}
+th:first-child,td:first-child{text-align:left}
+thead th{font-size:.8rem;font-weight:600;color:var(--muted);background:#edf4f8}
+tbody th{font-weight:600}
+td{white-space:nowrap}
+tbody tr.estimate th{font-weight:400}
+.details{display:flex;flex-wrap:wrap;align-items:baseline;gap:.4rem 1rem;margin:.65rem 0 .35rem}
+.details strong{font-variant-numeric:tabular-nums}
+.method-note{max-width:90ch}
+@media(max-width:480px){body{font-size:13px}.views button{font-size:.74rem;padding:.39rem .45rem}
+  thead th{font-size:.74rem}th,td{padding:.36rem .27rem}.profile-window{--chart-height:330px}.methods li{white-space:normal}}
+@media print{body,figure{background:#fff}main{max-width:none;padding:0}
+  nav,.views,.interval,.height-scale{display:none}
+  .print-scale{display:block}
+  .profile-window,.profile-window.zoomed{overflow:visible;scrollbar-gutter:auto}
+  figure,tr{break-inside:avoid}}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <nav aria-label="Связанные виды">
+      <a href="../index.html?pdLocate=kv1">← КВ‑1 на модели</a>
+      <a id="view-in-3d" href="../index.html?pdProfile=1">Показать профиль в 3D</a>
+      <a href="section-kv1.html">Разрез колодца КВ‑1</a>
+    </nav>
+    <h1>Продольный разрез водовода В1</h1>
+    <p>Голубое · ПЭ100 SDR17 Ø225×13,4 мм · ПК0+00 — ПК4+00</p>
+  </header>
+
+  <figure>
+    <div class="views" role="group" aria-label="Участок продольного разреза">
+      <button aria-pressed="true" data-view="all" type="button">Вся трасса</button>
+      <button aria-pressed="false" data-view="start" type="button">КВ‑1 и УП‑1</button>
+      <button aria-pressed="false" data-view="end" type="button">УП‑2 и ВЗУ</button>
+    </div>
+    <form class="interval" aria-label="Выбор интервала профиля" novalidate>
+      <label>Начало, м<input id="interval-start" name="from" type="text" inputmode="decimal" value="0" aria-describedby="interval-status"></label>
+      <label>Конец, м<input id="interval-end" name="to" type="text" inputmode="decimal" value="400" aria-describedby="interval-status"></label>
+      <button type="submit">Показать</button>
+    </form>
+    <p class="interval-status" id="interval-status" role="status">Участок ПК0+00 — ПК4+00. Расстояние от КВ‑1 в пределах 0–400 м.</p>
+    <div class="height-scale">
+      <label for="height-scale">Увеличение по высоте</label>
+      <select id="height-scale">
+        <option value="1">×1</option>
+        <option value="2">×2</option>
+        <option value="5">×5</option>
+        <option value="10">×10</option>
+      </select>
+      <p id="height-scale-help" hidden>Прокрутите график по вертикали.</p>
+    </div>
+    <p class="print-scale">Увеличение по высоте ×1</p>
+    <div class="profile-window" id="profile-window" role="region" aria-label="Профиль по высоте">
+      <div id="profile-track">
+        <canvas id="profile" role="img" aria-describedby="graph-note" aria-label="Продольный разрез. Лоток трубы от +200,500 м у КВ‑1 до +207,300 м у ВЗУ. Подписанные отметки приведены в таблице."></canvas>
+      </div>
+    </div>
+    <div class="legend" aria-label="Легенда графика">
+      <span><i aria-hidden="true"></i>Лоток</span>
+      <span><i class="axis" aria-hidden="true"></i>Расчётная ось трубы</span>
+      <span><i class="earth" aria-hidden="true"></i>Земля по ППО</span>
+      <span><i class="well" aria-hidden="true"></i>Низ подготовки КВ‑1</span>
+    </div>
+    <figcaption id="graph-note">Высоты абсолютные, м. Увеличение ×1 соответствует исходному виду участка. Уклон определяйте по разности отметок и расстоянию.</figcaption>
+    <ul class="methods" aria-label="Способ прокладки по участкам">
+      <li><i class="mark" aria-hidden="true"></i>Открыто · ПК0+00 → ПК0+07 · 7 м</li>
+      <li><i class="mark hdd" aria-hidden="true"></i>ГНБ под проездом · ПК0+07 → ПК0+31 · 24 м</li>
+      <li><i class="mark long" aria-hidden="true"></i>ГНБ вдоль проезда · ПК0+31 → ПК3+90 · 359 м</li>
+      <li><i class="mark" aria-hidden="true"></i>Открыто · ПК3+90 → ПК4+00 · 10 м</li>
+    </ul>
+  </figure>
+
+  <section aria-labelledby="marks-title">
+    <h2 id="marks-title">Отметки водовода</h2>
+    <table aria-describedby="station-note">
+      <thead><tr><th scope="col">Пикет</th><th scope="col">Лоток, м</th><th scope="col">Ось, м</th><th scope="col">Земля, м</th></tr></thead>
+      <tbody id="marks">
+        <tr data-station="0"><th scope="row">ПК0+00 · КВ‑1</th><td>+200,500</td><td>+200,599</td><td>+204,300</td></tr>
+        <tr data-station="21.5" class="estimate"><th scope="row">ПК0+21,5 ≈</th><td>+200,390</td><td>+200,489</td><td>—</td></tr>
+        <tr data-station="31"><th scope="row">ПК0+31 · УП‑1</th><td>+200,420</td><td>+200,519</td><td>+203,800</td></tr>
+        <tr data-station="60.5" class="estimate"><th scope="row">ПК0+60,5 ≈</th><td>+200,500</td><td>+200,599</td><td>—</td></tr>
+        <tr data-station="142.4" class="estimate"><th scope="row">ПК1+42,4 ≈</th><td>+202,500</td><td>+202,599</td><td>—</td></tr>
+        <tr data-station="292.1" class="estimate"><th scope="row">ПК2+92,1 ≈</th><td>+206,500</td><td>+206,599</td><td>—</td></tr>
+        <tr data-station="390"><th scope="row">ПК3+90 · УП‑2</th><td>+207,230</td><td>+207,329</td><td>+211,050</td></tr>
+        <tr data-station="400"><th scope="row">ПК4+00 · т. 3 у ВЗУ</th><td>+207,300</td><td>+207,399</td><td>—</td></tr>
+      </tbody>
+    </table>
+    <p class="method-note" id="station-note">Лоток и земля взяты из подписей ППО. При расчёте оси лоток принят за внутренний низ трубы, как в модели R1.2. Прибавка равна 99,1 мм. Знак ≈ отмечает пикет, снятый по графике листа для промежуточной подписи. Между опорами значения вычисляются линейной интерполяцией. Тире означает отсутствие значения в таблице ППО на этом пикете.</p>
+  </section>
+
+  <section aria-labelledby="well-title">
+    <h2 id="well-title">Основание колодца КВ‑1</h2>
+    <div class="details"><span>Низ песчаной подготовки <strong>+199,760 м</strong> по модели</span>
+      <span>Низ днища ПН‑15 <strong>+199,860 м</strong> по модели</span>
+      <a href="section-kv1.html">Днище ПН‑15 и песчаная подготовка на разрезе КВ‑1</a></div>
+    <p class="method-note">ТКР показывает схему опирания днища и толщину песчаной подготовки 100 мм. Абсолютные отметки основания сняты из модели узла.</p>
+  </section>
+
+  <div class="sources" aria-label="Листы проектной документации">
+    <a href="../albums/Раздел ПД№2 - том 2.pdf#page=18">ППО · л. 5 · отметки лотка и земли</a>
+    <a href="../albums/Раздел ПД№3 - том 3 (5).pdf#page=22">ТКР · л. 16 · диаметр и стенка</a>
+    <a href="../albums/Раздел ПД№3 - том 3 (5).pdf#page=32">ТКР · л. 3 · размерная цепочка</a>
+    <a href="../albums/Раздел ПД№3 - том 3 (5).pdf#page=35">ТКР · л. 6 · узел КВ‑1</a>
+  </div>
+</main>
+
+<script src="profile-world-data.js"></script>
+<script>
+(() => {
+  const canvas = document.getElementById('profile');
+  const context = canvas.getContext('2d');
+  if (!context) return;
+
+  const model = window.ATLAS_PROFILE_WORLD;
+  const anchors = model.marks.map(point => ({ ...point, node:point.label }));
+  const methodColors = ['#5d7a89', '#295c78', '#4b8295', '#5d7a89'];
+  const sections = model.construction.map((leg,i) => [leg.startM,leg.endM,methodColors[i]]);
+  const views = {
+    all:{stations:[0,400], elevations:[199,212], tick:50},
+    start:{stations:[0,36], elevations:[199,205], tick:5},
+    end:{stations:[368,400], elevations:[206,212], tick:5},
+  };
+  const internalRadius = model.insideRadius;
+  const wellBedding = model.well.beddingBottom;
+  const colors = { ink:'#173747', text:'#4c6675', brand:'#115d7a', axis:'#7a5135', earth:'#4b725b', well:'#865534' };
+  const buttons = [...document.querySelectorAll('[data-view]')];
+  const form = document.querySelector('.interval');
+  const begin = document.getElementById('interval-start');
+  const finish = document.getElementById('interval-end');
+  const status = document.getElementById('interval-status');
+  const marks = document.getElementById('marks');
+  const rows = [...marks.querySelectorAll('[data-station]')];
+  const decimals = new Intl.NumberFormat('ru-RU',{maximumFractionDigits:3,useGrouping:false});
+  const metersInPicket = new Intl.NumberFormat('ru-RU',{minimumIntegerDigits:2,maximumFractionDigits:3,useGrouping:false});
+  const heightScale = document.getElementById('height-scale');
+  const scaleHelp = document.getElementById('height-scale-help');
+  const profileWindow = document.getElementById('profile-window');
+  const profileTrack = document.getElementById('profile-track');
+  const plotTop = 22, footerHeight = 54;
+  let currentView = views.all;
+  let verticalScale = 1;
+  let scrollFrame = null;
+  let printing = false;
+
+  function line(x1, y1, x2, y2, color, width = 1) {
+    context.strokeStyle = color;
+    context.lineWidth = width;
+    context.beginPath();
+    context.moveTo(x1,y1);
+    context.lineTo(x2,y2);
+    context.stroke();
+  }
+  function label(text, x, y, align = 'left', color = colors.text, weight = 400) {
+    context.font = weight + ' 11px Golos,system-ui,sans-serif';
+    context.textAlign = align;
+    context.textBaseline = 'alphabetic';
+    context.fillStyle = color;
+    context.fillText(text,x,y);
+  }
+  function height(value) {
+    return '+' + value.toFixed(3).replace('.',',');
+  }
+  function picket(value) {
+    return 'ПК' + Math.floor(value / 100) + '+' + metersInPicket.format(value % 100);
+  }
+  for (const row of rows) {
+    const mark = anchors.find(point => point.station === Number(row.dataset.station));
+    if (!mark) continue;
+    row.cells[1].textContent = height(mark.invert);
+    row.cells[2].textContent = height(mark.invert + internalRadius);
+    row.cells[3].textContent = mark.ground === undefined ? '—' : height(mark.ground);
+  }
+  function atStation(station) {
+    const index = anchors.findIndex(point => point.station >= station);
+    const point = anchors[index];
+    if (point.station === station) return point;
+    const before = anchors[index-1];
+    const fraction = (station-before.station)/(point.station-before.station);
+    return { station, invert: before.invert + (point.invert-before.invert)*fraction, interpolated:true };
+  }
+  function forRange(first,last) {
+    return [atStation(first), ...anchors.filter(point => first < point.station && point.station < last), atStation(last)];
+  }
+  function addBoundary(point, prepend) {
+    if (!point.interpolated) return;
+    const row = document.createElement('tr');
+    row.className = 'estimate';
+    row.dataset.boundary = '';
+    const heading = document.createElement('th');
+    heading.scope = 'row';
+    heading.textContent = picket(point.station) + ' · интерполяция';
+    row.append(heading);
+    for (const value of [height(point.invert),height(point.invert + internalRadius),'—']) {
+      row.insertCell().textContent = value;
+    }
+    if (prepend) marks.prepend(row);
+    else marks.append(row);
+  }
+  function showMarks(first,last) {
+    for (const row of marks.querySelectorAll('[data-boundary]')) row.remove();
+    for (const row of rows) {
+      const station = Number(row.dataset.station);
+      row.hidden = station < first || station > last;
+    }
+    addBoundary(atStation(first),true);
+    addBoundary(atStation(last),false);
+  }
+  function rangeView(first,last) {
+    const points = forRange(first,last);
+    const zs = points.flatMap(point => {
+      const levels = [point.invert,point.invert + internalRadius];
+      if (point.ground !== undefined) levels.push(point.ground);
+      return levels;
+    });
+    if (first === 0) zs.push(wellBedding);
+    const low = Math.floor(Math.min(...zs)-0.2);
+    const high = Math.ceil(Math.max(...zs)+0.2);
+    const rawStep = (last-first) / 5;
+    const magnitude = Math.pow(10,Math.floor(Math.log10(rawStep)));
+    const step = [1,2,5,10].find(value => value*magnitude >= rawStep);
+    return { stations:[first,last], elevations:[low,high], tick:Math.max(0.001,step*magnitude) };
+  }
+  function stationCenter() {
+    const [first,last] = currentView.stations;
+    const [low,high] = currentView.elevations;
+    return (high - atStation((first + last) / 2).invert) / (high - low);
+  }
+  function scrollToCenter(center) {
+    const plotHeight = canvas.clientHeight - plotTop - footerHeight;
+    profileWindow.scrollTop = (center * verticalScale - .5) * plotHeight;
+    draw();
+  }
+  function setScale(value) {
+    verticalScale = value;
+    scaleHelp.hidden = value === 1;
+    profileWindow.classList.toggle('zoomed', value > 1);
+    if (value > 1) {
+      profileWindow.tabIndex = 0;
+      profileWindow.setAttribute('aria-describedby','height-scale-help');
+    } else {
+      profileWindow.removeAttribute('tabindex');
+      profileWindow.removeAttribute('aria-describedby');
+    }
+    draw();
+    if (value > 1) scrollToCenter(stationCenter());
+  }
+  function draw() {
+    const width = Math.round(canvas.clientWidth);
+    const heightPx = Math.round(canvas.clientHeight);
+    if (width < 150) return;
+    const dpr = Math.min(window.devicePixelRatio || 1, 3);
+    const bufferWidth = Math.round(width * dpr), bufferHeight = Math.round(heightPx * dpr);
+    if (canvas.width !== bufferWidth) canvas.width = bufferWidth;
+    if (canvas.height !== bufferHeight) canvas.height = bufferHeight;
+    context.setTransform(dpr,0,0,dpr,0,0);
+    context.clearRect(0,0,width,heightPx);
+
+    const narrow = width < 560;
+    const view = currentView;
+    const [first,last] = view.stations;
+    const [low,high] = view.elevations;
+    const left = 47, right = width - 32, top = plotTop, bottom = heightPx - footerHeight;
+    const scale = printing ? 1 : verticalScale;
+    const span = (bottom - top) * scale;
+    const trackHeight = heightPx + span - (bottom - top) + 'px';
+    if (profileTrack.style.height !== trackHeight) profileTrack.style.height = trackHeight;
+    const offset = printing ? 0 : profileWindow.scrollTop;
+    const x = station => left + (station - first) / (last - first) * (right - left);
+    const y = elevation => top + (high - elevation) / (high - low) * span - offset;
+    const stepY = (high-low > 8 ? 2 : 1) / scale;
+    const withinPlot = py => top <= py && py <= bottom;
+    const stepX = narrow && view === views.all ? 100 : view.tick;
+    const within = station => first <= station && station <= last;
+    const points = forRange(first,last);
+
+    context.fillStyle = '#f8fbfc';
+    context.fillRect(left,top,right-left,bottom-top);
+    label('Отметка, м',left,12);
+    for (let i = Math.ceil(low/stepY); i <= Math.floor(high/stepY); i++) {
+      const elevation = i * stepY, py = y(elevation);
+      if (!withinPlot(py)) continue;
+      line(left,py,right,py,'#e1e9ee');
+      label('+'+decimals.format(elevation),left-7,py+4,'right');
+    }
+    const ticks = [first];
+    for (let tick = Math.ceil(first/stepX); tick*stepX < last; tick++) {
+      const station = Number((tick*stepX).toFixed(3));
+      const spacing = view === views.all ? 37 : 58;
+      if (x(station)-x(ticks[ticks.length-1]) >= spacing && x(last)-x(station) >= spacing) ticks.push(station);
+    }
+    ticks.push(last);
+    for (const station of ticks) {
+      const px = x(station);
+      line(px,top,px,bottom,'#e1e9ee');
+      label(picket(station),px,bottom+18,'center');
+    }
+    line(left,bottom,right,bottom,'#9cb0b9');
+
+    const trace = (offset, color, strokeWidth, dash) => {
+      context.strokeStyle = color;
+      context.lineWidth = strokeWidth;
+      context.setLineDash(dash);
+      context.beginPath();
+      points.forEach((point,index) => {
+        const px = x(point.station), py = y(point.invert + offset);
+        if (index === 0) context.moveTo(px,py);
+        else context.lineTo(px,py);
+      });
+      context.stroke();
+      context.setLineDash([]);
+    };
+    context.save();
+    context.beginPath();
+    context.rect(left-3,top,right-left+6,bottom-top);
+    context.clip();
+    trace(0,colors.brand,2.2,[]);
+    trace(internalRadius,colors.axis,1.4,[4,4]);
+    context.restore();
+
+    if (scale > 1) {
+      context.save();
+      context.beginPath();
+      context.rect(0,top,width,bottom-top);
+      context.clip();
+    }
+    for (const point of points) {
+      const px = x(point.station), py = y(point.invert);
+      context.beginPath();
+      context.arc(px,py,point.node ? 3.4 : 2.8,0,2*Math.PI);
+      context.strokeStyle = colors.brand;
+      context.fillStyle = point.node ? colors.brand : '#fff';
+      context.lineWidth = 1.4;
+      context.fill();
+      context.stroke();
+      if (point.ground !== undefined) {
+        context.fillStyle = colors.earth;
+        context.fillRect(px-3,y(point.ground)-3,6,6);
+      }
+      if (view !== views.all) {
+        if (point.node) {
+          const atStart = point.station < (first+last)/2;
+          const placeBelow = last-point.station < (last-first)*0.08;
+          label(point.node,px+(atStart ? 6 : -6),py+(placeBelow ? 26 : -18),atStart ? 'left' : 'right',colors.ink,600);
+          label(height(point.invert),px+(atStart ? 6 : -6),py+(placeBelow ? 14 : -7),atStart ? 'left' : 'right',colors.brand,600);
+        }
+        if (point.ground !== undefined) {
+          const atStart = point.station < (first+last)/2;
+          label(height(point.ground),px+(atStart ? 6 : -6),y(point.ground)-6,atStart ? 'left' : 'right',colors.earth);
+        }
+      }
+    }
+
+    if (within(0)) {
+      const px = x(0), py = y(wellBedding);
+      context.save();
+      context.translate(px,py);
+      context.rotate(Math.PI/4);
+      context.fillStyle = colors.well;
+      context.fillRect(-3.4,-3.4,6.8,6.8);
+      context.restore();
+      label(height(wellBedding),px+7,py+4,'left',colors.well,600);
+    }
+    if (scale > 1) context.restore();
+
+    for (const [start,end,color] of sections) {
+      const clippedStart = Math.max(start,first), clippedEnd = Math.min(end,last);
+      if (clippedEnd <= clippedStart) continue;
+      context.fillStyle = color;
+      context.fillRect(x(clippedStart),heightPx-16,Math.max(1,x(clippedEnd)-x(clippedStart)-1),7);
+    }
+  }
+  function select(view) {
+    currentView = view;
+    profileWindow.scrollTop = 0;
+    for (const button of buttons) button.setAttribute('aria-pressed',String(views[button.dataset.view] === view));
+    const [first,last] = view.stations;
+    document.getElementById('view-in-3d').href = '../index.html?' + new URLSearchParams({ pdProfile: '1', pdFrom: first, pdTo: last });
+    begin.value = decimals.format(first);
+    finish.value = decimals.format(last);
+    begin.removeAttribute('aria-invalid');
+    finish.removeAttribute('aria-invalid');
+    status.classList.remove('error');
+    const stationLabel = picket(first) + ' — ' + picket(last);
+    status.textContent = 'Участок ' + stationLabel + '. Расстояние от КВ‑1 в пределах 0–400 м.';
+    canvas.setAttribute('aria-label','Продольный разрез ' + stationLabel + '. Отметки приведены в таблице.');
+    showMarks(first,last);
+    draw();
+    if (verticalScale > 1) scrollToCenter(stationCenter());
+  }
+  function readDistance(raw) {
+    const value = raw?.trim() ?? '';
+    return /^\d+(?:[.,]\d{1,3})?$/.test(value) ? Number(value.replace(',','.')) : NaN;
+  }
+  function invalid(message,input) {
+    input.setAttribute('aria-invalid','true');
+    status.textContent = message;
+    status.classList.add('error');
+    input.focus();
+  }
+  form.addEventListener('submit',event => {
+    event.preventDefault();
+    begin.removeAttribute('aria-invalid');
+    finish.removeAttribute('aria-invalid');
+    const first = readDistance(begin.value), last = readDistance(finish.value);
+    if (!Number.isFinite(first) || first > 400) {
+      invalid('Укажите начало интервала числом от 0 до 400 м. Можно ввести до трёх знаков после запятой.',begin);
+      return;
+    }
+    if (!Number.isFinite(last) || last > 400) {
+      invalid('Укажите конец интервала числом от 0 до 400 м. Можно ввести до трёх знаков после запятой.',finish);
+      return;
+    }
+    if (first >= last) {
+      invalid('Конец интервала должен быть больше начала.',finish);
+      return;
+    }
+    select(first === 0 && last === 400 ? views.all : rangeView(first,last));
+  });
+  for (const button of buttons) button.addEventListener('click',() => select(views[button.dataset.view]));
+  addEventListener('resize',draw);
+  if (document.fonts) document.fonts.ready.then(draw);
+  heightScale.value = String(verticalScale);
+  heightScale.addEventListener('change',() => setScale(Number(heightScale.value)));
+  profileWindow.addEventListener('scroll',() => {
+    if (scrollFrame !== null) return;
+    scrollFrame = requestAnimationFrame(() => {
+      scrollFrame = null;
+      draw();
+    });
+  });
+  addEventListener('beforeprint',() => {
+    printing = true;
+    draw();
+  });
+  addEventListener('afterprint',() => {
+    requestAnimationFrame(() => {
+      printing = false;
+      draw();
+      if (verticalScale > 1) scrollToCenter(stationCenter());
+    });
+  });
+  const query = new URLSearchParams(location.search);
+  const first = readDistance(query.get('pdFrom')), last = readDistance(query.get('pdTo'));
+  if (Number.isFinite(first) && Number.isFinite(last) && first < last && last <= 400) {
+    select(first === 0 && last === 400 ? views.all : rangeView(first,last));
+  } else {
+    draw();
+  }
+})();
+</script>
+</body>
+</html>
