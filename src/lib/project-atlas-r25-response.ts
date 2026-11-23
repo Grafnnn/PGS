@@ -5,7 +5,7 @@ import { createGunzip } from "node:zlib";
 import { acceptsProjectModelGzip } from "@/lib/project-model-embed";
 
 export const ATLAS_R25_PREFIX = "/model-assets/troitsk-r25v12-18/";
-type AtlasVersion = "v12-18" | "v12-20" | "v12-21" | "dou200-r1-27" | "zagoryanka-1500-r1-0" | "goluboe-vodovod-r1-2-terrain-snapshot" | "goluboe-vodovod-r1-2-field-pilot-01" | "goluboe-vodovod-r1-2-field-pilot-02" | "goluboe-vodovod-r1-2-field-pilot-02-ux-01" | "goluboe-vodovod-r1-3" | "goluboe-vodovod-r1-4" | "goluboe-vodovod-r1-5" | "goluboe-vodovod-r1-6" | "goluboe-vodovod-r1-7" | "goluboe-vodovod-r1-8" | "goluboe-vodovod-r1-9" | "goluboe-vodovod-r1-10" | "goluboe-vodovod-r1-11" | "goluboe-vodovod-r1-12" | "goluboe-vodovod-r1-13" | "goluboe-vodovod-r1-13-1";
+type AtlasVersion = "v12-18" | "v12-20" | "v12-21" | "dou200-r1-27" | "zagoryanka-1500-r1-0" | "goluboe-vodovod-r1-2-terrain-snapshot" | "goluboe-vodovod-r1-2-field-pilot-01" | "goluboe-vodovod-r1-2-field-pilot-02" | "goluboe-vodovod-r1-2-field-pilot-02-ux-01" | "goluboe-vodovod-r1-3" | "goluboe-vodovod-r1-4" | "goluboe-vodovod-r1-5" | "goluboe-vodovod-r1-6" | "goluboe-vodovod-r1-7" | "goluboe-vodovod-r1-8" | "goluboe-vodovod-r1-9" | "goluboe-vodovod-r1-10" | "goluboe-vodovod-r1-11" | "goluboe-vodovod-r1-12" | "goluboe-vodovod-r1-13" | "goluboe-vodovod-r1-13-1" | "goluboe-vodovod-r1-13-2";
 const atlasDirectories: Record<AtlasVersion, string> = {
   "v12-18": "troitsk-r25v12-18",
   "v12-20": "troitsk-r25v12-20",
@@ -27,7 +27,8 @@ const atlasDirectories: Record<AtlasVersion, string> = {
   "goluboe-vodovod-r1-11": "goluboe-vodovod-r1-11",
   "goluboe-vodovod-r1-12": "goluboe-vodovod-r1-12",
   "goluboe-vodovod-r1-13": "goluboe-vodovod-r1-13",
-  "goluboe-vodovod-r1-13-1": "goluboe-vodovod-r1-13-1"
+  "goluboe-vodovod-r1-13-1": "goluboe-vodovod-r1-13-1",
+  "goluboe-vodovod-r1-13-2": "goluboe-vodovod-r1-13-2"
 };
 type Asset = { pack: string; offset: number; storedBytes: number; bytes: number; compressed: boolean; sha256: string; contentType: string };
 const indexes = new Map<AtlasVersion, Promise<{ files: Record<string, Asset> }>>();
@@ -51,7 +52,7 @@ export async function projectAtlasR25Response(request: Request, segments: string
     const { files } = await loadIndex(version, root);
     if (!Object.hasOwn(files, name)) return new Response("Not found", { status: 404 });
     const asset = files[name];
-    const localFonts = version === "v12-20" || version === "v12-21" || version === "goluboe-vodovod-r1-2-terrain-snapshot" || version === "goluboe-vodovod-r1-2-field-pilot-01" || version === "goluboe-vodovod-r1-2-field-pilot-02" || version === "goluboe-vodovod-r1-2-field-pilot-02-ux-01" || version === "goluboe-vodovod-r1-3" || version === "goluboe-vodovod-r1-4" || version === "goluboe-vodovod-r1-5" || version === "goluboe-vodovod-r1-6" || version === "goluboe-vodovod-r1-7" || version === "goluboe-vodovod-r1-8" || version === "goluboe-vodovod-r1-9" || version === "goluboe-vodovod-r1-10" || version === "goluboe-vodovod-r1-11" || version === "goluboe-vodovod-r1-12" || version === "goluboe-vodovod-r1-13" || version === "goluboe-vodovod-r1-13-1";
+    const localFonts = version === "v12-20" || version === "v12-21" || version === "goluboe-vodovod-r1-2-terrain-snapshot" || version === "goluboe-vodovod-r1-2-field-pilot-01" || version === "goluboe-vodovod-r1-2-field-pilot-02" || version === "goluboe-vodovod-r1-2-field-pilot-02-ux-01" || version === "goluboe-vodovod-r1-3" || version === "goluboe-vodovod-r1-4" || version === "goluboe-vodovod-r1-5" || version === "goluboe-vodovod-r1-6" || version === "goluboe-vodovod-r1-7" || version === "goluboe-vodovod-r1-8" || version === "goluboe-vodovod-r1-9" || version === "goluboe-vodovod-r1-10" || version === "goluboe-vodovod-r1-11" || version === "goluboe-vodovod-r1-12" || version === "goluboe-vodovod-r1-13" || version === "goluboe-vodovod-r1-13-1" || version === "goluboe-vodovod-r1-13-2";
     const headers = new Headers({
       "Content-Type": localFonts && name.startsWith("assets/fonts/") && name.endsWith(".woff2") ? "font/woff2" : asset.contentType,
       "Cache-Control": name === "service-worker.js" || name.endsWith(".html") ? "public, no-cache" : "public, max-age=31536000, immutable",
