@@ -14,6 +14,7 @@ import { GET as r112GET, HEAD as r112HEAD } from "@/app/model-assets/goluboe-vod
 import { GET as r113GET, HEAD as r113HEAD } from "@/app/model-assets/goluboe-vodovod-r1-13/[...asset]/route";
 import { GET as r1131GET, HEAD as r1131HEAD } from "@/app/model-assets/goluboe-vodovod-r1-13-1/[...asset]/route";
 import { GET as r1132GET, HEAD as r1132HEAD } from "@/app/model-assets/goluboe-vodovod-r1-13-2/[...asset]/route";
+import { GET as r115GET, HEAD as r115HEAD } from "@/app/model-assets/goluboe-vodovod-r1-15/[...asset]/route";
 import { GET as alias } from "@/app/models/[slug]/route";
 import { legacyAtlasDestination, legacyAtlasWorker } from "./project-atlas-legacy";
 
@@ -31,24 +32,25 @@ const r112 = "/model-assets/goluboe-vodovod-r1-12/";
 const r113 = "/model-assets/goluboe-vodovod-r1-13/";
 const r1131 = "/model-assets/goluboe-vodovod-r1-13-1/";
 const r1132 = "/model-assets/goluboe-vodovod-r1-13-2/";
+const r115 = "/model-assets/goluboe-vodovod-r1-15/";
 const snapshot = "/model-assets/goluboe-vodovod-r1-2-terrain-snapshot/";
 const priorPilot = "/model-assets/goluboe-vodovod-r1-2-field-pilot-02-ux-01/";
 const hash = (data: string | Uint8Array) => createHash("sha256").update(data).digest("hex");
 
-describe("Goluboe R1.3 through R1.13.2 publication", () => {
-  it("serves R1.13.2 from both aliases without changing prior releases", async () => {
-    for (const prefix of [r13, r14, r15, r16, r17, r18, r19, r110, r111, r112, r113, r1131, r1132, snapshot, priorPilot]) {
+describe("Goluboe immutable publication through R1.15", () => {
+  it("serves R1.15 from both aliases without changing prior releases", async () => {
+    for (const prefix of [r13, r14, r15, r16, r17, r18, r19, r110, r111, r112, r113, r1131, r1132, r115, snapshot, priorPilot]) {
       expect(legacyAtlasDestination(new URL(origin + prefix + "index.html"))).toBeNull();
       expect(legacyAtlasWorker(new URL(origin + prefix + "service-worker.js"))).toBeNull();
     }
     const slug = "goluboe-vodovod-field-pilot";
     const response = await alias(new Request(origin + "/models/" + slug + "?field=1&pk=21.5"), { params: { slug } });
     expect(response.status).toBe(307);
-    expect(response.headers.get("location")).toBe(r1132 + "index.html?field=1&pk=21.5");
+    expect(response.headers.get("location")).toBe(r115 + "index.html?field=1&pk=21.5");
     const main = "goluboe-vodovod";
     const primary = await alias(new Request(origin + "/models/" + main), { params: { slug: main } });
     expect(primary.status).toBe(307);
-    expect(primary.headers.get("location")).toBe(r1132 + "index.html");
+    expect(primary.headers.get("location")).toBe(r115 + "index.html");
   });
 
   it.each([
@@ -78,6 +80,8 @@ describe("Goluboe R1.3 through R1.13.2 publication", () => {
       treeSha: "7d87e9a45924549da3b47b08ab20189ec1b0ef1d9e885094df51c23989dc955b", cache: "field-c83501683889", files: 353 },
     { release: r1132, serve: r1132GET, head: r1132HEAD, manifestSha: "404b758f6b8bc7b74e40d843dd35be0b3f27a77dee1d4ebaa11d2b18703f3548",
       treeSha: "cd2e83897a45e145ef08addad9e9d4489a6d239dd808028fbec2d23df2dc54d5", cache: "field-1a847e80b9a8", files: 353 },
+    { release: r115, serve: r115GET, head: r115HEAD, manifestSha: "120d9b6af55c22de0359503ccbbde0d38d983cc053efc0d92e66bdce7de626c9",
+      treeSha: "f8465f596b22125e527d78ebcecdd11392ea5b7ebd954e96a5e9cb9273e0c016", cache: "field-6418d94f9ea7", files: 372 },
   ])("serves all hashed items and isolates the worker for $release", async ({ release, serve, head, manifestSha, treeSha, cache, files = 338 }) => {
     const get = (name: string) => serve(
       new Request(origin + release + name.split("/").map(encodeURIComponent).join("/")), { params: { asset: name.split("/") } }
@@ -113,11 +117,11 @@ describe("Goluboe R1.3 through R1.13.2 publication", () => {
     expect(self.ATLAS_OFFLINE_FILES).toEqual(expect.arrayContaining([
       "project/underground-geometry-data.js", "project/underground-mesh.js", "project/underground-view.js"
     ]));
-    if (release === r112 || release === r113 || release === r1131 || release === r1132) {
+    if (release === r112 || release === r113 || release === r1131 || release === r1132 || release === r115) {
       expect(hash(new Uint8Array(await (await get("assets/atlas-field-offline.js")).arrayBuffer())))
         .toBe("62083de270fa86d6fd828d40c91ecaa31598f3b280f9eef56da21bc981101e68");
       const metadata = await (await get("CURRENT_RELEASE.json")).json();
-      expect(metadata).toMatchObject({ coreVersion: "1.1.3" });
+      expect(metadata).toMatchObject({ coreVersion: release === r115 ? "1.2.7" : "1.1.3" });
       const shell = await (await get("assets/atlas-shell.js")).text();
       const stamps = [...shell.matchAll(/^\s*window\.ATLAS_CORE_VERSION\s*=\s*["']([^"']+)["'];/gm)].map(match => match[1]);
       expect(stamps).toEqual([metadata.coreVersion]);
@@ -151,5 +155,26 @@ describe("Goluboe R1.3 through R1.13.2 publication", () => {
     expect(self.ATLAS_OFFLINE_FILES).toEqual(expect.arrayContaining([
       "PROGRESS.html", "project/work-progress-demo.html", "data/geometry_06.js", "data/progress_items.js"
     ]));
+  });
+
+  it("ships the R1.15 demo and fragments only within the versioned scope", async () => {
+    const get = (name: string) => r115GET(
+      new Request(origin + r115 + name), { params: { asset: name.split("/") } }
+    );
+    const demo = await get("DEMO.html");
+    expect(demo.status).toBe(200);
+    expect(demo.headers.get("x-frame-options")).toBe("SAMEORIGIN");
+    expect(demo.headers.get("content-security-policy")).toContain("frame-src blob: " + origin + r115 + " https://pgs-frankfurt.onrender.com" + r115);
+    expect(await demo.text()).toContain('id="demoModelBox"');
+    const self: Record<string, string[]> = {};
+    runInNewContext(await (await get("assets/offline-manifest.js")).text(), { self }, { timeout: 1000 });
+    expect(self.ATLAS_OFFLINE_FILES).toHaveLength(366);
+    expect(self.ATLAS_OFFLINE_PRECACHE).toHaveLength(104);
+    for (const fragment of ["project/fragments/pk021p5-pos-58.png", "project/fragments/pk021p5-ppo-18.png"]) {
+      const response = await get(fragment);
+      expect(response.status).toBe(200);
+      expect(response.headers.get("content-type")).toBe("image/png");
+      expect(self.ATLAS_OFFLINE_FILES).toContain(fragment);
+    }
   });
 });
