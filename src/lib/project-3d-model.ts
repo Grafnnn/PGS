@@ -95,11 +95,11 @@ const stolarnyModel: Project3dModel = {
   slug: "stolarny",
   title: "3D Атлас «Столярный»",
   subtitle: "Модель, каталог и 21 альбом чертежей",
-  revision: "R0.3",
+  revision: "R0.4",
   updatedAt: "24.11.2026",
   disclaimer: "Координационный атлас. Не инженерная приёмка и не исполнительная документация.",
-  assetPath: "src/assets/project-models/stolarny-r0-3",
-  assetBaseUrl: "/model-assets/stolarny-r0-3/",
+  assetPath: "src/assets/project-models/stolarny-r0-4",
+  assetBaseUrl: "/model-assets/stolarny-r0-4/",
   publicUrl: "/models/stolarny"
 };
 
