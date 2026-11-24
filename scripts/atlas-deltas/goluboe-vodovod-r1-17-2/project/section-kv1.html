@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Разрез колодца КВ‑1 · Голубое</title>
+<style>
+@font-face{font-family:Golos;src:url("../assets/fonts/GolosText-Regular.woff2") format("woff2");font-display:swap}
+@font-face{font-family:Golos;src:url("../assets/fonts/GolosText-SemiBold.woff2") format("woff2");font-weight:600;font-display:swap}
+:root{color-scheme:light;--ink:#163347;--muted:#4c6675;--line:#ccdae2;--brand:#115d7a;--soft:#edf4f8;--project:#026b84;--calculated:#526499;--model:#465e70}
+*{box-sizing:border-box}
+body{margin:0;background:#f6f9fb;color:var(--ink);font:15px/1.55 Golos,system-ui,sans-serif}
+main{max-width:61rem;margin:auto;padding:clamp(1rem,4vw,2.8rem)}
+a{color:var(--brand);text-underline-offset:3px}
+a:focus-visible{outline:2px solid var(--brand);outline-offset:4px}
+header{margin:0 0 1.25rem}
+nav{display:flex;flex-wrap:wrap;gap:.35rem 1.15rem;margin:0 0 .9rem;font-size:.9rem;font-weight:600}
+h1{font-size:clamp(1.55rem,4vw,2.6rem);line-height:1.16;letter-spacing:-.035em;margin:0 0 .4rem}
+header p,figcaption,.note,.origins{color:var(--muted)}
+header p{margin:0}
+figure{padding:clamp(.65rem,2.1vw,1.25rem);margin:0;background:#fff;border:1px solid var(--line);border-radius:.7rem}
+canvas{display:block;width:100%;height:340px}
+figcaption{margin:.65rem 0 .15rem;font-size:.87rem}
+.legend{display:flex;flex-wrap:wrap;gap:.35rem 1.1rem;margin:.55rem 0 0;padding:0;list-style:none;font-size:.87rem}
+.legend li{display:flex;align-items:center;gap:.4rem}
+.swatch{display:inline-block;width:1.05rem;height:.65rem;border:1px solid}
+.concrete{background:#dce4e8;border-color:#80909a}
+.sand{background:#f2e1bf;border-color:#aa7e40}
+.pipe{background:#d5edf3;border-color:var(--project)}
+.levels{margin:1rem 0;border:1px solid var(--line);background:#fff;border-radius:.55rem;overflow:hidden}
+table{width:100%;border-collapse:collapse;text-align:left;font-size:.9rem;font-variant-numeric:tabular-nums}
+caption{padding:.7rem .8rem;text-align:left;background:var(--soft);font-weight:600;color:var(--ink)}
+th,td{padding:.54rem .8rem;border-top:1px solid #e3ebef;vertical-align:top}
+th{font-weight:600}
+td{color:var(--muted)}
+.elevation{white-space:nowrap;font-weight:600;color:var(--ink)}
+.note{font-size:.89rem;margin:.6rem 0;max-width:78ch}
+.note strong{color:var(--ink)}
+.sources{display:flex;flex-wrap:wrap;gap:.3rem .9rem;margin:.85rem 0 0;font-size:.87rem}
+.parts{display:flex;flex-wrap:wrap;align-items:center;gap:.25rem 1rem;margin:.55rem 0 0;font-size:.9rem}
+.parts a{display:inline-flex;align-items:center;min-height:2.5rem}
+@media(max-width:480px){canvas{height:310px}th,td{padding:.46rem .45rem;font-size:.79rem}}
+@media print{body{background:#fff}main{max-width:none;padding:0}nav{display:none}figure,.levels{break-inside:avoid}a{color:var(--ink)}}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <nav aria-label="Связанные виды">
+      <a href="../index.html?pdLocate=kv1">← Котлован КВ‑1 в 3D</a>
+      <a href="../index.html?pdLocate=kv1&amp;pdCard=1">Все детали КВ‑1 в 3D</a>
+      <a href="profile-waterline.html">Продольный профиль водовода В1</a>
+    </nav>
+    <h1>Разрез колодца КВ‑1</h1>
+    <p>Основание колодца, существующий водовод Ø315 и проектная труба В1 Ø225 × 13,4 мм · Голубое</p>
+    <nav class="parts" aria-label="Открыть деталь отдельно в 3D">
+      <strong>Детали в 3D</strong>
+      <a href="../index.html?pdLocate=kv1&amp;pdCard=1&amp;pdWellPart=NET-GOL-WELL-SLEEVES">Гильзы Ø500</a>
+      <a href="../index.html?pdLocate=kv1&amp;pdCard=1&amp;pdWellPart=NET-GOL-WELL-SADDLE">Седловой отвод</a>
+      <a href="../index.html?pdLocate=kv1&amp;pdCard=1&amp;pdWellPart=NET-GOL-PD-NODE-KV1-LADDER-C4">Стремянка С4</a>
+    </nav>
+  </header>
+  <figure>
+    <canvas id="well-section" role="img" aria-label="Разрез нижней части колодца КВ‑1. Проектный лоток трубы +200,500 м, расчётная ось +200,599 м. Верх плиты днища в модели +200,000 м, низ +199,860 м, низ песчаной подготовки +199,760 м. Отметки приведены в таблице.">
+      Отметки разреза колодца и трубы приведены в таблице под схемой.
+    </canvas>
+    <ul class="legend" aria-label="Условные обозначения">
+      <li><span class="swatch concrete" aria-hidden="true"></span>Плита днища ПН‑15 и стенка</li>
+      <li><span class="swatch sand" aria-hidden="true"></span>Песчаная подготовка 100 мм</li>
+      <li><span class="swatch pipe" aria-hidden="true"></span>Проектная труба В1</li>
+    </ul>
+    <figcaption>Показана нижняя часть колодца. Вертикальные расстояния пропорциональны отметкам. По горизонтали схема условная. Положение проходки и арматуры подлежит уточнению.</figcaption>
+  </figure>
+  <div class="levels">
+    <table>
+      <caption>Абсолютные отметки, м</caption>
+      <thead><tr><th scope="col">Уровень</th><th scope="col">Отметка</th><th scope="col">Основание</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">Земля у КВ‑1</th><td class="elevation">+204,300</td><td>ППО, л. 5</td></tr>
+        <tr><th scope="row">Ось трубы В1</th><td class="elevation">+200,599</td><td>Расчёт от лотка¹</td></tr>
+        <tr><th scope="row">Низ трубы (лоток)</th><td class="elevation">+200,500</td><td>ППО, л. 5</td></tr>
+        <tr><th scope="row">Ось существующей трубы Ø315</th><td class="elevation">+200,408</td><td>Размер по ТКР от условного верха плиты²</td></tr>
+        <tr><th scope="row">Верх плиты ПН‑15</th><td class="elevation">+200,000</td><td>Модель R1.2²</td></tr>
+        <tr><th scope="row">Низ плиты / верх песка</th><td class="elevation">+199,860</td><td>Модель R1.2²</td></tr>
+        <tr><th scope="row">Низ песчаной подготовки</th><td class="elevation">+199,760</td><td>Модель R1.2²</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="note">¹ Ось рассчитана при трактовке лотка как внутреннего низа трубы. Внутренний радиус трубы Ø225 × 13,4 мм равен 99,1 мм.</p>
+  <p class="note">² Верх плиты в модели принят на 4,300 м ниже проектной отметки земли. Толщина плиты 140 мм принята в модели. В ТКР указана песчаная подготовка 100 мм. Абсолютные отметки установки колодца в ТКР отсутствуют.</p>
+  <p class="note"><strong>Увязка с котлованом К1.</strong> В R1.2 номинальное дно выемки показано на +200,400 м, поверхность контакта под песчаной подготовкой на +199,760 м. Разница 640 мм требует сверки с проектировщиком.</p>
+  <p class="note"><strong>Врезка в существующий водовод Ø315.</strong> На разрезе ТКР от пола до наружного низа трубы дано 250 мм. Ось расположена на 407,5 мм выше пола. При принятой отметке пола ось ответвления на 192 мм ниже расчётной оси В1 по ППО. Окончательную высотную увязку требуется уточнить.</p>
+  <div class="sources" aria-label="Листы проектной документации">
+    <a href="../albums/Раздел ПД№2 - том 2.pdf#page=18">ППО · профиль В1, л. 5</a>
+    <a href="../albums/Раздел ПД№3 - том 3 (5).pdf#page=35">ТКР · разрез КВ‑1, л. 6</a>
+    <a href="../albums/Раздел ПД№3 - том 3 (5).pdf#page=32">ТКР · план КВ‑1, л. 3</a>
+    <a href="../albums/Раздел ПД№3 - том 3 (5).pdf#page=22">ТКР · параметры трубы, PDF с. 22</a>
+  </div>
+</main>
+<script src="profile-world-data.js"></script>
+<script>
+(() => {
+  const canvas = document.getElementById('well-section');
+  const context = canvas.getContext('2d');
+  if (!context) return;
+
+  const model = window.ATLAS_PROFILE_WORLD;
+  const invert = model.marks.find(mark => mark.station === model.well.station).invert;
+  const elevations = [
+    { elevation: invert + model.insideRadius, value: '+200,599', label: 'Ось трубы · расчёт', color: '#526499', dash: [5, 4] },
+    { elevation: invert, value: '+200,500', label: 'Лоток · ППО', color: '#026b84', dash: [] },
+    { elevation: model.well.slabTop, value: '+200,000', label: 'Верх плиты · модель', color: '#465e70', dash: [] },
+    { elevation: model.well.slabBottom, value: '+199,860', label: 'Низ плиты · модель', color: '#465e70', dash: [] },
+    { elevation: model.well.beddingBottom, value: '+199,760', label: 'Низ песка · модель', color: '#465e70', dash: [] },
+  ];
+
+  for (const mark of elevations) mark.value = '+' + mark.elevation.toFixed(3).replace('.',',');
+
+  function draw() {
+    const { width, height } = canvas.getBoundingClientRect();
+    const ratio = window.devicePixelRatio || 1;
+    canvas.width = Math.round(width * ratio);
+    canvas.height = Math.round(height * ratio);
+    context.setTransform(ratio, 0, 0, ratio, 0, 0);
+    const compact = width < 590;
+    const markerLeft = compact ? 76 : 87;
+    const shapeLeft = markerLeft + 15;
+    const shapeRight = width - (compact ? 12 : 183);
+    const baseWidth = (shapeRight - shapeLeft) * 0.75;
+    const baseRight = shapeLeft + baseWidth;
+    const wallLeft = shapeLeft + baseWidth * 0.08;
+    const wallRight = baseRight - baseWidth * 0.08;
+    const wallWidth = baseWidth * 0.055;
+    const pipeStart = wallRight - baseWidth * 0.21;
+    const pipeEnd = shapeRight - 8;
+    const axis = elevations[0].elevation;
+    const pipeTop = axis + model.pipe.outerDiameterMm / 2000;
+    const pipeBottom = axis - model.pipe.outerDiameterMm / 2000;
+    const wellCut = 200.81;
+    const plotTop = 30;
+    const plotBottom = height - 12;
+    const y = elevation => plotTop + (200.91 - elevation) / (200.91 - 199.70) * (plotBottom - plotTop);
+
+    function line(x1, y1, x2, y2, color, dash = [], strokeWidth = 1) {
+      context.beginPath();
+      context.setLineDash(dash);
+      context.strokeStyle = color;
+      context.lineWidth = strokeWidth;
+      context.moveTo(x1, y1);
+      context.lineTo(x2, y2);
+      context.stroke();
+      context.setLineDash([]);
+    }
+
+    function block(left, right, top, bottom, fill, edge, hatch) {
+      const upper = y(top);
+      const blockHeight = y(bottom) - upper;
+      const blockWidth = right - left;
+      context.fillStyle = fill;
+      context.fillRect(left, upper, blockWidth, blockHeight);
+      context.save();
+      context.beginPath();
+      context.rect(left, upper, blockWidth, blockHeight);
+      context.clip();
+      for (let offset = -blockHeight; offset < blockWidth; offset += 7) {
+        line(left + offset, upper + blockHeight, left + offset + blockHeight, upper, hatch, [], .75);
+      }
+      context.restore();
+      context.strokeStyle = edge;
+      context.lineWidth = 1;
+      context.strokeRect(left, upper, blockWidth, blockHeight);
+    }
+
+    context.fillStyle = '#4c6675';
+    context.font = '12px Golos, system-ui, sans-serif';
+    context.textBaseline = 'middle';
+    context.fillText('Отметка, м', 3, 13);
+    if (!compact) context.fillText('Нижняя часть колодца', shapeLeft, 13);
+
+    block(shapeLeft, baseRight, model.well.slabBottom, model.well.beddingBottom, '#f2e1bf', '#aa7e40', '#dcbb82');
+    block(shapeLeft, baseRight, model.well.slabTop, model.well.slabBottom, '#dce4e8', '#80909a', '#bcbdc1');
+    block(wallLeft, wallLeft + wallWidth, wellCut, model.well.slabTop, '#dce4e8', '#80909a', '#bcbdc1');
+    block(wallRight - wallWidth, wallRight, wellCut, pipeTop, '#dce4e8', '#80909a', '#bcbdc1');
+    block(wallRight - wallWidth, wallRight, pipeBottom, model.well.slabTop, '#dce4e8', '#80909a', '#bcbdc1');
+    line(wallLeft, y(wellCut), wallRight, y(wellCut), '#a8b9c1', [4, 5]);
+
+    context.fillStyle = '#d5edf3';
+    const innerTop = axis + model.insideRadius, innerBottom = axis - model.insideRadius;
+    context.fillRect(pipeStart, y(pipeTop), pipeEnd - pipeStart, y(innerTop) - y(pipeTop));
+    context.fillRect(pipeStart, y(innerBottom), pipeEnd - pipeStart, y(pipeBottom) - y(innerBottom));
+    line(pipeStart, y(innerTop), pipeEnd, y(innerTop), '#026b84');
+    line(pipeStart, y(innerBottom), pipeEnd, y(innerBottom), '#026b84');
+    line(pipeStart, y(pipeTop), pipeEnd, y(pipeTop), '#026b84', [], 1.5);
+    line(pipeStart, y(pipeBottom), pipeEnd, y(pipeBottom), '#026b84', [], 1.5);
+    line(pipeStart, y(pipeTop), pipeStart, y(pipeBottom), '#88b1bd', [3, 3]);
+    line(pipeEnd, y(pipeTop), pipeEnd, y(pipeBottom), '#88b1bd', [3, 3]);
+
+    // Поперечное сечение существующей трубы. Масштаб вертикали совпадает со шкалой.
+    const existingAxis = model.well.slabTop + 0.25 + 0.315 / 2;
+    const radius = Math.abs(y(existingAxis + 0.315 / 2) - y(existingAxis));
+    const cx = (wallLeft + pipeStart) / 2;
+    context.beginPath();
+    context.arc(cx, y(existingAxis), radius, 0, Math.PI * 2);
+    context.fillStyle = '#cee0d3';
+    context.fill();
+    context.strokeStyle = '#385944';
+    context.stroke();
+    context.textAlign = 'center';
+    context.font = '600 11px Golos, system-ui, sans-serif';
+    context.fillStyle = '#203a29';
+    context.fillText('Ø315', cx, y(existingAxis));
+    for (const level of elevations) {
+      const markerY = y(level.elevation);
+      const end = level.elevation >= 200.5 ? pipeEnd : baseRight;
+      line(markerLeft - 3, markerY, end, markerY, level.color, level.dash);
+      line(markerLeft - 3, markerY - 3, markerLeft - 3, markerY + 3, level.color);
+      if (!compact) {
+        line(end, markerY, shapeRight + 6, markerY, level.color, [2, 5]);
+        context.fillStyle = level.color;
+        context.font = '12px Golos, system-ui, sans-serif';
+        context.textAlign = 'left';
+        context.fillText(level.label, shapeRight + 14, markerY);
+      }
+      context.fillStyle = level.color;
+      context.textAlign = 'right';
+      context.font = '600 13px Golos, system-ui, sans-serif';
+      context.fillText(level.value, markerLeft - 10, markerY);
+    }
+  }
+  new ResizeObserver(draw).observe(canvas);
+  document.fonts.ready.then(draw);
+})();
+</script>
+</body>
+</html>

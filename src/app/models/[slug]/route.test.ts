@@ -7,7 +7,7 @@ vi.mock("@/lib/prisma", () => ({ prisma: { project: { findUnique: mocks.find } }
 import { GET } from "./route";
 import { GET as privateGET } from "@/app/api/projects/[projectId]/model-viewer/route";
 
-const goluboeIndex = "/model-assets/goluboe-vodovod-r1-17-1/index.html";
+const goluboeIndex = "/model-assets/goluboe-vodovod-r1-17-2/index.html";
 
 describe("Atlas V11 publication", () => {
   beforeEach(() => vi.clearAllMocks());
@@ -80,6 +80,11 @@ describe("Atlas V11 publication", () => {
     const slug = "goluboe-vodovod";
     const response = await GET(new Request(`https://pgs.local/models/${slug}?${query}`), { params: { slug } });
     expect(response.headers.get("location")).toBe(goluboeIndex + expected);
+  });
+  it("keeps well-part selection scoped to the immutable assets", async () => {
+    const slug = "goluboe-vodovod";
+    const response = await GET(new Request(`https://pgs.local/models/${slug}?pdLocate=kv1&pdCard=1&pdWellPart=NET-GOL-WELL-SLEEVES`), { params: { slug } });
+    expect(response.headers.get("location")).toBe(goluboeIndex + "?pdLocate=kv1&pdCard=1");
   });
   it.each(["other", "https://elsewhere.test", "../.env"])("rejects an unknown general-scene locate value %s", async (value) => {
     const response = await GET(new Request(`https://pgs.local/models/goluboe-vodovod?pdLocate=${encodeURIComponent(value)}&pdCard=1`), { params: { slug: "goluboe-vodovod" } });

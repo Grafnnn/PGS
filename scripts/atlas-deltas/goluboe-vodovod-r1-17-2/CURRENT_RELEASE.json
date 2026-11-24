@@ -1,0 +1,31 @@
+{
+  "release": "GOLUBOE_VODOVOD_R1_17_2",
+  "revision": "R1.17.2",
+  "label": "R1.17.2",
+  "coreVersion": "1.2.7",
+  "coreManifestSha256": "d829bf09db083014e7c7a7775b5626cdbf75894e6127e6c34c94a774ea66a625",
+  "projectId": "goluboe-vodovod",
+  "sourceDate": "2026-11-24",
+  "suppliedFiles": 392,
+  "sourceTreeSha256": "b2bbdf5f6f08f25cdc18722413e31374a6baa09c3001b672ed5eb1151cba116a",
+  "suppliedManifestSha256": "787ca7fe1b00c2283cba5822c14cf97640e561e64e3fc348a2884eb40711c69b",
+  "sourceArchiveSha256": "4d200c258744120ddd364acb71db760e28aab7275ffe8553269bb450efe4f002",
+  "changedFromUpstream": [
+    "assets/offline-manifest.js",
+    "data/release-info.js",
+    "project/field-data.js",
+    "project/plan-controls.js",
+    "project/section-kv1.html",
+    "project/terrain-overlay.js"
+  ],
+  "addedToUpstream": [],
+  "upstreamManifestSha256": "6b7df537c3fbfb8481c8fe44e23330122cb46fe57754cabc3e8007caa5bdf08f",
+  "offlineVersion": "field-b4e563e4e804",
+  "workerSha256": "9ae05e295372984a45d5b15990ff1449d393e8d07ca0a59955716ef139907259",
+  "geometryChangedFromSuppliedRelease": false,
+  "elementAssignmentsChanged": false,
+  "newEngineeringApproval": false,
+  "publicationModifiedFiles": [],
+  "pdfs": 6,
+  "modelGeometryChangedFromUpstream": false
+}
