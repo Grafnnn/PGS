@@ -18,6 +18,7 @@ import { GET as r115GET, HEAD as r115HEAD } from "@/app/model-assets/goluboe-vod
 import { GET as r116GET, HEAD as r116HEAD } from "@/app/model-assets/goluboe-vodovod-r1-16/[...asset]/route";
 import { GET as r1161GET, HEAD as r1161HEAD } from "@/app/model-assets/goluboe-vodovod-r1-16-1/[...asset]/route";
 import { GET as r1170GET, HEAD as r1170HEAD } from "@/app/model-assets/goluboe-vodovod-r1-17/[...asset]/route";
+import { GET as r1171GET, HEAD as r1171HEAD } from "@/app/model-assets/goluboe-vodovod-r1-17-1/[...asset]/route";
 import { GET as alias } from "@/app/models/[slug]/route";
 import { legacyAtlasDestination, legacyAtlasWorker } from "./project-atlas-legacy";
 
@@ -39,24 +40,25 @@ const r115 = "/model-assets/goluboe-vodovod-r1-15/";
 const r116 = "/model-assets/goluboe-vodovod-r1-16/";
 const r1161 = "/model-assets/goluboe-vodovod-r1-16-1/";
 const r1170 = "/model-assets/goluboe-vodovod-r1-17/";
+const r1171 = "/model-assets/goluboe-vodovod-r1-17-1/";
 const snapshot = "/model-assets/goluboe-vodovod-r1-2-terrain-snapshot/";
 const priorPilot = "/model-assets/goluboe-vodovod-r1-2-field-pilot-02-ux-01/";
 const hash = (data: string | Uint8Array) => createHash("sha256").update(data).digest("hex");
 
-describe("Goluboe immutable publication through R1.17", () => {
-  it("serves R1.17 from both aliases without changing prior releases", async () => {
-    for (const prefix of [r13, r14, r15, r16, r17, r18, r19, r110, r111, r112, r113, r1131, r1132, r115, r116, r1161, r1170, snapshot, priorPilot]) {
+describe("Goluboe immutable publication through R1.17.1", () => {
+  it("serves R1.17.1 from both aliases without changing prior releases", async () => {
+    for (const prefix of [r13, r14, r15, r16, r17, r18, r19, r110, r111, r112, r113, r1131, r1132, r115, r116, r1161, r1170, r1171, snapshot, priorPilot]) {
       expect(legacyAtlasDestination(new URL(origin + prefix + "index.html"))).toBeNull();
       expect(legacyAtlasWorker(new URL(origin + prefix + "service-worker.js"))).toBeNull();
     }
     const slug = "goluboe-vodovod-field-pilot";
     const response = await alias(new Request(origin + "/models/" + slug + "?field=1&pk=21.5"), { params: { slug } });
     expect(response.status).toBe(307);
-    expect(response.headers.get("location")).toBe(r1170 + "index.html?field=1&pk=21.5");
+    expect(response.headers.get("location")).toBe(r1171 + "index.html?field=1&pk=21.5");
     const main = "goluboe-vodovod";
     const primary = await alias(new Request(origin + "/models/" + main), { params: { slug: main } });
     expect(primary.status).toBe(307);
-    expect(primary.headers.get("location")).toBe(r1170 + "index.html");
+    expect(primary.headers.get("location")).toBe(r1171 + "index.html");
   });
 
   it.each([
@@ -94,6 +96,8 @@ describe("Goluboe immutable publication through R1.17", () => {
       treeSha: "e696c6d99c9197cdba0d143e18a2d0fcf71f2f4e91ac13cdd67d92568216c4cf", cache: "field-59ebc954774b", files: 374 },
     { release: r1170, serve: r1170GET, head: r1170HEAD, manifestSha: "853287f540e1f54acdb9c785f418a5fcf26ad2ed6dc429a20babd17c9d66efe8",
       treeSha: "8fe22ef64779b58fed793e531f26c27058b06f020dda315fb2ef073839fa2993", cache: "field-64bb1e016281", files: 379 },
+    { release: r1171, serve: r1171GET, head: r1171HEAD, manifestSha: "6b7df537c3fbfb8481c8fe44e23330122cb46fe57754cabc3e8007caa5bdf08f",
+      treeSha: "99e1f54b2ac04f5ab441728e2175359ba0b4acbd883579b0c820701f9c86cb4f", cache: "field-73487632e311", files: 393 },
   ])("serves all hashed items and isolates the worker for $release", async ({ release, serve, head, manifestSha, treeSha, cache, files = 338 }) => {
     const get = (name: string) => serve(
       new Request(origin + release + name.split("/").map(encodeURIComponent).join("/")), { params: { asset: name.split("/") } }
@@ -129,11 +133,11 @@ describe("Goluboe immutable publication through R1.17", () => {
     expect(self.ATLAS_OFFLINE_FILES).toEqual(expect.arrayContaining([
       "project/underground-geometry-data.js", "project/underground-mesh.js", "project/underground-view.js"
     ]));
-    if (release === r112 || release === r113 || release === r1131 || release === r1132 || release === r115 || release === r116 || release === r1161 || release === r1170) {
+    if (release === r112 || release === r113 || release === r1131 || release === r1132 || release === r115 || release === r116 || release === r1161 || release === r1170 || release === r1171) {
       expect(hash(new Uint8Array(await (await get("assets/atlas-field-offline.js")).arrayBuffer())))
         .toBe("62083de270fa86d6fd828d40c91ecaa31598f3b280f9eef56da21bc981101e68");
       const metadata = await (await get("CURRENT_RELEASE.json")).json();
-      expect(metadata).toMatchObject({ coreVersion: release === r115 || release === r116 || release === r1161 || release === r1170 ? "1.2.7" : "1.1.3" });
+      expect(metadata).toMatchObject({ coreVersion: release === r115 || release === r116 || release === r1161 || release === r1170 || release === r1171 ? "1.2.7" : "1.1.3" });
       const shell = await (await get("assets/atlas-shell.js")).text();
       const stamps = [...shell.matchAll(/^\s*window\.ATLAS_CORE_VERSION\s*=\s*["']([^"']+)["'];/gm)].map(match => match[1]);
       expect(stamps).toEqual([metadata.coreVersion]);
@@ -169,7 +173,7 @@ describe("Goluboe immutable publication through R1.17", () => {
     ]));
   });
 
-  it.each([[r115, r115GET, 366, 104], [r116, r116GET, 368, 106], [r1161, r1161GET, 368, 106], [r1170, r1170GET, 373, 111]] as const)("ships the demo and fragments only within the versioned scope at %s", async (prefix, serve, files, precache) => {
+  it.each([[r115, r115GET, 366, 104], [r116, r116GET, 368, 106], [r1161, r1161GET, 368, 106], [r1170, r1170GET, 373, 111], [r1171, r1171GET, 390, 369]] as const)("ships the demo and fragments only within the versioned scope at %s", async (prefix, serve, files, precache) => {
     const get = (name: string) => serve(
       new Request(origin + prefix + name), { params: { asset: name.split("/") } }
     );
@@ -188,5 +192,62 @@ describe("Goluboe immutable publication through R1.17", () => {
       expect(response.headers.get("content-type")).toBe("image/png");
       expect(self.ATLAS_OFFLINE_FILES).toContain(fragment);
     }
+  });
+
+  it("serves the new searchable pages with the existing version-scoped policy", async () => {
+    for (const [name, query, localIndex] of [
+      ["specification.html", "?q=kv1", "specification-data.js"],
+      ["drawing-tree.html", "?q=kv1&volume=TKR&page=32", "drawing-tree-data.js"]
+    ]) {
+      const asset = ["project", name];
+      const response = await r1171GET(new Request(origin + r1171 + asset.join("/") + query), { params: { asset } });
+      expect(response.status).toBe(200);
+      expect(response.headers.get("content-security-policy")).toContain("connect-src " + origin + r1171);
+      expect(await response.text()).toContain(localIndex);
+    }
+  });
+
+  it("installs every offline path exactly once, including the catalogue and six existing PDFs", async () => {
+    const get = (name: string) => r1171GET(
+      new Request(origin + r1171 + name), { params: { asset: name.split("/") } }
+    );
+    const offline = await (await get("assets/offline-manifest.js")).text();
+    const worker = await (await get("service-worker.js")).text();
+    let install: ((event: { waitUntil: (promise: Promise<void>) => void }) => void) | undefined;
+    const scope = origin + r1171;
+    const self = {
+      registration: { scope },
+      ATLAS_OFFLINE_FILES: [] as string[],
+      ATLAS_OFFLINE_PRECACHE: [] as string[],
+      addEventListener(name: string, callback: typeof install) {
+        if (name === "install") install = callback;
+      }
+    };
+    const requested: string[] = [];
+    runInNewContext(worker, { self, URL, importScripts: (name: string) => {
+      expect(name).toBe("assets/offline-manifest.js");
+      runInNewContext(offline, { self }, { timeout: 1000 });
+    }, caches: { open: async () => ({
+      addAll: async (urls: URL[]) => {
+        for (const url of urls) {
+          expect(url.href.startsWith(scope)).toBe(true);
+          requested.push(decodeURIComponent(url.href.slice(scope.length)));
+        }
+      }
+    }) } }, { timeout: 1000 });
+    expect(install).toBeTypeOf("function");
+    let completed: Promise<void> | undefined;
+    install!({ waitUntil: promise => { completed = promise; } });
+    expect(completed).toBeDefined();
+    await completed;
+    expect(self.ATLAS_OFFLINE_PRECACHE).toHaveLength(369);
+    expect(requested).toHaveLength(390);
+    expect(new Set(requested).size).toBe(390);
+    expect(requested.sort()).toEqual([...self.ATLAS_OFFLINE_FILES].sort());
+    expect(requested.filter(name => name.endsWith(".pdf"))).toHaveLength(6);
+    expect(requested).toEqual(expect.arrayContaining([
+      "project/specification.html", "project/drawing-tree.html", "catalogue-model.html",
+      "data/catalogue_blocks/D0155.js", "data/catalogue_blocks/D0156.js"
+    ]));
   });
 });
