@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { createReadStream, createWriteStream } from "node:fs";
-import { copyFile, mkdir, readFile, mkdtemp, rm } from "node:fs/promises";
+import { copyFile, mkdir, readFile, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { Readable, Transform } from "node:stream";
@@ -23,7 +23,8 @@ async function verifiedCache() {
     const index = JSON.parse(await readFile(path.join(root, "index.json"), "utf8"));
     const sealed = release.base
       ? index.sourceManifestSha256 === release.manifestSha256
-      : index.archiveSha256 === archive.sha256;
+      : index.archiveSha256 === archive.sha256 &&
+        (!release.manifestSha256 || index.sourceManifestSha256 === release.manifestSha256);
     if (!sealed || index.release !== release.release || Object.keys(index.files).length !== release.files) return false;
     for (const [name, pack] of Object.entries(index.packs)) {
       if (!/^part-\d+\.bin$/.test(name) || await hashFile(path.join(root, name)) !== pack.sha256) return false;
@@ -60,6 +61,16 @@ if (await verifiedCache()) {
         await mkdir(path.dirname(target), { recursive: true });
         await copyFile(path.join("scripts", "atlas-deltas", from, name), target);
       }
+    }
+    if (release.sourceFileManifest) {
+      // Project-authored reports are retained verbatim; the packer consumes a separate, pinned manifest.
+      const { name, sha256 } = release.sourceFileManifest;
+      const report = await readFile(path.join(source, name));
+      if (createHash("sha256").update(report).digest("hex") !== sha256) throw new Error("Atlas source file manifest integrity mismatch");
+      const files = Object.entries(JSON.parse(report).files).map(([path, { bytes, sha256 }]) => ({ path, bytes, sha256 }));
+      files.push({ path: name, bytes: report.length, sha256 });
+      files.sort((a, b) => a.path < b.path ? -1 : a.path > b.path ? 1 : 0);
+      await writeFile(path.join(source, "MANIFEST.json"), JSON.stringify({ release: release.release, files }) + "\n", { flag: "wx" });
     }
     const { stdout } = await run(process.execPath, ["scripts/package-atlas-r25v5.mjs", source, release.version], { maxBuffer: 1024 * 1024 });
     console.log(stdout.trim());
