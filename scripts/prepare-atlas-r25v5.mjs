@@ -48,8 +48,16 @@ if (await verifiedCache()) {
       hash.update(chunk); callback(null, chunk);
     } }), createWriteStream(zip));
     if (bytes !== archive.bytes || hash.digest("hex") !== archive.sha256) throw new Error("Atlas archive integrity mismatch");
-    await run("unzip", ["-q", zip, "-d", path.join(temp, "source")], { maxBuffer: 1024 * 1024 });
-    const source = path.join(temp, "source", archive.directory);
+    const extracted = path.join(temp, "source");
+    if (archive.utf8Zip && process.platform === "darwin") {
+      // Apple's unzip can misdecode UTF-8 entry names in ZIPs that use the UTF-8 flag.
+      await mkdir(extracted);
+      await run("/usr/bin/tar", ["-xf", zip, "-C", extracted], { maxBuffer: 1024 * 1024 });
+    } else {
+      const env = archive.utf8Zip ? { ...process.env, LC_ALL: "C.UTF-8" } : process.env;
+      await run("unzip", ["-q", zip, "-d", extracted], { maxBuffer: 1024 * 1024, env });
+    }
+    const source = path.join(extracted, archive.directory);
     if (release.base) {
       // Materialize a complete new release; no runtime cross-version asset requests.
       for (const name of release.overlay) {

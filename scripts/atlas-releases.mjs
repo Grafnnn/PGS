@@ -1,4 +1,14 @@
 const releases = {
+  "stolarny-r0-4-1": {
+    release: "STOLARNY_R0_4_1", directory: "STOLARNY_3D_ATLAS", assetDirectory: "stolarny-r0-4-1",
+    tag: "atlas-stolarny-r0-4-1", bytes: 247053581, files: 3060, utf8Zip: true,
+    sha256: "a83ae3f5e7d1de506e201400d029b87fcf16a23109342c14e28b16b719e6235b",
+    manifestSha256: "1fa55d0063f92f9c5ff86bdb7bffa1703388887cf0f3b28c98d1c23502b5b63f",
+    sourceFileManifest: {
+      name: "\u041f\u0440\u043e\u0432\u0435\u0440\u043a\u0430_SHA256.json",
+      sha256: "51eb92949fbfce917f3284083a3651c0202bde3f6b5449e4fd799a0cfdd98de8"
+    }
+  },
   "stolarny-r0-4": {
     release: "STOLARNY_R0_4", directory: "STOLARNY_3D_ATLAS", assetDirectory: "stolarny-r0-4",
     tag: "atlas-stolarny-r0-4", bytes: 246846354, files: 2964,
