@@ -17,6 +17,7 @@ import { GET as r1132GET, HEAD as r1132HEAD } from "@/app/model-assets/goluboe-v
 import { GET as r115GET, HEAD as r115HEAD } from "@/app/model-assets/goluboe-vodovod-r1-15/[...asset]/route";
 import { GET as r116GET, HEAD as r116HEAD } from "@/app/model-assets/goluboe-vodovod-r1-16/[...asset]/route";
 import { GET as r1161GET, HEAD as r1161HEAD } from "@/app/model-assets/goluboe-vodovod-r1-16-1/[...asset]/route";
+import { GET as r1170GET, HEAD as r1170HEAD } from "@/app/model-assets/goluboe-vodovod-r1-17/[...asset]/route";
 import { GET as alias } from "@/app/models/[slug]/route";
 import { legacyAtlasDestination, legacyAtlasWorker } from "./project-atlas-legacy";
 
@@ -37,24 +38,25 @@ const r1132 = "/model-assets/goluboe-vodovod-r1-13-2/";
 const r115 = "/model-assets/goluboe-vodovod-r1-15/";
 const r116 = "/model-assets/goluboe-vodovod-r1-16/";
 const r1161 = "/model-assets/goluboe-vodovod-r1-16-1/";
+const r1170 = "/model-assets/goluboe-vodovod-r1-17/";
 const snapshot = "/model-assets/goluboe-vodovod-r1-2-terrain-snapshot/";
 const priorPilot = "/model-assets/goluboe-vodovod-r1-2-field-pilot-02-ux-01/";
 const hash = (data: string | Uint8Array) => createHash("sha256").update(data).digest("hex");
 
-describe("Goluboe immutable publication through R1.16.1", () => {
-  it("serves R1.16.1 from both aliases without changing prior releases", async () => {
-    for (const prefix of [r13, r14, r15, r16, r17, r18, r19, r110, r111, r112, r113, r1131, r1132, r115, r116, r1161, snapshot, priorPilot]) {
+describe("Goluboe immutable publication through R1.17", () => {
+  it("serves R1.17 from both aliases without changing prior releases", async () => {
+    for (const prefix of [r13, r14, r15, r16, r17, r18, r19, r110, r111, r112, r113, r1131, r1132, r115, r116, r1161, r1170, snapshot, priorPilot]) {
       expect(legacyAtlasDestination(new URL(origin + prefix + "index.html"))).toBeNull();
       expect(legacyAtlasWorker(new URL(origin + prefix + "service-worker.js"))).toBeNull();
     }
     const slug = "goluboe-vodovod-field-pilot";
     const response = await alias(new Request(origin + "/models/" + slug + "?field=1&pk=21.5"), { params: { slug } });
     expect(response.status).toBe(307);
-    expect(response.headers.get("location")).toBe(r1161 + "index.html?field=1&pk=21.5");
+    expect(response.headers.get("location")).toBe(r1170 + "index.html?field=1&pk=21.5");
     const main = "goluboe-vodovod";
     const primary = await alias(new Request(origin + "/models/" + main), { params: { slug: main } });
     expect(primary.status).toBe(307);
-    expect(primary.headers.get("location")).toBe(r1161 + "index.html");
+    expect(primary.headers.get("location")).toBe(r1170 + "index.html");
   });
 
   it.each([
@@ -90,6 +92,8 @@ describe("Goluboe immutable publication through R1.16.1", () => {
       treeSha: "e4a5a792b214c437639f7685d4c7185ae84217f8452c655833b00bf1a78bc1ae", cache: "field-232e1bc27f13", files: 374 },
     { release: r1161, serve: r1161GET, head: r1161HEAD, manifestSha: "b8d30463bb9f2a7bc80e1709e658b51eabbebabf5c8c25f1f6492e4cff508c81",
       treeSha: "e696c6d99c9197cdba0d143e18a2d0fcf71f2f4e91ac13cdd67d92568216c4cf", cache: "field-59ebc954774b", files: 374 },
+    { release: r1170, serve: r1170GET, head: r1170HEAD, manifestSha: "853287f540e1f54acdb9c785f418a5fcf26ad2ed6dc429a20babd17c9d66efe8",
+      treeSha: "8fe22ef64779b58fed793e531f26c27058b06f020dda315fb2ef073839fa2993", cache: "field-64bb1e016281", files: 379 },
   ])("serves all hashed items and isolates the worker for $release", async ({ release, serve, head, manifestSha, treeSha, cache, files = 338 }) => {
     const get = (name: string) => serve(
       new Request(origin + release + name.split("/").map(encodeURIComponent).join("/")), { params: { asset: name.split("/") } }
@@ -125,11 +129,11 @@ describe("Goluboe immutable publication through R1.16.1", () => {
     expect(self.ATLAS_OFFLINE_FILES).toEqual(expect.arrayContaining([
       "project/underground-geometry-data.js", "project/underground-mesh.js", "project/underground-view.js"
     ]));
-    if (release === r112 || release === r113 || release === r1131 || release === r1132 || release === r115 || release === r116 || release === r1161) {
+    if (release === r112 || release === r113 || release === r1131 || release === r1132 || release === r115 || release === r116 || release === r1161 || release === r1170) {
       expect(hash(new Uint8Array(await (await get("assets/atlas-field-offline.js")).arrayBuffer())))
         .toBe("62083de270fa86d6fd828d40c91ecaa31598f3b280f9eef56da21bc981101e68");
       const metadata = await (await get("CURRENT_RELEASE.json")).json();
-      expect(metadata).toMatchObject({ coreVersion: release === r115 || release === r116 || release === r1161 ? "1.2.7" : "1.1.3" });
+      expect(metadata).toMatchObject({ coreVersion: release === r115 || release === r116 || release === r1161 || release === r1170 ? "1.2.7" : "1.1.3" });
       const shell = await (await get("assets/atlas-shell.js")).text();
       const stamps = [...shell.matchAll(/^\s*window\.ATLAS_CORE_VERSION\s*=\s*["']([^"']+)["'];/gm)].map(match => match[1]);
       expect(stamps).toEqual([metadata.coreVersion]);
@@ -165,7 +169,7 @@ describe("Goluboe immutable publication through R1.16.1", () => {
     ]));
   });
 
-  it.each([[r115, r115GET, 366, 104], [r116, r116GET, 368, 106], [r1161, r1161GET, 368, 106]] as const)("ships the demo and fragments only within the versioned scope at %s", async (prefix, serve, files, precache) => {
+  it.each([[r115, r115GET, 366, 104], [r116, r116GET, 368, 106], [r1161, r1161GET, 368, 106], [r1170, r1170GET, 373, 111]] as const)("ships the demo and fragments only within the versioned scope at %s", async (prefix, serve, files, precache) => {
     const get = (name: string) => serve(
       new Request(origin + prefix + name), { params: { asset: name.split("/") } }
     );
