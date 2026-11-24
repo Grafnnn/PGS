@@ -1,4 +1,14 @@
 const releases = {
+  "stolarny-r0-3": {
+    release: "STOLARNY_R0_3", directory: "STOLARNY_3D_ATLAS", assetDirectory: "stolarny-r0-3",
+    tag: "atlas-stolarny-r0-3", bytes: 239300596, files: 1887,
+    sha256: "26264460550e18cf188bdf75024e44ed4262c954052e31fd246ad4f2ae1fcfa0",
+    manifestSha256: "69dcce8f3079a6d165ccf2171fb5b6c0b561b393f73f2d8faf52b5b23fc62ad0",
+    sourceFileManifest: {
+      name: "\u041f\u0440\u043e\u0432\u0435\u0440\u043a\u0430_SHA256.json",
+      sha256: "012ec42e13dd9443a03aa46d648dcb077f7c9fdda4a837b5308ebc4caadfae42"
+    }
+  },
   "v12-18": { release: "V12_18", files: 4661, bytes: 419472395, sha256: "329b84daa82dbd74b1b7153dc0ccb891a3f27dbab9f1f0a9d3cd22eac7c407f5" },
   "v12-20": {
     release: "V12_20", assetDirectory: "troitsk-r25v12-20", files: 4672,

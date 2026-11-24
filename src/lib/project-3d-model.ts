@@ -91,6 +91,18 @@ const goluboeFieldPilot: Project3dModel = {
   publicUrl: "/models/goluboe-vodovod-field-pilot"
 };
 
+const stolarnyModel: Project3dModel = {
+  slug: "stolarny",
+  title: "3D Атлас «Столярный»",
+  subtitle: "Модель, каталог и 21 альбом чертежей",
+  revision: "R0.3",
+  updatedAt: "24.11.2026",
+  disclaimer: "Координационный атлас. Не инженерная приёмка и не исполнительная документация.",
+  assetPath: "src/assets/project-models/stolarny-r0-3",
+  assetBaseUrl: "/model-assets/stolarny-r0-3/",
+  publicUrl: "/models/stolarny"
+};
+
 // Explicit publication allowlist. Never resolve arbitrary project IDs on a public route.
 export function getPublicProject3dModel(slug: string): Project3dModel | null {
   if (slug === "troitsk-building-24") return troitskPublicModel;
@@ -98,6 +110,7 @@ export function getPublicProject3dModel(slug: string): Project3dModel | null {
   if (slug === "zagoryanka-1500") return zagoryankaModel;
   if (slug === "goluboe-vodovod") return goluboeModel;
   if (slug === goluboeFieldPilot.slug) return goluboeFieldPilot;
+  if (slug === stolarnyModel.slug) return stolarnyModel;
   return null;
 }
 
