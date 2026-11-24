@@ -7,7 +7,7 @@ vi.mock("@/lib/prisma", () => ({ prisma: { project: { findUnique: mocks.find } }
 import { GET } from "./route";
 import { GET as privateGET } from "@/app/api/projects/[projectId]/model-viewer/route";
 
-const goluboeIndex = "/model-assets/goluboe-vodovod-r1-16-1/index.html";
+const goluboeIndex = "/model-assets/goluboe-vodovod-r1-17/index.html";
 
 describe("Atlas V11 publication", () => {
   beforeEach(() => vi.clearAllMocks());
@@ -67,6 +67,19 @@ describe("Atlas V11 publication", () => {
     expect(response.headers.get("location")).toBe(`${goluboeIndex}?pdLocate=${view}`);
     expect(mocks.access).not.toHaveBeenCalled();
     expect(mocks.find).not.toHaveBeenCalled();
+  });
+  it.each(["goluboe-vodovod", "goluboe-vodovod-field-pilot"])("opens the KV-1 reinforcement view from %s", async (slug) => {
+    const response = await GET(new Request(`https://pgs.local/models/${slug}?pdLocate=kv1&pdCard=1&next=https://elsewhere.test`), { params: { slug } });
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toBe(`${goluboeIndex}?pdLocate=kv1&pdCard=1`);
+  });
+  it.each([
+    ["pdCard=1", ""], ["pdLocate=kv1&pdCard=0", "?pdLocate=kv1"],
+    ["pdLocate=up1&pdCard=1", "?pdLocate=up1"], ["pdLocate=vzu&pdCard=1", "?pdLocate=vzu"]
+  ])("strips a card flag outside the KV-1 reinforcement view: %s", async (query, expected) => {
+    const slug = "goluboe-vodovod";
+    const response = await GET(new Request(`https://pgs.local/models/${slug}?${query}`), { params: { slug } });
+    expect(response.headers.get("location")).toBe(goluboeIndex + expected);
   });
   it.each(["other", "https://elsewhere.test", "../.env"])("rejects an unknown general-scene locate value %s", async (value) => {
     const response = await GET(new Request(`https://pgs.local/models/goluboe-vodovod?pdLocate=${encodeURIComponent(value)}&pdCard=1`), { params: { slug: "goluboe-vodovod" } });
