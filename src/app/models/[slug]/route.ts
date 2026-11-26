@@ -28,14 +28,28 @@ function appendFieldPilotParams(input: URLSearchParams, target: URLSearchParams)
   }
 }
 
+function appendWorkspaceMenuParams(input: URLSearchParams, target: URLSearchParams) {
+  const workspace = input.get("aws");
+  if (workspace !== "plans" && workspace !== "drawings" && workspace !== "registry") return;
+  target.set("aws", workspace);
+  if (workspace !== "registry") return;
+  const tab = input.get("awsTab");
+  if (tab === "elements" || tab === "specification" || tab === "remarks") target.set("awsTab", tab);
+}
+
 export async function GET(request: Request, { params }: { params: { slug: string } }) {
   const model = getPublicProject3dModel(params.slug);
   if (!model) return new Response("3D model not found", { status: 404 });
   const response = await projectModelResponse(request, model, "public");
+  if (response.status !== 307) return response;
   const fieldPilot = params.slug === "goluboe-vodovod-field-pilot";
-  if ((params.slug === "goluboe-vodovod" || fieldPilot) && response.status === 307) {
-    const input = new URL(request.url);
-    const target = new URL(response.headers.get("location")!, input.origin);
+  const goluboe = params.slug === "goluboe-vodovod" || fieldPilot;
+  const workspaceMenu = model.supportsWorkspaceMenuQuery && (goluboe || params.slug === "troitsk-building-24");
+  if (!goluboe && !workspaceMenu) return response;
+
+  const input = new URL(request.url);
+  const target = new URL(response.headers.get("location")!, input.origin);
+  if (goluboe) {
     const excavation = input.searchParams.get("pdExc");
     if (excavation && ["kv1", "up1", "vzu"].includes(excavation)) {
       target.searchParams.set("pdExc", excavation);
@@ -57,7 +71,9 @@ export async function GET(request: Request, { params }: { params: { slug: string
       }
     }
     if (fieldPilot) appendFieldPilotParams(input.searchParams, target.searchParams);
-    response.headers.set("location", target.pathname + target.search);
   }
+  if (workspaceMenu) appendWorkspaceMenuParams(input.searchParams, target.searchParams);
+  // A Location without a fragment lets the browser keep the original one.
+  response.headers.set("location", target.pathname + target.search);
   return response;
 }

@@ -1,0 +1,160 @@
+/* Атлас · состав, настройки вида, панель на телефоне. */
+.ac-mounted #left :is(#navFind, #elFind, #levelNavigation, #inSection) { display: none; }
+.ac-mounted #left .left-tabs { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 3px; }
+.ac-mounted #left .left-tabs .left-tab { min-width: 0; padding-inline: 5px; font-size: 13px; }
+.ac-mounted #left .left-tabs:has(#tabLocations[hidden]) { grid-template-columns: repeat(2,minmax(0,1fr)); }
+.ac-mounted #left :is(.ac-native-hidden, .ac-section-open .ac-groups) { display: none; }
+.ac-mounted #left :is(.ac-back, .ac-composition [role="status"])[hidden] { display: none; }
+.ac-mounted #navViewNodes:has(.ac-section-open) { display: flex; flex-direction: column; gap: 7px; }
+.ac-mounted #navViewNodes[hidden],
+.ac-mounted #left:has(.ac-native-hidden) .nt-sethint { display: none; }
+.ac-mounted .ac-reset { margin: 0 0 6px; }
+.ac-mounted .ac-section-open .ac-reset { display: none; }
+
+.ac-mounted .ac-groups,
+.ac-mounted .ac-location-list { display: grid; gap: 6px; }
+.ac-mounted .ac-group {
+  margin: 0;
+  border: 1px solid var(--c-line);
+  background: var(--c-surface);
+  border-radius: 9px;
+}
+.ac-mounted .ac-group > summary {
+  min-height: 34px;
+  padding: 7px 9px;
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--c-text);
+  cursor: pointer;
+}
+.ac-mounted .ac-group > summary::marker { color: var(--c-text-2); }
+.ac-mounted .ac-group-content { display: grid; gap: 1px; padding: 1px 4px 4px; }
+.ac-mounted .ac-row { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 2px; align-items: stretch; }
+.ac-mounted .ac-row :is(.ac-section, .ac-eye) {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  min-height: 34px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--c-text);
+  padding: 4px;
+  text-align: left;
+}
+.ac-mounted .ac-row :is(.ac-section, .ac-eye):hover { background: var(--c-surface-2); }
+.ac-mounted .ac-row .ac-eye { justify-content: center; width: 34px; color: var(--c-text-2); }
+.ac-mounted .ac-row .ac-eye[aria-pressed="true"] { color: var(--c-link); }
+.ac-mounted .ac-row .ac-eye:disabled { opacity: .45; }
+.ac-mounted .ac-color { display: block; flex: 0 0 auto; width: 8px; height: 8px; border-radius: 2px; }
+.ac-mounted .ac-name { min-width: 0; font-size: 13px; line-height: 1.25; overflow-wrap: anywhere; }
+.ac-mounted .ac-count { margin-left: auto; color: var(--c-text-2); font-size: 11px; font-variant-numeric: tabular-nums; }
+.ac-mounted .ac-locations { padding: 3px 0 8px; }
+.ac-mounted #left .ac-floor-search {
+  width: 100%;
+  min-height: 44px;
+  margin-bottom: 8px;
+  background: var(--c-surface);
+  border-color: var(--c-line);
+  color: var(--c-text);
+}
+.ac-mounted #left .ac-floor-search[hidden] { display: none; }
+.ac-mounted .ac-location-list {
+  max-height: min(62dvh, 460px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.ac-mounted :is(.ac-back, .ac-location) {
+  display: flex;
+  align-items: center;
+  min-height: 36px;
+  gap: 6px;
+  padding: 6px 9px;
+  border: 1px solid var(--c-line);
+  border-radius: 8px;
+  background: var(--c-surface);
+  color: var(--c-text);
+  text-align: left;
+}
+.ac-mounted .ac-location { width: 100%; justify-content: space-between; }
+.ac-mounted .ac-location[aria-pressed="true"] { border-color: var(--c-line-strong); color: var(--c-link); background: var(--c-brand-tint); }
+.ac-mounted .ac-location small { font-size: 11px; color: var(--c-text-2); text-align: right; }
+.ac-mounted .ac-note { color: var(--c-text-2); font-size: 12px; margin: 6px 0 0; }
+.ac-mounted .ac-note:empty { display: none; }
+.ac-mounted .ac-picket:not([hidden]) {
+  position: absolute;
+  padding: 3px 7px;
+  top: calc(var(--atb-view-b, 55px) + 6px);
+  left: 16px;
+  z-index: 16;
+  border: 1px solid var(--c-line);
+  border-radius: 6px;
+  background: var(--c-float);
+  color: var(--c-text);
+  font-size: 12px;
+  pointer-events: none;
+}
+.ac-mounted #viewSettingsToggle.ac-settings-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: var(--c-float);
+  border-color: var(--c-line);
+  color: var(--c-text);
+}
+.ac-mounted #viewSettingsToggle.ac-settings-toggle[aria-expanded="true"] { background: var(--c-brand-tint); color: var(--c-link); }
+.ac-mounted #viewSettings .ac-duplicate,
+.ac-mounted #viewSettings > :is(h3, .r23-kbd) { display: none; }
+.ac-mounted #viewSettings .ac-secondary-angles { margin-block: 7px; }
+.ac-mounted #viewSettings details details { margin-top: 8px; padding-top: 6px; }
+.ac-mounted #viewSettings summary { min-height: 32px; padding-block: 6px; }
+.ac-mounted #viewSettings .r23-menu-head { align-items: center; }
+
+@media(max-width:850px) {
+  .ac-mounted .ac-group > summary { min-height: 44px; padding-block: 11px; }
+  .ac-mounted .ac-row :is(.ac-section, .ac-eye),
+  .ac-mounted #left :is(.ac-location, .ac-back, .left-tab, [data-close="left"]),
+  .ac-mounted #viewSettings summary { min-height: 44px; }
+  .ac-mounted .ac-row .ac-eye { width: 44px; }
+  body.ac-mounted .stage.atb .stage-actions #menu { width: auto; min-width: 44px; padding-inline: 9px; }
+  body.ac-mounted .stage.atb .stage-actions #menu .atb-t {
+    display: inline;
+    position: static;
+    clip: auto;
+    width: auto;
+    height: auto;
+    white-space: nowrap;
+  }
+  body.ac-mounted .stage.atb .stage-actions .stage-path {
+    position: absolute;
+    top: 51px;
+    left: 0;
+    right: 0;
+    min-height: 0;
+    height: auto;
+    max-width: none !important;
+    padding: 4px 8px;
+    border-radius: 9px;
+    flex-wrap: wrap;
+    white-space: normal;
+    gap: 1px 5px;
+  }
+  body.ac-mounted .stage.atb .stage-actions .stage-path .crumb {
+    white-space: normal;
+    overflow: visible;
+    min-height: 0;
+    line-height: 1.3;
+  }
+  body.ac-mounted .stage.atb .stage-actions .stage-path :is(.crumb.crumb--el, .crumb-sep.crumb-sep--el) { display: block; }
+  body.ac-mounted .stage.atb .stage-actions .stage-path button.crumb { min-height: 44px; }
+  body.ac-mounted .stage.atb .stage-actions .stage-path > .crumb:last-child { flex: 1 1 min(160px,45%); overflow-wrap: anywhere; }
+  body.ac-mounted .stage.atb #atbIssues.iss-chip { top: calc(var(--atb-view-b, 103px) + 7px); }
+  .ac-mounted .ac-picket:not([hidden]) {
+    top: calc(var(--atb-view-b, 103px) + 7px);
+    left: auto;
+    right: 12px;
+  }
+  .ac-mounted #viewSettingsToggle.ac-settings-toggle { min-height: 44px; min-width: 44px; }
+}

@@ -8,6 +8,7 @@ export type Project3dModel = {
   assetPath: string;
   publicUrl: string;
   assetBaseUrl?: string;
+  supportsWorkspaceMenuQuery?: boolean;
 };
 
 type ProjectIdentity = {
@@ -32,11 +33,12 @@ const troitskBuilding24Model: Project3dModel = {
 
 const troitskPublicModel: Project3dModel = {
   ...troitskBuilding24Model,
-  slug: "troitsk-building-24-atlas-v12-21",
-  revision: "V12.21",
-  updatedAt: "22.11.2026",
-  assetPath: "src/assets/project-models/troitsk-r25v12-21",
-  assetBaseUrl: "/model-assets/troitsk-r25v12-21/"
+  slug: "troitsk-building-24-atlas-v12-22",
+  revision: "V12.22",
+  updatedAt: "27.11.2026",
+  assetPath: "src/assets/project-models/troitsk-r25v12-22",
+  assetBaseUrl: "/model-assets/troitsk-r25v12-22/",
+  supportsWorkspaceMenuQuery: true
 };
 
 const TROITSK_PROJECT_ID = "cmteg9g33000for4oc06rko5a";
@@ -72,14 +74,15 @@ export function getProjectAtlasUrl(projectId: string): string | null {
 }
 
 const goluboeModel: Project3dModel = {
-  slug: "goluboe-vodovod-atlas-r1-16",
+  slug: "goluboe-vodovod-atlas-r1-18",
   title: "3D Атлас Голубое",
   subtitle: "Водовод до ВЗУ: 396 записей реестра, 244 элемента сцены, 6 PDF",
-  revision: "R1.17.2",
-  updatedAt: "24.11.2026",
+  revision: "R1.18",
+  updatedAt: "27.11.2026",
   disclaimer: "Модель по ПД 19/26-2026. Расхождения со ЗнП № 10 сохранены в замечаниях и заключении; оригинал ЗнП не входит в пакет. Не инженерная приёмка и не исполнительная съёмка.",
-  assetPath: "src/assets/project-models/goluboe-vodovod-r1-17-2",
-  assetBaseUrl: "/model-assets/goluboe-vodovod-r1-17-2/",
+  assetPath: "src/assets/project-models/goluboe-vodovod-r1-18",
+  assetBaseUrl: "/model-assets/goluboe-vodovod-r1-18/",
+  supportsWorkspaceMenuQuery: true,
   publicUrl: "/models/goluboe-vodovod#node/building"
 };
 

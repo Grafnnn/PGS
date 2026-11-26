@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="robots" content="noindex, nofollow"><script src="project/config.js"></script><script>/* К1: наборы данных объекта (имя атрибута — переменной A, чтобы проверка ссылок не принимала шаблон за адрес) */(function(){var A="src",P=window.ATLAS_PROJECT||{},L=Array.isArray(P.plugins)?P.plugins:[],X=window.ATLAS_PLUGINS=window.ATLAS_PLUGINS||{},N=[],seen={};for(var i=0;i<L.length;i++){var p=L[i];if(p&&/^[A-Za-z0-9_-]+$/.test(p.name||"")){X[p.name]=Object.assign(X[p.name]||{},{data:p.data||[]});N.push(p.name);}}var pg=(location.pathname.split("/").pop()||"index.html").replace(/\.html$/,"");window.__atlasPluginData=function(defer){for(var i=0;i<N.length;i++){var x=X[N[i]];if(!x||!x.data)continue;for(var j=0;j<x.data.length;j++){var d=x.data[j],u=typeof d==="string"?d:d&&d.src,ps=d&&d.pages;if(!u||seen[u])continue;if(ps&&!ps.some(function(q){return String(q).replace(/\.html$/,"")===pg;}))continue;seen[u]=1;if(document.querySelector("script["+A+"=\""+u+"\"]"))continue;document.write('<script'+(defer?' defer':'')+' '+A+'="'+u+'"><\/script>');}}};if(pg!=="index")window.__atlasPluginData(false);})();</script><link rel="stylesheet" href="assets/tokens.css"><link rel="icon" href="assets/atlas-mark-v3-84.png"><script src="assets/atlas-data.js" data-need="release remarks"></script><script src="assets/atlas-shell.js"></script><script>/* 1.0.4 В4: оболочка страницы (atlas-shell.js) не загрузилась — сообщение и «Обновить», не пустой экран */window.AtlasShell||addEventListener("DOMContentLoaded",function(){var d=document,b=d.createElement("div"),k=d.createElement("button");b.setAttribute("role","alert");b.style.cssText="margin:24px auto;max-width:520px;padding:16px;border:1px solid var(--c-line-strong,#9ab);border-radius:8px;background:var(--c-surface,#fff);color:var(--c-text,#123);font:15px/1.5 system-ui,sans-serif";b.append("Не загрузилась оболочка страницы. ");k.type="button";k.textContent="Обновить";k.style.cssText="display:block;min-height:44px;margin-top:8px;padding:0 16px";k.onclick=function(){location.reload();};b.append(k);d.body.prepend(b);});</script>
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>Чертежи и документы · 3D Атлас</title>
+<link rel="stylesheet" href="assets/atlas-shell.css"><link rel="stylesheet" href="assets/atlas-pages.css"><link rel="stylesheet" href="assets/documents.css"><style>.pkg-archive-off{color:inherit;opacity:.72;cursor:default;text-decoration:none}.pkg-archive-off::after{content:" · в инженерном архиве, поставляется отдельно";font-size:.85em}</style><script defer src="assets/package-links.js"></script><link rel="stylesheet" href="assets/atlas-workspace.css"/>
+<link rel="stylesheet" href="assets/atlas-release-tools.css"/>
+</head>
+<body data-nav="docs">
+<main class="page docs">
+<div class="page-head">
+<div><h1>Чертежи и документы</h1><p class="page-sub" id="docsSub">Рабочая документация и отчёты по модели</p></div>
+<nav class="tabs-seg" aria-label="Вид"><a href="library.html"><span>Чертежи · <span data-release="sources"></span> источников</span></a><a href="DOCUMENTS.html" aria-current="page">Документы</a></nav>
+</div>
+<div class="docs-grid">
+<section class="card docs-albums" aria-labelledby="albumsH">
+<div class="docs-h"><h2 id="albumsH">Альбомы рабочей документации</h2><span class="muted" id="albumsCount"></span></div>
+<div id="albums"></div>
+<div id="docsAlert"></div>
+</section>
+<div class="docs-side">
+<section class="card" aria-labelledby="reportsH">
+<h2 id="reportsH" class="docs-h2">Реестры и отчёты</h2>
+<div id="docsReports"></div>
+</section>
+<section class="card" aria-labelledby="aboutH">
+<h2 id="aboutH" class="docs-h2">О выпуске</h2>
+<div class="docs-tiles">
+<a href="ABOUT.html#open" data-file-only=""><b>Как открыть атлас</b><span class="muted">Двойной щелчок, без установки</span></a><script>/* 1.0.19a A-14: по http(s) пункта нет */if(location.protocol!=='file:')document.querySelectorAll('[data-file-only]').forEach(function(e){e.remove();});</script>
+<a href="ABOUT.html#limits"><b>Границы применения</b><span class="muted">Что модель показывает и чего нет</span></a>
+<a href="ABOUT.html#history"><b>История выпусков</b><span class="muted">Изменения по датам</span></a>
+<a href="ABOUT.html#passport"><b>Сведения о выпуске</b><span class="muted">Состав и счётчики</span></a>
+</div>
+<div id="docsDev"></div>
+</section>
+</div>
+</div>
+</main>
+<script>
+(() => {
+  const S = window.AtlasShell, make = S.make, R = S.release();
+  // К1: блоки объекта — из текстов объекта (ATLAS_TEXTS.documents: alert — строки и { href, label }; reports — { label, sub, sub_id | sub_release, links: [{ href, label, kind: open | download | more }] };
+  // dev — { summary, note, groups: [{ title, links }] }); нет — блока нет, пустой раздел скрыт
+  { const DT = (window.ATLAS_TEXTS || {}).documents || {}, e = t => String(t == null ? '' : t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'), q = t => e(t).replace(/"/g, '&quot;');
+    // К1: {pdf_pages} — texts.remarks.pdf_pages; нет числа — « · {pdf_pages} стр.» убирается
+    const PP = ((((window.ATLAS_REMARKS || {}).edition || {}).files || {}).pdf_pages) || ((window.ATLAS_TEXTS || {}).remarks || {}).pdf_pages, lab = t => String(t == null ? '' : t).includes('{pdf_pages}') ? (PP ? String(t).replace('{pdf_pages}', PP) : String(t).replace(/\s*·?\s*\{pdf_pages\}\s*стр\.?/, '')) : t;
+    const link = l => l.kind === 'open' ? '<a class="pbtn pbtn--sm" href="' + q(l.href) + '" target="_blank" rel="noopener">' + e(lab(l.label)) + '</a>' : l.kind === 'download' ? '<a class="pbtn pbtn--sm" href="' + q(l.href) + '" download>' + e(lab(l.label)) + '</a>'
+      : l.kind === 'more' ? '<a href="' + q(l.href) + '" class="docs-more">' + e(lab(l.label)) + '</a>' : '<a href="' + q(l.href) + '">' + e(lab(l.label)) + '</a>';
+    const H = {
+      docsAlert: Array.isArray(DT.alert) && DT.alert.length ? '<div class="docs-alert"><span class="docs-alert-dot" aria-hidden="true"></span><span>' + DT.alert.map(x => typeof x === 'string' ? e(x) : link(x)).join('') + '</span></div>' : '',
+      docsReports: (DT.reports || []).filter(r => !r.sub_release || typeof R[r.sub_release] === 'number').map(r => '<div class="docs-row"><span class="docs-t"><b>' + e(r.label) + '</b><span class="muted"' + (r.sub_id ? ' id="' + q(r.sub_id) + '"' : '') + '>'
+        + (r.sub_release ? '<span data-release="' + q(r.sub_release) + '">' + e(S.fmt(R[r.sub_release])) + '</span>' + e(String(r.sub || '').replace(/^[\d\s\u202f\u00a0]+/, ' ')) : e(r.sub)) + '</span></span>' + (r.links || []).map(link).join('') + '</div>').join('\n'),
+      docsDev: DT.dev ? '<details class="docs-dev" data-allow-codes><summary>' + e(DT.dev.summary) + '</summary>\n' + (DT.dev.note ? '<p class="muted">' + e(DT.dev.note) + '</p>\n' : '')
+        + (DT.dev.groups || []).map(g => (g.title ? '<h3>' + e(g.title) + '</h3>\n' : '') + '<ul>' + (g.links || []).map(l => '<li>' + link(l) + '</li>').join('') + '</ul>').join('\n') + '\n</details>' : ''
+    };
+    for (const id of Object.keys(H)) { const el = document.getElementById(id); if (H[id]) el.outerHTML = H[id]; else el.remove(); }
+    const rs = document.querySelector('section[aria-labelledby="reportsH"]'); if (rs && !rs.querySelector('.docs-row')) rs.hidden = true; }
+  const ITEMS = (window.ATLAS_REMARKS && window.ATLAS_REMARKS.items) || [];
+  const n = sec => ITEMS.filter(r => r.section_code === sec).length;
+  // К1: шифр — title.code; альбомы — documents[] конфига объекта (один список со сборкой): file, code, title, pages, remarks_section, note, remarks_group
+  const PJ = (S.project && S.project()) || window.ATLAS_PROJECT || {}, code0 = (PJ.title || {}).code;
+  if (code0) document.getElementById('docsSub').textContent = 'Рабочая документация ' + code0 + ' и отчёты по модели';
+  const ALBUMS = (Array.isArray(PJ.documents) ? PJ.documents : []).filter(d => d && (d.src || d.file));   /* К1: src — путь в сборке, file — путь в пакете */
+  if (ALBUMS.length) document.getElementById('albumsCount').textContent = S.fmt(ALBUMS.length) + ' ' + S.plural(ALBUMS.length, 'альбом', 'альбома', 'альбомов') + ' · PDF';
+  const host = document.getElementById('albums');
+  for (const d of ALBUMS) {
+    const code = d.code || '', name = d.title || d.file || d.src, pdf = d.src || d.file, pages = d.pages, sec = d.remarks_section, note = d.note;
+    const row = make('div', { class: 'album-row' });
+    row.append(make('span', { class: 'album-code mono' }, code));
+    const t = make('span', { class: 'album-t' }); t.append(make('span', { class: 'album-name' }, name), make('span', { class: 'muted' }, 'PDF' + (pages ? ' · ' + pages + ' стр.' : '')));
+    row.append(t);
+    if (sec) { const k = n(sec); row.append(make('a', { class: 'album-rem', href: 'RD_REMARKS.html#sec=' + encodeURIComponent(sec) }, 'Замечания · ' + k + (note || ''))); }
+    else if (note && d.remarks_group) row.append(make('a', { class: 'album-rem muted', href: 'RD_REMARKS.html#sec=' + encodeURIComponent(d.remarks_group) }, note));   // нужен ключ documents[].remarks_group (объект: УУТЭ → ОВ)
+    else if (note) row.append(make('span', { class: 'album-rem muted' }, note));
+    row.append(make('a', { class: 'pbtn pbtn--sm', href: pdf, target: '_blank', rel: 'noopener' }, 'Открыть'));
+    host.append(row);
+  }
+  const ed = (window.ATLAS_REMARKS || {}).edition || {};
+  const [y, m, d] = String(ed.date || '').split('-');
+  { const rl = document.getElementById('remLine'); if (d && rl) rl.textContent = d + '.' + m + '.' + y + ' · ' + S.fmt(ITEMS.length) + ' замечаний'; }   // К1: строки отчётов — из текстов объекта, может не быть
+})();
+</script>
+<script defer src="assets/atlas-workspace.js"></script>
+<script defer src="assets/atlas-release-tools.js"></script>
+</body></html>

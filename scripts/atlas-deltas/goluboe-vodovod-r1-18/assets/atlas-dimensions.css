@@ -1,0 +1,69 @@
+/* 3D Атлас · «Размеры» (atlas-dimensions.js). Выноски рисуются на холсте .adim-canvas; числа кликабельны через прозрачные кнопки .adim-hit. */
+.stage .adim-canvas, .stage .adim-hits { position: absolute; z-index: 2; pointer-events: none; }
+.stage .adim-hits { overflow: hidden; }
+.stage .adim-hit { position: absolute; pointer-events: auto; margin: 0; padding: 0; min-width: 0; min-height: 0; border: 0; border-radius: 4px; background: transparent; cursor: pointer; touch-action: manipulation; }
+.stage .adim-hit:hover { background: color-mix(in srgb, var(--c-select) 16%, transparent); }
+.stage .adim-hit:focus-visible { outline: 2px solid var(--c-link); outline-offset: 1px; }
+
+/* полоса слоёв: «Габарит», «Отметки» и числа, которым не хватило места у элемента */
+.stage .adim-bar { position: absolute; z-index: 17; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; max-width: min(560px, calc(100% - 16px)); padding: 6px 10px; background: var(--c-float); color: var(--c-text); border: 1px solid var(--c-line); border-radius: var(--r-l); box-shadow: var(--shadow-2); font-size: 13px; line-height: 1.3; }
+.stage .adim-bar-main { display: flex; gap: 12px; flex: none; }
+.stage .adim-bar-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0; }
+.stage .adim-chk { display: inline-flex; align-items: center; gap: 2px; min-height: 28px; cursor: pointer; white-space: nowrap; }
+.stage .adim-chk input { width: 16px; height: 16px; margin: 0 4px 0 0; accent-color: var(--c-brand-fill, var(--c-brand)); }
+.stage .adim-note { color: var(--c-text-2); }
+.stage .adim-chip { display: inline-flex; align-items: center; min-height: 26px; padding: 2px 8px; border: 1px solid var(--c-line-mid, var(--c-line)); border-radius: 6px; background: var(--c-surface); color: var(--c-text); font: 500 12.5px/1.3 var(--font-mono, ui-monospace, monospace); white-space: nowrap; }
+.stage button.adim-chip { cursor: pointer; }
+.stage button.adim-chip:hover { background: var(--c-surface-2); }
+.stage .adim-chip--model { border-style: dashed; }
+.stage .adim-chip--conflict { border-color: var(--c-sig-mid, #B25E00); color: var(--c-sig-mid-text, var(--c-text)); }
+.stage .adim-chip--unresolved { border-style: dotted; color: var(--c-text-2); font-family: inherit; white-space: normal; }
+
+/* окно источника по нажатию на число */
+.stage .adim-pop { position: absolute; z-index: 31; width: min(320px, calc(100% - 16px)); padding: 12px 14px; background: var(--c-surface); color: var(--c-text); border: 1px solid var(--c-line); border-radius: var(--r-l); box-shadow: var(--shadow-3); font-size: 13px; line-height: 1.4; }
+.stage .adim-pop-h { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.stage .adim-pop-h b { font-size: 14px; }
+.stage .adim-pop-x { margin-left: auto; width: 28px; height: 28px; min-height: 28px; padding: 0; border: 0; border-radius: 6px; background: transparent; color: var(--c-text-2); font-size: 18px; line-height: 1; cursor: pointer; }
+.stage .adim-pop-x:hover { background: var(--c-surface-2); }
+.stage .adim-st { padding: 1px 7px; border-radius: 5px; font-size: 12px; font-weight: 500; white-space: nowrap; background: var(--c-surface-2); color: var(--c-text-2); }
+.stage .adim-st--doc { background: var(--c-confirmed-bg, var(--c-ok-bg)); color: var(--c-confirmed-text, var(--c-ok)); }
+.stage .adim-st--model { border: 1px dashed var(--c-line-strong, var(--c-line)); background: transparent; }
+.stage .adim-st--conflict { background: var(--c-sig-mid-bg, #FBF0D9); color: var(--c-sig-mid-text, #8A5A00); }
+.stage .adim-pop p { margin: 0 0 6px; }
+.stage .adim-pop-v { font: 600 13.5px/1.35 var(--font-mono, ui-monospace, monospace); }
+.stage .adim-pop-s { color: var(--c-text); }
+.stage .adim-pop-n, .stage .adim-pop-w { color: var(--c-text-2); font-size: 12.5px; }
+.stage .adim-pop-w { color: var(--c-sig-mid-text, #8A5A00); }
+.stage .adim-pop-go { margin-top: 4px; min-height: 36px; padding: 6px 12px; border: 1px solid var(--c-brand-fill, var(--c-brand)); border-radius: 8px; background: var(--c-brand-fill, var(--c-brand)); color: var(--c-on-brand, #fff); font: 600 13.5px var(--font, inherit); cursor: pointer; }
+.stage .adim-pop-go:disabled { background: var(--c-surface-2); border-color: var(--c-line); color: var(--c-text-2); cursor: default; }
+.stage .adim-pop :is(button):focus-visible { outline: 2px solid var(--c-link); outline-offset: 2px; }
+
+/* явное hidden: display у полосы и окна задан выше, поэтому атрибут hidden нужно подтвердить */
+.stage :is(.adim-bar, .adim-pop, .adim-hit, .adim-hits, .adim-canvas)[hidden] { display: none !important; }
+.stage .adim-pop { overflow: auto; }
+.stage .adim-pop:popover-open { position: fixed; inset: auto; margin: 0; max-width: calc(100vw - 16px); }
+/* запас над панелью инструментов, когда автоматически открыт разбор слоёв объекта */
+@media (min-width: 851px) { body:has(#quickDims) #atlasLayers:not([hidden]) { bottom: 148px !important; } }
+
+/* кнопка в панели */
+.stage.atb .tools #quickDims[aria-pressed="true"] { background: var(--c-brand-tint); color: var(--c-link); }
+@media (max-width: 850px) {
+  .stage.atb .zoom-controls #quickDims { display: flex; align-items: center; justify-content: center; width: 44px; min-width: 44px; height: 44px; min-height: 44px; padding: 0; border: 1px solid var(--c-line); border-radius: 12px; background: var(--c-float); color: var(--c-text); box-shadow: var(--shadow-2); }
+  .stage.atb .zoom-controls #quickDims > .atb-t { display: none; }
+  .stage.atb .zoom-controls #quickDims[aria-pressed="true"] { background: var(--c-brand-tint); color: var(--c-link); }
+  .stage .adim-bar { font-size: 13px; padding: 4px 8px; gap: 4px 10px; }
+  .stage .adim-bar .adim-note { display: none; }
+  .stage .adim-bar .adim-bar-row:empty { display: none; }
+  .stage .adim-chk { min-height: 32px; }
+  .stage .adim-hit { min-width: 0; }
+}
+
+/* кнопка «Размеры» в карточке — рядом с кнопкой листа */
+body #right.card-v12 .card-row-a .card-dims { display: flex; align-items: center; justify-content: center; gap: 6px; height: 44px; min-height: 44px; margin: 0; padding: 0 12px; border: 1px solid var(--c-line-strong, var(--c-line)); border-radius: var(--r, 8px); background: var(--c-surface); color: var(--c-text); font: 600 var(--fs-14, 14px) var(--font, inherit); cursor: pointer; white-space: nowrap; }
+body #right.card-v12 .card-row-a .card-dims[hidden] { display: none; }
+body #right.card-v12 .card-row-a .card-dims .icon { width: 18px; height: 18px; display: inline-block; }
+body #right.card-v12 .card-row-a .card-dims:hover { background: var(--c-surface-2); }
+body #right.card-v12 .card-row-a .card-dims[aria-pressed="true"] { background: var(--c-brand-tint); border-color: var(--c-link); color: var(--c-link); }
+
+/* «Чертёж элемента» для числа «по модели»: лист связан с элементом, но не источник числа */
+.stage .adim-pop-go--alt { background: var(--c-surface); color: var(--c-link); border-color: var(--c-line-strong, var(--c-line)); }
