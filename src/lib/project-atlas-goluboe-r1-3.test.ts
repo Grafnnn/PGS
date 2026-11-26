@@ -43,24 +43,25 @@ const r1161 = "/model-assets/goluboe-vodovod-r1-16-1/";
 const r1170 = "/model-assets/goluboe-vodovod-r1-17/";
 const r1171 = "/model-assets/goluboe-vodovod-r1-17-1/";
 const r1172 = "/model-assets/goluboe-vodovod-r1-17-2/";
+const r1180 = "/model-assets/goluboe-vodovod-r1-18/";
 const snapshot = "/model-assets/goluboe-vodovod-r1-2-terrain-snapshot/";
 const priorPilot = "/model-assets/goluboe-vodovod-r1-2-field-pilot-02-ux-01/";
 const hash = (data: string | Uint8Array) => createHash("sha256").update(data).digest("hex");
 
 describe("Goluboe immutable publication through R1.17.2", () => {
-  it("serves R1.17.2 from both aliases without changing prior releases", async () => {
-    for (const prefix of [r13, r14, r15, r16, r17, r18, r19, r110, r111, r112, r113, r1131, r1132, r115, r116, r1161, r1170, r1171, r1172, snapshot, priorPilot]) {
+  it("serves R1.18 from both aliases without changing prior releases", async () => {
+    for (const prefix of [r13, r14, r15, r16, r17, r18, r19, r110, r111, r112, r113, r1131, r1132, r115, r116, r1161, r1170, r1171, r1172, r1180, snapshot, priorPilot]) {
       expect(legacyAtlasDestination(new URL(origin + prefix + "index.html"))).toBeNull();
       expect(legacyAtlasWorker(new URL(origin + prefix + "service-worker.js"))).toBeNull();
     }
     const slug = "goluboe-vodovod-field-pilot";
     const response = await alias(new Request(origin + "/models/" + slug + "?field=1&pk=21.5"), { params: { slug } });
     expect(response.status).toBe(307);
-    expect(response.headers.get("location")).toBe(r1172 + "index.html?field=1&pk=21.5");
+    expect(response.headers.get("location")).toBe(r1180 + "index.html?field=1&pk=21.5");
     const main = "goluboe-vodovod";
     const primary = await alias(new Request(origin + "/models/" + main), { params: { slug: main } });
     expect(primary.status).toBe(307);
-    expect(primary.headers.get("location")).toBe(r1172 + "index.html");
+    expect(primary.headers.get("location")).toBe(r1180 + "index.html");
   });
 
   it.each([

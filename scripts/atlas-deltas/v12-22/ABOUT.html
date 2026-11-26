@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="robots" content="noindex, nofollow"><script src="project/config.js"></script><script>/* К1: наборы данных объекта (имя атрибута — переменной A, чтобы проверка ссылок не принимала шаблон за адрес) */(function(){var A="src",P=window.ATLAS_PROJECT||{},L=Array.isArray(P.plugins)?P.plugins:[],X=window.ATLAS_PLUGINS=window.ATLAS_PLUGINS||{},N=[],seen={};for(var i=0;i<L.length;i++){var p=L[i];if(p&&/^[A-Za-z0-9_-]+$/.test(p.name||"")){X[p.name]=Object.assign(X[p.name]||{},{data:p.data||[]});N.push(p.name);}}var pg=(location.pathname.split("/").pop()||"index.html").replace(/\.html$/,"");window.__atlasPluginData=function(defer){for(var i=0;i<N.length;i++){var x=X[N[i]];if(!x||!x.data)continue;for(var j=0;j<x.data.length;j++){var d=x.data[j],u=typeof d==="string"?d:d&&d.src,ps=d&&d.pages;if(!u||seen[u])continue;if(ps&&!ps.some(function(q){return String(q).replace(/\.html$/,"")===pg;}))continue;seen[u]=1;if(document.querySelector("script["+A+"=\""+u+"\"]"))continue;document.write('<script'+(defer?' defer':'')+' '+A+'="'+u+'"><\/script>');}}};if(pg!=="index")window.__atlasPluginData(false);})();</script><link rel="stylesheet" href="assets/tokens.css"><link rel="icon" href="assets/atlas-mark-v3-84.png"><script src="assets/atlas-data.js" data-need="release remarks"></script><script src="assets/atlas-shell.js"></script><script>/* 1.0.4 В4: оболочка страницы (atlas-shell.js) не загрузилась — сообщение и «Обновить», не пустой экран */window.AtlasShell||addEventListener("DOMContentLoaded",function(){var d=document,b=d.createElement("div"),k=d.createElement("button");b.setAttribute("role","alert");b.style.cssText="margin:24px auto;max-width:520px;padding:16px;border:1px solid var(--c-line-strong,#9ab);border-radius:8px;background:var(--c-surface,#fff);color:var(--c-text,#123);font:15px/1.5 system-ui,sans-serif";b.append("Не загрузилась оболочка страницы. ");k.type="button";k.textContent="Обновить";k.style.cssText="display:block;min-height:44px;margin-top:8px;padding:0 16px";k.onclick=function(){location.reload();};b.append(k);d.body.prepend(b);});</script>
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>О выпуске · 3D Атлас</title>
+<link rel="stylesheet" href="assets/atlas-shell.css"><link rel="stylesheet" href="assets/atlas-pages.css"><link rel="stylesheet" href="assets/about.css"><style>.pkg-archive-off{color:inherit;opacity:.72;cursor:default;text-decoration:none}.pkg-archive-off::after{content:" · в инженерном архиве, поставляется отдельно";font-size:.85em}</style><script defer src="assets/package-links.js"></script><link rel="stylesheet" href="assets/atlas-workspace.css"/>
+<link rel="stylesheet" href="assets/atlas-release-tools.css"/>
+</head>
+<body data-nav="">
+<main class="page about" data-allow-codes>
+<div class="about-brand"><img src="assets/atlas-mark-v3-84.png" alt="" width="44" height="44"><div><b>3D Атлас</b><span id="aboutObject"></span><script>/* К1: объект и шифр — из конфига */{const t=(window.ATLAS_PROJECT||{}).title||{},v=[t.object,t.code].filter(Boolean).join(' · '),e=document.getElementById('aboutObject');if(v)e.textContent=v;else e.remove();}</script></div></div>
+<div class="page-head about-head"><div><h1>О выпуске <span data-release="release_label"></span></h1><p class="page-sub">Редакция данных <span data-release="date_label"></span></p></div>
+<nav class="page-actions about-toc" aria-label="Разделы страницы"><a class="pbtn" href="#limits">Границы применения</a><a class="pbtn" href="#history">История выпусков</a><a class="pbtn" href="#tech">Технические сведения</a></nav></div>
+<!-- V12.0 · 1.6: плитки чисел — только из data/release-info.js (ATLAS_RELEASE), в разметке чисел нет -->
+<div class="about-tiles" id="aboutTiles" aria-label="Выпуск в числах"></div>
+<div class="about-cols"><div class="about-col">
+
+
+
+<section id="limits" class="card about-s"><h2>Границы применения</h2>
+<ul id="aboutLimits"></ul><script>/* К1: пункты — ATLAS_TEXTS.about.limits; часть { release: ключ } — число выпуска (нет числа — нет пункта); без текстов — общие пункты */
+{const R=window.ATLAS_RELEASE||{},T=((window.ATLAS_TEXTS||{}).about||{}).limits,ul=document.getElementById('aboutLimits');
+ const L=Array.isArray(T)?T:[['Атлас — координационная модель по рабочей документации. Он ',{b:'не заменяет'},' чертежи и не является инженерной приёмкой; для изготовления и монтажа модель не используется.'],['Размеры и привязки взяты из РД. Где РД противоречива или неполна, привязка условная — это указано в карточке элемента меткой «привязка условная».'],['Модели ',{release:'unplaced'},' типов не имеют подтверждённого места в здании — они собраны '+((window.AtlasShell&&AtlasShell.unplacedWhere)?AtlasShell.unplacedWhere():'в разделе «Требует решения»')+'.']];
+ for(const it of L){const parts=Array.isArray(it)?it:[it];if(parts.some(p=>p&&typeof p==='object'&&p.release&&typeof R[p.release]!=='number'))continue;const li=document.createElement('li');
+  for(const p of parts){if(typeof p==='string')li.append(p);else if(p&&typeof p.b==='string'){const b=document.createElement('b');b.textContent=p.b;li.append(b);}else if(p&&p.release){const sp=document.createElement('span');sp.dataset.release=p.release;li.append(sp);}}
+  if(li.childNodes.length)ul.append(li);}}
+</script></ul></section></div><div class="about-col"><section id="history" class="card about-s"><h2>История выпусков</h2>
+<ul class="about-news" id="aboutNews"></ul>
+<p class="about-links" id="aboutLinks"></p><script>/* К1: ссылки — ATLAS_TEXTS.pages.history_links [{ href, label, class }]; нет — строки нет */
+{const H=((window.ATLAS_TEXTS||{}).pages||{}).history_links,p=document.getElementById('aboutLinks');for(const x of Array.isArray(H)?H:[]){if(!x||!x.href||!x.label)continue;const a=document.createElement('a');a.className=x.class||'pbtn';a.href=x.href;a.textContent=x.label;p.append(a);}if(!p.children.length)p.remove();}
+</script></section>
+<section id="open" class="card about-s"><h2>Как открыть атлас</h2>
+<ol><li>Дважды щёлкните файл <b>index.html</b> в папке атласа.</li><li>Атлас откроется в браузере Chrome, Edge или Safari. Установка программ и интернет не нужны.</li><li>Модель загружается несколько секунд. Если загрузка остановилась — нажмите «Повторить загрузку» или откройте файл ещё раз.</li></ol>
+<p>Справка по управлению моделью — в меню «Ещё» → «Как работать с атласом».</p></section><script>/* 1.0.19a A-14: по http(s) раздела нет */if(location.protocol!=='file:')document.getElementById('open').remove();</script></div></div>
+
+
+
+<section id="passport" class="card about-s"><h2>Сведения о выпуске</h2>
+<table class="about-table"><tbody id="passportRows"></tbody></table>
+<p class="muted">Числа берутся из одного файла данных выпуска и совпадают с шапкой, меню, каталогом и страницей замечаний.</p></section>
+
+<section id="tech" class="card about-s"><h2>Технические сведения</h2>
+<dl class="about-dl" id="aboutTech"></dl>
+<script>/* К1: строки — ATLAS_TEXTS.about.tech [{ label, value | core: release (release: [ключи], separator) | core: datasets, mono }]; без текстов — «Выпуск» и «Данные выпуска» */
+{const dl=document.getElementById('aboutTech'),T=((window.ATLAS_TEXTS||{}).about||{}).tech,rows=Array.isArray(T)?T:[{label:'Выпуск',core:'release',release:['release_label','release'],separator:' · ',mono:true},{label:'Данные выпуска',core:'datasets'}];
+ for(const r of rows){if(!r||typeof r.label!=='string')continue;const dt=document.createElement('dt'),dd=document.createElement('dd');dt.textContent=r.label;if(r.mono)dd.className='mono';
+  if(r.core==='release'){const RL=window.ATLAS_RELEASE||{},ks=(Array.isArray(r.release)?r.release:[]).filter(k=>RL[k]!=null&&RL[k]!=='');if(!ks.length)continue;ks.forEach((k,i)=>{if(i)dd.append(document.createTextNode(typeof r.separator==='string'?r.separator:' · '));const sp=document.createElement('span');sp.dataset.release=k;dd.append(sp);});}
+  else if(r.core==='datasets')dd.id='dataSets';else if(typeof r.value==='string')dd.textContent=r.value;else continue;
+  dl.append(dt,dd);}}
+</script></section>
+</main>
+<script>
+(() => {
+  const S = window.AtlasShell, R = S.release(), f = S.fmt, make = S.make, UN = S.unplacedName ? S.unplacedName() : 'Требует решения';
+  const rows = [
+    ['Дата редакции', R.date_label],
+    ['Элементов в модели здания', f(R.elements)],
+    ['Исторических элементов (вне подсчёта)', f(R.history_elements)],
+    ['Вспомогательных элементов (вне подсчёта)', f(R.auxiliary_elements)],
+    ['Карточек каталога', f(R.catalogue_types)],
+    [UN === 'Требует решения' ? 'Требует решения — моделей без подтверждённого места' : 'Моделей без подтверждённого места в здании', f(R.unplaced)],   // 1.0.19a к2: имя — как у пункта меню
+    ['Источников (листов и фрагментов РД)', f(R.sources)],
+    ['Замечаний к РД', f(R.remarks) + ', из них высокой значимости — ' + f(R.remarks_high)]
+  ];
+  // V12.0 · 1.6: плитки «выпуск в числах» — ссылки на разделы; подпись согласована с числом
+  const pl = S.plural, tiles = [
+    [R.elements, n => pl(n, 'элемент', 'элемента', 'элементов') + ' в модели', 'index.html'],
+    [R.remarks, n => pl(n, 'замечание', 'замечания', 'замечаний') + ' к РД', 'RD_REMARKS.html'],
+    [R.catalogue_types, n => pl(n, 'карточка каталога', 'карточки каталога', 'карточек каталога'), 'catalogue.html'],
+    [R.sources, n => R.counts_definitions ? pl(n, 'источник', 'источника', 'источников') : pl(n, 'лист и источник', 'листа и источника', 'листов и источников'), 'library.html'],   // 1.0.5 С1
+    [R.placed_rd, n => pl(n, 'тип', 'типа', 'типов') + ' по РД', (((window.ATLAS_REVISIONS_META || {}).layers || [])[0] || {}).href || 'index.html'],   // К1: адрес слоя — набор объекта revisions_meta.layers[0].href
+    [R.unplaced, () => UN === 'Требует решения' ? 'требует решения' : 'без подтверждённого места', 'UNPLACED.html']
+  ];
+  // К1: пункт о моделях без места — только если число есть в данных выпуска (ключ unplaced)
+  const tl = document.getElementById('aboutTiles');
+  for (const [n, word, href] of tiles) { if (typeof n !== 'number') continue; const a = make('a', { class: 'about-tile', href }); a.append(make('b', { class: 'num' }, f(n)), make('span', {}, word(n))); tl.append(a); }
+  // V12.0b · 15: «История выпусков» — списком из ATLAS_RELEASE.whats_new, новые сверху
+  const news = document.getElementById('aboutNews');
+  for (const [v, t] of (R.whats_new || []).slice().reverse()) { const li = make('li'); li.append(make('b', { class: 'mono' }, v), make('span', {}, t)); news.append(li); }
+  if (!news.children.length) news.remove();
+  const tb = document.getElementById('passportRows');
+  for (const [k, v] of rows) { if (v === undefined || v === '—') continue; const tr = make('tr'); tr.append(make('th', { scope: 'row' }, k), make('td', { class: 'num' }, v)); tb.append(tr); }
+  if (document.getElementById('dataSets')) document.getElementById('dataSets').textContent = Object.entries(window.AtlasDataSets || {}).map(([k, v]) => k + ': ' + v.src + (v.fallback ? ' (резервная копия до данных задачи A)' : '')).join(' · ');
+})();
+</script>
+<script defer src="assets/atlas-workspace.js"></script>
+<script defer src="assets/atlas-release-tools.js"></script>
+</body></html>

@@ -1,0 +1,415 @@
+/* 3D Атлас · правая панель «Сводка / Паспорт элемента» (V12.0 «Чистовая отделка», сессия B3).
+   Разметку строит atlas-card.js (#right.card-v12). Цвета и размеры — токены v2; тёмная тема главной —
+   :root[data-theme="dark"] (значения токенов) и body.ui-dark. Геометрия панели и шторки (ширина колонки, 32 % / 85 %) — prototype.css. */
+
+body #right.card-v12 { gap: 12px; padding: 12px 20px 0; background: var(--c-surface); color: var(--c-text); border-color: var(--c-line); }
+
+/* ---------- шапка панели ---------- */
+body #right.card-v12 .card-head { display: flex; align-items: center; gap: 4px; min-height: 36px; }
+body #right.card-v12 .card-head .eyebrow { flex: 1 1 auto; margin: 0; font: 600 var(--fs-12)/1.3 var(--font); color: var(--c-text-2); }
+body #right.card-v12 .card-icon, body #right.card-v12 .card-head .closepane {
+  position: static; display: grid; place-items: center; width: 36px; height: 36px; min-height: 36px; padding: 0;
+  border: 0; border-radius: var(--r); background: transparent; color: var(--c-text); cursor: pointer;
+}
+body #right.card-v12 .card-icon .icon { width: 20px; height: 20px; }
+body #right.card-v12 .card-icon:hover { background: var(--c-surface-2); color: var(--c-text); }
+body #right.card-v12 .card-head [hidden] { display: none; }
+
+/* ---------- «Сводка» ---------- */
+body #right.card-v12 .card-empty { margin: 0; padding: 0; border: 0; border-radius: 0; font-size: var(--fs-14); color: var(--c-text); }
+body #right.card-v12 .card-notfound { margin: 0 0 12px; }
+body #right.card-v12 .card-sum-h { margin: 2px 0; font-size: var(--fs-20); line-height: 1.2; font-weight: 700; letter-spacing: -.01em; color: var(--c-text); }
+body #right.card-v12 .card-sum-sub { margin: 0 0 12px; font-size: var(--fs-13); line-height: 1.45; color: var(--c-text-2); }
+body #right.card-v12 .card-tiles--sum { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+body #right.card-v12 .card-tile {
+  display: block; min-height: 72px; padding: 12px; border: 0; border-radius: var(--r-l); background: var(--c-surface-2);
+  color: var(--c-text); font: inherit; text-align: left; text-decoration: none; cursor: pointer;
+}
+body #right.card-v12 .card-tile:hover { box-shadow: inset 0 0 0 1px var(--c-line-mid); }
+body #right.card-v12 .card-tile b { display: block; font-size: var(--fs-26); font-weight: 700; line-height: 1.1; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+body #right.card-v12 .card-tile span { display: block; margin-top: 2px; font-size: var(--fs-13); font-weight: 500; line-height: 1.3; color: var(--c-text-2); }
+body #right.card-v12 .card-tile--warn b { color: var(--c-text-2); }   /* 1.0.19a Т-4: очередь размещения — нейтральный графит, не цвет «Средней значимости» */
+/* 1.0.19a к4: длинное слово подписи («подтверждённого» при ключе progress) — перенос с дефисом, а не вылет из плитки 390; слова короче 12 букв не переносятся (вид 1.0.18) */
+body #right.card-v12 .card-tile span { hyphens: manual; -webkit-hyphens: manual; overflow-wrap: normal; word-break: normal; }   /* 1.1.1 C3: слова в плитках не рвутся посреди («источнико/в», «подтвер-ждённого») — плитка шире по самому длинному слову (телефон) */ /* 320: плитка ≈ 68 px — переносить и слова от 6 букв (без этого «элементов», «замечаний» вылезают на 10–12 px) */
+body #right.card-v12 .card-sigbar { display: flex; gap: 2px; height: 8px; margin: 16px 0 8px; border-radius: 4px; overflow: hidden; }
+body #right.card-v12 .card-sigbar i { display: block; min-width: 4px; }
+body #right.card-v12 .card-sigbar--high { background: var(--c-sig-high); }
+body #right.card-v12 .card-sigbar--mid { background: var(--c-sig-mid); }
+body #right.card-v12 .card-sigbar--low { background: var(--c-sig-low); }
+body #right.card-v12 .card-sum-legend { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }   /* 1.0.19a К-2: ul > li > a */
+body #right.card-v12 .card-sum-legend li { display: block; margin: 0; padding: 0; }
+body #right.card-v12 .card-sum-legend a { text-decoration: none; }
+body #right.card-v12 .card-sum-hint { display: flex; align-items: flex-start; gap: 8px; margin: 16px 0 0; padding-top: 12px; border-top: 1px solid var(--c-line); font-size: var(--fs-13); line-height: 1.45; color: var(--c-text-2); }
+body #right.card-v12 .card-sum-hint .icon { flex: none; width: 18px; height: 18px; margin-top: 1px; color: var(--c-link); }
+body #right.card-v12 .card-sum-hint kbd { padding: 0 5px; border: 1px solid var(--c-line-mid); border-radius: 4px; font: 500 var(--fs-12) var(--mono); color: var(--c-text); }
+
+/* Значимость — цвет и форма значка (треугольник, ромб, круг) */
+body #right.card-v12 .sig { display: inline-flex; align-items: center; gap: 6px; height: 24px; min-height: 24px; padding: 0 8px; border-radius: var(--r-pill); font-size: var(--fs-12); font-weight: 600; white-space: nowrap; }
+body #right.card-v12 .sig:has(.icon)::before { display: none; }
+body #right.card-v12 .sig .icon { width: 14px; height: 14px; }
+body #right.card-v12 .sig--high { background: var(--c-sig-high-bg); color: var(--c-sig-high-text); } body #right.card-v12 .sig--high .icon { color: var(--c-sig-high); }
+body #right.card-v12 .sig--mid { background: var(--c-sig-mid-bg); color: var(--c-sig-mid-text); } body #right.card-v12 .sig--mid .icon { color: var(--c-sig-mid); }
+body #right.card-v12 .sig--low { background: var(--c-sig-low-bg); color: var(--c-sig-low-text); } body #right.card-v12 .sig--low .icon { color: var(--c-sig-low); }
+
+/* ---------- «Паспорт»: путь, название, оговорки ---------- */
+body #right.card-v12 .card-body { gap: 12px; }
+body #right.card-v12 .card-title { display: flex; flex-direction: column; gap: 2px; }
+body #right.card-v12 .card-path { font: 500 var(--fs-13)/1.4 var(--font); color: var(--c-text-2); overflow-wrap: anywhere; }
+body #right.card-v12 #cardTitle { margin: 0; font-size: var(--fs-20); line-height: 1.2; font-weight: 700; letter-spacing: -.01em; color: var(--c-text); overflow-wrap: anywhere; }
+body #right.card-v12 .card-facts { display: none; font-size: var(--fs-13); line-height: 1.4; color: var(--c-text-2); } /* M13 (решение координатора): на ПК строки фактов нет */
+body #right.card-v12 .card-facts-pc { display: none; } /* M13: на 390 — «материал · габарит» */
+body #right.card-v12 .card-path { display: none; } /* R1-07: на ПК та же строка фактов, что на 390 */
+body #right.card-v12 .card-node { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 6px; padding: 4px 10px; border-radius: var(--r); background: var(--c-brand-tint); font-size: var(--fs-13); font-weight: 500; color: var(--c-text); }
+body #right.card-v12 .card-node .icon { width: 16px; height: 16px; color: var(--c-link); flex: none; }
+body #right.card-v12 .card-node { flex-wrap: nowrap; align-items: center; }
+body #right.card-v12 .card-node .icon { margin-top: 1px; }
+body #right.card-v12 .card-node-t { flex: 1 1 auto; min-width: 0; }
+body #right.card-v12 .card-node[hidden] { display: none; }
+body #right.card-v12 .card-node-go { height: auto; min-height: 0; padding: 0; border: 0; background: none; color: var(--c-link); font: 600 var(--fs-13) var(--font); cursor: pointer; }
+body #right.card-v12 .card-node-warn { color: var(--c-sig-mid-text); }
+body #right.card-v12 .card-comp-line { margin: 0 0 2px; font-size: var(--fs-13); line-height: 20px; color: var(--c-text-2); }
+body #right.card-v12 .card-comp-line .card-comp-h { margin-right: 4px; font-weight: 500; color: var(--c-text-2); }
+body #right.card-v12 .card-comp-item { white-space: nowrap; }
+body #right.card-v12 .card-comp-more { margin-left: 3px; }
+body #right.card-v12 .card-comp .card-link { height: auto; min-height: 0; padding: 0; border: 0; background: none; color: var(--c-link); font: 600 var(--fs-13)/18px var(--font); cursor: pointer; text-align: left; }
+body #right.card-v12 .card-comp-list { margin: 2px 0 4px 12px; display: flex; flex-direction: column; gap: 2px; max-height: 180px; overflow: auto; }
+body #right.card-v12 .card-comp-list[hidden] { display: none; }
+body #right.card-v12 .card-comp-list .card-link { font-weight: 500; }
+body #right.card-v12 .card-status { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin-top: -4px; font-size: var(--fs-12); font-weight: 500; line-height: 1.4; color: var(--c-text-2); }
+body #right.card-v12 .card-status[hidden] { display: none; }
+body #right.card-v12 .card-badge { display: inline-flex; align-items: center; height: 24px; padding: 0 9px; border-radius: var(--r-pill); background: var(--c-surface-2); color: var(--c-text); font-size: var(--fs-12); font-weight: 600; }
+body #right.card-v12 .card-badge--state { background: var(--c-brand-tint); color: var(--c-link); }
+body #right.card-v12 .card-info { display: inline-grid; place-items: center; width: 24px; height: 24px; min-height: 24px; padding: 0; border: 0; border-radius: var(--r-pill); background: transparent; color: var(--c-text-2); cursor: pointer; }
+body #right.card-v12 .card-info:hover { background: var(--c-surface-2); color: var(--c-text); }
+body #right.card-v12 .card-info .icon { width: 16px; height: 16px; }
+body #right.card-v12 .card-status { flex-wrap: nowrap; }
+body #right.card-v12 .card-status-t { flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } /* одной строкой; полностью — ⓘ и подсказка */
+body #right.card-v12 .card-badge { flex: none; }
+body #right.card-v12 .card-badges.card-status { flex-wrap: wrap; }   /* 1.0.19a К-1: оговорка «Привязка условная — не для изготовления» целиком, без «…» */
+body #right.card-v12 .card-badges .card-status-t { flex: 1 1 calc(100% - 40px); white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; }
+body #right.card-v12 .card-badges .card-info { flex: none; }
+
+/* ---------- замечание наверху ---------- */
+body #right.card-v12 .card-remarks { display: flex; flex-direction: column; gap: 8px; padding: 0; border: 0; border-radius: 0; background: transparent; }
+body #right.card-v12 .card-remarks[hidden] { display: none; }
+body #right.card-v12 .card-remark { position: relative; display: flex; flex-direction: column; gap: 4px; padding: 10px 12px 10px 14px; border: 1px solid var(--c-line); border-radius: var(--r); background: var(--c-surface-2); }
+body #right.card-v12 .card-remark + .card-remark { border-top: 1px solid var(--c-line); padding-top: 10px; }
+body #right.card-v12 .card-remark::before { content: ""; position: absolute; left: -1px; top: -1px; bottom: -1px; width: 4px; border-radius: var(--r) 0 0 var(--r); background: var(--c-sig-low); }
+body #right.card-v12 .card-remark--high::before { background: var(--c-sig-high); }
+body #right.card-v12 .card-remark--mid::before { background: var(--c-sig-mid); }
+body #right.card-v12 .card-remark-line { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: var(--fs-12); font-weight: 600; color: var(--c-text-2); }
+body #right.card-v12 .card-remark-id { font-size: var(--fs-13); font-weight: 500; color: var(--c-link); }
+body #right.card-v12 .card-remark-line .card-muted { font-size: var(--fs-12); font-weight: 500; color: var(--c-text-2); }
+body #right.card-v12 .card-remark-what { margin: 0; font-size: var(--fs-13); line-height: 1.45; color: var(--c-text); }
+body #right.card-v12 .card-remark-links { display: flex; flex-wrap: wrap; gap: 4px 16px; }
+body #right.card-v12 .card-remark-links a { display: inline-flex; align-items: center; gap: 4px; min-height: 28px; font-size: var(--fs-13); font-weight: 600; color: var(--c-link); text-decoration: none; }
+body #right.card-v12 .card-remark-links a:hover { text-decoration: underline; }
+body #right.card-v12 .card-remark-links .icon { width: 16px; height: 16px; }
+body #right.card-v12 .card-remarks-all { align-self: flex-start; font-size: var(--fs-13); font-weight: 600; color: var(--c-link); text-decoration: none; }
+
+
+/* ---------- «Характеристики», «Где находится» — таблица-«штамп» ---------- */
+body #right.card-v12 .card-block { display: flex; flex-direction: column; gap: 4px; padding-top: 4px; border-top: 0; }
+body #right.card-v12 .card-block[hidden] { display: none; }
+body #right.card-v12 .card-block h3 { margin: 0 0 2px; font-size: var(--fs-13); font-weight: 700; color: var(--c-text); }
+/* V12.2 · M3 (макет D V12_2_КуР): окружение этажа Ку/Р */
+body #right.card-v12 .card-env { padding: 8px 10px; border-radius: var(--r); background: var(--c-surface-2); }
+body #right.card-v12 .card-env[hidden] { display: none; }
+body #right.card-v12 .card-env p { margin: 6px 0 0; font-size: var(--fs-12); line-height: 16px; font-weight: 500; color: var(--c-text-2); }
+body #right.card-v12 .card-envb { display: inline-flex; align-items: center; gap: 6px; height: 36px; min-height: 36px; padding: 0 12px; border: 1px solid var(--c-line-mid); border-radius: var(--r); background: var(--c-surface); color: var(--c-text); font: 500 var(--fs-13) var(--font); cursor: pointer; }
+body #right.card-v12 .card-envb { max-width: 100%; white-space: nowrap; } /* V122-R2-01: подпись в одну строку */
+body #right.card-v12 .card-envb > span { overflow: hidden; text-overflow: ellipsis; }
+body #right.card-v12 .card-envb[aria-pressed="true"] { background: var(--c-brand-tint); border-color: var(--c-link); color: var(--c-link); font-weight: 600; }
+body #right.card-v12 .card-envb[aria-busy="true"] { opacity: .6; cursor: progress; }
+body #right.card-v12 .card-env--none { display: flex; gap: 8px; align-items: flex-start; font-size: var(--fs-13); line-height: 18px; color: var(--c-text); }
+body #right.card-v12 .card-env--none .icon { flex: none; margin-top: 2px; color: var(--c-text-2); }
+body #right.card-v12 .card-envb-short { display: none; }
+.stage .card-envtag { position: absolute; left: 16px; top: 168px; z-index: 5; max-width: 360px; display: grid; grid-template-columns: 18px 1fr; gap: 2px 8px; padding: 10px 12px; border: 1px solid var(--c-line); border-radius: var(--r); background: var(--c-surface); box-shadow: var(--shadow-1, 0 1px 3px rgba(0,0,0,.12)); font-size: var(--fs-12); line-height: 16px; pointer-events: none; }
+.stage .card-envtag[hidden] { display: none; }
+.stage .card-envtag .icon { color: var(--c-link); } .stage .card-envtag b { font-size: var(--fs-13); } .stage .card-envtag span { grid-column: 2; color: var(--c-text-2); font-weight: 500; }
+body #right.card-v12 .card-main { padding-top: 0; } /* M13: первый блок сразу под статусом */
+/* M13 (макет D V12_2_основные_данные): сетка 3 колонки, подпись 12 px над значением 13 px; размеры, марки, отметки — моно */
+body #right.card-v12 .card-basic { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px 12px; margin: 0; } /* решение координатора (в): 4 px, без верхних 2 px */
+body #right.card-v12 .card-bc { display: flex; flex-direction: column; min-width: 0; grid-column: span 2; }
+body #right.card-v12 .card-bc--h { grid-column: span 3; }
+body #right.card-v12 .card-bc--w { grid-column: 1 / -1; }
+body #right.card-v12 .card-bc > span { font-size: var(--fs-12); line-height: 16px; font-weight: 500; color: var(--c-text-2); }
+body #right.card-v12 .card-bc > b { font-size: var(--fs-13); line-height: 18px; font-weight: 500; color: var(--c-text); hyphens: auto; -webkit-hyphens: auto; overflow-wrap: anywhere; }   /* 1.0.15 B3-7 (L7): перенос по слогам, anywhere — последняя страховка */
+body #right.card-v12 .card-bc > b .card-vline { display: block; }   /* 1.0.19a К-1: значение объёма — своей строкой */
+body #right.card-v12 .card-bc > b .nw { white-space: nowrap; hyphens: none; -webkit-hyphens: none; }
+body #right.card-v12 .card-bc > b small { display: block; font-size: var(--fs-12); line-height: 16px; font-weight: 500; color: var(--c-text-2); }
+body #right.card-v12 .card-bc > b .mono { font-family: var(--mono); font-size: 12.5px; font-weight: 600; }
+body #right.card-v12 .card-bc > b small.card-extra { display: flex; margin-top: 2px; color: var(--c-sig-mid-text); }
+body #right.card-v12 .card-stamp { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 0 10px; margin: 0; font-size: var(--fs-13); line-height: 18px; }
+body #right.card-v12 .card-stamp dt { padding: 3px 0; hyphens: manual; border: 0; font-weight: 500; color: var(--c-text-2); } /* шаг строки 24 px, без линий (V12.1 §4.2) */
+body #right.card-v12 .card-stamp dd { margin: 0; padding: 3px 0; border: 0; color: var(--c-text); overflow-wrap: anywhere; }
+body #right.card-v12 .card-stamp dt:last-of-type, body #right.card-v12 .card-stamp dd:last-of-type { border-bottom: 0; }
+body #right.card-v12 .card-grid .mono, body #right.card-v12 .card-grid dd.mono { font-family: var(--mono); font-size: var(--fs-13); word-break: normal; overflow-wrap: anywhere; }
+body #right.card-v12 .card-stamp a { color: var(--c-link); }
+body #right.card-v12 .card-xblock .card-clamp:not(.open) { display: block; max-height: 18px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; } /* 1 строка + «Подробнее» */
+body #right.card-v12 .card-xblock .card-clamp:not(.open) .card-line { overflow: hidden; text-overflow: ellipsis; }
+body #right.card-v12 .card-xblock .card-clamp:not(.open) .card-line + .card-line { margin-top: 0; }
+body #right.card-v12 .card-rebar .nw { white-space: nowrap; }
+body #right.card-v12 .card-xblock .card-clamp + .card-link { height: auto; min-height: 0; padding: 0; border: 0; background: none; color: var(--c-link); font: 600 var(--fs-12) var(--font); cursor: pointer; }
+body #right.card-v12 .card-extra { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; margin-top: 3px; font-size: var(--fs-12); font-weight: 500; color: var(--c-sig-mid-text); }
+body #right.card-v12 .card-extra a { font-weight: 600; color: var(--c-link); }
+body #right.card-v12 .card-extra .icon { width: 14px; height: 14px; color: var(--c-sig-mid); }
+body #right.card-v12 .card-extra .icon.card-extra--high { color: var(--c-sig-high); } body #right.card-v12 .card-extra .icon.card-extra--low { color: var(--c-sig-low); }
+body #right.card-v12 .card-note, body #right.card-v12 .card-muted { margin: 0; font-size: var(--fs-12); line-height: 1.45; color: var(--c-text-2); }
+body #right.card-v12 .card-note a { font-weight: 600; color: var(--c-link); }
+body #right.card-v12 .card-note--warn { color: var(--c-sig-mid-text); font-weight: 500; }
+body #right.card-v12 .card-link { color: var(--c-link); }
+body #right.card-v12 .card-remark-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+body #right.card-v12 .card-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 36px; min-height: 36px; padding: 0 12px;
+  border: 1px solid var(--c-line-mid); border-radius: var(--r); background: var(--c-surface); color: var(--c-text);
+  font: 500 var(--fs-13) var(--font); text-decoration: none; cursor: pointer;
+}
+body #right.card-v12 .card-btn:hover { background: var(--c-surface-2); }
+body #right.card-v12 .card-btn--outline { border-color: var(--c-link); color: var(--c-link); font-weight: 600; }
+body #right.card-v12 .card-btn[aria-pressed="true"] { background: var(--c-brand-tint); border-color: var(--c-link); color: var(--c-link); }
+body #right.card-v12 .card-details { border-top: 1px solid var(--c-line); }
+body #right.card-v12 .card-details:last-child { border-bottom: 1px solid var(--c-line); }
+body #right.card-v12 .card-details > summary { min-height: 35px; font-size: var(--fs-13); color: var(--c-text); } /* 35 + линия 1 = 36 px */
+body #right.card-v12 .card-details > :not(summary) { margin-bottom: 8px; }
+body #right.card-v12 .card-details + .card-details, body #right.card-v12 .card-details + .card-details[hidden] + .card-details { margin-top: -12px; } /* пять пунктов — вплотную, как в V11.5 */
+body #right.card-v12 .card-details > summary::before { color: var(--c-text-2); }
+body #right.card-v12 .card-grid dt { color: var(--c-text-2); }
+body #right.card-v12 #objectWarning, body #right.card-v12 .card-extra-notes p { color: var(--c-text); }
+/* Ссылки и сводки внутри сведений — цвет ссылок токеном (в тёмной теме главной --brand не светлеет) */
+body #right.card-v12 .props details > summary, body #right.card-v12 .r23-archive-links .links a, body #right.card-v12 .card-empty-link { color: var(--c-link); }
+body #right.card-v12 .album-source { color: var(--c-text); border-bottom-color: var(--c-line); }
+body #right.card-v12 .album-source small, body #right.card-v12 #pairs .sub, body #right.card-v12 .card-archive-note, body #right.card-v12 .props span { color: var(--c-text-2); }
+body #right.card-v12 .props b, body #right.card-v12 #selectedId { color: var(--c-text); }
+body #right.card-v12 .props pre { background: var(--c-bg); color: var(--c-text); }
+
+/* ---------- закреплено внизу: «Открыть чертёж · л. N» и 4 действия в ряд ---------- */
+body #right.card-v12 .card-dock { gap: 8px; margin: 0 -20px; padding: 12px 20px 16px; background: var(--c-surface); border-top: 1px solid var(--c-line); }
+body #right.card-v12 .card-row-a { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+body #right.card-v12 .card-row-a .card-rebar[hidden] { display: none; } body #right.card-v12 .card-row-a:has(.card-rebar[hidden]) { grid-template-columns: 1fr; }   /* 1.1.1 A3: без армирования — «Чертёж» на всю ширину */
+body #right.card-v12 .card-row-a .card-primary, body #right.card-v12 .card-rebar { text-wrap: balance; }
+body #right.card-v12 .card-row-a .card-primary { font-size: var(--fs-14); line-height: 1.2; white-space: nowrap; text-align: center; padding: 0 8px; gap: 6px; }
+body #right.card-v12 .card-rebar {
+  display: flex; align-items: center; justify-content: center; gap: 6px; min-width: 0; height: 44px; min-height: 44px; padding: 0 8px;
+  border: 1px solid var(--c-line-mid); border-radius: var(--r); background: var(--c-surface); color: var(--c-text);
+  font: 600 var(--fs-13)/1.2 var(--font); text-align: center; cursor: pointer;
+}
+body #right.card-v12 .card-rebar .icon { flex: none; width: 18px; height: 18px; }
+body #right.card-v12 .card-rebar:hover { background: var(--c-surface-2); }
+body #right.card-v12 .card-rebar[aria-pressed="true"] { background: var(--c-brand-tint); border-color: var(--c-link); color: var(--c-link); }
+body #right.card-v12 .card-rebar[aria-busy="true"] { cursor: progress; }
+body #right.card-v12 .card-rebar[aria-disabled="true"]:not([aria-busy="true"]) { border: 1px dashed var(--c-line-strong); color: var(--c-text-2); font-weight: 500; cursor: default; }
+body #right.card-v12 .card-rebar:has(.card-rebar-sub) { flex-direction: column; gap: 0; line-height: 1.15; }   /* 1.0.19a К-1: «Армирование» и под ним «армирование не задано» */
+body #right.card-v12 .card-rebar-sub { display: block; font: 500 var(--fs-12)/1.2 var(--font); color: var(--c-text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+body #right.card-v12 .card-rebar-why { margin: 0; font-size: var(--fs-12); font-weight: 500; line-height: 1.4; color: var(--c-text-2); }
+body #right.card-v12 .card-rebar-why[hidden] { display: none; }
+body #right.card-v12 .card-primary {
+  display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; height: 44px; min-height: 44px; margin: 0; padding: 0 12px;
+  border: 0; border-radius: var(--r); background: var(--c-brand-fill); color: var(--c-on-brand); font: 600 var(--fs-16) var(--font); cursor: pointer;
+}
+body #right.card-v12 .card-primary:hover { background: var(--c-brand-fill-hover); }
+body #right.card-v12 .card-primary .icon { width: 18px; height: 18px; }
+body #right.card-v12 .card-primary:disabled { background: var(--c-surface); color: var(--c-text-2); border: 1px dashed var(--c-line-strong); font-size: var(--fs-14); font-weight: 500; cursor: default; }
+body #right.card-v12 .card-drawitem { border: 1px solid var(--c-line-mid); border-radius: var(--r); background: var(--c-surface); color: var(--c-text); }
+body #right.card-v12 .card-drawitem small { color: var(--c-text-2); }
+body #right.card-v12 .card-actions-src { display: none !important; } /* узлы B2 (#isolate, #hide, #objectTransparency, #fitElement) — в DOM, видимы посредники */
+body #right.card-v12 .card-acts-wrap { position: relative; }
+body #right.card-v12 .card-acts { display: grid; grid-template-columns: minmax(0, 1.14fr) minmax(0, 1fr) minmax(0, 1fr) 44px; gap: 4px; } /* «Прозрачность» — самое длинное слово */
+body #right.card-v12 #cardDrawing { display: flex; } /* prototype.css прячет его в свёрнутой шторке — в V12.1 он в ряду А */
+body #right.card-v12 .card-act {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-width: 0; height: 44px; min-height: 44px; padding: 0 2px;
+  border: 1px solid var(--c-line-mid); border-radius: var(--r); background: var(--c-surface); color: var(--c-text);
+  font: 500 var(--fs-12)/1.2 var(--font); white-space: nowrap; cursor: pointer;
+}
+body #right.card-v12 .card-acts .card-act { padding: 0 2px; letter-spacing: -.01em; }
+body #right.card-v12 .card-act .icon { width: 18px; height: 18px; }
+body #right.card-v12 .card-act-t { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+body #right.card-v12 .card-act:hover { background: var(--c-surface-2); }
+body #right.card-v12 .card-act[aria-pressed="true"], body #right.card-v12 .card-act[aria-expanded="true"] { background: var(--c-brand-tint); border-color: var(--c-link); color: var(--c-link); font-weight: 600; }
+body #right.card-v12 .card-act:disabled { color: var(--c-text-2); border-style: dashed; cursor: default; }
+body #right.card-v12 .card-more-menu {
+  position: absolute; left: 0; right: 0; bottom: calc(100% + 6px); z-index: 5; display: flex; flex-direction: column; padding: 4px;
+  background: var(--c-surface); border: 1px solid var(--c-line); border-radius: var(--r-l); box-shadow: var(--shadow-3);
+}
+body #right.card-v12 .card-more-menu[hidden] { display: none; }
+body #right.card-v12 .card-more-menu button {
+  display: flex; align-items: center; gap: 10px; width: 100%; height: 40px; min-height: 40px; padding: 0 10px; border: 0; border-radius: var(--r-s);
+  background: transparent; color: var(--c-text); font: 500 var(--fs-13) var(--font); text-align: left; cursor: pointer;
+}
+body #right.card-v12 .card-more-menu button .icon { width: 18px; height: 18px; color: var(--c-text-2); }
+body #right.card-v12 .card-more-menu button:hover { background: var(--c-surface-2); }
+body #right.card-v12 .card-more-menu button:focus-visible { background: var(--c-surface-2); outline: 2px solid var(--c-accent); outline-offset: -2px; }   /* 1.0.19a М-4: фокус виден (было outline: none) */
+body #right.card-v12 .card-mobile-actions { display: none !important; } /* V12.1: полоса одна — .card-dock */
+
+/* Узкая колонка (320 / 300 px на 851–1200): четыре действия — две строки по два, значок и слово в строку */
+@media (max-width: 1200px) and (min-width: 851px) {
+  body #right.card-v12 .card-act { font-size: var(--fs-12); }
+  body #right.card-v12 .card-tile b { font-size: var(--fs-22); }
+}
+
+/* ---------- телефон: шторка 30 % / 85 % (геометрия — prototype.css) ---------- */
+@media (max-width: 850px) {
+  body #right.card-v12 { padding: 8px 16px 12px; gap: 8px; }
+  body #right.card-v12 .card-head { display: none; }
+  body #right.card-v12.expanded .card-head { display: flex; }
+  body #right.card-v12 .card-icon, body #right.card-v12 .card-head .closepane { width: 44px; height: 44px; min-height: 44px; }
+  body #right.card-v12 .card-path { display: none; }
+  body #right.card-v12 .card-facts { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  body #right.card-v12.expanded .card-facts { display: none; }
+  body #right.card-v12 .card-envb { width: 100%; height: 44px; min-height: 44px; justify-content: center; }
+  .stage .card-envtag { display: none; } /* развёрнутая — материал и габарит в «Основных данных» */
+  body #right.card-v12 #cardTitle { font-size: var(--fs-20); line-height: 24px; }
+  /* V12.1 §5.2: свёрнутая шторка — название, строка фактов, ряд А, ряд Б; остальное — в развёрнутой */
+  body #right.card-v12:not(.expanded) :is(.card-section, .card-remarks, .card-drawlist, #detailDrawing) { display: none; }
+  /* M3: в свёрнутой шторке — кнопка окружения на всю ширину (id — чтобы перебить :is(… #detailDrawing)) */
+  /* решение координатора: свёрнутая шторка ≤ 230 px — только кнопка «Окружение» 44 px справа в строке заголовка, без поясняющей строки; «показа нет» — в развёрнутой */
+  body #right.card-v12.has-env:not(.expanded) .card-body { position: relative; }
+  body #right.card-v12.has-env:not(.expanded) #cardTitle { padding-right: 132px; min-height: 44px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  body #right.card-v12.has-env:not(.expanded) .card-facts { -webkit-line-clamp: 1; }
+  body #right.card-v12.has-env:not(.expanded) #cardEnv:not([hidden]) { display: block; position: absolute; top: 0; right: 0; padding: 0; background: none; }
+  body #right.card-v12.has-env:not(.expanded) #cardEnv p { display: none; }
+  body #right.card-v12.has-env:not(.expanded) .card-envb { width: auto; padding: 0 10px; }
+  body #right.card-v12.has-env:not(.expanded) .card-envb-full { display: none; }
+  body #right.card-v12.has-env:not(.expanded) .card-envb-short { display: inline; }
+  body #right.card-v12 .card-remark-links a { min-height: 44px; }
+  /* R3-03: ⓘ — цель 44 × 44, значок прежний; поле — прозрачное, строку не раздвигает */
+  body #right.card-v12 .card-info { width: 44px; height: 44px; min-height: 44px; margin: -10px -8px -10px -10px; }
+  body #right.card-v12 .card-remarks-all { display: inline-flex; align-items: center; min-height: 44px; }
+  body #right.card-v12 .card-node-go, body #right.card-v12 .card-comp .card-link { min-height: 44px; }
+  /* полоса — у нижнего края шторки в обоих состояниях; каждое действие видно один раз */
+  body #right.card-v12 .card-dock { position: sticky; bottom: -12px; z-index: 3; margin: 0 -16px -12px; padding: 4px 16px 12px; gap: 4px; border-top: 0; }
+  body #right.card-v12.expanded .card-dock { border-top: 1px solid var(--c-line); }
+  body #right.card-v12 .card-btn, body #right.card-v12 .card-primary { min-height: 44px; height: 44px; }
+  body #right.card-v12 .card-act { height: 44px; min-height: 44px; }
+  body #right.card-v12 .card-acts { grid-template-columns: repeat(3, minmax(0, 1fr)) 48px; }
+  body #right.card-v12 .card-acts .card-act[aria-haspopup] .card-act-t { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); } /* «⋯» — только значок, aria-label «Ещё действия» */
+  body #right.card-v12 .card-details > summary { min-height: 44px; }
+  body #right.card-v12 .card-more-menu button { height: auto; min-height: 44px; } /* V12.0b п. 6 */
+  /* «Сводка» в шторке — плитки в ряд, без подсказки и легенды (макет D, главная 390).
+     1.1.1 C3: стартовая шторка ниже — в свёрнутой только название и плитки (подзаголовок, шифр и полоса значимости — в развёрнутой);
+     плитка не уже самого длинного слова подписи, не помещаются — перенос плитки на новую строку, а не слова */
+  body #right.card-v12 .card-sum-h { font-size: var(--fs-16); }
+  body #right.card-v12 .card-sum-sub { margin-bottom: 8px; }
+  body #right.card-v12 .card-tiles--sum { display: flex; flex-wrap: wrap; gap: 4px; }
+  body #right.card-v12 .card-tiles--sum .card-tile { flex: 1 1 0; min-width: min-content; padding: 6px; }
+  body #right.card-v12 .card-tile { min-height: 0; padding: 6px 8px; }
+  body #right.card-v12 .card-tile b { font-size: var(--fs-16); }
+  body #right.card-v12 .card-tile span { font-size: var(--fs-12); line-height: 1.25; }
+  body #right.card-v12 .card-sigbar { margin: 10px 0 6px; }
+  body #right.card-v12 :is(.card-sum-legend, .card-sum-hint) { display: none; }
+  body #right.card-v12:not(.expanded) .card-sum :is(.card-sum-sub, .card-sigbar) { display: none; }
+  body #right.card-v12:not(.expanded) .card-sum-h { margin-bottom: 6px; }
+}
+
+/* R1-04: «Состав узла» строками ролей */
+body #right.card-v12 .card-comp-h { margin: 0; font-size: var(--fs-13); font-weight: 700; color: var(--c-text); }
+body #right.card-v12 .card-comp-rows { display: grid; grid-template-columns: 1fr 1fr; column-gap: 20px; } /* роли — по две в ряд */
+body #right.card-v12 .card-comp-rows .card-comp-list { grid-column: 1 / -1; }
+body #right.card-v12 .card-comp-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; min-height: 24px; height: auto; padding: 0; border: 0; border-radius: var(--r-s); background: none; color: var(--c-text); font: 500 var(--fs-13)/24px var(--font); text-align: left; cursor: pointer; }
+body #right.card-v12 .card-comp-row:hover { background: var(--c-surface-2); }
+body #right.card-v12 .card-comp-role { color: var(--c-link); font-weight: 700; }
+body #right.card-v12 .card-comp-row[aria-expanded="true"] .card-comp-n { color: var(--c-link); }
+body #right.card-v12 .card-comp-n { font-size: var(--fs-13); color: var(--c-text); font-variant-numeric: tabular-nums; }
+body #right.card-v12 .card-comp-rows .card-comp-list { margin: 0 0 4px 12px; }
+@media (max-width: 850px) {
+  body #right.card-v12 .card-comp-row { min-height: 44px; }
+  body #right.card-v12 .card-comp-list .card-link { min-height: 44px; }
+  /* R2-02: ⓘ и «Подробнее» — цели 44 px */
+  body #right.card-v12 .card-status .card-info { flex: none; width: 44px; min-width: 44px; height: 44px; margin: -10px -10px -10px 0; }
+  body #right.card-v12 .props details > summary { min-height: 44px; }
+  body #right.card-v12 :is(.card-extra, .card-note) a { padding: 15px 0; margin: -15px 0; } /* встроенная ссылка: поле нажатия 44 px, строка не раздвигается */
+  body #right.card-v12 .card-xblock .card-clamp + .card-link, body #right.card-v12 .card-where .card-link, body #right.card-v12 .card-block .card-link { display: inline-flex; align-items: center; min-height: 44px; min-width: 44px; }
+}
+
+/* V12.1b п. 10: скрытые пункты «Ещё» места не занимают */
+body #right.card-v12 .card-more-menu button[hidden] { display: none; }
+/* V12.1b п. 12: ряд А — колонки не раздвигаются длинной плашкой («Лист в атласе отсутствует») */
+body #right.card-v12 .card-row-a { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+body #right.card-v12 .card-row-a > button { min-width: 0; overflow: hidden; }
+body #right.card-v12 .card-row-a > button > span { min-width: 0; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; white-space: normal; line-height: 1.2; text-wrap: balance; } /* до 2 строк в 44 px, без вылезания */
+body #right.card-v12 .card-row-a .nw { white-space: normal; }
+/* V12.1b п. 11: на 851–1200 ряд Б — два по два, значок и подпись в строку, без обрезки */
+@media (max-width: 1200px) and (min-width: 851px) {
+  body #right.card-v12 .card-row-a > button > .icon { display: none; } /* узкая колонка: подписи ряда А без значков */
+  body #right.card-v12 .card-acts { grid-template-columns: 1fr 1fr; }
+  body #right.card-v12 .card-act { flex-direction: row; gap: 6px; height: 40px; min-height: 40px; }
+  body #right.card-v12 .card-acts .card-act[aria-haspopup] .card-act-t { position: static; width: auto; height: auto; clip: auto; }
+}
+
+/* V12.1d п. 5: список «Чертежи · N» — только по нажатию (prototype.css задаёт display: flex и перекрывает hidden) */
+body #right.card-v12 .card-drawlist[hidden] { display: none; }
+
+/* V12.3: паспорт нового тела грузится дольше 120 мс — тело карточки приглушено (прежние числа не выдаются за новые) */
+body #right.card-v12.is-loading .card-body { opacity: .4; transition: opacity var(--dur-1, .12s); pointer-events: none; }   /* 1.0.19a М-13: --dur-1 (0 при reduced-motion) */
+
+/* V12.5 Q7 (решение D): 390 — после «×» без изоляции: строка 44 px над вкладками, отступы 8, верх скруглён 16; название + «⌃» и «×» 44×44 */
+body #right.card-v12 .card-mini-bar[hidden] { display: none; }
+@media (max-width: 850px) {
+  body #right.card-v12.card-mini { padding: 8px; border-radius: 16px 16px 0 0; min-height: 0; }
+  body #right.card-v12.card-mini > :not(.card-mini-bar) { display: none !important; }
+  body #right.card-v12 .card-mini-bar { display: flex; align-items: center; gap: 4px; min-height: 44px; touch-action: none; } /* V12.5b: свайп вверх — без прокрутки страницы */
+  body #right.card-v12 .card-mini-name { flex: 1 1 auto; min-width: 0; min-height: 44px; padding: 0 4px; border: 0; background: none; text-align: left; font: 700 15px/20px var(--font); color: var(--c-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+  body #right.card-v12 .card-mini-up, body #right.card-v12 .card-mini-x { flex: none; width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: var(--r); background: none; color: var(--c-text-2); cursor: pointer; }
+}
+/* V12.5 Q5 (решение D): плашка «… закрыт окружением» — слева сверху над моделью, как «← К замечанию»; на 390 — ниже чипа «Замечания» */
+.stage .card-occl { position: absolute; left: 16px; top: 106px; z-index: 16; display: flex; align-items: center; gap: 8px; min-height: 52px; box-sizing: border-box; max-width: min(360px, calc(100% - 32px)); /* V12.5b: под строкой вида, ≤ 360 (D); точное место — в JS */ padding: 8px 12px; /* V12.6b (D): 8/12 */ border: 1px solid var(--c-line); border-radius: var(--r); background: var(--c-surface); box-shadow: var(--shadow-1, 0 1px 3px rgba(0,0,0,.12)); font-size: var(--fs-13); }
+.stage .card-occl[hidden] { display: none; }
+.stage .card-occl-t { display: flex; flex-direction: column; flex: 1 1 auto; min-width: 0; white-space: nowrap; } /* V12.6 R7 (D): две строки */
+.stage .card-occl-k { flex: none; font-size: 13px; line-height: 16px; /* V12.6b (D) */ font-weight: 600; color: var(--c-text); }
+.stage .card-occl-n { min-width: 0; overflow: hidden; text-overflow: ellipsis; font-size: 13px; line-height: 16px; font-weight: 500; color: var(--c-text-2); }
+.stage .card-occl-go { flex: none; min-height: 36px; padding: 0 10px; border: 1px solid var(--c-link); border-radius: var(--r); background: var(--c-brand-tint); color: var(--c-link); font: 600 var(--fs-13) var(--font); cursor: pointer; }
+.stage .card-occl-x { flex: none; width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center; border: 0; background: none; color: var(--c-text-2); cursor: pointer; }
+@media (max-width: 850px) { .stage .card-occl { left: 8px; top: 108px; width: auto; max-width: min(360px, calc(100% - 16px)); min-height: 60px; } /* V12.6b: 431–850 — не шире 360, как в 5b */ .stage .card-occl-go, .stage .card-occl-x { min-height: 44px; min-width: 44px; } }
+@media (max-width: 430px) { .stage .card-occl { right: 8px; max-width: none; } } /* V12.6 R7 (D): телефон — 100 % − 16, высота 60 */
+
+/* 1.0.12 · пояснения к наложению (atlas_overlay_data) в «Ограничениях и примечаниях»: ключ — моно, значение как есть, длинное — с переносом */
+.card-od { margin: 8px 0 0; padding: 6px 0 0; border-top: 1px solid var(--c-line); }
+.card-od-row { margin: 0 0 6px; font-size: var(--fs-12, 12px); line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--c-text-2, inherit); }
+.card-od-k { font-family: var(--font-mono, ui-monospace, monospace); font-size: inherit; color: var(--c-text, inherit); }
+
+/* ---- Ядро 1.0.13 (D): сворачивание правой панели. Разметку и состояние ставит JS (B3):
+   кнопка button.card-icon.card-fold в .card-head (aria-expanded, aria-controls="right"), вкладка button.rp-tab внутри #right:
+   <svg class="icon"/> <span class="rp-tab-t">Панель</span> <span class="rp-tab-n">имя выбранного тела | «Сводка»</span>; состояние — #right.rp-collapsed ---- */
+body #right.card-v12 .rp-tab { display: none; }
+body #right.card-v12 .card-fold { display: none; }
+@media (min-width: 851px) {
+  body #right.card-v12 .card-fold { display: flex; }
+  body #right.card-v12 .card-fold .icon { width: 20px; height: 20px; }
+  body #right.card-v12.rp-collapsed { padding: 0; gap: 0; overflow: hidden; border-left: 1px solid var(--c-line); background: var(--c-surface); }
+  body #right.card-v12.rp-collapsed > :not(.rp-tab) { display: none; }
+  body #right.card-v12.rp-collapsed .rp-tab { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%; height: 100%; min-height: 0; padding: 12px 0; border: 0; border-radius: 0; background: var(--c-surface); color: var(--c-text); font: inherit; cursor: pointer; }
+  body #right.card-v12.rp-collapsed .rp-tab:hover { background: var(--c-surface-2); }
+  body #right.card-v12.rp-collapsed .rp-tab:focus-visible { outline: 2px solid var(--c-accent); outline-offset: -2px; }
+  body #right.card-v12.rp-collapsed .rp-tab .icon { width: 20px; height: 20px; flex: none; color: var(--c-text-2); }
+  body #right.card-v12 .rp-tab-t { flex: none; writing-mode: vertical-rl; font: 600 var(--fs-12)/1.2 var(--font); letter-spacing: .02em; color: var(--c-text-2); white-space: nowrap; }
+  body #right.card-v12 .rp-tab-n { flex: 0 1 auto; min-height: 0; max-height: calc(100% - 96px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; writing-mode: vertical-rl; font: 600 var(--fs-13)/1.2 var(--font); color: var(--c-text); }
+  body #right.card-v12 .rp-tab-n:empty { display: none; }
+}
+@media (max-width: 850px) {
+  body #right.card-v12 .card-fold, body #right.card-v12 .rp-tab { display: none !important; }   /* на 390 и до 850 — шторка, кнопки нет */
+}
+
+/* ---- 1.0.19a ---- */
+/* К-4: неактивные ссылки архива (нет файла в выпуске) не показываются — atlas-card.js (archSync) */
+body #right.card-v12 .card-details a[hidden] { display: none !important; }
+/* К-3: live-область объявления выбора — только для экранного диктора */
+.card-sr { position: absolute !important; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0; }
+/* К-3: «К карточке» — сразу после холста, видна только при фокусе с клавиатуры */
+.stage .card-skip:not(:focus) { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0; }
+.stage .card-skip:focus { position: absolute; right: 16px; top: 16px; z-index: 60; min-height: 44px; padding: 0 16px; border: 0; border-radius: var(--r-pill, 999px); background: var(--c-brand-fill); color: var(--c-on-brand); font: 600 var(--fs-14, 14px) var(--font, system-ui); box-shadow: var(--shadow-2); outline: 2px solid var(--c-accent); outline-offset: 2px; cursor: pointer; }
+/* 1.1.1 A3: «Нет в источнике: тип, основа…» — одна строка, раскрытие — все поля и причина */
+body #right .card-nosrc { margin: 6px 0 0; font-size: var(--fs-13); }
+body #right .card-nosrc > summary { display: flex; gap: 6px; align-items: baseline; min-height: 32px; padding: 4px 0; cursor: pointer; color: var(--c-text-2); list-style-position: outside; }
+body #right .card-nosrc > summary::-webkit-details-marker { color: var(--c-text-2); }
+body #right .card-nosrc-h { flex: none; font-weight: 600; }
+body #right .card-nosrc-list { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+body #right .card-nosrc > summary::after { content: '▾'; flex: none; margin-left: auto; padding-left: 6px; } body #right .card-nosrc[open] > summary::after { content: '▴'; }
+body #right .card-nosrc[open] .card-nosrc-list { white-space: normal; }
+body #right .card-nosrc .card-note { margin: 4px 0 8px; }
+
+
+/* 1.3.0 · единый план, п. 6: ID под названием, «Откуда данные», строка «Не для изготовления» внизу */
+body #right.card-v12 .card-id { margin: 2px 0 0; font: 500 var(--fs-12, 12px)/1.3 var(--font-mono, ui-monospace, monospace); color: var(--c-text-2); overflow-wrap: anywhere; }
+body #right.card-v12 .card-id[hidden], body #right.card-v12 .card-src[hidden], body #right.card-v12 .card-foot-note[hidden] { display: none; }
+body #right.card-v12 .card-src .card-nosrc { margin-top: 6px; }
+body #right.card-v12 .card-foot-note { margin: 16px 0 8px; font-size: var(--fs-12, 12px); color: var(--c-text-2); }

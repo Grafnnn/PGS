@@ -6,15 +6,95 @@ vi.mock("@/lib/project-route-guards", () => ({ requireProjectAccess: mocks.acces
 vi.mock("@/lib/prisma", () => ({ prisma: { project: { findUnique: mocks.find } } }));
 import { GET } from "./route";
 import { GET as privateGET } from "@/app/api/projects/[projectId]/model-viewer/route";
+import * as projectModels from "@/lib/project-3d-model";
 
-const goluboeIndex = "/model-assets/goluboe-vodovod-r1-17-2/index.html";
+const nextGoluboe = "/model-assets/goluboe-vodovod-r1-18/";
+const nextTroitsk = "/model-assets/troitsk-r25v12-22/";
+const goluboeIndex = nextGoluboe + "index.html";
+
+async function workspaceRedirect(slug: string, params: string, fixturePrefix?: string, enabled = true) {
+  const model = projectModels.getPublicProject3dModel(slug);
+  const spy = model && fixturePrefix
+    ? vi.spyOn(projectModels, "getPublicProject3dModel").mockReturnValue({
+      ...model, assetBaseUrl: fixturePrefix, supportsWorkspaceMenuQuery: enabled
+    })
+    : undefined;
+  try {
+    return await GET(new Request(`https://pgs.local/models/${slug}?${params}`), { params: { slug } });
+  } finally {
+    spy?.mockRestore();
+  }
+}
+
+describe("Atlas workspace menu deep links", () => {
+  it.each([
+    ["goluboe-vodovod", "/model-assets/goluboe-vodovod-r1-17-2/"],
+    ["goluboe-vodovod-field-pilot", "/model-assets/goluboe-vodovod-r1-17-2/"],
+    ["troitsk-building-24", "/model-assets/troitsk-r25v12-21/"]
+  ])("drops new parameters on the pre-workspace release of %s", async (slug, prefix) => {
+    const response = await workspaceRedirect(slug, "aws=registry&awsTab=elements", prefix, false);
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toBe(prefix + "index.html");
+  });
+
+  it.each([
+    ["goluboe-vodovod", nextGoluboe],
+    ["goluboe-vodovod-field-pilot", nextGoluboe],
+    ["troitsk-building-24", nextTroitsk]
+  ])("forwards only approved menu panels and tabs on an opted-in %s", async (slug, prefix) => {
+    for (const workspace of ["plans", "drawings", "registry"]) {
+      const response = await workspaceRedirect(slug, `aws=${workspace}&next=https://elsewhere.test`);
+      expect(response.status).toBe(307);
+      expect(response.headers.get("location")).toBe(`${prefix}index.html?aws=${workspace}`);
+    }
+    for (const tab of ["elements", "specification", "remarks"]) {
+      const response = await workspaceRedirect(slug, `aws=registry&awsTab=${tab}`);
+      expect(response.headers.get("location")).toBe(`${prefix}index.html?aws=registry&awsTab=${tab}`);
+    }
+  });
+
+  it.each([
+    ["awsTab=elements", ""],
+    ["aws=unknown&awsTab=remarks", ""],
+    ["aws=https%3A%2F%2Felsewhere.test&awsTab=remarks", ""],
+    ["aws=Registry&awsTab=remarks", ""],
+    ["aws=plans&awsTab=remarks", "?aws=plans"],
+    ["aws=drawings&awsTab=elements", "?aws=drawings"],
+    ["aws=registry&awsTab=unknown", "?aws=registry"],
+    ["aws=registry&awsTab=..%2Fspecification", "?aws=registry"]
+  ])("rejects unsupported or misplaced menu values: %s", async (query, search) => {
+    const response = await workspaceRedirect("troitsk-building-24", query);
+    expect(response.headers.get("location")).toBe(`${nextTroitsk}index.html${search}`);
+  });
+
+  it("retains the field pilot query and leaves the fragment for the browser", async () => {
+    const response = await workspaceRedirect("goluboe-vodovod-field-pilot",
+      "field=1&pk=21.5&pdPlan=1&pdLocate=kv1&pdCard=1&aws=registry&awsTab=specification#node/building");
+    expect(response.headers.get("location")).toBe(
+      `${nextGoluboe}index.html?pdPlan=1&pdLocate=kv1&pdCard=1&field=1&pk=21.5&aws=registry&awsTab=specification`
+    );
+    expect(response.headers.get("cache-control")).toBe("no-store");
+  });
+
+  it("retains the public Troitsk embed when opening a workspace panel", async () => {
+    const response = await workspaceRedirect("troitsk-building-24",
+      "embed=monolith-v1&aws=drawings#node/building");
+    expect(response.headers.get("location")).toBe(`${nextTroitsk}index.html?embed=monolith-v1&aws=drawings`);
+  });
+
+  it("does not forward any workspace parameters through another public alias", async () => {
+    const prefix = "/model-assets/dou200-r1-27/";
+    const response = await workspaceRedirect("dou200", "aws=registry&awsTab=elements", prefix);
+    expect(response.headers.get("location")).toBe(prefix + "index.html");
+  });
+});
 
 describe("Atlas V11 publication", () => {
   beforeEach(() => vi.clearAllMocks());
   it("preserves the public alias without sessions or project lookups", async () => {
     const response = await GET(new Request("https://pgs.local/models/troitsk-building-24"), { params: { slug: "troitsk-building-24" } });
     expect(response.status).toBe(307);
-    expect(response.headers.get("location")).toBe("/model-assets/troitsk-r25v12-21/index.html");
+    expect(response.headers.get("location")).toBe(nextTroitsk + "index.html");
     expect(response.headers.get("cache-control")).toBe("no-store");
     expect(response.headers.has("set-cookie")).toBe(false);
     expect(mocks.access).not.toHaveBeenCalled();
@@ -24,7 +104,7 @@ describe("Atlas V11 publication", () => {
   it("retains public Troitsk embed without changing the protected release", async () => {
     const response = await GET(new Request("https://pgs.local/models/troitsk-building-24?embed=monolith-v1#node/building"), { params: { slug: "troitsk-building-24" } });
     expect(response.status).toBe(307);
-    expect(response.headers.get("location")).toBe("/model-assets/troitsk-r25v12-21/index.html?embed=monolith-v1");
+    expect(response.headers.get("location")).toBe(nextTroitsk + "index.html?embed=monolith-v1");
     expect(mocks.access).not.toHaveBeenCalled();
     expect(mocks.find).not.toHaveBeenCalled();
   });
@@ -146,7 +226,7 @@ describe("Atlas V11 publication", () => {
   });
   it.each([401, 403])("keeps private project viewer protected: %s", async (status) => {
     mocks.access.mockResolvedValue({ response: new Response("Denied", { status }) });
-    const response = await privateGET(new Request("https://pgs.local/api/model?embed=monolith-v1"), { params: { projectId: "cmteg9g33000for4oc06rko5a" } });
+    const response = await privateGET(new Request("https://pgs.local/api/model?embed=monolith-v1&aws=registry&awsTab=elements"), { params: { projectId: "cmteg9g33000for4oc06rko5a" } });
     expect(response.status).toBe(status);
     expect(response.headers.has("location")).toBe(false);
     expect(mocks.find).not.toHaveBeenCalled();
@@ -154,7 +234,7 @@ describe("Atlas V11 publication", () => {
   it("opens the same release after project authorization and preserves embed mode", async () => {
     mocks.access.mockResolvedValue({ user: { id: "user-1" } });
     mocks.find.mockResolvedValue({ id: "cmteg9g33000for4oc06rko5a" });
-    const response = await privateGET(new Request("https://pgs.local/api/model?embed=monolith-v1"), { params: { projectId: "cmteg9g33000for4oc06rko5a" } });
+    const response = await privateGET(new Request("https://pgs.local/api/model?embed=monolith-v1&aws=registry&awsTab=elements"), { params: { projectId: "cmteg9g33000for4oc06rko5a" } });
     expect(response.status).toBe(307);
     expect(response.headers.get("location")).toBe("/model-assets/troitsk-r25v12-18/index.html?embed=monolith-v1");
     expect(mocks.access).toHaveBeenCalledWith("cmteg9g33000for4oc06rko5a", "view");
