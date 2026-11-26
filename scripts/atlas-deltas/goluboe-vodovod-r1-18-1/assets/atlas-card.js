@@ -385,8 +385,8 @@
       const doc = list.filter(x => x.status === 'doc' || x.status === 'conflict'), mdl = list.filter(x => x.status === 'model');
       const srcs = [...new Set(doc.map(x => srcShort(x.doc && x.doc.src)).filter(Boolean))];
       const parts = [];
-      if (doc.length) parts.push((doc.length === list.length ? '' : doc.map(x => ({ length: 'длина', width: 'ширина', height: 'высота', diameter: 'диаметр', bottom: 'низ', top: 'верх', axis: 'ось', invert: 'лоток' })[x.key]).join(', ') + ' — ') + 'по документу' + (srcs.length ? ' (' + srcs.join(', ') + ')' : ''));
-      if (mdl.length) parts.push((mdl.length === list.length ? '' : mdl.map(x => ({ length: 'длина', width: 'ширина', height: 'высота', diameter: 'диаметр', bottom: 'низ', top: 'верх' })[x.key] || x.key).join(', ') + ' — ') + 'сняты с модели');
+      if (doc.length) parts.push((doc.length === list.length ? '' : doc.map(x => ({ length: 'длина', width: 'ширина', height: 'высота', diameter: 'диаметр', route_length: 'длина по оси', bottom: 'низ', top: 'верх', axis: 'ось', invert: 'лоток' })[x.key]).join(', ') + ' — ') + 'по документу' + (srcs.length ? ' (' + srcs.join(', ') + ')' : ''));
+      if (mdl.length) parts.push((mdl.length === list.length ? '' : mdl.map(x => ({ length: 'длина', width: 'ширина', height: 'высота', diameter: 'диаметр', route_length: 'длина по оси', bottom: 'низ', top: 'верх' })[x.key] || x.key).join(', ') + ' — ') + 'сняты с модели');
       if (list.some(x => x.status === 'conflict')) parts.push('документ и модель расходятся — показаны оба числа');
       return { label: what, value: parts.join('; ') };
     };

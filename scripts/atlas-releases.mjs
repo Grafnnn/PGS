@@ -1,7 +1,7 @@
 const releases = {
   "goluboe-vodovod-r1-18-1": {
     release: "GOLUBOE_VODOVOD_R1_18_1", assetDirectory: "goluboe-vodovod-r1-18-1", files: 413,
-    base: "goluboe-vodovod-r1-3", manifestSha256: "d5903583923358a1b01741caed91943d09e5c47a08da6879ba92fd28348ead2e",
+    base: "goluboe-vodovod-r1-3", manifestSha256: "9dd0eec7ddcc84a707dbefcd20b8b430778bb1021344d3e9906b22afc00c7bfc",
     overlay: [
       "ABOUT.html", "CURRENT_RELEASE.json", "DEMO.html",
       "DOCUMENTS.html", "MANIFEST.json", "OVERVIEW.html",
@@ -249,7 +249,7 @@ const releases = {
   },
   "v12-22-1": {
     release: "V12_22_1", assetDirectory: "troitsk-r25v12-22-1", files: 4689,
-    base: "v12-18", manifestSha256: "59882b88d52de965fff63808d4fb4e82b7081bb9fca33eccc11bce6fe804a582",
+    base: "v12-18", manifestSha256: "179b56a56d64149130b306b5f67f5ac523c2f78b36cb0f61f74c2b3935b25f5f",
     overlay: [
       "ABOUT.html", "CHANGELOG_RU.md", "CURRENT_RELEASE.json",
       "DOCUMENTS.html", "MANIFEST.json", "OVERVIEW.html",

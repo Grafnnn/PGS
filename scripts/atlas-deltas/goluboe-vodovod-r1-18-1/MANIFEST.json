@@ -1,6 +1,6 @@
 {
   "release": "GOLUBOE_VODOVOD_R1_18_1",
-  "sourceTreeSha256": "9c15fba80cf44b2d8ffd71b01e1512934d28bf339fc486043d1ccc570727975e",
+  "sourceTreeSha256": "dd55758a11f5cda917bd65366ff1225884dab7735c4977760ce3fa78939e576d",
   "files": [
     {
       "path": "ABOUT.html",
@@ -10,7 +10,7 @@
     {
       "path": "CURRENT_RELEASE.json",
       "bytes": 1051,
-      "sha256": "38bab413001a8310e1394f6c10b7d9dce44b544bf334a25da41b22a6f7e64664"
+      "sha256": "a9d8de62017a57a3d6ff44e6a598bf91c51826eb22f6b8fbe6f8fa606adef541"
     },
     {
       "path": "DEMO.html",
@@ -99,8 +99,8 @@
     },
     {
       "path": "assets/atlas-card.js",
-      "bytes": 203060,
-      "sha256": "c718b6672f7c0c2556a53474862f0ad45bae3042bb0cf7323ee1f080c3adffb8"
+      "bytes": 203140,
+      "sha256": "cfc70c21a0bc67fffd4218241419a47c3ea8b8d49c12436047efa68340932fa3"
     },
     {
       "path": "assets/atlas-compare.js",
@@ -580,7 +580,7 @@
     {
       "path": "assets/offline-manifest.js",
       "bytes": 39098,
-      "sha256": "9faca27a8618f57601902beea1604427018d2f32a143133dbcb0a71d8d20c0e9"
+      "sha256": "0617868851f1844f8a520309792d52cddfa2d340f257d0852b765793725611fb"
     },
     {
       "path": "assets/overview.css",

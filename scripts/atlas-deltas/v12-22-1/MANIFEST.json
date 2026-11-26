@@ -1,6 +1,6 @@
 {
   "release": "V12_22_1",
-  "sourceTreeSha256": "f3c7ab7fe9cd8ada9b18b54c9697930d956d8d8afd3a62aba38face129ee788b",
+  "sourceTreeSha256": "a9da722dcdbef458bde3e3c07012f4bcb578d951637d83c22add5a207c8b7117",
   "files": [
     {
       "path": ".nojekyll",
@@ -30,7 +30,7 @@
     {
       "path": "CURRENT_RELEASE.json",
       "bytes": 1086,
-      "sha256": "3b348701af97a63ebe8f4271da30b9e87bda066082d1cb450e1c49c90bfabad0"
+      "sha256": "a4be6c5cba2a4067549c2a99d11a3a0adce9ece255424e50c867b8a046be9c82"
     },
     {
       "path": "DOCUMENTS.html",
@@ -224,8 +224,8 @@
     },
     {
       "path": "assets/atlas-card.js",
-      "bytes": 203060,
-      "sha256": "c718b6672f7c0c2556a53474862f0ad45bae3042bb0cf7323ee1f080c3adffb8"
+      "bytes": 203140,
+      "sha256": "cfc70c21a0bc67fffd4218241419a47c3ea8b8d49c12436047efa68340932fa3"
     },
     {
       "path": "assets/atlas-compare.js",
@@ -705,7 +705,7 @@
     {
       "path": "assets/offline-manifest.js",
       "bytes": 412686,
-      "sha256": "8eb51cfb9c2fce312202e583b604ca325932c18f35d5f7862cdf1beb34ebf954"
+      "sha256": "6daf5fc50c9dc2edb64c9837877596029b0a208ec06b08bdd6f2e86bcb3e3f65"
     },
     {
       "path": "assets/overview.css",

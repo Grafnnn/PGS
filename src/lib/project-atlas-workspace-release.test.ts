@@ -24,10 +24,10 @@ it.each([
     pin: "51cb479ffb336db54cd151ef30c9f547fdda6bd8e8b547998c78fb697fdb4022", cache: "site-76cc6616f064" },
   { serve: goluboeCardFix, prior: goluboe, prefix: "/model-assets/goluboe-vodovod-r1-18-1/",
     old: "/model-assets/goluboe-vodovod-r1-18/", files: 412, pdfs: 6,
-    pin: "d5903583923358a1b01741caed91943d09e5c47a08da6879ba92fd28348ead2e", cache: "field-a2ef49329140" },
+    pin: "9dd0eec7ddcc84a707dbefcd20b8b430778bb1021344d3e9906b22afc00c7bfc", cache: "field-b881bbf1c320" },
   { serve: troitskCardFix, prior: troitsk, prefix: "/model-assets/troitsk-r25v12-22-1/",
     old: "/model-assets/troitsk-r25v12-22/", files: 4688, pdfs: 26,
-    pin: "59882b88d52de965fff63808d4fb4e82b7081bb9fca33eccc11bce6fe804a582", cache: "site-3c2eea2a10c4" }
+    pin: "179b56a56d64149130b306b5f67f5ac523c2f78b36cb0f61f74c2b3935b25f5f", cache: "site-3a414437ca2d" }
 ])("serves the exact independent workspace release under $prefix", async ({ serve, prior, prefix, old, files, pdfs, pin, cache }) => {
   const reply = await request(serve, prefix, "MANIFEST.json");
   expect(reply.status).toBe(200);
