@@ -1,0 +1,33 @@
+{
+  "release": "V12_22_1",
+  "revision": "V12.22.1",
+  "label": "V12.22.1",
+  "coreVersion": "1.4.1",
+  "coreManifestSha256": "8644cf21ef993f1ba4f780c3a6e3d1d3fa4657861f84455c53bb1625d8dc1715",
+  "projectId": "troitsk-b24",
+  "sourceDate": "2026-11-27",
+  "suppliedFiles": 4687,
+  "sourceTreeSha256": "f3c7ab7fe9cd8ada9b18b54c9697930d956d8d8afd3a62aba38face129ee788b",
+  "changedFromUpstream": [
+    "assets/atlas-card.js",
+    "assets/atlas-shell.js",
+    "assets/offline-manifest.js",
+    "data/release-info.js",
+    "project/config.js"
+  ],
+  "addedToUpstream": [],
+  "upstreamManifestSha256": "51cb479ffb336db54cd151ef30c9f547fdda6bd8e8b547998c78fb697fdb4022",
+  "offlineVersion": "site-3c2eea2a10c4",
+  "workerSha256": "9ae05e295372984a45d5b15990ff1449d393e8d07ca0a59955716ef139907259",
+  "geometryChangedFromSuppliedRelease": false,
+  "elementAssignmentsChanged": false,
+  "newEngineeringApproval": false,
+  "publicationModifiedFiles": [],
+  "pdfs": 26,
+  "elements": 10795,
+  "rebarOnDemand": 13325,
+  "catalogueTypes": 2950,
+  "sources": 396,
+  "nodes": 559,
+  "unplaced": 47
+}

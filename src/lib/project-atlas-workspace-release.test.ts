@@ -4,6 +4,8 @@ import { GET as goluboe } from "@/app/model-assets/goluboe-vodovod-r1-18/[...ass
 import { GET as priorGoluboe } from "@/app/model-assets/goluboe-vodovod-r1-17-2/[...asset]/route";
 import { GET as troitsk } from "@/app/model-assets/troitsk-r25v12-22/[...asset]/route";
 import { GET as priorTroitsk } from "@/app/model-assets/troitsk-r25v12-21/[...asset]/route";
+import { GET as goluboeCardFix } from "@/app/model-assets/goluboe-vodovod-r1-18-1/[...asset]/route";
+import { GET as troitskCardFix } from "@/app/model-assets/troitsk-r25v12-22-1/[...asset]/route";
 
 const origin = "https://pgs-frankfurt.onrender.com";
 type Serve = typeof goluboe;
@@ -19,7 +21,13 @@ it.each([
     pin: "b1e66bb0903337e5b4b23deca50a21b3ba7e36060d8e1b51085df1f89c686d61", cache: "field-899738c6272e" },
   { serve: troitsk, prior: priorTroitsk, prefix: "/model-assets/troitsk-r25v12-22/",
     old: "/model-assets/troitsk-r25v12-21/", files: 4688, pdfs: 26,
-    pin: "51cb479ffb336db54cd151ef30c9f547fdda6bd8e8b547998c78fb697fdb4022", cache: "site-76cc6616f064" }
+    pin: "51cb479ffb336db54cd151ef30c9f547fdda6bd8e8b547998c78fb697fdb4022", cache: "site-76cc6616f064" },
+  { serve: goluboeCardFix, prior: goluboe, prefix: "/model-assets/goluboe-vodovod-r1-18-1/",
+    old: "/model-assets/goluboe-vodovod-r1-18/", files: 412, pdfs: 6,
+    pin: "d5903583923358a1b01741caed91943d09e5c47a08da6879ba92fd28348ead2e", cache: "field-a2ef49329140" },
+  { serve: troitskCardFix, prior: troitsk, prefix: "/model-assets/troitsk-r25v12-22-1/",
+    old: "/model-assets/troitsk-r25v12-22/", files: 4688, pdfs: 26,
+    pin: "59882b88d52de965fff63808d4fb4e82b7081bb9fca33eccc11bce6fe804a582", cache: "site-3c2eea2a10c4" }
 ])("serves the exact independent workspace release under $prefix", async ({ serve, prior, prefix, old, files, pdfs, pin, cache }) => {
   const reply = await request(serve, prefix, "MANIFEST.json");
   expect(reply.status).toBe(200);
