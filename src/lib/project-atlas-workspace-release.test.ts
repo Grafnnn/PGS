@@ -12,6 +12,8 @@ import { GET as goluboeCounter } from "@/app/model-assets/goluboe-vodovod-r1-18-
 import { GET as troitskCounter } from "@/app/model-assets/troitsk-r25v12-22-3/[...asset]/route";
 import { GET as goluboeSectionSelection } from "@/app/model-assets/goluboe-vodovod-r1-18-4/[...asset]/route";
 import { GET as troitskSectionSelection } from "@/app/model-assets/troitsk-r25v12-22-4/[...asset]/route";
+import { GET as goluboeExplicitOffline } from "@/app/model-assets/goluboe-vodovod-r1-18-5/[...asset]/route";
+import { GET as troitskExplicitOffline } from "@/app/model-assets/troitsk-r25v12-22-5/[...asset]/route";
 
 const origin = "https://pgs-frankfurt.onrender.com";
 type Serve = typeof goluboe;
@@ -51,7 +53,13 @@ it.each([
     pin: "6aa5bcde79e17e85a1dc79c96b13236d10a0e74e32e5795a29c07e4d64c85ffc", cache: "field-d62e73130175" },
   { serve: troitskSectionSelection, prior: troitskCounter, prefix: "/model-assets/troitsk-r25v12-22-4/",
     old: "/model-assets/troitsk-r25v12-22-3/", files: 4692, pdfs: 26,
-    pin: "1d0f58feafe3fbf4f492d38aa51dc42425a2f59481486943bfa1ba8386599285", cache: "site-4f9e28515cd8" }
+    pin: "1d0f58feafe3fbf4f492d38aa51dc42425a2f59481486943bfa1ba8386599285", cache: "site-4f9e28515cd8" },
+  { serve: goluboeExplicitOffline, prior: goluboeSectionSelection, prefix: "/model-assets/goluboe-vodovod-r1-18-5/",
+    old: "/model-assets/goluboe-vodovod-r1-18-4/", files: 416, pdfs: 6,
+    pin: "65ccbcd7d35ce43e43a4e88095f8cdd57c7746b44dcb6d1121f04608e40aff28", cache: "field-20afe30e71b8" },
+  { serve: troitskExplicitOffline, prior: troitskSectionSelection, prefix: "/model-assets/troitsk-r25v12-22-5/",
+    old: "/model-assets/troitsk-r25v12-22-4/", files: 4692, pdfs: 26,
+    pin: "867df0f075b5392e655dcc4d9e29f5f872114ba9dd6e696285e2ccc4be12a682", cache: "site-5a1399ae2c2c" }
 ])("serves the exact independent workspace release under $prefix", async ({ serve, prior, prefix, old, files, pdfs, pin, cache }) => {
   const reply = await request(serve, prefix, "MANIFEST.json");
   expect(reply.status).toBe(200);
