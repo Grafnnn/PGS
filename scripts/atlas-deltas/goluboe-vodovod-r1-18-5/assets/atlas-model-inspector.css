@@ -1,0 +1,160 @@
+/* The model inspector shares the hierarchy and working rhythm of the composition pane. */
+body #right.card-v12 .card-head {
+  min-height: 44px;
+  border-bottom: 1px solid var(--c-line);
+  padding-bottom: 6px;
+}
+body #right.card-v12 .card-head .eyebrow {
+  color: var(--c-text);
+  font-size: var(--fs-14);
+  font-weight: 650;
+}
+body #right.card-v12 .card-sum {
+  display: flow-root;
+}
+body #right.card-v12 .card-sum-h {
+  max-inline-size: 24ch;
+  margin: 4px 0 6px;
+  font-size: clamp(20px, 1.65vw, 25px);
+  line-height: 1.17;
+  overflow-wrap: anywhere;
+}
+body #right.card-v12 .card-sum-sub {
+  max-inline-size: 38ch;
+  margin-bottom: 16px;
+  text-wrap: pretty;
+}
+body #right.card-v12 .card-tiles--sum {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+  border: 1px solid var(--c-line);
+  border-radius: var(--r-l);
+}
+body #right.card-v12 .card-tile {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) max-content 10px;
+  align-items: center;
+  column-gap: 9px;
+  min-height: 43px;
+  margin: 0;
+  padding: 7px 11px;
+  background: var(--c-surface);
+  border-radius: 0;
+}
+body #right.card-v12 .card-tile:first-child {
+  border-radius: var(--r-l) var(--r-l) 0 0;
+}
+body #right.card-v12 .card-tile:last-child {
+  border-radius: 0 0 var(--r-l) var(--r-l);
+}
+body #right.card-v12 .card-tile:only-child {
+  border-radius: var(--r-l);
+}
+body #right.card-v12 .card-tile + .card-tile {
+  border-top: 1px solid var(--c-line);
+}
+body #right.card-v12 .card-tile:hover {
+  background: var(--c-surface-2);
+  box-shadow: none;
+}
+body #right.card-v12 .card-tile:focus-visible {
+  position: relative;
+  outline: 2px solid var(--c-accent);
+  outline-offset: -2px;
+}
+body #right.card-v12 .card-tile span {
+  grid-column: 1;
+  grid-row: 1;
+  margin: 0;
+  font-weight: 550;
+  color: var(--c-text);
+  overflow-wrap: anywhere;
+}
+body #right.card-v12 .card-tile b {
+  grid-column: 2;
+  grid-row: 1;
+  color: var(--c-link);
+  font-size: var(--fs-16);
+  font-weight: 650;
+  white-space: nowrap;
+}
+body #right.card-v12 .card-tile::after {
+  content: "";
+  justify-self: center;
+  width: 5px;
+  height: 5px;
+  border-top: 1.5px solid var(--c-text-2);
+  border-right: 1.5px solid var(--c-text-2);
+  transform: rotate(45deg);
+}
+body #right.card-v12 .card-sum-legend {
+  gap: 6px;
+}
+body #right.card-v12 .card-sum-hint {
+  margin-top: 12px;
+  padding: 10px 0;
+}
+body #right.card-v12 .card-title {
+  border-inline-start: 2px solid var(--c-accent);
+  padding: 3px 0 3px 10px;
+  gap: 4px;
+}
+body #right.card-v12 .card-main:not([hidden]) {
+  padding: 10px;
+  border: 1px solid var(--c-line);
+  border-radius: var(--r);
+  background: var(--c-surface-2);
+}
+body #right.card-v12 .card-src:not([hidden]) {
+  border-top: 1px solid var(--c-line);
+  padding-top: 10px;
+}
+@media (min-width: 851px) {
+  body #right.card-v12 .card-dock {
+    padding-top: 8px;
+  }
+}
+@media (max-width: 850px) {
+  body #right.card-v12 .card-tiles--sum {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    overflow: hidden;
+  }
+  body #right.card-v12 .card-tiles--sum .card-tile {
+    grid-template-columns: minmax(0, 1fr) 10px;
+    grid-template-rows: auto 1fr;
+    row-gap: 2px;
+    min-width: 0;
+    min-height: 44px;
+    padding: 7px 9px;
+    border: 0;
+    border-radius: 0;
+  }
+  body #right.card-v12 .card-tiles--sum .card-tile:nth-child(even) {
+    border-inline-start: 1px solid var(--c-line);
+  }
+  body #right.card-v12 .card-tiles--sum .card-tile:nth-child(n+3) {
+    border-top: 1px solid var(--c-line);
+  }
+  body #right.card-v12 .card-tiles--sum .card-tile:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+  body #right.card-v12 .card-tiles--sum .card-tile b {
+    grid-column: 1;
+  }
+  body #right.card-v12 .card-tiles--sum .card-tile span {
+    grid-area: 2 / 1 / auto / -1;
+    align-self: start;
+    overflow-wrap: break-word;
+  }
+  body #right.card-v12 .card-tiles--sum .card-tile::after {
+    grid-area: 1 / 2;
+  }
+  body #right.card-v12 .card-head .card-icon:not([hidden]) {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  body #right.card-v12:not(.expanded) .card-title {
+    padding-block: 0;
+  }
+}

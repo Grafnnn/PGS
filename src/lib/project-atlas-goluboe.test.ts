@@ -18,10 +18,10 @@ function decode(text: string, key: string) {
 describe("Goluboe public atlas and sealed R1.2 Terrain Snapshot", () => {
   it("adds a public allowlist entry without changing private assignments or neighbors", () => {
     expect(getPublicProject3dModel("goluboe-vodovod")).toMatchObject({
-      revision: "R1.18.4", assetBaseUrl: "/model-assets/goluboe-vodovod-r1-18-4/", publicUrl: "/models/goluboe-vodovod#node/building"
+      revision: "R1.18.5", assetBaseUrl: "/model-assets/goluboe-vodovod-r1-18-5/", publicUrl: "/models/goluboe-vodovod#node/building"
     });
     expect(getPublicProject3dModel("dou200")?.revision).toBe("R1.27");
-    expect(getPublicProject3dModel("troitsk-building-24")?.revision).toBe("V12.22.4");
+    expect(getPublicProject3dModel("troitsk-building-24")?.revision).toBe("V12.22.5");
     expect(getPublicProject3dModel("zagoryanka-1500")?.revision).toBe("R1.0");
     expect(getProject3dModel({ id: "goluboe-vodovod" })).toBeNull();
     expect(getPublicProject3dModel("goluboe")).toBeNull();
