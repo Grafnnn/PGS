@@ -33,11 +33,11 @@ const troitskBuilding24Model: Project3dModel = {
 
 const troitskPublicModel: Project3dModel = {
   ...troitskBuilding24Model,
-  slug: "troitsk-building-24-atlas-v12-22-2",
-  revision: "V12.22.2",
+  slug: "troitsk-building-24-atlas-v12-22-3",
+  revision: "V12.22.3",
   updatedAt: "27.11.2026",
-  assetPath: "src/assets/project-models/troitsk-r25v12-22-2",
-  assetBaseUrl: "/model-assets/troitsk-r25v12-22-2/",
+  assetPath: "src/assets/project-models/troitsk-r25v12-22-3",
+  assetBaseUrl: "/model-assets/troitsk-r25v12-22-3/",
   supportsWorkspaceMenuQuery: true
 };
 
@@ -74,14 +74,14 @@ export function getProjectAtlasUrl(projectId: string): string | null {
 }
 
 const goluboeModel: Project3dModel = {
-  slug: "goluboe-vodovod-atlas-r1-18-2",
+  slug: "goluboe-vodovod-atlas-r1-18-3",
   title: "3D Атлас Голубое",
   subtitle: "Водовод до ВЗУ: 396 записей реестра, 244 элемента сцены, 6 PDF",
-  revision: "R1.18.2",
+  revision: "R1.18.3",
   updatedAt: "27.11.2026",
   disclaimer: "Модель по ПД 19/26-2026. Расхождения со ЗнП № 10 сохранены в замечаниях и заключении; оригинал ЗнП не входит в пакет. Не инженерная приёмка и не исполнительная съёмка.",
-  assetPath: "src/assets/project-models/goluboe-vodovod-r1-18-2",
-  assetBaseUrl: "/model-assets/goluboe-vodovod-r1-18-2/",
+  assetPath: "src/assets/project-models/goluboe-vodovod-r1-18-3",
+  assetBaseUrl: "/model-assets/goluboe-vodovod-r1-18-3/",
   supportsWorkspaceMenuQuery: true,
   publicUrl: "/models/goluboe-vodovod#node/building"
 };

@@ -1,0 +1,34 @@
+{
+  "release": "V12_22_3",
+  "revision": "V12.22.3",
+  "label": "V12.22.3",
+  "coreVersion": "1.4.2",
+  "coreManifestSha256": "bc587c7a0831a85f62430096980ada61b3e483366b6b87d0d813019924e6897e",
+  "projectId": "troitsk-b24",
+  "sourceDate": "2026-11-27",
+  "suppliedFiles": 4691,
+  "sourceTreeSha256": "9058e36349084a48d12ae54bd753678f2225bc919d8a67e4d9e3c2e5a712e818",
+  "changedFromUpstream": [
+    "assets/atlas-composition.js",
+    "assets/offline-manifest.js",
+    "data/release-info.js"
+  ],
+  "addedToUpstream": [],
+  "upstreamManifestSha256": "34a30821bfe28778436e764f5ef3c18b2f7ba78b2bc86289d3c46fc3b4e52b78",
+  "offlineVersion": "site-fa0c7ffd0e95",
+  "workerSha256": "9ae05e295372984a45d5b15990ff1449d393e8d07ca0a59955716ef139907259",
+  "geometryChangedFromSuppliedRelease": false,
+  "elementAssignmentsChanged": false,
+  "newEngineeringApproval": false,
+  "publicationModifiedFiles": [],
+  "pdfs": 26,
+  "elements": 10795,
+  "rebarOnDemand": 13325,
+  "catalogueTypes": 2950,
+  "sources": 396,
+  "nodes": 559,
+  "unplaced": 47,
+  "coreOverrides": {
+    "assets/atlas-composition.js": "e9fb94aac9d83882bab95718401fe3c21d91456c626228a6209e6bf9bcbf3973"
+  }
+}
