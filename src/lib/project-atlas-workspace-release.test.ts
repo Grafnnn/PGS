@@ -10,6 +10,8 @@ import { GET as goluboeModelUi } from "@/app/model-assets/goluboe-vodovod-r1-18-
 import { GET as troitskModelUi } from "@/app/model-assets/troitsk-r25v12-22-2/[...asset]/route";
 import { GET as goluboeCounter } from "@/app/model-assets/goluboe-vodovod-r1-18-3/[...asset]/route";
 import { GET as troitskCounter } from "@/app/model-assets/troitsk-r25v12-22-3/[...asset]/route";
+import { GET as goluboeSectionSelection } from "@/app/model-assets/goluboe-vodovod-r1-18-4/[...asset]/route";
+import { GET as troitskSectionSelection } from "@/app/model-assets/troitsk-r25v12-22-4/[...asset]/route";
 
 const origin = "https://pgs-frankfurt.onrender.com";
 type Serve = typeof goluboe;
@@ -43,7 +45,13 @@ it.each([
     pin: "7628510dfcb8fe1618cf8a04a4affbd353baefdbc0e439d522547b8d7b09db69", cache: "field-0a8aafc43269" },
   { serve: troitskCounter, prior: troitskModelUi, prefix: "/model-assets/troitsk-r25v12-22-3/",
     old: "/model-assets/troitsk-r25v12-22-2/", files: 4692, pdfs: 26,
-    pin: "40bae33889802175a96c88601e4c3816513ed3e2b1bdd688d5f75e58a9d40203", cache: "site-fa0c7ffd0e95" }
+    pin: "40bae33889802175a96c88601e4c3816513ed3e2b1bdd688d5f75e58a9d40203", cache: "site-fa0c7ffd0e95" },
+  { serve: goluboeSectionSelection, prior: goluboeCounter, prefix: "/model-assets/goluboe-vodovod-r1-18-4/",
+    old: "/model-assets/goluboe-vodovod-r1-18-3/", files: 416, pdfs: 6,
+    pin: "6aa5bcde79e17e85a1dc79c96b13236d10a0e74e32e5795a29c07e4d64c85ffc", cache: "field-d62e73130175" },
+  { serve: troitskSectionSelection, prior: troitskCounter, prefix: "/model-assets/troitsk-r25v12-22-4/",
+    old: "/model-assets/troitsk-r25v12-22-3/", files: 4692, pdfs: 26,
+    pin: "1d0f58feafe3fbf4f492d38aa51dc42425a2f59481486943bfa1ba8386599285", cache: "site-4f9e28515cd8" }
 ])("serves the exact independent workspace release under $prefix", async ({ serve, prior, prefix, old, files, pdfs, pin, cache }) => {
   const reply = await request(serve, prefix, "MANIFEST.json");
   expect(reply.status).toBe(200);
@@ -90,4 +98,20 @@ it.each([
   const script = await request(serve, prefix, file);
   expect(script.status).toBe(200);
   expect(createHash("sha256").update(new Uint8Array(await script.arrayBuffer())).digest("hex")).toBe(pin);
+});
+
+it.each([
+  { serve: goluboeSectionSelection, prefix: "/model-assets/goluboe-vodovod-r1-18-4/" },
+  { serve: troitskSectionSelection, prefix: "/model-assets/troitsk-r25v12-22-4/" }
+])("serves the sealed section-selection core under $prefix", async ({ serve, prefix }) => {
+  const metadata = await request(serve, prefix, "CURRENT_RELEASE.json");
+  expect(metadata.status).toBe(200);
+  expect(await metadata.json()).toMatchObject({
+    coreVersion: "1.4.3",
+    coreManifestSha256: "e7ebad1eb6deb49727a020d4c861fb02b989210c5d9d3927bf7a90f9815a6151"
+  });
+  const script = await request(serve, prefix, "assets/atlas-composition.js");
+  expect(script.status).toBe(200);
+  expect(createHash("sha256").update(new Uint8Array(await script.arrayBuffer())).digest("hex"))
+    .toBe("a525999aba414976db666a4262e26286770c861d51906f6c64fc6abb0ed954ee");
 });
