@@ -8,8 +8,8 @@ import { GET } from "./route";
 import { GET as privateGET } from "@/app/api/projects/[projectId]/model-viewer/route";
 import * as projectModels from "@/lib/project-3d-model";
 
-const nextGoluboe = "/model-assets/goluboe-vodovod-r1-18-1/";
-const nextTroitsk = "/model-assets/troitsk-r25v12-22-1/";
+const nextGoluboe = "/model-assets/goluboe-vodovod-r1-18-2/";
+const nextTroitsk = "/model-assets/troitsk-r25v12-22-2/";
 const goluboeIndex = nextGoluboe + "index.html";
 
 async function workspaceRedirect(slug: string, params: string, fixturePrefix?: string, enabled = true) {

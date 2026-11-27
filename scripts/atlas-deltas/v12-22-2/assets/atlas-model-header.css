@@ -1,0 +1,170 @@
+/* У пути свой ряд. Группы управления камерой больше не уменьшают его ширину. */
+body.atlas-prototype .stage.atb > .stage-actions > .stage-path {
+  box-sizing: border-box;
+  width: fit-content;
+  min-width: 0;
+  max-width: 100%;
+  height: auto;
+  padding: 3px 7px;
+  flex-wrap: wrap;
+  gap: 1px 4px;
+  border-color: var(--c-line);
+  border-radius: var(--r);
+  background: var(--c-float);
+  color: var(--c-text-2);
+  white-space: normal;
+}
+body.atlas-prototype .stage.atb > .stage-actions > .stage-path .crumb {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  max-width: 100%;
+  height: auto;
+  min-height: 30px;
+  padding: 3px 6px;
+  border-radius: var(--r-s);
+  text-align: start;
+  line-height: 1.35;
+  white-space: normal;
+  overflow: visible;
+  overflow-wrap: anywhere;
+}
+body.atlas-prototype .stage.atb > .stage-actions > .stage-path .crumb--here {
+  color: var(--c-text);
+  font-weight: 650;
+}
+body.atlas-prototype .stage.atb > .stage-actions > .stage-path button.crumb:hover {
+  background: var(--c-surface-2);
+  text-decoration: none;
+}
+
+@media (min-width: 851px) {
+  body.atlas-prototype .stage.atb > .stage-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: start;
+    align-items: start;
+    gap: 6px;
+  }
+  body.atlas-prototype .stage.atb > .stage-actions > .atb-tr {
+    box-sizing: border-box;
+    max-width: 100%;
+    flex-wrap: wrap;
+    gap: 3px;
+    min-width: 0;
+    margin: 0;
+    padding: 3px;
+    border: 1px solid var(--c-line);
+    border-radius: var(--r);
+    background: var(--c-float);
+    box-shadow: var(--shadow-1);
+  }
+  body.atlas-prototype .stage.atb > .stage-actions > .atb-tr > .atb-seg {
+    gap: 2px;
+    max-width: 100%;
+    padding: 2px;
+    border: 0;
+    background: var(--c-surface-2);
+    box-shadow: none;
+  }
+  body.atlas-prototype .stage.atb > .stage-actions > .atb-tr button {
+    min-height: 34px;
+    height: auto;
+  }
+  body.atlas-prototype .stage.atb > .stage-actions > .atb-tr :is(.atb-b, #viewSettingsToggle) {
+    border: 0;
+    border-radius: var(--r-s);
+    background: transparent;
+    box-shadow: none;
+    padding-inline: 8px;
+    min-width: 34px;
+    gap: 6px;
+    font-size: var(--fs-13);
+    font-weight: 500;
+  }
+  body.atlas-prototype .stage.atb > .stage-actions > .atb-tr :is(.atb-b, #viewSettingsToggle):hover {
+    background: var(--c-surface-2);
+  }
+  body.atlas-prototype .stage.atb > .stage-actions > .atb-tr :is(.atb-b, #viewSettingsToggle):is([aria-expanded="true"], #quickRestore.is-needed) {
+    background: var(--c-brand-tint);
+    color: var(--c-link);
+  }
+  body.atlas-prototype .stage.atb > .stage-actions > .atb-tr #quickPrev {
+    width: 34px;
+    padding-inline: 0;
+  }
+  body.atlas-prototype .stage.atb > .stage-actions > .atb-tr .atb-cam .atb-t {
+    display: inline;
+  }
+  body.atlas-prototype .stage.atb > .stage-actions > .atb-tr .atb-menu .atb-cam-now {
+    white-space: normal;
+    flex-wrap: wrap;
+  }
+  body.atlas-prototype .stage.atb .iss-legend {
+    top: max(108px, calc(var(--am-head-b, 96px) + 8px));
+  }
+  body.atlas-prototype .stage.atb > #viewSettings {
+    position: absolute;
+    top: calc(var(--am-head-b, 96px) + 8px);
+    right: 16px;
+    max-width: calc(100% - 32px);
+    max-height: calc(100% - var(--am-head-b, 96px) - 24px);
+  }
+}
+
+@media (min-width: 851px) {
+  @container stage (max-width: 860px) {
+    body.atlas-prototype .stage.atb .stage-actions > .atb-tr:has(#quickRestore.is-needed) #quickHome .atb-t { display: none; }
+  }
+  @container stage (max-width: 735px) {
+    body.atlas-prototype .stage.atb .stage-actions > .atb-tr #quickHome .atb-t { display: none; }
+  }
+  @container stage (max-width: 604px) {
+    body.atlas-prototype .stage.atb .stage-actions > .atb-tr :is(#quickRestore, #viewSettingsToggle) .atb-t { display: none; }
+  }
+  @container stage (max-width: 465px) {
+    body.atlas-prototype .stage.atb > .stage-actions > .atb-tr .atb-cam .atb-t { display: none; }
+    body.atlas-prototype .stage.atb > .stage-actions > .atb-tr .atb-seg button { padding-inline: 6px; }
+  }
+}
+
+@media (max-width: 850px) {
+  body.atlas-prototype .stage.atb > .stage-actions > .stage-path {
+    top: calc(var(--am-controls-h, 52px) + 6px);
+    width: max-content;
+    max-width: 100% !important; /* прежняя мобильная композиция снимает ограничение */
+    padding: 2px 4px;
+  }
+  body.atlas-prototype .stage.atb > .stage-actions > .stage-path > :last-child {
+    min-width: 0;
+  }
+  body.atlas-prototype .stage.atb > .stage-actions > .stage-path button.crumb {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  body.atlas-prototype .stage.atb > .stage-actions > .stage-path .crumb--mid {
+    display: none;
+  }
+  body.atlas-prototype .stage.atb > .stage-actions > .stage-path :is(.crumb--el, .crumb-sep--el) {
+    display: inline-flex;
+  }
+  body.atlas-prototype .stage.atb > .stage-actions > .stage-path > .crumb:last-child {
+    flex: 0 1 auto;
+  }
+}
+
+body.ac-mounted .stage.atb .ac-picket:not([hidden]) {
+  top: calc(var(--am-head-b, 103px) + 7px);
+}
+@media (max-width: 850px) {
+  body.ac-mounted .stage.atb #atbIssues.iss-chip {
+    top: calc(var(--am-head-b, 103px) + 7px);
+  }
+}
+
+@media (max-width: 359px) {
+  body.atlas-prototype .stage.atb .stage-actions #menu .atb-t { display: none; }
+  body.atlas-prototype .stage.atb .tools { gap: 3px; }
+  body.atlas-prototype .stage.atb .tools .atb-seg { gap: 3px; }
+  body.atlas-prototype .stage.atb .tools .atb-seg button { padding-inline: 4px; }
+}
