@@ -19,7 +19,7 @@ describe("independent Zagoryanka R1.0 publication", () => {
   it("adds only the explicit public alias and preserves existing project assignments", () => {
     expect(getPublicProject3dModel("zagoryanka-1500")).toMatchObject({ revision: "R1.0", assetBaseUrl: "/model-assets/zagoryanka-1500-r1-0/" });
     expect(getPublicProject3dModel("dou200")?.revision).toBe("R1.27");
-    expect(getPublicProject3dModel("troitsk-building-24")?.revision).toBe("V12.22.3");
+    expect(getPublicProject3dModel("troitsk-building-24")?.revision).toBe("V12.22.4");
     expect(getProject3dModel({ id: "zagoryanka-1500" })).toBeNull();
     expect(getPublicProject3dModel("goluboe")).toBeNull();
   });
