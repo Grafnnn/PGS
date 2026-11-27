@@ -8,6 +8,8 @@ import { GET as goluboeCardFix } from "@/app/model-assets/goluboe-vodovod-r1-18-
 import { GET as troitskCardFix } from "@/app/model-assets/troitsk-r25v12-22-1/[...asset]/route";
 import { GET as goluboeModelUi } from "@/app/model-assets/goluboe-vodovod-r1-18-2/[...asset]/route";
 import { GET as troitskModelUi } from "@/app/model-assets/troitsk-r25v12-22-2/[...asset]/route";
+import { GET as goluboeCounter } from "@/app/model-assets/goluboe-vodovod-r1-18-3/[...asset]/route";
+import { GET as troitskCounter } from "@/app/model-assets/troitsk-r25v12-22-3/[...asset]/route";
 
 const origin = "https://pgs-frankfurt.onrender.com";
 type Serve = typeof goluboe;
@@ -35,7 +37,13 @@ it.each([
     pin: "705e72fcc97cb8207df638ecb0c3b483a0b23b1aedcbf727c122a00eb7862d58", cache: "field-5fb1247a842f" },
   { serve: troitskModelUi, prior: troitskCardFix, prefix: "/model-assets/troitsk-r25v12-22-2/",
     old: "/model-assets/troitsk-r25v12-22-1/", files: 4692, pdfs: 26,
-    pin: "34a30821bfe28778436e764f5ef3c18b2f7ba78b2bc86289d3c46fc3b4e52b78", cache: "site-87d9df2abfbc" }
+    pin: "34a30821bfe28778436e764f5ef3c18b2f7ba78b2bc86289d3c46fc3b4e52b78", cache: "site-87d9df2abfbc" },
+  { serve: goluboeCounter, prior: goluboeModelUi, prefix: "/model-assets/goluboe-vodovod-r1-18-3/",
+    old: "/model-assets/goluboe-vodovod-r1-18-2/", files: 416, pdfs: 6,
+    pin: "7628510dfcb8fe1618cf8a04a4affbd353baefdbc0e439d522547b8d7b09db69", cache: "field-0a8aafc43269" },
+  { serve: troitskCounter, prior: troitskModelUi, prefix: "/model-assets/troitsk-r25v12-22-3/",
+    old: "/model-assets/troitsk-r25v12-22-2/", files: 4692, pdfs: 26,
+    pin: "40bae33889802175a96c88601e4c3816513ed3e2b1bdd688d5f75e58a9d40203", cache: "site-fa0c7ffd0e95" }
 ])("serves the exact independent workspace release under $prefix", async ({ serve, prior, prefix, old, files, pdfs, pin, cache }) => {
   const reply = await request(serve, prefix, "MANIFEST.json");
   expect(reply.status).toBe(200);
@@ -68,4 +76,18 @@ it.each([
   expect(pdf.headers.get("content-range")).toBe(`bytes 0-7/${sample.bytes}`);
   expect(await pdf.text()).toMatch(/^%PDF-/);
   expect((await request(serve, prefix, sample.path, { headers: { range: `bytes=${sample.bytes}-` } })).status).toBe(416);
+});
+
+it.each([
+  { serve: goluboeCounter, prefix: "/model-assets/goluboe-vodovod-r1-18-3/" },
+  { serve: troitskCounter, prefix: "/model-assets/troitsk-r25v12-22-3/" }
+])("records the exact branch-count override under $prefix", async ({ serve, prefix }) => {
+  const file = "assets/atlas-composition.js";
+  const pin = "e9fb94aac9d83882bab95718401fe3c21d91456c626228a6209e6bf9bcbf3973";
+  const metadata = await request(serve, prefix, "CURRENT_RELEASE.json");
+  expect(metadata.status).toBe(200);
+  expect(await metadata.json()).toMatchObject({ coreVersion: "1.4.2", coreOverrides: { [file]: pin } });
+  const script = await request(serve, prefix, file);
+  expect(script.status).toBe(200);
+  expect(createHash("sha256").update(new Uint8Array(await script.arrayBuffer())).digest("hex")).toBe(pin);
 });
