@@ -1,0 +1,41 @@
+{
+  "release": "V12_22_2",
+  "revision": "V12.22.2",
+  "label": "V12.22.2",
+  "coreVersion": "1.4.2",
+  "coreManifestSha256": "bc587c7a0831a85f62430096980ada61b3e483366b6b87d0d813019924e6897e",
+  "projectId": "troitsk-b24",
+  "sourceDate": "2026-11-27",
+  "suppliedFiles": 4691,
+  "sourceTreeSha256": "39ee1267b356ba34b2db0b766eb2e125383e8b3bbb33cf262d727b8c087dc502",
+  "changedFromUpstream": [
+    "assets/atlas-composition.js",
+    "assets/atlas-dimensions.js",
+    "assets/atlas-nodes.js",
+    "assets/atlas-shell.js",
+    "assets/offline-manifest.js",
+    "data/release-info.js",
+    "index.html",
+    "project/config.js"
+  ],
+  "addedToUpstream": [
+    "assets/atlas-model-header.css",
+    "assets/atlas-model-header.js",
+    "assets/atlas-model-inspector.css",
+    "assets/atlas-model-sidebar.css"
+  ],
+  "upstreamManifestSha256": "179b56a56d64149130b306b5f67f5ac523c2f78b36cb0f61f74c2b3935b25f5f",
+  "offlineVersion": "site-87d9df2abfbc",
+  "workerSha256": "9ae05e295372984a45d5b15990ff1449d393e8d07ca0a59955716ef139907259",
+  "geometryChangedFromSuppliedRelease": false,
+  "elementAssignmentsChanged": false,
+  "newEngineeringApproval": false,
+  "publicationModifiedFiles": [],
+  "pdfs": 26,
+  "elements": 10795,
+  "rebarOnDemand": 13325,
+  "catalogueTypes": 2950,
+  "sources": 396,
+  "nodes": 559,
+  "unplaced": 47
+}

@@ -1,0 +1,37 @@
+{
+  "release": "GOLUBOE_VODOVOD_R1_18_2",
+  "revision": "R1.18.2",
+  "label": "R1.18.2",
+  "coreVersion": "1.4.2",
+  "coreManifestSha256": "bc587c7a0831a85f62430096980ada61b3e483366b6b87d0d813019924e6897e",
+  "projectId": "goluboe-vodovod",
+  "sourceDate": "2026-11-27",
+  "suppliedFiles": 415,
+  "sourceTreeSha256": "65bb640f4dbd80593db6af6cd2dd42a6177e5d4a6c450f6dcb4027c568aefa2b",
+  "changedFromUpstream": [
+    "assets/atlas-composition.js",
+    "assets/atlas-dimensions.js",
+    "assets/atlas-nodes.js",
+    "assets/atlas-shell.js",
+    "assets/offline-manifest.js",
+    "data/release-info.js",
+    "index.html",
+    "project/config.js",
+    "project/field-data.js"
+  ],
+  "addedToUpstream": [
+    "assets/atlas-model-header.css",
+    "assets/atlas-model-header.js",
+    "assets/atlas-model-inspector.css",
+    "assets/atlas-model-sidebar.css"
+  ],
+  "upstreamManifestSha256": "9dd0eec7ddcc84a707dbefcd20b8b430778bb1021344d3e9906b22afc00c7bfc",
+  "offlineVersion": "field-5fb1247a842f",
+  "workerSha256": "9ae05e295372984a45d5b15990ff1449d393e8d07ca0a59955716ef139907259",
+  "geometryChangedFromSuppliedRelease": false,
+  "elementAssignmentsChanged": false,
+  "newEngineeringApproval": false,
+  "publicationModifiedFiles": [],
+  "pdfs": 6,
+  "modelGeometryChangedFromUpstream": false
+}
