@@ -2199,6 +2199,13 @@ const releases = {
       "source_album/previews/AR_full_page_016-w864.jpg": "v12-21"
     }
   },
+  "proizvodstvenny-korpus-r1-0": {
+    release: "R1.0", directory: "3D_\u0410\u0442\u043b\u0430\u0441", assetDirectory: "proizvodstvenny-korpus-r1-0",
+    tag: "atlas-proizvodstvenny-korpus-r1-0", archiveName: "3D_ATLAS_FACTORY_R1_0_FULL.zip",
+    bytes: 339893207, files: 35230, utf8Zip: true,
+    sha256: "7115f13647048cc9a6f316b481ba25b33be1a3c91ac3d76d6fd71042b5c48d1b",
+    manifestSha256: "28a54194b8e2f7f4ebc40b6648422602b116a7177e633f036cefe385d01595a9"
+  },
   "stolarny-r0-4-1": {
     release: "STOLARNY_R0_4_1", directory: "STOLARNY_3D_ATLAS", assetDirectory: "stolarny-r0-4-1",
     tag: "atlas-stolarny-r0-4-1", bytes: 247053581, files: 3060, utf8Zip: true,
@@ -3894,6 +3901,7 @@ export function atlasRelease(version = "v12-18") {
   const directory = entry.directory ?? `TROITSK_B24_ATLAS_${entry.release}`;
   const tag = entry.tag ?? `atlas-r25${version}`;
   const assetDirectory = entry.assetDirectory ?? `troitsk-r25${version}`;
+  const archiveName = entry.archiveName ?? `${directory}_FULL.zip`;
   return { ...entry, version, directory, root: `src/assets/project-models/${assetDirectory}`,
-    url: entry.base ? undefined : `https://github.com/Grafnnn/PGS/releases/download/${tag}/${directory}_FULL.zip` };
+    url: entry.base ? undefined : `https://github.com/Grafnnn/PGS/releases/download/${tag}/${archiveName}` };
 }
