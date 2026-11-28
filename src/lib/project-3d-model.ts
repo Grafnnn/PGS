@@ -106,6 +106,18 @@ const stolarnyModel: Project3dModel = {
   publicUrl: "/models/stolarny"
 };
 
+const factoryModel: Project3dModel = {
+  slug: "proizvodstvenny-korpus",
+  title: "3D Атлас «Производственный корпус»",
+  subtitle: "Модель, каталог и 69 альбомов чертежей",
+  revision: "R1.0",
+  updatedAt: "28.11.2026",
+  disclaimer: "Координационный атлас. Не инженерная приёмка и не исполнительная документация.",
+  assetPath: "src/assets/project-models/proizvodstvenny-korpus-r1-0",
+  assetBaseUrl: "/model-assets/proizvodstvenny-korpus-r1-0/",
+  publicUrl: "/models/proizvodstvenny-korpus"
+};
+
 // Explicit publication allowlist. Never resolve arbitrary project IDs on a public route.
 export function getPublicProject3dModel(slug: string): Project3dModel | null {
   if (slug === "troitsk-building-24") return troitskPublicModel;
@@ -114,6 +126,7 @@ export function getPublicProject3dModel(slug: string): Project3dModel | null {
   if (slug === "goluboe-vodovod") return goluboeModel;
   if (slug === goluboeFieldPilot.slug) return goluboeFieldPilot;
   if (slug === stolarnyModel.slug) return stolarnyModel;
+  if (slug === factoryModel.slug) return factoryModel;
   return null;
 }
 
