@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { GET as getAsset } from "@/app/model-assets/proizvodstvenny-korpus-r1-0/[...asset]/route";
 import { GET as getUpdatedAsset } from "@/app/model-assets/proizvodstvenny-korpus-r1-0-1/[...asset]/route";
+import { GET as getCurrentAsset } from "@/app/model-assets/proizvodstvenny-korpus-r1-1/[...asset]/route";
 import { GET as getAlias } from "@/app/models/[slug]/route";
 import { getProject3dModel } from "./project-3d-model";
 
@@ -8,6 +9,7 @@ const slug = "proizvodstvenny-korpus";
 const origin = "https://pgs.local";
 const prefix = "/model-assets/proizvodstvenny-korpus-r1-0/";
 const updatedPrefix = "/model-assets/proizvodstvenny-korpus-r1-0-1/";
+const currentPrefix = "/model-assets/proizvodstvenny-korpus-r1-1/";
 const asset = (file: string, headers?: HeadersInit) =>
   getAsset(new Request(origin + prefix + file, { headers }), { params: { asset: file.split("/") } });
 
@@ -15,7 +17,7 @@ describe("Factory atlas R1.0", () => {
   it("publishes only the named atlas alias and preserves private project lookup", async () => {
     const response = await getAlias(new Request(origin + "/models/" + slug + "?next=https://offsite.test"), { params: { slug } });
     expect(response.status).toBe(307);
-    expect(response.headers.get("location")).toBe(updatedPrefix + "index.html");
+    expect(response.headers.get("location")).toBe(currentPrefix + "index.html");
     expect(response.headers.get("cache-control")).toBe("no-store");
     const unknown = await getAlias(new Request(origin + "/models/" + slug + "-r0-3"), { params: { slug: slug + "-r0-3" } });
     expect(unknown.status).toBe(404);
@@ -81,5 +83,29 @@ describe("Factory atlas R1.0", () => {
     expect((await updated("service-worker.js")).headers.get("service-worker-allowed")).toBe(updatedPrefix);
     const pdf = await updated("albums/pdf-07.pdf");
     expect(pdf.headers.get("etag")).toBe((await getAsset(new Request(origin + prefix + "albums/pdf-07.pdf", { method: "HEAD" }), { params: { asset: ["albums", "pdf-07.pdf"] } })).headers.get("etag"));
+  });
+
+  it("serves R1.1 in its own scope while preserving the old rebar asset path", async () => {
+    const current = (name: string, method = "HEAD", headers?: HeadersInit) =>
+      getCurrentAsset(new Request(origin + currentPrefix + name, { method, headers }), { params: { asset: name.split("/") } });
+    const manifest = await current("MANIFEST.json", "GET");
+    expect(manifest.status).toBe(200);
+    expect(manifest.headers.get("etag")).toBe('"afaa745b391c6d31426241acb3a4ea4aa5638dda77347ed7a1fe465411f8293f"');
+    const data = await manifest.json();
+    expect(data.release).toBe("R1.1");
+    expect(data.files).toHaveLength(36856);
+    const css = (await current("rebar-model.html")).headers.get("content-security-policy");
+    expect(css).toContain("font-src " + origin + currentPrefix);
+    expect(css).not.toContain(origin + updatedPrefix);
+    expect((await current("service-worker.js")).headers.get("service-worker-allowed")).toBe(currentPrefix);
+    expect((await current("data/rebar_blocks/REBAR-FM52.js")).status).toBe(200);
+    const oldMesh = "data/catalogue_blocks/REBAR-FM52.js";
+    expect((await current(oldMesh)).status).toBe(404);
+    expect((await getUpdatedAsset(new Request(origin + updatedPrefix + oldMesh, { method: "HEAD" }), {
+      params: { asset: oldMesh.split("/") }
+    })).status).toBe(200);
+    const pdf = await current("albums/pdf-05.pdf", "GET", { range: "bytes=0-4" });
+    expect(pdf.status).toBe(206);
+    expect(await pdf.text()).toBe("%PDF-");
   });
 });
