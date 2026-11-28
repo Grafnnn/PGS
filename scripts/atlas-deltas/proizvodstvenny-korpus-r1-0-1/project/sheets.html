@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Сверка по листам · Производственный корпус</title>
+<link rel="stylesheet" href="sheets.css">
+<script src="sheets-data.js" defer></script>
+<script src="collisions-data.js" defer></script>
+<script src="sheets.js" defer></script>
+</head>
+<body>
+<header>
+  <a class="brand" href="../index.html"><img src="../assets/atlas-mark-v3.png" alt="">3D Атлас</a>
+  <a href="../index.html">К модели</a>
+</header>
+<main>
+  <div class="intro">
+    <p class="project">Производственный корпус · АФП-2026-05-19</p>
+    <h1>Сверка по листам</h1>
+    <p id="summary"></p>
+  </div>
+  <nav class="tabs" aria-label="Раздел реестра">
+    <button id="showPages" type="button" aria-pressed="true">Листы и альбомы</button>
+    <button id="showGaps" type="button" aria-pressed="false">Уточнения</button>
+    <button id="showClashes" type="button" aria-pressed="false">Коллизии</button>
+    <a href="rebar.html">Армирование</a>
+    <a href="vor-audit.html">Сверка ВОР</a>
+    <a href="Проверка_по_листам_R1.0.csv" download>Сверка R1.0 · CSV</a>
+  </nav>
+  <section id="sheets" class="pane" aria-label="Листы проекта">
+    <form id="filters" role="search">
+      <label>Поиск<input id="query" type="search" placeholder="Раздел, лист, узел, марка…"></label>
+      <label>Альбом<select id="document"><option value="">Все альбомы</option></select></label>
+      <label>Перенос<select id="filterState">
+        <option value="">Все страницы</option>
+        <option value="model">Есть элементы в 3D</option>
+        <option value="drawing">Графические листы</option>
+        <option value="verify">Остались вопросы по листу</option>
+      </select></label>
+    </form>
+    <p id="count" role="status"></p>
+    <div id="rows"></div>
+    <div class="pager"><button id="back" type="button">Назад</button><span id="current"></span><button id="next" type="button">Далее</button></div>
+  </section>
+  <section id="gaps" class="pane" aria-label="Уточнения" hidden>
+    <p class="caption">Здесь собраны вопросы к комплекту и привязкам. Допроектированные варианты отмечены в 3D отдельными группами.</p>
+    <label>Вид уточнений<select id="gap-kind">
+      <option value="">Все вопросы по комплекту</option>
+      <option value="discrepancies">Листы с зафиксированными расхождениями ПД</option>
+    </select></label>
+    <p id="gap-count" class="caption" role="status"></p>
+    <p><a href="Сверка_496_R1.0.csv" download>Результаты повторной сверки 496 страниц</a></p>
+    <ul id="gap-list"></ul>
+    <div id="workbooks"></div>
+  </section>
+  <section id="clashes" class="pane" aria-label="Пересечения модели" hidden>
+    <p class="caption">Это пересечения геометрии Атласа. Условную монтажную отметку или габарит необходимо проверить по исходным листам. Проектные стыки и пересечения, которые не удалось проверить, учтены отдельно.</p>
+    <p id="clash-summary"></p>
+    <p><a href="../index.html#issues=1">Открыть коллизии на модели</a> · <a href="Пересечения_модели.csv" download>Все пары · CSV</a></p>
+    <p><a href="Разбор_пересечений_R1.0.csv" download>Разбор пересечений R0.2 и R1.0</a></p>
+    <label>Поиск коллизии<input id="clash-query" type="search" placeholder="Номер, элемент, раздел или лист"></label>
+    <p id="clash-count" class="caption" role="status"></p>
+    <div id="clash-rows"></div>
+  </section>
+</main>
+</body>
+</html>

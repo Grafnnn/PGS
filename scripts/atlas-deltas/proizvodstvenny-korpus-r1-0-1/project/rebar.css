@@ -1,0 +1,30 @@
+.rebar-pane + .rebar-pane { margin-top: 16px; }
+.rebar-pane h2 { margin: 0 0 3px; font-size: clamp(20px, 3vw, 25px); }
+.rebar-pane > .caption { margin: 0 0 14px; }
+.rebar-rows, .rebar-links ul { list-style: none; margin: 0; padding: 0; }
+.rebar-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+  padding: 12px 0;
+  border-top: 1px solid var(--line);
+}
+.rebar-row h3 { margin: 0; font-size: 16px; overflow-wrap: anywhere; }
+.rebar-status { margin: 3px 0 0; }
+.rebar-links { display: flex; gap: 6px 12px; flex-wrap: wrap; align-items: baseline; }
+.rebar-links ul { display: flex; gap: 4px 12px; flex-wrap: wrap; }
+.rebar-links ul a { display: inline-flex; align-items: center; min-height: 30px; font-size: 14px; }
+.rebar-open {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 4px 10px;
+  background: var(--tag);
+  border-radius: 8px;
+  font-weight: 700;
+  text-decoration: none;
+}
+@media (max-width: 650px) {
+  .rebar-row { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+  .rebar-open { min-height: 44px; }
+}
