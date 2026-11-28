@@ -110,11 +110,11 @@ const factoryModel: Project3dModel = {
   slug: "proizvodstvenny-korpus",
   title: "3D Атлас «Производственный корпус»",
   subtitle: "Модель, каталог и 69 альбомов чертежей",
-  revision: "R1.0.1",
+  revision: "R1.1",
   updatedAt: "28.11.2026",
   disclaimer: "Координационный атлас. Не инженерная приёмка и не исполнительная документация.",
-  assetPath: "src/assets/project-models/proizvodstvenny-korpus-r1-0-1",
-  assetBaseUrl: "/model-assets/proizvodstvenny-korpus-r1-0-1/",
+  assetPath: "src/assets/project-models/proizvodstvenny-korpus-r1-1",
+  assetBaseUrl: "/model-assets/proizvodstvenny-korpus-r1-1/",
   publicUrl: "/models/proizvodstvenny-korpus"
 };
 

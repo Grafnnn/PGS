@@ -2206,6 +2206,13 @@ const releases = {
     sha256: "7115f13647048cc9a6f316b481ba25b33be1a3c91ac3d76d6fd71042b5c48d1b",
     manifestSha256: "28a54194b8e2f7f4ebc40b6648422602b116a7177e633f036cefe385d01595a9"
   },
+  "proizvodstvenny-korpus-r1-1": {
+    release: "R1.1", directory: "3D_\u0410\u0442\u043b\u0430\u0441", assetDirectory: "proizvodstvenny-korpus-r1-1",
+    tag: "atlas-proizvodstvenny-korpus-r1-1", archiveName: "3D_ATLAS_FACTORY_R1_1_FULL.zip",
+    bytes: 382491709, files: 36857, utf8Zip: true,
+    sha256: "d3b34af40edf1af5b7b15f0c1e3a4c0602710e9d433a151aabc1cce112a1778c",
+    manifestSha256: "afaa745b391c6d31426241acb3a4ea4aa5638dda77347ed7a1fe465411f8293f"
+  },
   "proizvodstvenny-korpus-r1-0-1": {
     release: "R1.0.1", assetDirectory: "proizvodstvenny-korpus-r1-0-1",
     base: "proizvodstvenny-korpus-r1-0", files: 35235, rebuildBaseManifest: true,
