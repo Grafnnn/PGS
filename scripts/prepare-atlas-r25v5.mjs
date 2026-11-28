@@ -8,6 +8,7 @@ import { pipeline } from "node:stream/promises";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { atlasRelease } from "./atlas-releases.mjs";
+import { rebuildAtlasManifest } from "./atlas-overlay-manifest.mjs";
 
 const release = atlasRelease(process.argv[2]);
 const archive = release.base ? atlasRelease(release.base) : release;
@@ -60,14 +61,30 @@ if (await verifiedCache()) {
     const source = path.join(extracted, archive.directory);
     if (release.base) {
       // Materialize a complete new release; no runtime cross-version asset requests.
+      const replacements = release.rebuildBaseManifest ? new Map() : null;
       for (const name of release.overlay) {
         if (path.isAbsolute(name) || name.split("/").some(part => !part || part === "." || part === "..") || name.includes("\\")) {
           throw new Error("Unsafe Atlas overlay path");
         }
         const from = release.overlayFrom?.[name] ?? release.version;
         const target = path.join(source, name);
+        if (replacements && name === "MANIFEST.json") throw new Error("Cannot overlay a reconstructed Atlas manifest");
+        if (replacements?.has(name)) throw new Error("Duplicate Atlas overlay path: " + name);
         await mkdir(path.dirname(target), { recursive: true });
         await copyFile(path.join("scripts", "atlas-deltas", from, name), target);
+        if (replacements) {
+          const bytes = await readFile(target);
+          replacements.set(name, { bytes: bytes.length, sha256: createHash("sha256").update(bytes).digest("hex") });
+        }
+      }
+      if (replacements) {
+        // Preserve the author's record order; the packer verifies the exact new manifest digest.
+        const filename = path.join(source, "MANIFEST.json");
+        const original = await readFile(filename);
+        if (createHash("sha256").update(original).digest("hex") !== archive.manifestSha256) {
+          throw new Error("Atlas baseline manifest integrity mismatch");
+        }
+        await writeFile(filename, rebuildAtlasManifest(JSON.parse(original), release.release, replacements, release.manifestAppend));
       }
     }
     if (release.sourceFileManifest) {

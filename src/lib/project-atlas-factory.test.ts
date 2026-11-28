@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { GET as getAsset } from "@/app/model-assets/proizvodstvenny-korpus-r1-0/[...asset]/route";
+import { GET as getUpdatedAsset } from "@/app/model-assets/proizvodstvenny-korpus-r1-0-1/[...asset]/route";
 import { GET as getAlias } from "@/app/models/[slug]/route";
 import { getProject3dModel } from "./project-3d-model";
 
 const slug = "proizvodstvenny-korpus";
 const origin = "https://pgs.local";
 const prefix = "/model-assets/proizvodstvenny-korpus-r1-0/";
+const updatedPrefix = "/model-assets/proizvodstvenny-korpus-r1-0-1/";
 const asset = (file: string, headers?: HeadersInit) =>
   getAsset(new Request(origin + prefix + file, { headers }), { params: { asset: file.split("/") } });
 
@@ -13,7 +15,7 @@ describe("Factory atlas R1.0", () => {
   it("publishes only the named atlas alias and preserves private project lookup", async () => {
     const response = await getAlias(new Request(origin + "/models/" + slug + "?next=https://offsite.test"), { params: { slug } });
     expect(response.status).toBe(307);
-    expect(response.headers.get("location")).toBe(prefix + "index.html");
+    expect(response.headers.get("location")).toBe(updatedPrefix + "index.html");
     expect(response.headers.get("cache-control")).toBe("no-store");
     const unknown = await getAlias(new Request(origin + "/models/" + slug + "-r0-3"), { params: { slug: slug + "-r0-3" } });
     expect(unknown.status).toBe(404);
@@ -59,5 +61,25 @@ describe("Factory atlas R1.0", () => {
     expect(remarks.reduce((count, item) => count + item.sheet_links.length, 0)).toBe(1930);
     expect(remarks.find(item => item.id === "\u041a\u041e\u041b-655")?.sheet_links.map(link => link.href))
       .toEqual(["albums/pdf-07.pdf#page=26", "albums/pdf-04.pdf#page=37"]);
+  });
+
+  it("mounts the updated atlas and its added pages without changing the original release", async () => {
+    const updated = (name: string, method = "HEAD") =>
+      getUpdatedAsset(new Request(origin + updatedPrefix + name, { method }), { params: { asset: name.split("/") } });
+    const manifest = await updated("MANIFEST.json", "GET");
+    expect(manifest.status).toBe(200);
+    expect(manifest.headers.get("etag")).toBe('"4b69ffd92b3361062c8c3ed7f938f8bf9860956b74940fad688efc21264f7093"');
+    expect((await manifest.json()).files).toHaveLength(35234);
+    const original = await asset("MANIFEST.json");
+    expect((await original.json()).release).toBe("R1.0");
+    expect((await asset("rebar-model.html")).status).toBe(404);
+    for (const name of ["project/rebar.html", "rebar-model.html"]) {
+      const html = await updated(name);
+      expect(html.status).toBe(200);
+      expect(html.headers.get("content-security-policy")).toContain("font-src " + origin + updatedPrefix);
+    }
+    expect((await updated("service-worker.js")).headers.get("service-worker-allowed")).toBe(updatedPrefix);
+    const pdf = await updated("albums/pdf-07.pdf");
+    expect(pdf.headers.get("etag")).toBe((await getAsset(new Request(origin + prefix + "albums/pdf-07.pdf", { method: "HEAD" }), { params: { asset: ["albums", "pdf-07.pdf"] } })).headers.get("etag"));
   });
 });

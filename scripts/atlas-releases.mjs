@@ -2206,6 +2206,17 @@ const releases = {
     sha256: "7115f13647048cc9a6f316b481ba25b33be1a3c91ac3d76d6fd71042b5c48d1b",
     manifestSha256: "28a54194b8e2f7f4ebc40b6648422602b116a7177e633f036cefe385d01595a9"
   },
+  "proizvodstvenny-korpus-r1-0-1": {
+    release: "R1.0.1", assetDirectory: "proizvodstvenny-korpus-r1-0-1",
+    base: "proizvodstvenny-korpus-r1-0", files: 35235, rebuildBaseManifest: true,
+    manifestSha256: "4b69ffd92b3361062c8c3ed7f938f8bf9860956b74940fad688efc21264f7093",
+    manifestAppend: ["data/catalogue_blocks/REBAR-FM52.js","data/rebar_catalogue_data.js","project/rebar.css","project/rebar.html","rebar-model.html"],
+    overlay: [
+      "assets/atlas-model-header.css", "assets/atlas-workspace.js", "assets/offline-manifest.js", "assets/prototype.js",
+      "data/catalogue_blocks/REBAR-FM52.js", "data/rebar_catalogue_data.js", "data/release-info.js", "index.html",
+      "project/rebar.css", "project/rebar.html", "project/sheets.html", "project/sheets.js", "project/texts.js", "rebar-model.html"
+    ]
+  },
   "stolarny-r0-4-1": {
     release: "STOLARNY_R0_4_1", directory: "STOLARNY_3D_ATLAS", assetDirectory: "stolarny-r0-4-1",
     tag: "atlas-stolarny-r0-4-1", bytes: 247053581, files: 3060, utf8Zip: true,
